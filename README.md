@@ -3,14 +3,15 @@
 [中文说明](README_cn.md)
 
 `pylcl` is a pure-Python, async-first configuration expression language for
-Python 3.14+. The 0.1 language/runtime implementation is complete but remains
-unreleased until its artifact and clean-install release-candidate gate passes.
+Python 3.14+. The 0.1.0 implementation and clean-install artifact gate are
+verified; publication remains pending the repository-wide source-policy gate.
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## Project status
 
 - Target: 0.4.0 development release
 - Latest completed milestone: M050 — 0.1 bilingual user documentation
-- Current milestone: M051 — 0.1 artifact and clean-install release gate
+- Current milestone: M051 — 0.1 release-candidate gate
 - Implemented: foundation, enforced English rST API docs, source-aware lexer,
   immutable AST, complete expression/comprehension parsing, all planned V1
   expression forms, deterministic AST-to-source rendering, semantic f-string
@@ -30,10 +31,6 @@ unreleased until its artifact and clean-install release-candidate gate passes.
   text, immutable data, and strict JSON helpers in a standard preset, exposed
   through a focused root API for the complete runtime workflow
 - Test status: 578 tests pass with 99.12% branch coverage; the unified quality gate passes
-
-Package metadata still reports development version `0.0.0`. The earlier
-foundation wheel passed no-dependency installation in a fresh Python 3.14
-environment; M051 will repeat that gate for the 0.1 artifact.
 
 The authoritative milestone ledger is in [progress.md](progress.md). Planned
 features are deliberately not presented as implemented features.

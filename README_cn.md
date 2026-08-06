@@ -2,14 +2,15 @@
 
 [English](README.md)
 
-`pylcl` 是面向 Python 3.14+、异步优先的纯 Python 配置表达式语言。0.1 language/runtime
-实现已经完成，但在 artifact 与 clean-install release-candidate 门通过前仍未发布。
+`pylcl` 是面向 Python 3.14+、异步优先的纯 Python 配置表达式语言。0.1.0
+实现与零运行时依赖的 artifact、clean-install 验证门已经通过；发布仍等待
+仓库级 source-policy 闸门完成。详见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 项目状态
 
 - 目标版本：0.4.0 开发版本
 - 最新完成：M050 — 0.1 双语用户文档
-- 当前工作：M051 — 0.1 artifact 与 clean-install 发布门
+- 当前工作：M051 — 0.1 发布候选门
 - 已实现：基础工程、强制英文 rST API 文档、带源码位置的 lexer、不可变 AST、
   完整表达式/comprehension 解析、全部计划内 V1 表达式 form，以及确定性的
   AST 到源码渲染、semantic f-string 解析、稳定的根包 parse/print API、异步表达式求值、
