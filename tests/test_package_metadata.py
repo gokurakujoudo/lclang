@@ -22,10 +22,10 @@ class PackageMetadataTests(unittest.TestCase):
         self.assertEqual(project["requires-python"], ">=3.14")
         self.assertNotIn("dependencies", project)
 
-    def test_import_exposes_foundation_version(self) -> None:
-        """Importing the package must expose the pre-release foundation version."""
+    def test_import_exposes_release_version(self) -> None:
+        """Importing the package must expose the coherent 0.1 release version."""
         module = importlib.import_module("pylcl")
-        self.assertEqual(module.__version__, "0.0.0")
+        self.assertEqual(module.__version__, "0.1.0")
         self.assertTrue((ROOT / "pylcl" / "py.typed").is_file())
 
 

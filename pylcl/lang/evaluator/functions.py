@@ -103,10 +103,12 @@ async def _default(
     evaluate: EvaluateNode,
 ) -> object:
     """Resolve one parameter default or return the missing sentinel.
+
     :param parameter: Parameter whose optional default should be evaluated.
     :param resolver: Resolver used by the default expression.
     :param evaluate: Recursive evaluator for the default expression.
     :returns: Evaluated default value, or ``_MISSING`` when absent.
+
     .. note:: The sentinel distinguishes an omitted default from an explicit ``None``.
     """
     if parameter.default is None:
@@ -125,7 +127,9 @@ def _bind(
     :param args: Positional call arguments.
     :param kwargs: Named call arguments.
     :returns: Local name-to-value bindings for one invocation.
-    :raises TypeError: If arguments are duplicated, missing, unexpected, or exceed the available positional parameters.
+    :raises TypeError: If arguments are duplicated, missing, unexpected, or exceed
+       the available positional parameters.
+
     .. note:: Named arguments are copied before binding, so caller-owned input is not mutated.
     """
     values: dict[str, object] = {}
@@ -168,8 +172,10 @@ def _bind_positional(
     :param position: Current zero-based positional cursor.
     :param named: Remaining named arguments, including possible overrides.
     :param values: Binding map being populated for the invocation.
-    :returns: Cursor after consuming a positional argument, or unchanged when a named argument or default supplies the value.
+    :returns: Cursor after consuming a positional argument, or unchanged when a
+       named argument or default supplies the value.
     :raises TypeError: If the parameter is duplicated or has no supplied value or default.
+
     .. note:: Exhausted positional arguments use named binding and default rules.
     """
     if position < len(args):
@@ -191,7 +197,9 @@ def _take_named(
     :param named: Mutable remaining named-argument mapping.
     :returns: Popped argument value or the parameter's default.
     :raises TypeError: If the parameter is required but no value was supplied.
-    .. note:: Successful lookup removes the entry, allowing unexpected keywords to be detected later.
+
+    .. note:: Successful lookup removes the entry, allowing unexpected keywords
+       to be detected later.
     """
     if parameter.name in named:
         return named.pop(parameter.name)
