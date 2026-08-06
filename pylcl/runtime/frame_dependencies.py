@@ -1,0 +1,86 @@
+"""Frame-owned dependency graph, trace staging, and snapshot publication."""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Protocol, cast
+
+from pylcl.errors import LclEvaluationError, LclNameError
+from pylcl.lang.evaluator.context import Resolver
+from pylcl.runtime.dependency_graph import DependencyGraph, build_dependency_graph
+from pylcl.runtime.dependency_reconciliation import reconcile_dependency_edges
+from pylcl.runtime.dependency_snapshots import DependencySnapshot
+from pylcl.runtime.dependency_tracing import DependencyTrace, TracingResolver
+from pylcl.runtime.lifecycle import _FrameLifecycle
+from pylcl.runtime.modules import Module
+from pylcl.types import VarName
+
+
+class _FrameDependencies:
+    def __init__(self, module: Module) -> None:
+        self.graph: DependencyGraph = build_dependency_graph(module)
+        self.traces: dict[str, DependencyTrace] = {}
+
+    def stage(
+        self,
+        name: str,
+        parent: Resolver,
+    ) -> tuple[DependencyTrace, TracingResolver]:
+        trace = DependencyTrace(VarName(name))
+        return trace, TracingResolver(trace, parent)
+
+    def publish(self, name: str, trace: DependencyTrace) -> None:
+        self.traces[name] = trace
+
+    def snapshot(self, name: str) -> DependencySnapshot:
+        static_edges = self.graph.dependencies(name)
+        trace = self.traces.get(name)
+        dynamic_edges = () if trace is None else trace.edges
+        reconciliation = reconcile_dependency_edges(static_edges, dynamic_edges)
+        return DependencySnapshot(
+            VarName(name),
+            static_edges,
+            dynamic_edges,
+            reconciliation,
+        )
+
+    def clear(self) -> None:
+        self.traces.clear()
+
+
+class _SnapshotFrame(Protocol):
+    module: Module
+    values: Mapping[str, object]
+    parent: _SnapshotFrame | None
+    _lifecycle: _FrameLifecycle
+    _dependencies: _FrameDependencies
+
+    def dependency_snapshot(self, name: str) -> DependencySnapshot: ...
+
+
+class _DependencySnapshotApi:
+    def dependency_snapshot(self, name: str) -> DependencySnapshot:
+        """Return point-in-time dependency evidence for one owned definition.
+
+        :param name: Non-empty definition name to inspect.
+        :returns: Immutable static, dynamic, and reconciled edge evidence.
+        :raises ValueError: If *name* is empty.
+        :raises LclEvaluationError: If *name* selects a host binding.
+        :raises LclNameError: If *name* is absent from the Frame hierarchy.
+        :raises LclClosedFrameError: If this Frame is closing or closed.
+
+        .. note::
+           Parent definitions are inspected in their owning parent Frame.
+        """
+        frame = cast(_SnapshotFrame, self)
+        frame._lifecycle.ensure_open(None)
+        if not name:
+            raise ValueError("variable name cannot be empty")
+        if name in frame.module.definitions:
+            return frame._dependencies.snapshot(name)
+        if name in frame.values:
+            message = f"host binding has no dependency snapshot: {name}"
+            raise LclEvaluationError(message)
+        if frame.parent is not None:
+            return frame.parent.dependency_snapshot(name)
+        raise LclNameError(f"unknown variable: {name}")
