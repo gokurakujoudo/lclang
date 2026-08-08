@@ -48,6 +48,7 @@ class _Scanner:
 
     :param text: Complete LCL source text.
     :param origin: Source origin attached to every emitted token.
+    :param base_offset: Physical offset represented by local text offset zero.
     :param offset: Current zero-based source offset.
     :param line: Current one-based source line.
     :param column: Current one-based source column.
@@ -60,6 +61,7 @@ class _Scanner:
 
     text: str
     origin: SourceOrigin
+    base_offset: int = 0
     offset: int = 0
     line: int = 1
     column: int = 1
@@ -225,7 +227,7 @@ class _Scanner:
            Positions are snapshots, so later cursor movement does not mutate
            a position already attached to a token.
         """
-        return SourcePosition(self.line, self.column, self.offset)
+        return SourcePosition(self.line, self.column, self.base_offset + self.offset)
 
     def _span(self, start: SourcePosition) -> SourceSpan:
         """Create a span from a saved start position to the current cursor.
@@ -264,11 +266,13 @@ def scan_tokens(
     text: str,
     *,
     origin: SourceOrigin | None = None,
+    start: SourcePosition | None = None,
 ) -> list[Token]:
     """Scan source text into a source-aware token stream.
 
     :param text: Complete LCL source text.
     :param origin: Optional diagnostic origin; an in-memory origin is the default.
+    :param start: Optional physical position of the first character.
     :returns: Tokens in source order ending with exactly one EOF token.
     :raises LclSyntaxError: If any character sequence is not valid LCL syntax.
 
@@ -276,4 +280,11 @@ def scan_tokens(
        Offsets and columns count Unicode code points rather than encoded bytes.
     """
     selected_origin = origin or SourceOrigin(SourceName("<string>"))
-    return _Scanner(text, selected_origin).scan()
+    selected_start = start or SourcePosition(1, 1, 0)
+    return _Scanner(
+        text,
+        selected_origin,
+        base_offset=selected_start.offset,
+        line=selected_start.line,
+        column=selected_start.column,
+    ).scan()

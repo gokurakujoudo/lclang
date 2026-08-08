@@ -26,7 +26,10 @@ class Module:
     definitions: Mapping[str, LclAstNode]
 
     def __post_init__(self) -> None:
-        """Validate identifiers and detach definitions from caller mutation."""
+        """Validate identifiers and detach definitions from caller mutation.
+
+        :raises ValueError: If the module or a definition name is empty.
+        """
         if not self.name:
             raise ValueError("module name cannot be empty")
         snapshot = dict(self.definitions)

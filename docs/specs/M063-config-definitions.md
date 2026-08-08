@@ -1,4 +1,4 @@
-# M063: configuration headers and definitions
+# M063: configuration versions and definitions
 
 ## Goal
 
@@ -15,25 +15,29 @@ source diagnostics.
 
 ## Contract
 
-- The first meaningful line is exactly `lcl 1`; comments and blank lines may
-  precede it. M069 later enriches version diagnostics but does not change syntax.
-- A definition is `identifier = expression`. Whitespace around `=` is optional,
+- The optional first meaningful declaration is `__LCL_VERSION__: INTEGER`;
+  comments and blank lines may precede it, omission selects version 1, and the
+  metadata never becomes a definition. M069 enriches its diagnostics.
+- A definition is `identifier: expression`. Whitespace around `:` is optional,
   and the right side uses the complete LCL v1 grammar in `docs/lcl-lang.md`.
 - Exactly one top-level declaration occupies a logical line. `=` inside calls,
   displays, strings, f-strings, comparisons, or function forms is not mistaken
   for the declaration separator.
-- Duplicate definitions in one document are rejected at the later name and cite
-  the original declaration. Empty right sides, invalid names, assignment-like
+- Duplicate definitions are valid and preserved in order for later expansion.
+  Empty right sides, invalid names, assignment-like
   chains, and trailing tokens surface as `LclConfigSyntaxError` with adjusted
   document coordinates and the underlying `LclSyntaxError` as cause.
-- Parsing produces only the immutable M060 model; no expression is evaluated.
+- Every parsed binding name in the LCL grammar rejects the `__` prefix: config
+  definitions, function parameters, comprehension targets, exception aliases,
+  and context-manager aliases. Non-binding references remain compatible.
+- Parsing produces only the immutable M060 model; no ordinary expression is evaluated.
 
 ## TDD matrix
 
 - Sunny: parse a header plus scalar, collection, function, and multiline
   definitions and compare their ASTs and spans.
-- Rainy: reject missing headers, duplicate names, empty expressions, chained
-  assignment, and malformed LCL with source excerpts.
+- Rainy: reject late/duplicate/unsupported versions, `=` declarations, empty
+  expressions, double-underscore bindings, and malformed LCL with excerpts.
 - Composite-complex: parse a comment-heavy document whose RHS contains a nested
   comprehension, f-string, conditional, and keyword argument using internal `=`.
 

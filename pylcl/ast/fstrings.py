@@ -22,7 +22,10 @@ class LclStringText(LclAstNode):
     text: str
 
     def __post_init__(self) -> None:
-        """Reject segments that add no semantic value."""
+        """Reject segments that add no semantic value.
+
+        :raises ValueError: If the text is empty.
+        """
         if not self.text:
             raise ValueError("f-string text segment cannot be empty")
 
@@ -48,7 +51,10 @@ class LclFormattedValue(LclAstNode):
     debug: bool = False
 
     def __post_init__(self) -> None:
-        """Validate the explicit V1 conversion vocabulary."""
+        """Validate the explicit V1 conversion vocabulary.
+
+        :raises ValueError: If conversion is outside the supported set.
+        """
         if self.conversion not in {None, "s", "r", "a"}:
             raise ValueError("unsupported f-string conversion")
 

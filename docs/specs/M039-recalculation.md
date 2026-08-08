@@ -7,11 +7,11 @@ until a complete new success or failure can replace it atomically.
 
 ## Module and test layout
 
-- `pylcl/runtime/frames.py` exposes refresh dispatch and cache commit helpers.
-- `pylcl/runtime/recalculation.py` coordinates one refresh owner per definition.
-- `tests/runtime/test_recalculation.py` mirrors atomic replacement, parent
+- `pylcl/runtime/frame/core.py` exposes refresh dispatch and cache commit helpers.
+- `pylcl/runtime/frame/recalculation.py` coordinates one refresh owner per definition.
+- `tests/runtime/frame/test_recalculation.py` mirrors atomic replacement, parent
   ownership, and dependant snapshot retention.
-- `tests/runtime/test_recalculation_flights.py` mirrors initial-owner waiting,
+- `tests/runtime/frame/test_recalculation_flights.py` mirrors initial-owner waiting,
   refresh coalescing, failure/cancellation settlement, and waiter isolation.
 
 ## Contract

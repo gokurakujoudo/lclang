@@ -41,7 +41,10 @@ class SourcePosition:
     offset: int
 
     def __post_init__(self) -> None:
-        """Validate public coordinate invariants after construction."""
+        """Validate public coordinate invariants after construction.
+
+        :raises ValueError: If any coordinate is outside its valid range.
+        """
         if self.line < 1:
             raise ValueError("source line must be positive")
         if self.column < 1:
@@ -68,7 +71,10 @@ class SourceSpan:
     end: SourcePosition
 
     def __post_init__(self) -> None:
-        """Reject ranges whose offsets run backwards."""
+        """Reject ranges whose offsets run backwards.
+
+        :raises ValueError: If the end offset precedes the start offset.
+        """
         if self.end.offset < self.start.offset:
             raise ValueError("source span end cannot precede its start")
 

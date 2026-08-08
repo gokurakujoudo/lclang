@@ -10,8 +10,8 @@ reparses to the same structure and preserves operator meaning.
 - `pylcl/lang/printer/atoms.py`, `expressions.py`, `primaries.py`,
   `collections.py`, and `forms.py` own their matching AST families.
 - Each module has the same-named mirror under `tests/lang/printer/`.
-- `pylcl/lang/printer/printer.py` owns dispatch, parenthesization, and the public
-  `to_source` entry point; `test_printer.py` mirrors integration and errors.
+- `pylcl/lang/printer/dispatch.py` owns dispatch, parenthesization, and the public
+  `to_source` entry point; `test_dispatch.py` mirrors integration and errors.
 - Package `__init__.py` re-exports only public entry points.
 
 ## Contract

@@ -18,8 +18,8 @@ for realistically large files, graphs, diagnostics, and concurrent callers.
 
 - A generated document with 10,000 simple definitions parses without recursion
   proportional to definition count and retains exact first/last spans.
-- A 200-node acyclic include graph with shared subgraphs loads deterministically;
-  resolver calls equal unique identities while merge placement follows includes.
+- A 200-node acyclic using graph with shared subgraphs loads deterministically;
+  resolver calls equal unique identities while expansion placement follows using declarations.
 - At least 100 concurrent callers for one root share source loads, receive equal
   immutable results, and may cancel half their waiters without owner loss.
 - A configured `ConfigLoadLimits` caps source count, include depth, total Unicode

@@ -78,3 +78,9 @@ def test_invalid_comprehension_reports_syntax_error(source: str) -> None:
     with pytest.raises(LclSyntaxError) as caught:
         parse_expression(source)
     assert caught.value.span is not None
+
+
+def test_double_underscore_comprehension_binding_is_rejected() -> None:
+    """Reserved double-underscore names cannot become comprehension targets."""
+    with pytest.raises(LclSyntaxError, match="double underscore"):
+        parse_expression("[item for __item in items]")

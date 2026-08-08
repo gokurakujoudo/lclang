@@ -16,12 +16,13 @@ taxonomy across parsing, resolution, merging, and loading.
 
 ## Contract
 
-- Every source requires one first meaningful `lcl INTEGER` header. Version `1`
-  is supported; missing, duplicate, non-integer, zero/negative, and unsupported
-  versions are distinct configuration errors.
+- Every source independently accepts one optional first meaningful
+  `__LCL_VERSION__: INTEGER` metadata line and defaults to version 1. Late,
+  duplicate, non-integer, zero/negative, and unsupported versions are distinct
+  configuration errors.
 - Each included document negotiates independently. An unsupported child cannot
   inherit the root version or be silently skipped.
-- Public subclasses cover syntax, version, include, cycle, merge, and lifecycle
+- Public subclasses cover syntax, version, using, cycle, expansion, limit, and lifecycle
   failures under `LclConfigError`. Each carries a stable machine code, message,
   primary origin/span, ordered related locations, and original cause when present.
 - Human rendering includes display name, one-based line/column, source excerpt,

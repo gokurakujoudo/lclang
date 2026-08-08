@@ -9,9 +9,9 @@ ordinary failures.
 ## Module and test layout
 
 - `pylcl/runtime/modules.py` owns the named immutable definition snapshot.
-- `pylcl/runtime/frames.py` owns local lookup, lazy evaluation, and cache state.
+- `pylcl/runtime/frame/core.py` and `frame/evaluation.py` own Frame state and lazy evaluation.
 - `tests/runtime/test_modules.py` mirrors module validation and snapshotting.
-- `tests/runtime/test_frames.py` mirrors lazy lookup and result/failure caching.
+- `tests/runtime/frame/test_core.py` mirrors lazy lookup and result/failure caching.
 
 ## Contract
 

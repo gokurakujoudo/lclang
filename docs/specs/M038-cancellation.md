@@ -7,8 +7,8 @@ genuine cancellation originating inside the owner evaluation.
 
 ## Module and test layout
 
-- `pylcl/runtime/frames.py` shields shared owner Tasks at waiter boundaries.
-- `tests/runtime/test_cancellation.py` mirrors waiter cancellation, surviving
+- `pylcl/runtime/frame/evaluation.py` shields owner Tasks at waiter boundaries.
+- `tests/runtime/frame/test_cancellation.py` mirrors waiter cancellation, surviving
   peers, owner-originated cancellation, retry, and cache completion.
 
 ## Contract

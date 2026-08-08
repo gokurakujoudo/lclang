@@ -8,12 +8,12 @@ module's static dependency edges without coupling the mechanism to `Frame`.
 
 ## Module and test layout
 
-- `pylcl/runtime/dependency_tracing.py` owns a per-definition trace and a
+- `pylcl/runtime/dependency/tracing.py` owns a per-definition trace and a
   resolver decorator that records before delegating lookup.
-- `pylcl/runtime/dependency_reconciliation.py` owns the immutable comparison
+- `pylcl/runtime/dependency/reconciliation.py` owns the immutable comparison
   result and pure reconciliation function.
-- `tests/runtime/test_dependency_tracing.py` and
-  `tests/runtime/test_dependency_reconciliation.py` mirror those production
+- `tests/runtime/dependency/test_tracing.py` and
+  `tests/runtime/dependency/test_reconciliation.py` mirror those production
   responsibilities.
 
 `Frame` ownership, published snapshots, and atomic recalculation replacement

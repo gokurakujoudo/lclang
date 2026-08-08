@@ -25,7 +25,10 @@ class LclAttribute(LclAstNode):
     name: VarName
 
     def __post_init__(self) -> None:
-        """Reject an empty attribute name."""
+        """Reject an empty attribute name.
+
+        :raises ValueError: If the attribute name is empty.
+        """
         if not self.name:
             raise ValueError("attribute name cannot be empty")
 
@@ -56,7 +59,10 @@ class LclSafeAttribute(LclAstNode):
     name: VarName
 
     def __post_init__(self) -> None:
-        """Reject an empty attribute name."""
+        """Reject an empty attribute name.
+
+        :raises ValueError: If the attribute name is empty.
+        """
         if not self.name:
             raise ValueError("safe attribute name cannot be empty")
 

@@ -19,15 +19,18 @@ text parsing, inclusion, or evaluation is implemented.
 
 - `ConfigDocument` is an immutable ordered sequence of declarations associated
   with one `SourceOrigin` and language version.
-- A declaration is either `ConfigDefinition` or `ConfigInclude`. Definitions
+- A declaration is either `ConfigDefinition` or `ConfigUsing`. Definitions
   contain a validated `Name`, parsed expression, source span, and declaration
-  ordinal. Includes contain the literal target, source span, and ordinal.
+  ordinal. Using declarations contain the decoded quoted target, source span,
+  and ordinal.
 - Construction preserves declaration order and copies caller-owned iterables so
   later mutation cannot affect a document.
-- Empty documents are valid. Empty names, non-positive versions, overlapping
+- Version metadata defaults to language version 1 and is never a declaration or
+  runtime definition. Empty documents are valid. Empty names, non-positive versions, overlapping
   ordinals, mismatched origins, and spans outside their origin raise `ValueError`.
-- Models carry syntax and provenance only. They do not read files, resolve
-  includes, merge names, create Frames, or evaluate expressions.
+- Duplicate definition names are valid and retain distinct ordinals and spans.
+  Models carry syntax and provenance only. They do not read files, resolve
+  using targets, expand names, create Frames, or evaluate expressions.
 
 ## TDD matrix
 

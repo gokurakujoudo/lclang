@@ -12,6 +12,12 @@ _RESERVED_NAMES = frozenset(
 
 
 def _validate_export_name(name: str, label: str) -> None:
+    """Reject names unsafe for public mapping/attribute namespaces.
+
+    :param name: Candidate public identifier.
+    :param label: Human-readable field label used in diagnostics.
+    :raises ValueError: If the candidate violates namespace policy.
+    """
     if (
         not name.isidentifier()
         or keyword.iskeyword(name)
@@ -39,7 +45,10 @@ class StdlibEntry:
     summary: str
 
     def __post_init__(self) -> None:
-        """Validate stable public metadata without touching the value."""
+        """Validate stable public metadata without touching the value.
+
+        :raises ValueError: If the name or summary violates manifest policy.
+        """
         _validate_export_name(self.name, "entry name")
         if not self.summary.strip() or "\n" in self.summary or "\r" in self.summary:
             raise ValueError("standard-library summary must be one non-blank line")
@@ -62,7 +71,13 @@ class StdlibManifest:
     entries: tuple[StdlibEntry, ...]
 
     def __init__(self, namespace: str, entries: Iterable[StdlibEntry]) -> None:
-        """Consume, validate, and detach one manifest declaration."""
+        """Consume, validate, and detach one manifest declaration.
+
+        :param namespace: Public non-keyword root identifier.
+        :param entries: Entry iterable consumed once in declaration order.
+        :raises TypeError: If an item is not a :class:`StdlibEntry`.
+        :raises ValueError: If the namespace is invalid or names repeat.
+        """
         _validate_export_name(namespace, "namespace")
         snapshot = tuple(entries)
         if any(not isinstance(entry, StdlibEntry) for entry in snapshot):

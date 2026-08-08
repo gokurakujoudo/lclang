@@ -15,14 +15,15 @@ parsing, inclusion, merging, and later evaluation.
 
 ## Contract
 
-- `FileConfigResolver` resolves a root path explicitly supplied by the host.
-  Relative include targets resolve against the importing file's directory, not
+- `FileConfigResolver` resolves a `.lclcfg` root path explicitly supplied by the host.
+  Relative using targets resolve against the importing file's directory, not
   process CWD; normalized absolute paths form canonical identities.
 - Files are decoded strictly as UTF-8, with an optional UTF-8 BOM accepted only
   at the beginning. Decode, permission, directory, and missing-file failures are
   structured include errors with preserved causes.
 - Each definition retains its physical file origin and expression span after
-  merge. The root origin and ordered include chain remain available for errors.
+  expansion. Magic constants use this same canonical file. The root origin and
+  ordered using chain remain available for errors.
 - Symlink resolution policy is injected and documented: the default canonical
   identity uses `Path.resolve(strict=False)` while opening the requested resolved
   path. Path case follows the host filesystem and is not manually folded.
@@ -36,7 +37,10 @@ parsing, inclusion, merging, and later evaluation.
 - Rainy: diagnose invalid UTF-8, missing files, directory targets, traversal
   outside an allowed root, and read failures.
 - Composite-complex: load nested relative paths with `..`, Unicode filenames,
-  shadowing, and a deep expression error whose excerpt and include chain are exact.
+  shadowing, and a deep expression error whose excerpt and using chain are exact.
+  In a three-file nested using chain, independently bind `__file__` in each
+  physical file and prove all three eager constants contain their defining
+  file's distinct canonical path.
 
 ## Completion evidence
 

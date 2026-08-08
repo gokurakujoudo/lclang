@@ -17,6 +17,10 @@ from pylcl.stdlib import STANDARD_PRESET
 def test_root_runtime_exports_are_canonical_and_listed_once() -> None:
     """Primary runtime values retain one canonical implementation identity."""
     expected = {
+        "LCL_BUILTINS": pylcl.LCL_BUILTINS,
+        "LCL_IMPORTS": pylcl.LCL_IMPORTS,
+        "LCL_ROOT": pylcl.LCL_ROOT,
+        "LCL_RUNTIME": pylcl.LCL_RUNTIME,
         "DependencySnapshot": DependencySnapshot,
         "EvaluationLimits": EvaluationLimits,
         "Frame": Frame,
@@ -42,12 +46,11 @@ def test_advanced_runtime_and_stdlib_construction_remain_namespaced() -> None:
 @pytest.mark.asyncio
 async def test_root_only_runtime_workflow_evaluates_inspects_and_closes() -> None:
     """One root import supports the complete intended 0.1 user workflow."""
-    module = pylcl.Module(
-        pylcl.ModuleName("app"),
-        {"value": pylcl.parse_expression('json.encode({"answer": 42})')},
+    module = pylcl.define_module(
+        "app",
+        {"value": 'json.encode({"answer": 42})'},
     )
-    factory = pylcl.FrameFactory(module, pylcl.STANDARD_PRESET)
-    frame = factory.create(pylcl.FrameId("frame:1"))
+    frame = pylcl.define_frame(module)
     assert await frame.get("value") == '{"answer":42}'
     snapshot = frame.dependency_snapshot("value")
     assert isinstance(snapshot, pylcl.DependencySnapshot)

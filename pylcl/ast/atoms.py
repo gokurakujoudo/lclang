@@ -37,7 +37,10 @@ class LclName(LclAstNode):
     identifier: VarName
 
     def __post_init__(self) -> None:
-        """Reject identifiers that cannot name a value."""
+        """Reject identifiers that cannot name a value.
+
+        :raises ValueError: If the identifier is empty.
+        """
         if not self.identifier:
             raise ValueError("AST name identifier cannot be empty")
 

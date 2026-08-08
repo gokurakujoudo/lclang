@@ -8,14 +8,14 @@ standalone language evaluation.
 
 ## Module and test layout
 
-- `pylcl/runtime/limits.py` owns immutable public `EvaluationLimits` and mutable
+- `pylcl/runtime/frame/limits.py` owns immutable public `EvaluationLimits` and mutable
   per-chain budget state.
 - `pylcl/lang/evaluator/budget.py` owns an inward-facing guard protocol and
   ContextVar hooks so the language layer never imports runtime.
-- `pylcl/lang/evaluator/evaluator.py` accounts for every visited semantic node.
+- `pylcl/lang/evaluator/dispatch.py` accounts for every visited semantic node.
 - Collection evaluator modules report materialized result sizes through the
   same language-owned guard hook.
-- `tests/runtime/test_limits.py` mirrors validation, depth, work, collection,
+- `tests/runtime/frame/test_limits.py` mirrors validation, depth, work, collection,
   hierarchy, cache, recalculation, cancellation, and task-isolation behaviour.
 - `tests/lang/evaluator/test_budget.py` verifies that evaluation without an
   installed runtime guard remains unrestricted.

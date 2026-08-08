@@ -9,7 +9,12 @@ def test_smoke_program_is_standalone_and_records_both_artifact_paths() -> None:
     """The fixed program uses public APIs and emits machine-checkable evidence."""
     for kind in ("source-wheel", "sdist-wheel"):
         program = smoke_program(kind)
+        compile(program, f"<{kind}-smoke>", "exec")
         assert "import pylcl" in program
+        assert "from pylcl.config import load_config" in program
+        assert 'using "共享.lclcfg"' in program
+        assert "len(config.history[\"base\"]) == 2" in program
+        assert "await config_frame.get(\"answer\") == 42" in program
         assert "from tests" not in program
         assert f"artifact={kind}" in program
         assert "closed=" in program

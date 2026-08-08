@@ -74,3 +74,10 @@ def test_invalid_form_reports_syntax_error(source: str) -> None:
     with pytest.raises(LclSyntaxError) as caught:
         parse_expression(source)
     assert caught.value.span is not None
+
+
+@pytest.mark.parametrize("source", ["def (__arg): __arg", "def (**__kwargs): 1"])
+def test_double_underscore_function_bindings_are_rejected(source: str) -> None:
+    """Reserved double-underscore names cannot become function bindings."""
+    with pytest.raises(LclSyntaxError, match="double underscore"):
+        parse_expression(source)

@@ -7,9 +7,9 @@ detecting dependency cycles before they can deadlock on an in-flight Task.
 
 ## Module and test layout
 
-- `pylcl/runtime/frames.py` coordinates per-name owner tasks.
-- `pylcl/runtime/flight.py` owns task-local dependency paths and diagnostics.
-- `tests/runtime/test_flight.py` mirrors concurrent success/failure sharing,
+- `pylcl/runtime/frame/evaluation.py` coordinates per-name owner tasks.
+- `pylcl/runtime/frame/flights.py` owns task-local dependency paths and diagnostics.
+- `tests/runtime/frame/test_flights.py` mirrors concurrent success/failure sharing,
   direct cycles, indirect cycles, and independent Frame isolation.
 
 ## Contract

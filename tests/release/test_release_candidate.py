@@ -31,9 +31,9 @@ def test_existing_output_and_archive_traversal_are_rejected(tmp_path: Path) -> N
 
 def test_artifact_record_is_stable_for_composite_evidence(tmp_path: Path) -> None:
     """Sunny artifact evidence retains names, sizes, member counts, and digests."""
-    path = tmp_path / "pylcl-0.1.0.whl"
+    path = tmp_path / "pylcl-0.2.0.whl"
     path.write_bytes(b"wheel")
-    report = ArtifactReport(path, "wheel", ("pylcl/py.typed",), {"Version": "0.1.0"}, "abc")
+    report = ArtifactReport(path, "wheel", ("pylcl/py.typed",), {"Version": "0.2.0"}, "abc")
     record = artifact_record((report,))
-    assert '"version": "0.1.0"' in record
+    assert '"version": "0.2.0"' in record
     assert '"sha256": "abc"' in record

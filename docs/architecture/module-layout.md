@@ -13,7 +13,9 @@ pylcl/
     parser/        Pratt core, displays, comprehensions and special forms
     printer/       precedence-aware canonical source rendering
     evaluator/     node-family evaluation handlers and auto-await helpers
-  runtime/         modules, frames, cache state, dependencies and presets
+  runtime/         modules, presets and public runtime exports
+    frame/         Frame core, mixins, cache lifecycle and inspection trees
+    dependency/    static/dynamic analytics and qualified Frame graphs
   stdlib/          reviewed manifests, namespaces and async helpers
   config/          logical lines, includes, origins and config diagnostics
   cli/             typed contexts, parsing, routing, runners and built-ins
@@ -36,7 +38,9 @@ Tests mirror subsystem ownership:
 tests/
   ast/             node, visitor and round-trip contracts
   lang/            lexer/parser/printer/evaluator behaviour
-  runtime/         cache, concurrency, dependency and lifecycle behaviour
+  runtime/         module and preset behaviour
+    frame/         cache, concurrency, lifecycle and inspection behaviour
+    dependency/    static/dynamic and qualified graph behaviour
   stdlib/          manifest and async-helper behaviour
   config/          text, include, origin and diagnostic behaviour
   cli/             argv, routing, stream and exit-code behaviour

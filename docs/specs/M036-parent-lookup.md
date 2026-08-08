@@ -7,8 +7,8 @@ definition and its cache.
 
 ## Module and test layout
 
-- `pylcl/runtime/frames.py` adds an optional parent and hierarchical fallback.
-- `tests/runtime/test_frames.py` mirrors shadowing, parent ownership, cache
+- `pylcl/runtime/frame/core.py` and `frame/lookup.py` add parent fallback.
+- `tests/runtime/frame/test_core.py` mirrors shadowing, parent ownership, cache
   identity, and missing-name source propagation.
 
 ## Contract

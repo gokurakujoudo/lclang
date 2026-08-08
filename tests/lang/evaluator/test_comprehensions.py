@@ -32,6 +32,66 @@ async def test_nested_list_comprehension_has_isolated_targets() -> None:
 
 
 @pytest.mark.asyncio
+async def test_multilayer_comprehension_filters_nested_comprehension() -> None:
+    """Nested heads inherit outer targets after every clause filter passes."""
+    values = {
+        "xs": [1, 2, 3],
+        "ys": [2, 4],
+        "zs": [2, 3, 4, 6],
+    }
+    node = parse_expression(
+        "[[x * y + z for z in zs if z % y == 0] "
+        "for x in xs if x % 2 == 1 for y in ys if y > x]"
+    )
+
+    assert await evaluate(node, values) == [[4, 6, 8], [8], [16]]
+
+
+@pytest.mark.asyncio
+async def test_multilayer_clauses_filter_nested_data_structures() -> None:
+    """Each clause applies all filters while traversing nested mappings."""
+    values = {
+        "x": [
+            [
+                {"kind": "keep", "value": 1},
+                {"kind": "drop", "value": 2},
+                {"kind": "keep", "value": 4},
+            ],
+            [
+                {"kind": "skip", "value": 6},
+                {"kind": "keep", "value": 8},
+            ],
+            [
+                {"kind": "keep", "value": 3},
+                {"kind": "keep", "value": 10},
+            ],
+        ]
+    }
+    node = parse_expression(
+        '[z["value"] for y in x '
+        'if y[0]["kind"] != "skip" if y[0]["value"] < 5 '
+        'for z in y if z["kind"] == "keep" if z["value"] % 2 == 0]'
+    )
+
+    assert await evaluate(node, values) == [4, 10]
+
+
+@pytest.mark.asyncio
+async def test_nested_starred_comprehensions_flatten_multiple_layers() -> None:
+    """Nested starred heads flatten inner groups into one ordered list."""
+    values = {
+        "a": [
+            [[1, 2], [3]],
+            [[], [4, 5]],
+            [[6], [7, 8]],
+        ]
+    }
+    node = parse_expression("[*[*c for c in b] for b in a]")
+
+    assert await evaluate(node, values) == [1, 2, 3, 4, 5, 6, 7, 8]
+
+
+@pytest.mark.asyncio
 async def test_set_and_dict_comprehensions_materialize() -> None:
     """Set and dictionary heads retain their collection semantics."""
     values = {"xs": [1, 2, 2]}

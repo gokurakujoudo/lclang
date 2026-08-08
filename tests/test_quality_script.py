@@ -41,8 +41,20 @@ def public(value: str) -> str:
         self.assertTrue(any("200 lines" in failure for failure in failures))
         self.assertTrue(any("docstring" in failure for failure in failures))
 
+    def test_imports_and_docstrings_do_not_consume_the_source_budget(self) -> None:
+        """The line gate measures implementation rather than imports or documentation."""
+        imports = "\n".join(f"import module_{index}" for index in range(210))
+        documentation = '\n'.join(['"""Module', *["detail" for _ in range(210)], '"""'])
+        source = f"{documentation}\n{imports}\nvalue = 1\n"
+        self.assertEqual(check_source(source, DISPLAY_PATH), [])
+
+    def test_expression_bodies_do_not_confuse_docstring_exclusion(self) -> None:
+        """Lambda bodies remain ordinary counted implementation expressions."""
+        source = '"""Module."""\n\nvalue = lambda item: item\n'
+        self.assertEqual(check_source(source, DISPLAY_PATH), [])
+
     def test_incomplete_rst_fields_are_reported_independently(self) -> None:
-        """Missing parameter, result, exception, and note fields are visible."""
+        """Missing parameter, result, and exception fields are visible."""
         source = '''"""Module."""
 
 def public(value: str) -> str:
@@ -55,7 +67,32 @@ def public(value: str) -> str:
         assert any(":param value:" in failure for failure in failures)
         assert any(":returns:" in failure for failure in failures)
         assert any(":raises ValueError:" in failure for failure in failures)
-        assert any(".. note::" in failure for failure in failures)
+
+    def test_none_return_and_ordinary_behavior_need_no_redundant_fields(self) -> None:
+        """None-returning callables need neither a result field nor a forced note."""
+        source = '''"""Module."""
+
+def action(value: str) -> None:
+    """Consume one value.
+
+    :param value: Text consumed by the action.
+    """
+    print(value)
+'''
+        self.assertEqual(check_source(source, DISPLAY_PATH), [])
+
+    def test_reraised_exception_variables_do_not_invent_exception_types(self) -> None:
+        """A dynamic re-raise cannot produce a meaningful rST exception type field."""
+        source = '''"""Module."""
+
+def reraised(error: Exception) -> None:
+    """Raise a caller-provided failure.
+
+    :param error: Failure selected by the caller.
+    """
+    raise error
+'''
+        self.assertEqual(check_source(source, DISPLAY_PATH), [])
 
     def test_annotated_public_value_fields_require_param_entries(self) -> None:
         """Dataclass-like constructor fields are documented at the class."""

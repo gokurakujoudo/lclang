@@ -7,6 +7,7 @@ from collections.abc import Callable
 from pylcl.ast import LclAstNode, LclExceptHandler, LclTry, LclWith, LclWithItem
 from pylcl.errors import LclSyntaxError
 from pylcl.lang.lexer import TokenKind
+from pylcl.lang.parser.bindings import validate_binding_name
 from pylcl.lang.parser.stream import TokenStream
 from pylcl.source import SourceSpan
 from pylcl.types import VarName
@@ -86,6 +87,7 @@ class _ControlFormParser:
                         TokenKind.IDENTIFIER,
                         "except as requires a target name",
                     )
+                    validate_binding_name(name_token)
                     name = VarName(name_token.lexeme)
             else:
                 bare_seen = True
@@ -135,6 +137,7 @@ class _ControlFormParser:
                     TokenKind.IDENTIFIER,
                     "with as requires a target name",
                 )
+                validate_binding_name(target_token)
                 target = VarName(target_token.lexeme)
                 end = target_token.span
             items.append(

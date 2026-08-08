@@ -26,7 +26,10 @@ class LclExceptHandler(LclAstNode):
     body: LclAstNode
 
     def __post_init__(self) -> None:
-        """Validate the optional exception binding."""
+        """Validate the optional exception binding.
+
+        :raises ValueError: If a binding is empty or belongs to a bare handler.
+        """
         if self.name is not None and not self.name:
             raise ValueError("except binding name cannot be empty")
         if self.name is not None and self.exception is None:
@@ -63,7 +66,10 @@ class LclTry(LclAstNode):
     finally_body: LclAstNode | None = None
 
     def __post_init__(self) -> None:
-        """Require recovery or finalization behaviour."""
+        """Require recovery or finalization behaviour.
+
+        :raises ValueError: If both handlers and finalization are absent.
+        """
         if not self.handlers and self.finally_body is None:
             raise ValueError("try form requires except or finally")
 
@@ -97,7 +103,10 @@ class LclWithItem(LclAstNode):
     target: VarName | None = None
 
     def __post_init__(self) -> None:
-        """Reject an empty optional binding name."""
+        """Reject an empty optional binding name.
+
+        :raises ValueError: If a supplied target is empty.
+        """
         if self.target is not None and not self.target:
             raise ValueError("with target name cannot be empty")
 
@@ -128,7 +137,10 @@ class LclWith(LclAstNode):
     body: LclAstNode
 
     def __post_init__(self) -> None:
-        """Require at least one context item."""
+        """Require at least one context item.
+
+        :raises ValueError: If the item sequence is empty.
+        """
         if not self.items:
             raise ValueError("with form requires at least one context item")
 

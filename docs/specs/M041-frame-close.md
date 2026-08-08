@@ -7,11 +7,11 @@ releases owned cached resources exactly once, and permanently rejects lookup.
 
 ## Module and test layout
 
-- `pylcl/runtime/lifecycle.py` owns close state, task cancellation, cache commit
+- `pylcl/runtime/frame/lifecycle.py` owns close state, task cancellation, cache commit
   retirement, resource deduplication, and cleanup execution.
-- `pylcl/runtime/frames.py` exposes `closed` and `close`, checks lifecycle state
+- `pylcl/runtime/frame/closing.py` exposes `closed` and `close`; the core checks state
   at every lookup/recalculation boundary, and delegates atomic cache commits.
-- `tests/runtime/test_lifecycle.py` mirrors close rejection, cancellation,
+- `tests/runtime/frame/test_lifecycle.py` mirrors close rejection, cancellation,
   sync/async cleanup, ordering, deduplication, failures, hierarchy, refresh
   retirement, idempotence, and close-waiter cancellation.
 

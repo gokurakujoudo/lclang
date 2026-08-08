@@ -81,7 +81,10 @@ class LclBoolean(LclAstNode):
     values: tuple[LclAstNode, ...]
 
     def __post_init__(self) -> None:
-        """Enforce Boolean expression cardinality."""
+        """Enforce Boolean expression cardinality.
+
+        :raises ValueError: If fewer than two operands are supplied.
+        """
         if len(self.values) < 2:
             raise ValueError("Boolean expression requires at least two operands")
 
@@ -114,7 +117,10 @@ class LclCompare(LclAstNode):
     comparators: tuple[LclAstNode, ...]
 
     def __post_init__(self) -> None:
-        """Enforce comparison-chain cardinality."""
+        """Enforce comparison-chain cardinality.
+
+        :raises ValueError: If operators and comparators are empty or mismatched.
+        """
         if not self.operators or len(self.operators) != len(self.comparators):
             raise ValueError("comparison requires one comparator per operator")
 

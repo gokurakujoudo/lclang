@@ -15,18 +15,21 @@ identity, without introducing filesystem I/O or include resolution.
 
 ## Contract
 
-- `parse_config_text(text, *, source_name="<memory>")` accepts Unicode `str` and
+- `parse_config(text, *, source_name="<memory>", source_path=None)` accepts Unicode `str` and
   returns a `ConfigDocument`. Bytes are rejected with `TypeError` so decoding
   policy stays at host boundaries.
-- `source_name` must be a non-empty display label. It is never resolved as a
-  path, opened, normalized against the working directory, or used as an include
-  identity.
+- `source_name` must be a non-empty display label. Optional `source_path` is
+  normalized without reading it and must end in `.lclcfg`.
+- In file-backed sources, standalone `__file__` and `__dir__` expression tokens
+  become eager string constants for the canonical path and its parent before
+  Pratt parsing. Their original spans remain intact and no magic name reaches a
+  runtime Module or dependency graph. Pathless use is a structured origin error.
 - Every document, declaration, AST, error, and excerpt points to one retained
   `SourceOrigin`; repeated calls return independent immutable graphs.
 - The function performs no ambient I/O and is deterministic for equal text and
   source name. Source text is retained only as required by the established
   diagnostic model.
-- Include declarations may parse after M065 but cannot be resolved through this
+- Using declarations may parse after M065 but cannot be resolved through this
   boundary alone.
 
 ## TDD matrix

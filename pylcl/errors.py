@@ -44,7 +44,10 @@ class LclError(Exception):
         self.code = selected_code
 
     def __str__(self) -> str:
-        """Render a stable single-line diagnostic."""
+        """Render a stable single-line diagnostic.
+
+        :returns: Code, message, and optional source coordinates.
+        """
         diagnostic = f"[{self.code}] {self.message}"
         if self.span is None:
             return diagnostic

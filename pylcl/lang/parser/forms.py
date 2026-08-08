@@ -8,6 +8,7 @@ from pylcl.ast import LclAssert, LclAstNode, LclFunction, LclParameter, LclRaise
 from pylcl.ast.forms import ParameterKind
 from pylcl.errors import LclSyntaxError
 from pylcl.lang.lexer import TokenKind
+from pylcl.lang.parser.bindings import validate_binding_name
 from pylcl.lang.parser.stream import TokenStream
 from pylcl.source import SourceSpan
 from pylcl.types import VarName
@@ -137,6 +138,7 @@ class _FormParser:
             if marker is not None:
                 kind = ParameterKind.VAR_POSITIONAL
         name_token = self.stream.expect(TokenKind.IDENTIFIER, "expected parameter name")
+        validate_binding_name(name_token)
         if name_token.lexeme in names:
             raise LclSyntaxError("duplicate function parameter", span=name_token.span)
         names.add(name_token.lexeme)
