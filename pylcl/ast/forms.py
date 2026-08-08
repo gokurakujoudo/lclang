@@ -40,7 +40,10 @@ class LclParameter(LclAstNode):
     default: LclAstNode | None = None
 
     def __post_init__(self) -> None:
-        """Validate local parameter invariants."""
+        """Validate local parameter invariants.
+
+        :raises ValueError: If the name is empty or a variadic default is present.
+        """
         if not self.name:
             raise ValueError("function parameter name cannot be empty")
         if self.default is not None and self.kind in {

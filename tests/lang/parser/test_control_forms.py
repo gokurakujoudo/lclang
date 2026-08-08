@@ -71,3 +71,16 @@ def test_invalid_control_form_reports_syntax_error(source: str) -> None:
     with pytest.raises(LclSyntaxError) as caught:
         parse_expression(source)
     assert caught.value.span is not None
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "try: value except Error as __error: fallback",
+        "with resource as __resource: value",
+    ],
+)
+def test_double_underscore_control_bindings_are_rejected(source: str) -> None:
+    """Exception and context aliases share the reserved binding rule."""
+    with pytest.raises(LclSyntaxError, match="double underscore"):
+        parse_expression(source)

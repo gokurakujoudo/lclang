@@ -70,7 +70,10 @@ class LclKeywordArgument(LclAstNode):
     value: LclAstNode
 
     def __post_init__(self) -> None:
-        """Reject an empty keyword name."""
+        """Reject an empty keyword name.
+
+        :raises ValueError: If the name is empty.
+        """
         if not self.name:
             raise ValueError("keyword argument name cannot be empty")
 

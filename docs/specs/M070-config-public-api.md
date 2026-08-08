@@ -15,14 +15,16 @@ the existing Module, FrameFactory, and Preset runtime abstractions.
 
 ## Contract
 
-- `parse_config(text, *, source_name)` synchronously parses one in-memory source
-  without resolving includes. `load_config(source, *, resolver)` asynchronously
-  resolves, parses, and merges a graph and returns immutable `Config`.
+- `parse_config(text, *, source_name="<memory>", source_path=None)` synchronously
+  parses one source without resolving using declarations. `load_config(path,
+  *, resolver=None, limits=None)` asynchronously resolves, parses, and expands a
+  graph and returns immutable `Config`; the default resolver reads files.
 - `Config` exposes version, root origin, definitions, provenance history, and
   conversion to an immutable runtime `Module`. It never evaluates on inspection.
 - `Config.frame_factory(*, preset=None, parent=None, limits=None)` delegates to
   the established runtime factory. The caller owns every created Frame and must
-  close it; configs and factories are reusable immutable snapshots.
+  close it; configs and factories are reusable immutable snapshots. Omitting
+  the parent selects the canonical imports/runtime/builtins/root hierarchy.
 - `evaluate_config(...)` is async convenience for one owned Frame and guarantees
   cleanup. No new synchronous evaluation boundary is added; existing
   `evaluate_sync` remains the only sync convenience for evaluation.
@@ -33,7 +35,7 @@ the existing Module, FrameFactory, and Preset runtime abstractions.
 
 - Sunny: parse/load, inspect provenance, build independent Frames, and evaluate a
   config using a standard Preset.
-- Rainy: reject unresolved memory includes, resolver failures, invalid runtime
+- Rainy: reject unresolved memory using declarations, resolver failures, invalid runtime
   arguments, and prove convenience cleanup after evaluation failure.
 - Composite-complex: load a shadowing include graph, combine a parent and preset,
   evaluate concurrent names, inspect dependencies, and close all resources.

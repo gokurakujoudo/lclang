@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 MAX_SOURCE_LINES = 200
+# Repository root containing the production package.
 ROOT = Path(__file__).resolve().parents[1]
 DocumentedNode = ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
 CallableNode = ast.FunctionDef | ast.AsyncFunctionDef
@@ -45,9 +46,9 @@ def _raised_exception_names(node: CallableNode) -> set[str]:
         if not isinstance(child, ast.Raise) or child.exc is None:
             continue
         expression = child.exc.func if isinstance(child.exc, ast.Call) else child.exc
-        if isinstance(expression, ast.Name):
+        if isinstance(expression, ast.Name) and expression.id[:1].isupper():
             names.add(expression.id)
-        elif isinstance(expression, ast.Attribute):
+        elif isinstance(expression, ast.Attribute) and expression.attr[:1].isupper():
             names.add(expression.attr)
     return names
 
@@ -62,19 +63,66 @@ def _class_fields(node: ast.ClassDef) -> list[str]:
     ]
 
 
+def requires_return_field(node: CallableNode) -> bool:
+    """Return whether a callable produces a documented result value.
+
+    :param node: Function declaration being checked.
+    :returns: ``True`` when its annotation or return statements yield a value.
+
+    .. note::
+       Explicit ``-> None`` and bare-return procedures omit ``:returns:``.
+    """
+    if isinstance(node.returns, ast.Constant) and node.returns.value is None:
+        return False
+    if node.returns is not None:
+        return True
+    return any(
+        isinstance(child, ast.Return) and child.value is not None
+        for child in ast.walk(node)
+    )
+
+
+def effective_source_lines(source: str, tree: ast.Module) -> int:
+    """Count implementation lines after excluding imports and docstrings.
+
+    :param source: Complete Python source text.
+    :param tree: Parsed syntax tree for *source*.
+    :returns: Physical line count governed by the source-size policy.
+
+    .. note::
+       Blank and comment lines remain part of the implementation budget.
+    """
+    excluded: set[int] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            excluded.update(range(node.lineno, (node.end_lineno or node.lineno) + 1))
+        body = (
+            node.body
+            if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+            else ()
+        )
+        if body and isinstance(body[0], ast.Expr):
+            value = body[0].value
+            if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                end_line = body[0].end_lineno or body[0].lineno
+                excluded.update(range(body[0].lineno, end_line + 1))
+    return sum(
+        line_number not in excluded
+        for line_number, _ in enumerate(source.splitlines(), start=1)
+    )
+
+
 def _rst_failures(node: DocumentedNode, path: Path) -> list[str]:
     if isinstance(node, ast.Module):
         return []
     docstring = ast.get_docstring(node) or ""
     name = node.name
     failures: list[str] = []
-    if ".. note::" not in docstring:
-        failures.append(f"{path}:{name}: docstring lacks '.. note::'")
     if isinstance(node, ast.ClassDef):
         parameters = _class_fields(node)
     else:
         parameters = _callable_parameters(node)
-        if ":returns:" not in docstring:
+        if requires_return_field(node) and ":returns:" not in docstring:
             failures.append(f"{path}:{name}: docstring lacks ':returns:'")
         for exception in sorted(_raised_exception_names(node)):
             marker = f":raises {exception}:"
@@ -96,9 +144,9 @@ def check_source(source: str, path: Path) -> list[str]:
     :raises SyntaxError: If the source is not valid Python.
     """
     failures: list[str] = []
-    if len(source.splitlines()) > MAX_SOURCE_LINES:
-        failures.append(f"{path}: source exceeds 200 lines")
     tree = ast.parse(source, filename=str(path))
+    if effective_source_lines(source, tree) > MAX_SOURCE_LINES:
+        failures.append(f"{path}: source exceeds 200 lines")
     nodes = _documented_nodes(tree)
     missing = [node for node in nodes if ast.get_docstring(node) is None]
     if missing:

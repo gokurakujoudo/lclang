@@ -12,7 +12,7 @@ every evaluator family.
   conversion, format-spec recursion, and concatenation.
 - `tests/lang/evaluator/test_fstrings.py` mirrors literal, conversion,
   formatting, nested-spec, evaluation-order, awaitable, and failure behaviour.
-- `tests/lang/evaluator/test_evaluator.py` and `tests/test_public_api.py` retain
+- `tests/lang/evaluator/test_dispatch.py` and `tests/test_public_api.py` retain
   the async/sync boundary and root-package export audit.
 
 ## Contract

@@ -8,13 +8,13 @@ cached evaluation and atomic recalculation outcomes.
 
 ## Module and test layout
 
-- `pylcl/runtime/dependency_snapshots.py` owns the public immutable snapshot.
-- `pylcl/runtime/frame_dependencies.py` owns graph/trace staging, publication,
+- `pylcl/runtime/dependency/snapshot.py` owns the public immutable snapshot.
+- `pylcl/runtime/frame/dependencies.py` owns graph/trace staging, publication,
   reconciliation, hierarchy-neutral lookup, and cleanup support.
-- `pylcl/runtime/frames.py` exposes owner-aware snapshot lookup and installs a
-  tracing resolver for each definition evaluation.
-- Matching `tests/runtime/test_dependency_snapshots.py` and
-  `tests/runtime/test_frame_dependencies.py` mirror value and Frame behaviour.
+- `pylcl/runtime/frame/evaluation.py` installs a tracing resolver for each
+  definition evaluation; the dependency mixin exposes owner-aware snapshots.
+- Matching `tests/runtime/dependency/test_snapshot.py` and
+  `tests/runtime/frame/test_dependencies.py` mirror value and Frame behaviour.
 
 ## Contract
 

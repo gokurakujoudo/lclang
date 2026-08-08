@@ -40,6 +40,7 @@ import sys
 from pathlib import Path
 
 import pylcl
+from pylcl.config import load_config
 from pylcl.runtime import build_dependency_graph, topological_order
 
 sync_value = pylcl.evaluate_sync(pylcl.parse_expression("3 + 4"), {{}})
@@ -50,20 +51,18 @@ async def main() -> None:
     assert pylcl.to_source(expression) == "1 + 2"
     assert await pylcl.evaluate(expression, {{}}) == 3
     assert sync_value == 7
-    module = pylcl.Module(
-        pylcl.ModuleName("smoke"),
+    module = pylcl.define_module(
+        "smoke",
         {{
-            "base": pylcl.parse_expression("1"),
-            "value": pylcl.parse_expression("base + 1"),
-            "payload": pylcl.parse_expression('json.encode({{"ok": true}})'),
-            "iter_value": pylcl.parse_expression("iter.first([1, 2])"),
-            "text_value": pylcl.parse_expression('text.join("-", ["a", "b"])'),
-            "data_value": pylcl.parse_expression('data.lookup({{"x": 1}}, "x")'),
+            "base": "1",
+            "value": "base + 1",
+            "payload": 'json.encode({{"ok": true}})',
+            "iter_value": "iter.first([1, 2])",
+            "text_value": 'text.join("-", ["a", "b"])',
+            "data_value": 'data.lookup({{"x": 1}}, "x")',
         }},
     )
-    frame = pylcl.FrameFactory(module, pylcl.STANDARD_PRESET).create(
-        pylcl.FrameId("smoke:1"),
-    )
+    frame = pylcl.define_frame(module)
     try:
         value = await frame.get("value")
         snapshot = frame.dependency_snapshot("value")
@@ -81,10 +80,31 @@ async def main() -> None:
     finally:
         await frame.close()
     assert frame.closed is True
+
+    config_dir = Path("配置")
+    config_dir.mkdir()
+    shared = config_dir / "共享.lclcfg"
+    entry = config_dir / "应用.lclcfg"
+    shared.write_text("base: 40\\norigin: __file__\\n", encoding="utf-8")
+    entry.write_text(
+        'using "共享.lclcfg"\\nbase: 41\\nanswer: base + 1\\n',
+        encoding="utf-8",
+    )
+    config = await load_config(entry)
+    assert len(config.history["base"]) == 2
+    assert str(config.history["base"][0].span.origin.name) == str(shared.resolve())
+    config_frame = config.frame_factory().create()
+    try:
+        assert await config_frame.get("answer") == 42
+        assert await config_frame.get("origin") == str(shared.resolve())
+    finally:
+        await config_frame.close()
+    assert config_frame.closed is True
     assert Path(pylcl.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())
     print("pylcl-smoke version=" + pylcl.__version__ +
           " artifact={artifact_kind} value=" + str(value) +
-          " dependency=" + dependency + " closed=" + str(frame.closed).lower())
+          " dependency=" + dependency + " config=42 history=2 closed=" +
+          str(frame.closed and config_frame.closed).lower())
 
 
 asyncio.run(main())

@@ -4,11 +4,14 @@ This directory contains English design material and user tutorials.
 
 - [Milestone specifications](specs/)
 - [Architecture](architecture/)
-- [Tutorials](tutorials/)
-- [Runtime quickstart](tutorials/runtime-quickstart.md)
+- [Tutorials and three-minute start](tutorials/README.md)
+- [Runtime: Modules and Frames](tutorials/runtime.md)
+- [LCL examples gallery](tutorials/lcl_examples.md)
+- [Configuration-file tutorial](tutorials/config_file.md)
+- [Dependency analytics tutorial](tutorials/dependency-analytics.md)
 - [Runtime API guide](reference/runtime-api.md)
-- [Python user cheatsheet](user-cheatsheet.md)
 - [Complete LCL V1 language syntax](lcl-lang.md)
+- [`.lclcfg` configuration guide](configuration.md)
 - [Project progress](../progress.md)
 - [User README](../README.md)
 

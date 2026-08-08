@@ -37,19 +37,34 @@ class StdlibNamespace(Mapping[str, object]):
         object.__setattr__(self, "members", MappingProxyType(snapshot))
 
     def __getitem__(self, name: str) -> object:
-        """Return one member by mapping key."""
+        """Return one member by mapping key.
+
+        :param name: Declared member name.
+        :returns: Opaque reviewed member value.
+        """
         return self.members[name]
 
     def __iter__(self) -> Iterator[str]:
-        """Iterate member names in manifest declaration order."""
+        """Iterate member names in manifest declaration order.
+
+        :returns: Iterator over declared member names.
+        """
         return iter(self.members)
 
     def __len__(self) -> int:
-        """Return the number of declared members."""
+        """Return the number of declared members.
+
+        :returns: Number of namespace entries.
+        """
         return len(self.members)
 
     def __getattr__(self, name: str) -> object:
-        """Return a declared member or a namespace-aware attribute error."""
+        """Return a declared member or a namespace-aware attribute error.
+
+        :param name: Attribute-style member name.
+        :returns: Opaque reviewed member value.
+        :raises AttributeError: If no member has that name.
+        """
         try:
             return self.members[name]
         except KeyError:

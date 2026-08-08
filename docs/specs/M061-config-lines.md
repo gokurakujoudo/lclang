@@ -19,21 +19,23 @@ declarations or LCL expressions.
   while every emitted span still indexes the original source text.
 - `LogicalLine` records text, start/end positions, physical line range, and its
   origin. Blank lines are emitted for M062 to classify rather than discarded.
-- An unfinished LCL string or unmatched closing delimiter is reported as a
-  configuration syntax error at the original position.
-- A declaration continues only while `()`, `[]`, or `{}` nesting is open.
-  Newlines inside quoted literals do not terminate a line. Backslash line
-  continuation and semicolon-separated declarations are deliberately invalid.
-- Delimiter tracking understands prefixes, escaped quotes, triple-quoted
-  strings, f-string replacement fields, and comments without parsing the LCL
-  expression itself.
+- A definition continues only when the last non-space character outside a
+  literal and before an optional comment is `\\`. Every non-final fragment
+  requires its own marker; open delimiters never continue implicitly.
+- Markers and trailing comments are masked with spaces and fragments are
+  semantically joined by one space while original newlines and offsets remain
+  available for diagnostics. Blank/comment-only continuation fragments,
+  continuation on non-definition declarations, and semicolons are invalid.
+- Lexical tracking understands literal prefixes, escaped quotes, f-strings,
+  and comments without parsing the expression. Unfinished literals and stray
+  closers are reported at their original positions.
 
 ## TDD matrix
 
-- Sunny: scan mixed newline styles and multiline bracketed definitions with
+- Sunny: scan mixed newline styles and explicitly continued bracketed definitions with
   exact original spans.
-- Rainy: reject stray closers, unterminated literals, backslash continuation,
-  and semicolon-separated declarations with stable positions.
+- Rainy: reject stray closers, unterminated literals, missing/redundant
+  continuation markers, blank continuation fragments, and semicolons.
 - Composite-complex: scan a CRLF document containing an f-string, nested display,
   embedded comment, blank line, and following declaration without span drift.
 

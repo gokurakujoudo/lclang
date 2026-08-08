@@ -5,7 +5,7 @@ from __future__ import annotations
 from pylcl.ast import LclAstNode, LclBinary, LclTuple, LclUnary
 from pylcl.ast.operators import BinaryOperator, UnaryOperator
 from pylcl.errors import LclSyntaxError
-from pylcl.lang.lexer import TokenKind, scan_tokens
+from pylcl.lang.lexer import Token, TokenKind, scan_tokens
 from pylcl.lang.parser.atoms import parse_atom
 from pylcl.lang.parser.control_forms import parse_control_form
 from pylcl.lang.parser.forms import parse_form
@@ -183,10 +183,29 @@ def parse_expression(
     .. note::
        Physical newline tokens are separators; no Python AST or execution is used.
     """
+    return parse_tokens(scan_tokens(text, origin=origin), version=version)
+
+
+def parse_tokens(
+    tokens: list[Token],
+    *,
+    version: LanguageVersion = LCL_V1,
+) -> LclAstNode:
+    """Parse one complete pre-scanned LCL token sequence.
+
+    :param tokens: Source-aware tokens ending with EOF.
+    :param version: Independent LCL grammar version.
+    :returns: Immutable custom AST root.
+    :raises ValueError: If *version* is unsupported or tokens omit EOF.
+    :raises LclSyntaxError: If the token sequence is malformed.
+
+    .. note::
+       Configuration parsing uses this boundary to replace magic identifiers
+       with literal tokens without changing the standalone expression API.
+    """
     if version is not LCL_V1:
         raise ValueError(f"unsupported LCL language version: {version}")
-    stream = TokenStream(scan_tokens(text, origin=origin))
-    return _PrattParser(stream).parse()
+    return _PrattParser(TokenStream(tokens)).parse()
 
 
 def _merge_span(first: SourceSpan, last: SourceSpan) -> SourceSpan:

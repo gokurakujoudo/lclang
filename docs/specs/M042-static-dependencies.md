@@ -7,11 +7,11 @@ evaluation can demand it and respecting every language binding scope.
 
 ## Module and test layout
 
-- `pylcl/runtime/dependencies.py` owns public immutable dependency kinds and
+- `pylcl/runtime/dependency/model.py` owns public immutable dependency kinds and
   reference values.
-- `pylcl/runtime/dependency_analysis.py` owns pure scope-aware AST traversal.
-- `tests/runtime/test_dependencies.py` mirrors value validation and stable kinds.
-- `tests/runtime/test_dependency_analysis.py` mirrors eager, conditional,
+- `pylcl/runtime/dependency/analysis.py` owns pure scope-aware AST traversal.
+- `tests/runtime/dependency/test_model.py` mirrors value validation and stable kinds.
+- `tests/runtime/dependency/test_analysis.py` mirrors eager, conditional,
   deferred, binding, comprehension, and control-form traversal.
 
 ## Contract

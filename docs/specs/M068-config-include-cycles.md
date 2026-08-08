@@ -1,8 +1,8 @@
-# M068: include cycles, caching, and concurrency
+# M068: using cycles, caching, and concurrency
 
 ## Goal
 
-Make recursive async include loading safe under cycles, concurrent callers,
+Make recursive async using expansion safe under cycles, concurrent callers,
 failures, and cancellation.
 
 ## Module and test layout
@@ -17,12 +17,12 @@ failures, and cancellation.
 
 - A task-local ordered identity stack detects direct and indirect cycles before
   awaiting an already-owned load. `LclConfigCycleError` reports the closed cycle
-  and every corresponding include span in traversal order.
+  and every corresponding using span in traversal order.
 - Concurrent requests for the same identity share one resolver/parse owner task.
   Waiting tasks use cancellation shielding, so cancelling one waiter does not
   cancel the owner or peers.
 - Successfully parsed source documents are cached as immutable snapshots. Merge
-  placement still occurs at every include declaration according to M066.
+  placement still occurs at every using declaration according to M066.
 - Failed or owner-cancelled loads are not cached. All waiters observe the same
   exception instance for one attempt, and a later request may retry.
 - Cache and inflight state belong to one loader/event loop. Cross-loop use raises

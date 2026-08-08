@@ -38,14 +38,32 @@ class LclComprehensionClause(LclAstNode):
 
 @dataclass(frozen=True, slots=True)
 class _SequenceComprehension(LclAstNode):
+    """Share sequence-comprehension storage and traversal.
+
+    :param element: Expression emitted for each accepted binding.
+    :param clauses: Non-empty ordered comprehension clauses.
+    :raises ValueError: If no clause is supplied.
+
+    .. note::
+       Concrete subclasses select generator, list, or set materialization.
+    """
+
     element: LclAstNode
     clauses: tuple[LclComprehensionClause, ...]
 
     def __post_init__(self) -> None:
+        """Require at least one iteration clause.
+
+        :raises ValueError: If no clause is supplied.
+        """
         if not self.clauses:
             raise ValueError("comprehension requires at least one for clause")
 
     def children(self) -> tuple[LclAstNode, ...]:
+        """Return the element followed by its clauses.
+
+        :returns: Direct children in semantic traversal order.
+        """
         return (self.element, *self.clauses)
 
 
@@ -104,7 +122,10 @@ class LclDictComprehension(LclAstNode):
     clauses: tuple[LclComprehensionClause, ...]
 
     def __post_init__(self) -> None:
-        """Enforce comprehension-clause cardinality."""
+        """Enforce comprehension-clause cardinality.
+
+        :raises ValueError: If no clause is supplied.
+        """
         if not self.clauses:
             raise ValueError("dict comprehension requires at least one for clause")
 

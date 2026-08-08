@@ -2,23 +2,63 @@
 
 ## Import layers
 
-The package root exposes the daily workflow: `Module`, `Frame`, `FrameFactory`,
-`Preset`, `EvaluationLimits`, `DependencySnapshot`, and `STANDARD_PRESET`, plus
-the language parser/evaluator, identifier types, source values, and errors.
+The package root exposes the preferred `define_module`/`define_frame` workflow,
+the canonical `LCL_ROOT`, `LCL_BUILTINS`, `LCL_RUNTIME`, and `LCL_IMPORTS`
+Frames, and the lower-level `Module`, `Frame`, `FrameFactory`, `Preset`,
+`EvaluationLimits`, `DependencySnapshot`, and `STANDARD_PRESET` APIs.
 
 Use `pylcl.runtime` for advanced static graph construction, topological order,
 dynamic tracing, reconciliation values, and standard runtime types. Use
 `pylcl.stdlib` for manifests, namespace assembly, individual reviewed helpers,
 `STANDARD_MANIFESTS`, and `STANDARD_PRESET`.
 
-## Module, Preset, and FrameFactory
+## Direct expression evaluation
+
+`pylcl.evaluate_sync(source, resolver=None)` is the preferred synchronous
+one-expression boundary: string source is parsed with `parse_expression` and
+then evaluated on a private event loop. It also accepts an already parsed AST
+for tools that need to reuse syntax. It rejects calls made inside a running
+event loop. Async code should parse explicitly and await `pylcl.evaluate`.
+
+## Preferred definitions and canonical hierarchy
+
+`define_module(name, exprs)` parses a string-to-string dictionary into an
+immutable `Module`. `define_frame(module=None, base=LCL_RUNTIME, preset=None)`
+creates a fresh user Frame. Lookup proceeds from the nearest layer through:
+
+`user module -> LCL_IMPORTS -> LCL_RUNTIME -> LCL_BUILTINS -> LCL_ROOT`.
+
+`LCL_ROOT` owns definition-scoped `lhs()` and the reviewed LCL namespaces.
+`LCL_BUILTINS` owns curated ambient-I/O-free Python types/functions, including
+strict `parse_ymd`/`to_ymd` date conversion; `LCL_RUNTIME` is the empty package
+default and may be replaced with one CLI-aware base per run; `LCL_IMPORTS` is
+the detached preset layer. User definitions therefore win over presets, which
+win over runtime values. Canonical ancestors are borrowed and closing a user
+Frame never closes them.
+
+The fixed builtin inventory is: value types `bool`, `bytes`, `dict`, `float`,
+`frozenset`, `int`, `list`, `set`, `str`, and `tuple`; functions `abs`, `all`,
+`any`, `bin`, `chr`, `divmod`, `enumerate`, `filter`, `format`, `hex`,
+`isinstance`, `len`, `map`, `max`, `min`, `oct`, `ord`, `parse_ymd`, `pow`,
+`range`, `repr`, `reversed`, `round`, `slice`, `sorted`, `sum`, `to_ymd`, and
+`zip`. File/process input,
+dynamic import/code, reflection, and mutation helpers are deliberately absent.
+
+## Explicit Module, Preset, and FrameFactory
 
 `Module` copies a name-to-AST mapping into a read-only snapshot. `Preset` does
 the same for host bindings; `overlay` is shallow and right-biased. A
 `FrameFactory` retains a Module, optional Preset, and optional default
 `EvaluationLimits`. Each `create` call has fresh cache, task, dependency, and
 lifecycle state. Call-level values and limits override factory policy. Parent
-Frames are borrowed, not owned.
+Frames are borrowed, not owned. `create()` and direct `Frame(module)` both
+default their ID to `frame-<module name>`; an ordinary non-empty string or
+`FrameId` overrides that diagnostic default.
+
+Prefer `parent.derive(module, values={})` for an ordinary child Frame. It copies
+local host values, uses the module name as the child ID, owns fresh cache/task/
+dependency/lifecycle state, and borrows `parent`. Use direct `Frame`
+construction when child-specific limits or values are required.
 
 ## Frame caching and concurrency
 
@@ -27,6 +67,32 @@ its result or ordinary failure. Concurrent callers in one event loop share one
 owner task. Waiter cancellation is isolated. Circular dependency paths raise a
 structured error before an owner can deadlock. Parent definitions always run in
 their defining Frame.
+
+`frame.has(name)` checks whether that same recursive lookup selects either a
+definition or host value. `frame.get_definition(name)` returns the selected
+custom AST without evaluation, or `None` when the name is missing or a nearer
+host value masks an ancestor definition. Both methods preserve all cache,
+dependency, task, and lifecycle state.
+
+`frame.inspect_variable(name)` returns a `VariableInspectionTree` whose direct
+children are unique by first-seen variable name. Each node exposes its status (`Cached`,
+`NotEvaluated`, or `ExternalProvided`), selected AST, exact lookup path, owning
+Frame, current value or exception, and static dependency children. Missing
+names remain diagnostic leaves and cycles stop only on the repeating branch;
+the same name can still appear independently beneath separate parent branches.
+Inspection never evaluates or awaits anything, joins work, changes caches, or
+publishes traces. `repr(tree)` is a compact
+`name@frame/path: [definition ](Status) typed-payload` line using canonical LCL
+source. External values omit definition text, unresolved names use `<missing>`,
+values use `type: repr`, and errors use `ErrorType: message`.
+`tree.to_lines()` returns a markdown-style nested list of those lines.
+
+`frame.mixin(values)` atomically copies a right-biased dictionary into the open
+Frame's host bindings. The existing `frame.values` view remains read-only while
+reflecting the update. Direct lookups and uncached definitions see mixed values;
+already cached definition successes/failures remain snapshots. Call
+`recalculate` explicitly when a definition should observe a new mixed input.
+Module definitions continue to shadow same-name host values.
 
 `await frame.recalculate(name)` atomically replaces only the named definition's
 snapshot; it never invalidates a dependant. Old values remain readable during
@@ -40,6 +106,16 @@ returns static edges, observed dynamic edges, and confirmed/inactive/unexpected
 reconciliation. Before evaluation all static edges are inactive. Cached reads
 do not add observations. Deferred function/generator lookups extend their
 defining source's published trace. Parent lookups route to the owner.
+
+`pylcl.runtime.build_dependency_graph(frame)` performs a separate static,
+non-evaluating hierarchy analysis. It returns `FrameDependencyGraph` with
+qualified `FrameDependencyBinding` definitions/value terminals and
+`FrameDependencyEdge` occurrences. Each edge contains `lookup_path`, its
+requested `target_name`, and the selected binding or `None`. Module input keeps
+returning the original unqualified `DependencyGraph`.
+
+See the [dependency analytics tutorial](../tutorials/dependency-analytics.md)
+for the complete static-to-runtime methodology and executable examples.
 
 ## Limits and close
 

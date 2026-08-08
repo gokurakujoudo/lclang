@@ -8,13 +8,13 @@ ordering with structured cycle diagnostics.
 
 ## Module and test layout
 
-- `pylcl/runtime/dependencies.py` adds immutable public `DependencyEdge`.
-- `pylcl/runtime/dependency_graph.py` owns immutable graph construction and
+- `pylcl/runtime/dependency/model.py` adds immutable public `DependencyEdge`.
+- `pylcl/runtime/dependency/graph.py` owns immutable graph construction and
   forward/reverse/external queries.
-- `pylcl/runtime/dependency_order.py` owns deterministic kind-filtered
+- `pylcl/runtime/dependency/ordering.py` owns deterministic kind-filtered
   topological ordering and cycle-path discovery.
-- Matching `tests/runtime/test_dependencies.py`, `test_dependency_graph.py`, and
-  `test_dependency_order.py` mirror those production responsibilities.
+- Matching `tests/runtime/dependency/test_model.py`, `test_graph.py`, and
+  `test_ordering.py` mirror those production responsibilities.
 
 ## Contract
 
@@ -41,6 +41,8 @@ ordering with structured cycle diagnostics.
 - Construction and ordering are pure and never evaluate definitions. Public
   values/functions use complete English rST docs; modules remain below 200
   physical lines with mirrored tests.
+- M054 extends `build_dependency_graph` with Frame input and a qualified graph;
+  Module input and every M043 query/order contract remain unchanged.
 
 ## TDD evidence
 

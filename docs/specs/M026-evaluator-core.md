@@ -12,7 +12,7 @@ awaitable resolution, and the single supported synchronous convenience API.
   adapter; `tests/lang/evaluator/test_context.py` mirrors lookup behaviour.
 - `pylcl/lang/evaluator/awaitables.py` owns automatic awaitable resolution and
   its mirror covers immediate and deferred values.
-- `pylcl/lang/evaluator/evaluator.py` owns public dispatch, `evaluate`, and
+- `pylcl/lang/evaluator/dispatch.py` owns public dispatch, `evaluate`, and
   `evaluate_sync`; its mirror covers constants, names, unsupported nodes, and
   event-loop boundaries.
 - Package `__init__.py` files contain exports only.
@@ -30,6 +30,8 @@ awaitable resolution, and the single supported synchronous convenience API.
 - `evaluate_sync` uses a private event loop only when no event loop is running
   in the current thread. Inside a running loop it raises `RuntimeError` and
   callers must await `evaluate`.
+- M055 additionally accepts expression source text and parses it before this
+  unchanged synchronous loop boundary.
 - Empty resolver input is valid. Evaluation mutates neither the AST nor caller
   mappings.
 - All public docstrings use complete English rST fields and every source module

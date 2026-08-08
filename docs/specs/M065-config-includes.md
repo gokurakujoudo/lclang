@@ -1,8 +1,8 @@
-# M065: configuration includes and resolver protocol
+# M065: configuration using declarations and resolver protocol
 
 ## Goal
 
-Add explicit include declarations and an async, host-controlled source resolver
+Add explicit using declarations and an async, host-controlled source resolver
 without coupling the configuration language to a filesystem.
 
 ## Module and test layout
@@ -16,17 +16,20 @@ without coupling the configuration language to a filesystem.
 
 ## Contract
 
-- Include syntax is `include "target"`; the target is exactly one non-empty LCL
-  string literal and must decode to `str`. F-strings, bytes, trailing tokens, and
-  computed targets are invalid.
-- `ConfigSourceResolver.resolve(target, *, importer)` is async and returns
-  immutable `ResolvedConfigSource(identity, display_name, text)`. The host owns
-  target interpretation, decoding, authorization, and retrieval.
+- Using syntax is `using "target"`; the target is exactly one non-empty normal
+  or raw LCL string literal decoding to `str`. F-strings, bytes, adjacent
+  literals, continuation, computed targets, and trailing tokens are invalid.
+- Root and using targets end exactly in `.lclcfg`. Absolute paths remain
+  absolute; relative paths resolve from the importer directory. A decoded
+  leading `__dir__` path token expands to that directory and may be followed by
+  any number of `..` components.
+- `ConfigSourceResolver.resolve(path, *, importer)` is async and returns
+  immutable `ResolvedConfigSource(identity, display_name, path, text)`.
 - Resolver identities are non-empty stable strings used for deduplication and
   cycles. Display names are diagnostic only; source text must be Unicode.
 - Resolution walks declarations in source order and recursively parses each
-  returned document. An include performs no expression evaluation.
-- Resolver exceptions are wrapped as `LclConfigIncludeError` with target,
+  returned document. A using declaration performs no expression evaluation.
+- Resolver exceptions are wrapped as `LclConfigUsingError` with target,
   importing span, and preserved cause; cancellation propagates unchanged.
 
 ## TDD matrix

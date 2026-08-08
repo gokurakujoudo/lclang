@@ -18,6 +18,7 @@ from pylcl.ast import (
 )
 from pylcl.errors import LclSyntaxError
 from pylcl.lang.lexer import TokenKind
+from pylcl.lang.parser.bindings import validate_binding_name
 from pylcl.lang.parser.stream import TokenStream
 from pylcl.source import SourceSpan
 from pylcl.types import VarName
@@ -67,6 +68,7 @@ def parse_comprehension(
     clauses: list[LclComprehensionClause] = []
     while (for_token := stream.match(TokenKind.KW_FOR)) is not None:
         target_token = stream.expect(TokenKind.IDENTIFIER, "expected comprehension target name")
+        validate_binding_name(target_token)
         target = LclName(VarName(target_token.lexeme), span=target_token.span)
         stream.expect(TokenKind.KW_IN, "comprehension target requires in")
         iterable = parse_nonconditional()

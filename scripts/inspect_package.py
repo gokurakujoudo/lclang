@@ -1,4 +1,4 @@
-"""Inspect pylcl release archives against the 0.1 artifact contract."""
+"""Inspect pylcl release archives against the 0.2 artifact contract."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from email.parser import Parser
 from pathlib import Path, PurePosixPath
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 # Archive members that can never be part of a clean source distribution.
 FORBIDDEN_PARTS = frozenset(
     {"..", ".git", ".mypy_cache", ".pytest_cache", ".ruff_cache", ".codex_tmp",
@@ -54,7 +54,7 @@ def metadata_fields(raw: str) -> dict[str, str]:
 
     :param raw: RFC-style metadata text.
     :returns: Case-normalized selected metadata values.
-    :raises ValueError: If the metadata does not identify pylcl 0.1.0.
+    :raises ValueError: If the metadata does not identify pylcl 0.2.0.
     """
     message = Parser().parsestr(raw)
     fields = {

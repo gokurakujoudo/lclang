@@ -21,8 +21,8 @@ literal content or diagnostic coordinates.
   LCL lexer rules.
 - Stripping replaces comment characters with spaces rather than shortening the
   source, preserving all offsets and columns for later parser errors.
-- Comments may follow a complete declaration or appear on physical continuation
-  lines. They cannot provide an implicit continuation after a closed expression.
+- Comments may follow definitions, version metadata, using declarations, and
+  continuation markers. They cannot continue a declaration by themselves.
 - Encoding cookies, shebangs, block comments, and nested comment syntax have no
   special meaning; they are ordinary line comments or invalid declaration text.
 

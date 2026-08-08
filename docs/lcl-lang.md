@@ -5,9 +5,9 @@ familiar Python spellings while using its own lexer, custom immutable AST,
 parser, canonical printer, and async interpreter. It never compiles through the
 Python AST, `eval`, `exec`, or bytecode.
 
-This guide describes the implemented expression language. The `.lclcfg` file
-format planned for 0.2 adds definitions and includes around these expressions;
-it does not change the V1 expression grammar.
+This guide describes the implemented expression language. The implemented
+[`.lclcfg` format](configuration.md) adds colon definitions and source-ordered
+`using` expansion around these expressions.
 
 ## Lexical structure
 
@@ -22,6 +22,18 @@ words are reserved: `and`, `or`, `not`, `if`, `else`, `for`, `in`, `is`, `true`,
 `false`, `none`, `def`, `raise`, `try`, `except`, `finally`, `assert`, `with`,
 and `as`. Python-compatible `True`, `False`, and `None` are also accepted.
 Canonical printing uses `True`, `False`, and `None`.
+
+Names introduced at binding positions cannot begin with `__`. This applies to
+function parameters, comprehension targets, exception aliases, and context
+manager aliases. Ordinary references, attributes, and call keywords are not
+binding positions. File-backed `.lclcfg` parsing additionally replaces
+`__file__` and `__dir__` references with eager path string constants.
+
+During Frame evaluation of a named Module/config definition, the root `lhs()`
+function returns that definition name. Function values retain the definition in
+which they were created, so arguments use the caller owner while the function
+body uses its lexical owner. It is runtime definition context rather than
+syntax or a standalone-expression magic token.
 
 <!-- lcl-valid -->
 ```lcl
@@ -265,7 +277,7 @@ parameter     ::= name ["=" nonconditional]
 ```
 
 Defaults evaluate once when the function value is created. The body uses the
-defining lexical resolver. Calls are async and argument binding supports
+defining lexical resolver and captures the same lexical `lhs()` owner. Calls are async and argument binding supports
 positional, defaulted, variadic positional, keyword-only-after-`*name`, and
 variadic keyword parameters. Recursive re-entry of the same LCL function in one
 task is prohibited; concurrent calls in different tasks are independent.
@@ -461,9 +473,10 @@ V1 deliberately excludes statements and Python compilation semantics:
 - assignment statements, annotated assignment, `:=`, and augmented assignment;
 - `lambda`, `async def`, explicit `await`, `yield`, and `yield from`;
 - `import`, `from`, `class`, `match`, loops, statement `if`, and statement `try`;
-- list/set/dict target destructuring and function recursion;
+- list/set/dict target destructuring and direct same-function re-entry;
 - complex literals, template strings, and bytes f-strings;
 - arbitrary code loading, Python AST injection, and implicit module access.
 
-Use LCL's `def (...) : expression`, expression-form `try`/`with`, host-provided
+Use LCL's `def (...) : expression`, eta-expanded fixed-point combinators when
+recursion is genuinely useful, expression-form `try`/`with`, host-provided
 reviewed Presets, and explicit application APIs instead.

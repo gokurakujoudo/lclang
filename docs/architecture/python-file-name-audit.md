@@ -1,0 +1,267 @@
+# Python filename audit
+
+Every current production, maintenance, and test Python filename is recorded
+below. Each basename was reviewed for responsibility, package ownership, and
+the five-word maximum enforced by `tests/test_module_layout.py`.
+
+The M055/M056 refactor selected nested `runtime/dependency`,
+`runtime/dependency/frame`, and `runtime/frame` packages; split evaluator and
+printer dispatch modules; renamed configuration merge output to `result.py`;
+and moved mirrored tests to matching nested packages. Package markers, focused
+unit mirrors, explicit integration tests, support fixtures, and release
+acceptance files retain their established concise names.
+
+## Audited inventory
+
+- `pylcl/__init__.py` — keep — responsibility-based production module.
+- `pylcl/_version.py` — keep — responsibility-based production module.
+- `pylcl/api.py` — keep — responsibility-based production module.
+- `pylcl/ast/__init__.py` — keep — responsibility-based production module.
+- `pylcl/ast/atoms.py` — keep — responsibility-based production module.
+- `pylcl/ast/base.py` — keep — responsibility-based production module.
+- `pylcl/ast/call_arguments.py` — keep — responsibility-based production module.
+- `pylcl/ast/comprehensions.py` — keep — responsibility-based production module.
+- `pylcl/ast/control_forms.py` — keep — responsibility-based production module.
+- `pylcl/ast/displays.py` — keep — responsibility-based production module.
+- `pylcl/ast/expressions.py` — keep — responsibility-based production module.
+- `pylcl/ast/forms.py` — keep — responsibility-based production module.
+- `pylcl/ast/fstrings.py` — keep — responsibility-based production module.
+- `pylcl/ast/operators.py` — keep — responsibility-based production module.
+- `pylcl/ast/primaries.py` — keep — responsibility-based production module.
+- `pylcl/config/__init__.py` — keep — responsibility-based production module.
+- `pylcl/config/api.py` — keep — responsibility-based production module.
+- `pylcl/config/declarations.py` — keep — responsibility-based production module.
+- `pylcl/config/errors.py` — keep — responsibility-based production module.
+- `pylcl/config/expressions.py` — keep — responsibility-based production module.
+- `pylcl/config/files.py` — keep — responsibility-based production module.
+- `pylcl/config/limits.py` — keep — responsibility-based production module.
+- `pylcl/config/lines.py` — keep — responsibility-based production module.
+- `pylcl/config/loader.py` — keep — responsibility-based production module.
+- `pylcl/config/model.py` — keep — responsibility-based production module.
+- `pylcl/config/parser.py` — keep — responsibility-based production module.
+- `pylcl/config/positions.py` — keep — responsibility-based production module.
+- `pylcl/config/protocols.py` — keep — responsibility-based production module.
+- `pylcl/config/result.py` — keep — responsibility-based production module.
+- `pylcl/config/sources.py` — keep — responsibility-based production module.
+- `pylcl/errors.py` — keep — responsibility-based production module.
+- `pylcl/lang/__init__.py` — keep — responsibility-based production module.
+- `pylcl/lang/evaluator/__init__.py` — keep — responsibility-based production module.
+- `pylcl/lang/evaluator/_types.py` — keep — responsibility-based production module.
+- `pylcl/lang/evaluator/awaitables.py` — keep — responsibility-based production module.
+- `pylcl/lang/evaluator/budget.py` — keep — responsibility-based production module.
+- `pylcl/lang/evaluator/calls.py` — keep — responsibility-based production module.
+- `pylcl/lang/evaluator/comprehensions.py` — keep — responsibility-based production module.
+- `pylcl/lang/evaluator/context.py` — keep — responsibility-based production module.
+- `pylcl/lang/evaluator/contexts.py` — keep — responsibility-based production module.
+- `pylcl/lang/evaluator/definition_context.py` — keep — responsibility-based production module.
+- `pylcl/lang/evaluator/dispatch.py` — keep — responsibility-based production module.
+- `pylcl/lang/evaluator/displays.py` — keep — responsibility-based production module.
+- `pylcl/lang/evaluator/errors.py` — keep — responsibility-based production module.
+- `pylcl/lang/evaluator/fstrings.py` — keep — responsibility-based production module.
+- `pylcl/lang/evaluator/function_arguments.py` — keep — responsibility-based production module.
+- `pylcl/lang/evaluator/functions.py` — keep — responsibility-based production module.
+- `pylcl/lang/evaluator/iteration.py` — keep — responsibility-based production module.
+- `pylcl/lang/evaluator/logical.py` — keep — responsibility-based production module.
+- `pylcl/lang/evaluator/operations.py` — keep — responsibility-based production module.
+- `pylcl/lang/evaluator/primaries.py` — keep — responsibility-based production module.
+- `pylcl/lang/evaluator/sync.py` — keep — responsibility-based production module.
+- `pylcl/lang/lexer/__init__.py` — keep — responsibility-based production module.
+- `pylcl/lang/lexer/escapes.py` — keep — responsibility-based production module.
+- `pylcl/lang/lexer/fstring_values.py` — keep — responsibility-based production module.
+- `pylcl/lang/lexer/fstrings.py` — keep — responsibility-based production module.
+- `pylcl/lang/lexer/literals.py` — keep — responsibility-based production module.
+- `pylcl/lang/lexer/scanner.py` — keep — responsibility-based production module.
+- `pylcl/lang/lexer/tokens.py` — keep — responsibility-based production module.
+- `pylcl/lang/parser/__init__.py` — keep — responsibility-based production module.
+- `pylcl/lang/parser/atoms.py` — keep — responsibility-based production module.
+- `pylcl/lang/parser/bindings.py` — keep — responsibility-based production module.
+- `pylcl/lang/parser/comprehensions.py` — keep — responsibility-based production module.
+- `pylcl/lang/parser/control_forms.py` — keep — responsibility-based production module.
+- `pylcl/lang/parser/displays.py` — keep — responsibility-based production module.
+- `pylcl/lang/parser/forms.py` — keep — responsibility-based production module.
+- `pylcl/lang/parser/fstrings.py` — keep — responsibility-based production module.
+- `pylcl/lang/parser/logical.py` — keep — responsibility-based production module.
+- `pylcl/lang/parser/pratt.py` — keep — responsibility-based production module.
+- `pylcl/lang/parser/primaries.py` — keep — responsibility-based production module.
+- `pylcl/lang/parser/stream.py` — keep — responsibility-based production module.
+- `pylcl/lang/printer/__init__.py` — keep — responsibility-based production module.
+- `pylcl/lang/printer/_types.py` — keep — responsibility-based production module.
+- `pylcl/lang/printer/atoms.py` — keep — responsibility-based production module.
+- `pylcl/lang/printer/collections.py` — keep — responsibility-based production module.
+- `pylcl/lang/printer/dispatch.py` — keep — responsibility-based production module.
+- `pylcl/lang/printer/expressions.py` — keep — responsibility-based production module.
+- `pylcl/lang/printer/forms.py` — keep — responsibility-based production module.
+- `pylcl/lang/printer/primaries.py` — keep — responsibility-based production module.
+- `pylcl/runtime/__init__.py` — keep — responsibility-based production module.
+- `pylcl/runtime/dependency/__init__.py` — keep — responsibility-based production module.
+- `pylcl/runtime/dependency/analysis.py` — keep — responsibility-based production module.
+- `pylcl/runtime/dependency/frame/__init__.py` — keep — responsibility-based production module.
+- `pylcl/runtime/dependency/frame/builder.py` — keep — responsibility-based production module.
+- `pylcl/runtime/dependency/frame/model.py` — keep — responsibility-based production module.
+- `pylcl/runtime/dependency/frame/resolution.py` — keep — responsibility-based production module.
+- `pylcl/runtime/dependency/graph.py` — keep — responsibility-based production module.
+- `pylcl/runtime/dependency/model.py` — keep — responsibility-based production module.
+- `pylcl/runtime/dependency/ordering.py` — keep — responsibility-based production module.
+- `pylcl/runtime/dependency/reconciliation.py` — keep — responsibility-based production module.
+- `pylcl/runtime/dependency/snapshot.py` — keep — responsibility-based production module.
+- `pylcl/runtime/dependency/tracing.py` — keep — responsibility-based production module.
+- `pylcl/runtime/frame/__init__.py` — keep — responsibility-based production module.
+- `pylcl/runtime/frame/closing.py` — keep — responsibility-based production module.
+- `pylcl/runtime/frame/core.py` — keep — responsibility-based production module.
+- `pylcl/runtime/frame/dependencies.py` — keep — responsibility-based production module.
+- `pylcl/runtime/frame/derivation.py` — keep — responsibility-based production module.
+- `pylcl/runtime/frame/evaluation.py` — keep — responsibility-based production module.
+- `pylcl/runtime/frame/factory.py` — keep — responsibility-based production module.
+- `pylcl/runtime/frame/flights.py` — keep — responsibility-based production module.
+- `pylcl/runtime/frame/inspection.py` — keep — responsibility-based production module.
+- `pylcl/runtime/frame/inspector.py` — keep — responsibility-based production module.
+- `pylcl/runtime/frame/lifecycle.py` — keep — responsibility-based production module.
+- `pylcl/runtime/frame/limits.py` — keep — responsibility-based production module.
+- `pylcl/runtime/frame/lookup.py` — keep — responsibility-based production module.
+- `pylcl/runtime/frame/recalculation.py` — keep — responsibility-based production module.
+- `pylcl/runtime/frame/values.py` — keep — responsibility-based production module.
+- `pylcl/runtime/modules.py` — keep — responsibility-based production module.
+- `pylcl/runtime/presets.py` — keep — responsibility-based production module.
+- `pylcl/source.py` — keep — responsibility-based production module.
+- `pylcl/stdlib/__init__.py` — keep — responsibility-based production module.
+- `pylcl/stdlib/builtins.py` — keep — responsibility-based production module.
+- `pylcl/stdlib/data.py` — keep — responsibility-based production module.
+- `pylcl/stdlib/dates.py` — keep — responsibility-based production module.
+- `pylcl/stdlib/iterables.py` — keep — responsibility-based production module.
+- `pylcl/stdlib/json_values.py` — keep — responsibility-based production module.
+- `pylcl/stdlib/manifest.py` — keep — responsibility-based production module.
+- `pylcl/stdlib/namespaces.py` — keep — responsibility-based production module.
+- `pylcl/stdlib/text.py` — keep — responsibility-based production module.
+- `pylcl/types.py` — keep — responsibility-based production module.
+- `pylcl/version.py` — keep — responsibility-based production module.
+- `scripts/__init__.py` — keep — focused maintenance command module.
+- `scripts/build_package.py` — keep — focused maintenance command module.
+- `scripts/check_project.py` — keep — focused maintenance command module.
+- `scripts/inspect_package.py` — keep — focused maintenance command module.
+- `scripts/quality.py` — keep — focused maintenance command module.
+- `scripts/release_candidate.py` — keep — focused maintenance command module.
+- `scripts/smoke_install.py` — keep — focused maintenance command module.
+- `tests/__init__.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/ast/__init__.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/ast/test_base.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/ast/test_call_arguments.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/ast/test_comprehensions.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/ast/test_control_forms.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/ast/test_displays.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/ast/test_expressions.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/ast/test_forms.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/ast/test_fstrings.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/ast/test_operators.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/ast/test_primaries.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/config/support.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/config/test_api.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/config/test_documentation.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/config/test_files.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/config/test_limits.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/config/test_lines.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/config/test_loader.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/config/test_model.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/config/test_parser.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/config/test_sources.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/config/test_stress.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/__init__.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/evaluator/__init__.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/evaluator/context_support.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/evaluator/test_awaitables.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/evaluator/test_budget.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/evaluator/test_calls.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/evaluator/test_comprehensions.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/evaluator/test_context.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/evaluator/test_contexts.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/evaluator/test_definition_context.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/evaluator/test_dispatch.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/evaluator/test_displays.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/evaluator/test_errors.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/evaluator/test_fstrings.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/evaluator/test_function_arguments.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/evaluator/test_functions.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/evaluator/test_iteration.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/evaluator/test_logical.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/evaluator/test_operations.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/evaluator/test_primaries.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/evaluator/test_sync.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/lexer/__init__.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/lexer/test_escapes.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/lexer/test_fstring_values.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/lexer/test_fstrings.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/lexer/test_literals.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/lexer/test_scanner.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/lexer/test_tokens.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/parser/__init__.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/parser/test_atoms.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/parser/test_comprehensions.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/parser/test_control_forms.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/parser/test_displays.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/parser/test_forms.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/parser/test_fstrings.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/parser/test_logical.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/parser/test_pratt.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/parser/test_primaries.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/parser/test_stream.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/printer/__init__.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/printer/test_atoms.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/printer/test_collections.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/printer/test_dispatch.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/printer/test_expressions.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/printer/test_forms.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/lang/printer/test_primaries.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/release/__init__.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/release/support.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/release/test_artifacts.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/release/test_clean_install.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/release/test_release_candidate.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/__init__.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/dependency/__init__.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/dependency/frame/__init__.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/dependency/frame/test_builder.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/dependency/frame/test_model.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/dependency/test_analysis.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/dependency/test_graph.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/dependency/test_model.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/dependency/test_ordering.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/dependency/test_reconciliation.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/dependency/test_snapshot.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/dependency/test_tracing.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/frame/__init__.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/frame/lifecycle_support.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/frame/test_cancellation.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/frame/test_core.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/frame/test_dependencies.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/frame/test_derivation.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/frame/test_factory.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/frame/test_flights.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/frame/test_inspection.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/frame/test_integration_comprehensions.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/frame/test_lifecycle.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/frame/test_limits.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/frame/test_lookup.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/frame/test_recalculation.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/frame/test_recalculation_flights.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/frame/test_values.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/test_modules.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/runtime/test_presets.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/stdlib/test_builtins.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/stdlib/test_data.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/stdlib/test_dates.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/stdlib/test_iterables.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/stdlib/test_json_values.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/stdlib/test_manifest.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/stdlib/test_namespaces.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/stdlib/test_text.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/test_api.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/test_errors.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/test_module_layout.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/test_package_metadata.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/test_portable_scripts.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/test_public_api.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/test_quality_configuration.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/test_quality_script.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/test_runtime_public_api.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/test_tutorials.py` — keep — mirrored, support, integration, or acceptance test module.
+- `tests/test_types_and_sources.py` — keep — mirrored, support, integration, or acceptance test module.
+

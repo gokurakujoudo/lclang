@@ -1,0 +1,266 @@
+"""Behavioural tests for source-ordered `using` expansion."""
+
+import asyncio
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+import pytest
+
+from pylcl.ast import LclConstant
+from pylcl.config import (
+    ConfigLoader,
+    ConfigLoadLimits,
+    LclConfigCycleError,
+    LclConfigLimitError,
+    LclConfigUsingError,
+    ResolvedConfigSource,
+    load_config,
+)
+from pylcl.config.errors import LclConfigSyntaxError
+from tests.config.support import MappingResolver
+
+
+@pytest.mark.asyncio
+async def test_nested_using_binds_file_magic_to_each_physical_source() -> None:
+    """Every nested definition receives its own canonical physical file path."""
+    with TemporaryDirectory(prefix="pylcl-nested-magic-", dir=Path.cwd()) as directory:
+        root = Path(directory)
+        first = root / "a.lclcfg"
+        second = root / "b.lclcfg"
+        third = root / "c.lclcfg"
+        third.write_text("z: __file__\n", encoding="utf-8")
+        second.write_text('using "c.lclcfg"\ny: __file__\n', encoding="utf-8")
+        first.write_text('using "b.lclcfg"\nx: __file__\n', encoding="utf-8")
+
+        config = await load_config(first)
+
+        values: dict[str, object] = {}
+        for name in ("x", "y", "z"):
+            expression = config.definitions[name].expression
+            assert isinstance(expression, LclConstant)
+            values[name] = expression.value
+        assert values == {
+            "x": str(first.resolve()),
+            "y": str(second.resolve()),
+            "z": str(third.resolve()),
+        }
+        assert len(set(values.values())) == 3
+
+
+@pytest.mark.asyncio
+async def test_nested_using_expands_in_place_with_history_and_magic(tmp_path: Path) -> None:
+    """Nested files expand at their use sites and later declarations win globally."""
+    shared = tmp_path / "shared.lclcfg"
+    child_dir = tmp_path / "nested"
+    child_dir.mkdir()
+    child = child_dir / "child.lclcfg"
+    root = tmp_path / "root.lclcfg"
+    shared.write_text("value: 2\n", encoding="utf-8")
+    child.write_text(
+        "using \"__dir__/../shared.lclcfg\"\n"
+        "origin: __file__\n"
+        "value: 3\n",
+        encoding="utf-8",
+    )
+    root.write_text(
+        "value: 1\nusing \"nested/child.lclcfg\"\nresult: value + 1\nvalue: 4\n",
+        encoding="utf-8",
+    )
+
+    config = await load_config(root)
+
+    assert list(config.definitions) == ["value", "origin", "result"]
+    assert len(config.history["value"]) == 4
+    assert isinstance(config.definitions["origin"].expression, LclConstant)
+    assert config.definitions["origin"].expression.value == str(child.resolve())
+    assert config.definitions["value"] is config.history["value"][-1]
+
+
+@pytest.mark.asyncio
+async def test_cycles_missing_files_and_limits_are_structured(tmp_path: Path) -> None:
+    """Rainy loading paths report stable configuration failures."""
+    first = tmp_path / "first.lclcfg"
+    second = tmp_path / "second.lclcfg"
+    first.write_text("using \"second.lclcfg\"\n", encoding="utf-8")
+    second.write_text("using \"first.lclcfg\"\n", encoding="utf-8")
+    with pytest.raises(LclConfigCycleError):
+        await load_config(first)
+
+    missing = tmp_path / "missing-root.lclcfg"
+    missing.write_text("using \"absent.lclcfg\"\n", encoding="utf-8")
+    with pytest.raises(LclConfigUsingError):
+        await load_config(missing)
+
+    with pytest.raises(LclConfigLimitError):
+        await load_config(first, limits=ConfigLoadLimits(max_sources=1))
+
+
+@pytest.mark.asyncio
+async def test_loader_single_flight_cancellation_retry_and_unique_limits(tmp_path: Path) -> None:
+    """Concurrent owners are shielded, failures retry, and every limit is deterministic."""
+    root = (tmp_path / "root.lclcfg").resolve()
+    resolver = MappingResolver({root: "first: 1\nsecond: 2\n"})
+    loader = ConfigLoader(resolver)
+    first, second = await asyncio.gather(loader.load(root), loader.load(root))
+    assert first.definitions == second.definitions
+    assert resolver.calls[root] == 1
+
+    with pytest.raises(LclConfigLimitError, match="character"):
+        await ConfigLoader(
+            resolver,
+            ConfigLoadLimits(max_characters=1),
+        ).load(root)
+    with pytest.raises(LclConfigLimitError, match="declaration"):
+        await ConfigLoader(
+            resolver,
+            ConfigLoadLimits(max_declarations=1),
+        ).load(root)
+
+    child = (tmp_path / "child.lclcfg").resolve()
+    nested = MappingResolver({root: 'using "child.lclcfg"\n', child: "value: 1\n"})
+    with pytest.raises(LclConfigLimitError, match="depth"):
+        await ConfigLoader(nested, ConfigLoadLimits(max_depth=1)).load(root)
+
+
+@pytest.mark.asyncio
+async def test_waiter_cancellation_does_not_cancel_shared_owner(tmp_path: Path) -> None:
+    """One cancelled waiter leaves the source owner available to its peer."""
+    root = (tmp_path / "slow.lclcfg").resolve()
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    class SlowResolver:
+        """Hold one source request until the test releases it."""
+
+        async def resolve(
+            self,
+            path: Path,
+            *,
+            importer: ResolvedConfigSource | None,
+        ) -> ResolvedConfigSource:
+            """Wait for release and return one valid source."""
+            del importer
+            started.set()
+            await release.wait()
+            return ResolvedConfigSource("slow", "slow", path, "value: 1\n")
+
+    loader = ConfigLoader(SlowResolver())
+    cancelled = asyncio.create_task(loader.load(root))
+    peer = asyncio.create_task(loader.load(root))
+    await started.wait()
+    cancelled.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await cancelled
+    release.set()
+    assert "value" in (await peer).definitions
+
+
+@pytest.mark.asyncio
+async def test_failed_owner_retries_and_config_errors_are_not_rewrapped(tmp_path: Path) -> None:
+    """Failed attempts leave no poisoned task while structured parser failures survive."""
+    root = (tmp_path / "retry.lclcfg").resolve()
+
+    class FlakyResolver:
+        """Fail the first retrieval and succeed on retry."""
+
+        def __init__(self) -> None:
+            """Initialize the attempt counter."""
+            self.calls = 0
+
+        async def resolve(
+            self,
+            path: Path,
+            *,
+            importer: ResolvedConfigSource | None,
+        ) -> ResolvedConfigSource:
+            """Raise an OS error once before returning valid text."""
+            del importer
+            self.calls += 1
+            if self.calls == 1:
+                raise OSError("temporary")
+            return ResolvedConfigSource("retry", "retry", path, "value: 1\n")
+
+    resolver = FlakyResolver()
+    loader = ConfigLoader(resolver)
+    with pytest.raises(LclConfigUsingError):
+        await loader.load(root)
+    assert "value" in (await loader.load(root)).definitions
+
+    class StructuredResolver:
+        """Raise one already-structured configuration error."""
+
+        async def resolve(
+            self,
+            path: Path,
+            *,
+            importer: ResolvedConfigSource | None,
+        ) -> ResolvedConfigSource:
+            """Raise the stable test error without wrapping."""
+            del path, importer
+            raise LclConfigSyntaxError("structured")
+
+    with pytest.raises(LclConfigSyntaxError, match="structured"):
+        await ConfigLoader(StructuredResolver()).load(root)
+
+    class AliasResolver:
+        """Return one stable identity for two requested paths."""
+
+        async def resolve(
+            self,
+            path: Path,
+            *,
+            importer: ResolvedConfigSource | None,
+        ) -> ResolvedConfigSource:
+            """Return valid text under a shared identity."""
+            del importer
+            return ResolvedConfigSource("alias", str(path), path, "value: 1\n")
+
+    alias_loader = ConfigLoader(AliasResolver())
+    one = await alias_loader.source_for(root, None)
+    two = await alias_loader.source_for((tmp_path / "alias.lclcfg").resolve(), None)
+    assert one is two
+
+
+@pytest.mark.asyncio
+async def test_owner_cancellation_is_removed_and_retries(tmp_path: Path) -> None:
+    """A cancelled source owner does not poison the loader's task cache."""
+    root = (tmp_path / "owner-cancel.lclcfg").resolve()
+    started = asyncio.Event()
+    release = asyncio.Event()
+    calls = 0
+
+    class OwnerResolver:
+        """Expose the resolver owner so the test can cancel its task."""
+
+        async def resolve(
+            self,
+            path: Path,
+            *,
+            importer: ResolvedConfigSource | None,
+        ) -> ResolvedConfigSource:
+            """Block the first attempt and allow the retry to complete."""
+            nonlocal calls
+            del importer
+            calls += 1
+            started.set()
+            await release.wait()
+            return ResolvedConfigSource("owner", "owner", path, "value: 1\n")
+
+    loader = ConfigLoader(OwnerResolver())
+    waiter = asyncio.create_task(loader.source_for(root, None))
+    await started.wait()
+    loader.tasks[root].cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await waiter
+    release.set()
+    assert (await loader.source_for(root, None)).document.declarations
+    assert calls == 2
+
+
+def test_loader_rejects_cross_loop_reuse(tmp_path: Path) -> None:
+    """A loader binds to its first event loop even after successful completion."""
+    root = (tmp_path / "loop.lclcfg").resolve()
+    loader = ConfigLoader(MappingResolver({root: "value: 1\n"}))
+    asyncio.run(loader.load(root))
+    with pytest.raises(Exception, match="cross event loops"):
+        asyncio.run(loader.load(root))

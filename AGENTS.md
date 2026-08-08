@@ -30,6 +30,7 @@ README files before changing the project.
   (including private ones) document constructor fields
   and edge cases with the same conventions.
 - A Comment for each constant values to describe it.
+- In unittest, mock any external connectivities, and use separated TemporaryDirectory to hold file input and outputs.
 
 Runtime packages and tests follow `docs/architecture/module-layout.md`. Tests
 mirror production subsystem boundaries; reusable fixtures live in dedicated

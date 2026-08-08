@@ -2,26 +2,61 @@
 
 ## Import 分层
 
-根包提供日常工作流：`Module`、`Frame`、`FrameFactory`、`Preset`、
-`EvaluationLimits`、`DependencySnapshot` 与 `STANDARD_PRESET`，以及 parser、
-evaluator、identifier/source value 和错误类型。
+根包提供首选的 `define_module`/`define_frame` 工作流、标准 Frame
+`LCL_ROOT`、`LCL_BUILTINS`、`LCL_RUNTIME`、`LCL_IMPORTS`，以及底层的
+`Module`、`Frame`、`FrameFactory`、`Preset`、`EvaluationLimits`、
+`DependencySnapshot` 与 `STANDARD_PRESET` API。
 
 高级静态图、topological order、动态 tracing、reconciliation 与 runtime 类型位于
 `pylcl.runtime`。manifest、namespace 装配、独立 helper、`STANDARD_MANIFESTS` 和
 `STANDARD_PRESET` 位于 `pylcl.stdlib`。
 
-## Module、Preset 与 FrameFactory
+## 首选 definition shortcut 与标准层级
+
+`define_module(name, exprs)` 把 string-to-string dictionary 解析成不可变 `Module`。
+`define_frame(module=None, base=LCL_RUNTIME, preset=None)` 创建新的 user Frame。
+查找从最近一层依次回退：
+
+`user module -> LCL_IMPORTS -> LCL_RUNTIME -> LCL_BUILTINS -> LCL_ROOT`。
+
+`LCL_ROOT` 保存经审查的 LCL namespace；`LCL_BUILTINS` 保存不带 ambient I/O 的
+Python type/function；`LCL_RUNTIME` 是空的 package default，也可替换为每次 run 独立的
+CLI-aware base；`LCL_IMPORTS` 是 detached preset 层。因此 user definition 覆盖 preset，
+preset 覆盖 runtime value。标准 ancestor 只被借用，关闭 user Frame 不会关闭它们。
+
+固定 builtin inventory 为：value type `bool`、`bytes`、`dict`、`float`、
+`frozenset`、`int`、`list`、`set`、`str`、`tuple`；function `abs`、`all`、
+`any`、`bin`、`chr`、`divmod`、`enumerate`、`filter`、`format`、`hex`、
+`isinstance`、`len`、`map`、`max`、`min`、`oct`、`ord`、`pow`、`range`、
+`repr`、`reversed`、`round`、`slice`、`sorted`、`sum`、`zip`。文件/进程输入、
+动态 import/code、reflection 与 mutation helper 均不提供。
+
+## 显式 Module、Preset 与 FrameFactory
 
 `Module` 把 name-to-AST mapping 复制为只读快照。`Preset` 对 host binding 做同样处理，
 `overlay` 是浅层、右侧优先。`FrameFactory` 保存 Module、可选 Preset 与默认
 `EvaluationLimits`。每次 `create` 都拥有全新的 cache、task、dependency trace 与 lifecycle
 状态；调用级 values/limits 覆盖 factory policy。parent Frame 只借用、不归 child 所有。
 
+普通 child Frame 首选 `parent.derive(module, values={})`。它复制本地 host value，以 module
+name 作为 child ID，拥有新的 cache/task/dependency/lifecycle state，并借用 `parent`。
+需要显式 ID 或 child-specific limit 时再直接构造 `Frame`。
+
 ## Frame cache 与并发
 
 `await frame.get(name)` 惰性执行本地 definition 一次，并缓存结果或普通失败。同一 event
 loop 的并发调用共享 owner task，waiter 取消相互隔离。结构化环路径会在 owner deadlock
 前抛出错误。parent definition 始终在其 defining Frame 中运行。
+
+`frame.has(name)` 使用同一递归查找规则检查 definition 或 host value 是否存在。
+`frame.get_definition(name)` 不求值地返回选中的 custom AST；name 不存在，或更近的 host
+value 遮蔽 ancestor definition 时返回 `None`。两者都不修改 cache、dependency、task 或
+lifecycle state。
+
+`frame.mixin(values)` 把右侧优先的 dictionary 原子复制到 open Frame 的 host binding。
+现有 `frame.values` view 保持只读，但会反映更新。直接查找和未缓存 definition 可看到 mixed
+value；已缓存的成功/失败仍是快照。definition 需要观察新输入时应显式调用 `recalculate`。
+Module definition 仍遮蔽同名 host value。
 
 `await frame.recalculate(name)` 只原子替换该 definition 的快照，永远不会使 dependant
 失效。refresh 时旧值仍可读；普通成功/失败同时替换 value/failure 和 dependency trace，

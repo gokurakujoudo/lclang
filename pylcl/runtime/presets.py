@@ -23,7 +23,10 @@ class Preset:
     values: Mapping[str, object]
 
     def __post_init__(self) -> None:
-        """Validate names and detach the mapping from caller mutation."""
+        """Validate names and detach the mapping from caller mutation.
+
+        :raises ValueError: If the preset or a binding name is empty.
+        """
         if not self.name:
             raise ValueError("preset name cannot be empty")
         snapshot = dict(self.values)
