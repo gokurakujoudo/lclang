@@ -79,6 +79,24 @@ asyncio.run(main())
 [依赖分析教程](docs/tutorials/dependency-analytics.md)。中文
 [runtime API 指南](doc_cn/runtime-api_cn.md)继续保留。
 
+## JihuLab CI/CD
+
+仓库流水线定义在 `.gitlab-ci.yml` 中；setup、build、test 和包检查在同一个 verify 任务环境中执行，
+之后再进入发布阶段。verify 任务会导出
+Cobertura 覆盖率，供 JihuLab 合并请求注释和流水线覆盖率统计使用。仅标签流水线中的手动任务会将已验证的
+wheel 和 sdist 发布到本地 Artifactory 及 PyPI。发布前，请将 `ARTIFACTORY_REPOSITORY_URL`、
+`ARTIFACTORY_USERNAME`、`ARTIFACTORY_PASSWORD`、`PYPI_USERNAME` 和 `PYPI_PASSWORD` 配置为
+JihuLab CI/CD 的 masked/protected 变量。
+
+## JihuLab CI/CD
+
+仓库流水线定义在 `.gitlab-ci.yml` 中；setup、build、test 和包检查在同一个 verify 任务环境中执行，
+之后再进入发布阶段。verify 任务会导出
+Cobertura 覆盖率，供 JihuLab 合并请求注释和流水线覆盖率统计使用。仅标签流水线中的手动任务会将已验证的
+wheel 和 sdist 发布到本地 Artifactory 及 PyPI。发布前，请将 `ARTIFACTORY_REPOSITORY_URL`、
+`ARTIFACTORY_USERNAME`、`ARTIFACTORY_PASSWORD`、`PYPI_USERNAME` 和 `PYPI_PASSWORD` 配置为
+JihuLab CI/CD 的 masked/protected 变量。
+
 ## 0.4 目标能力
 
 - 带自定义 AST 的独立版本化 Python 风格表达式语法；

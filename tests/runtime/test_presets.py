@@ -1,6 +1,8 @@
 """Unit tests mirroring :mod:`pylcl.runtime.presets`."""
 
+from collections.abc import MutableMapping
 from dataclasses import FrozenInstanceError
+from typing import cast
 
 import pytest
 
@@ -13,8 +15,9 @@ def test_preset_detaches_an_ordered_read_only_binding_snapshot() -> None:
     preset = Preset("base", values)
     values["first"] = 2
     assert preset.values == {"first": 1}
+    opaque_values: object = preset.values
     with pytest.raises(TypeError):
-        preset.values["other"] = 3  # type: ignore[index]
+        cast(MutableMapping[str, object], opaque_values)["other"] = 3
     with pytest.raises(FrozenInstanceError):
         preset.name = "other"  # type: ignore[misc]
 

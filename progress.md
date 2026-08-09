@@ -79,6 +79,12 @@ actively implemented. The first non-DONE item is the default next task.
 
 M051 commands: `venv\Scripts\python.exe -m pytest tests\release tests\test_package_metadata.py tests\test_m051_release.py -q --no-cov` passed 10 tests; `venv\Scripts\python.exe -m scripts.quality` passed pytest (558 tests, 99.12% branch coverage), strict mypy, and Ruff, then stopped at `scripts.check_project` on the pre-existing production-policy backlog. The composite release command was `venv\Scripts\python.exe -m scripts.release_candidate --output <new space-and-Unicode directory>` and returned zero; its two fresh environments installed with pip `--no-deps --no-index`, with `PYTHONPATH` removed and imports resolved from each environment's site-packages.
 
+## Release engineering
+
+| ID | Deliverable | Status | Evidence |
+|---|---|---|---|
+| M052 | JihuLab GitLab-compatible shared verify/publish pipeline | VERIFIED | [`M052`](docs/specs/M052-jihulab-ci-pipeline.md); exact local tool pins and one-container setup/build/test/inspection structure pass regression checks and the full local quality gate 2026-08-09; an actual JihuLab runner and configured publication credentials remain external verification |
+
 M058 refined-representation evidence: the focused RED command `venv\Scripts\python.exe -m pytest tests\runtime\frame\test_inspection.py -q --no-cov --basetemp .test_tmp_m058_refined_red` failed 6 and passed 8 tests before implementation. The GREEN rerun passed all 14 focused tests. `venv\Scripts\python.exe -m pytest tests\test_tutorials.py -q --no-cov --basetemp .test_tmp_m058_docs_escalated` passed 5 executable documentation checks. The full suite passed 691 tests at 99.34% branch coverage, with `pylcl/runtime/frame/inspection.py` at 100%. Strict mypy passed 251 source files, Ruff passed, the changed production file passed isolated documentation/source-size policy, and `git diff --check` passed.
 
 ## 0.2 configuration
