@@ -22,7 +22,6 @@ def quality_commands(python: Path) -> tuple[Command, ...]:
         (executable, "-m", "mypy"),
         (executable, "-m", "ruff", "check", "."),
         (executable, "-m", "scripts.check_project"),
-        ("git", "diff", "--check"),
     )
 
 

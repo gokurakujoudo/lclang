@@ -85,6 +85,28 @@ Continue with the [tutorial index](docs/tutorials/README.md), then choose the
 static graphs, Frame paths, runtime traces, and reconciliation. The
 [runtime API guide](docs/reference/runtime-api.md) remains the detailed reference.
 
+## JihuLab CI/CD
+
+The repository pipeline is defined in `.gitlab-ci.yml` with one shared verify
+job for setup, build, test, and package inspection, followed by publication.
+The verify job exports Cobertura coverage for JihuLab merge
+request annotations and a percentage for pipeline coverage reporting. Tag-only
+manual jobs publish the verified wheel and sdist to a local Artifactory and to
+PyPI. Configure `ARTIFACTORY_REPOSITORY_URL`,
+`ARTIFACTORY_USERNAME`, `ARTIFACTORY_PASSWORD`, `PYPI_USERNAME`, and
+`PYPI_PASSWORD` as masked/protected JihuLab CI/CD variables before publishing.
+
+## JihuLab CI/CD
+
+The repository pipeline is defined in `.gitlab-ci.yml` with one shared verify
+job for setup, build, test, and package inspection, followed by publication.
+The verify job exports Cobertura coverage for JihuLab merge
+request annotations and a percentage for pipeline coverage reporting. Tag-only
+manual jobs publish the verified wheel and sdist to a local Artifactory and to
+PyPI. Configure `ARTIFACTORY_REPOSITORY_URL`,
+`ARTIFACTORY_USERNAME`, `ARTIFACTORY_PASSWORD`, `PYPI_USERNAME`, and
+`PYPI_PASSWORD` as masked/protected JihuLab CI/CD variables before publishing.
+
 ## Intended capability
 
 The 0.4 target comprises:
