@@ -43,6 +43,7 @@ from pylcl.lang.evaluator.calls import _evaluate_call
 from pylcl.lang.evaluator.comprehensions import _evaluate_comprehension
 from pylcl.lang.evaluator.context import MappingResolver, Resolver
 from pylcl.lang.evaluator.contexts import _evaluate_with
+from pylcl.lang.evaluator.definition_context import active_definition_stack
 from pylcl.lang.evaluator.displays import _evaluate_display
 from pylcl.lang.evaluator.errors import _evaluate_error_form, _wrap_failure
 from pylcl.lang.evaluator.fstrings import _evaluate_joined
@@ -105,10 +106,13 @@ async def _evaluate(node: LclAstNode, resolver: Resolver) -> object:
     try:
         token = _enter_node(node.span)
         return await _evaluate_node(node, resolver)
-    except LclError:
+    except LclError as error:
+        error.attach_variable_stack(active_definition_stack())
         raise
     except Exception as error:
-        raise _wrap_failure(error, node.span) from error
+        wrapped = _wrap_failure(error, node.span)
+        wrapped.attach_variable_stack(active_definition_stack())
+        raise wrapped from error
     finally:
         _leave_node(token)
 

@@ -1,6 +1,8 @@
 """Unit tests mirroring :mod:`pylcl.stdlib.iterables`."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable
+from inspect import isawaitable
+from typing import cast
 
 import pytest
 
@@ -44,3 +46,19 @@ async def test_iterable_helpers_reject_non_iterable_values() -> None:
         await collect(1)
     with pytest.raises(TypeError):
         await first(1)
+
+
+@pytest.mark.asyncio
+async def test_iterable_helpers_await_python_map_items() -> None:
+    """Collect and first resolve async values yielded by a lazy Python map."""
+
+    async def lowered(value: str) -> str:
+        return value.lower()
+
+    collected = await collect(map(lowered, ["A", "B"]))
+    selected = await first(map(lowered, ["C", "D"]))
+    for value in (*collected, selected):
+        if isawaitable(value):
+            await cast(Awaitable[object], value)
+    assert collected == ["a", "b"]
+    assert selected == "c"

@@ -8,6 +8,7 @@ from pylcl.runtime.frame import Frame
 from pylcl.runtime.modules import Module
 from pylcl.stdlib.builtins import STANDARD_PRESET
 from pylcl.stdlib.dates import parse_ymd, to_ymd
+from pylcl.stdlib.recursion import recursive
 from pylcl.types import FrameId, ModuleName
 
 # Curated ordinary Python value types and ambient-I/O-free functions.
@@ -39,6 +40,7 @@ LCL_BUILTIN_VALUES: dict[str, object] = {
     "parse_ymd": parse_ymd,
     "pow": pow,
     "range": range,
+    "recursive": recursive,
     "repr": repr,
     "reversed": reversed,
     "round": round,
@@ -68,6 +70,7 @@ LCL_ROOT = Frame(
     LCL_ROOT_MODULE,
     FrameId("LCL_ROOT"),
     values={"lhs": lhs, **STANDARD_PRESET.values},
+    native_values=True,
 )
 # Standard Python value types and pure functions above the LCL mixin.
 LCL_BUILTINS = Frame(
@@ -75,6 +78,7 @@ LCL_BUILTINS = Frame(
     FrameId("LCL_BUILTINS"),
     values=LCL_BUILTIN_VALUES,
     parent=LCL_ROOT,
+    native_values=True,
 )
 # Empty default run layer, replaceable with one CLI-aware Frame per invocation.
 LCL_RUNTIME = Frame(

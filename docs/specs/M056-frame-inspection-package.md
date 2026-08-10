@@ -21,7 +21,8 @@ for understanding one variable, and group the complete Frame subsystem beneath
   caches, or publishes dependency traces. Empty names are rejected and closing
   or closed Frames retain the existing lifecycle rejection.
 - `VariableInspectionStatus` is a string enumeration with the public values
-  `Cached`, `NotEvaluated`, and `ExternalProvided`.
+  `Cached`, `NotEvaluated`, `ExternalProvided`, and the M095 addition
+  `NativeProvided`.
 - `VariableInspectionTree` exposes `var_name`, `status`, `definition`,
   `definition_path`, `defined_at`, `current_value`, `current_exception`, and
   `dependencies`. Paths and dependencies are ordinary detached lists.
@@ -29,6 +30,9 @@ for understanding one variable, and group the complete Frame subsystem beneath
   ordinary failure is cached, and is otherwise `NotEvaluated`. A selected host
   value is `ExternalProvided`, has no definition, exposes the current unawaited
   host object as `current_value`, and has no dependencies.
+- M095 refines canonical `LCL_ROOT`/`LCL_BUILTINS` host values to
+  `NativeProvided`; ordinary application, preset, and CLI host values remain
+  `ExternalProvided`.
 - A successful cache sets `current_value`; a cached failure sets
   `current_exception`. The unused member is `None`. In-flight work without a
   committed snapshot remains `NotEvaluated` and is neither joined nor exposed.
@@ -59,7 +63,8 @@ for understanding one variable, and group the complete Frame subsystem beneath
 
 - `repr(tree)` uses the source-oriented
   `name@frame/path: [definition ](Status) typed-payload` grammar specified by
-  M058. It does not recursively render Frames or child trees.
+  M058, with canonical AST and evaluated LCL function value payloads added by
+  M098. It does not recursively render Frames or child trees.
 - `tree.to_lines(depth=0, prefix="- ")` returns a detached list of markdown-style
   lines. Every level adds two spaces before the caller prefix, then the one-line
   representation. `depth` must be non-negative and `prefix` must be a string.

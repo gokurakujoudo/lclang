@@ -1,42 +1,49 @@
-# M087: async and synchronous CLI execution
+# M087: async command execution and result mapping
 
 ## Goal
 
-Orchestrate routing, parsing, binding, handler evaluation, output, exit status,
-and cleanup through a stable async-first run boundary.
+Execute exactly typed async handlers through a no-ordinary-exception boundary,
+print/log their results, map statuses, and clean all invocation resources.
 
 ## Module and test layout
 
-- Execution lives in `pylcl/cli/run.py`; exit/error mapping may live in
-  `pylcl/cli/outcomes.py`.
-- Tests live in `tests/cli/test_run.py` with fake handlers/streams in support.
+- Execution lives in `pylcl/cli/run.py`; result rendering and exit mapping may
+  live in `pylcl/cli/outcomes.py`.
+- Tests live in `tests/cli/test_run.py` with static handlers/configs in support.
 - Every production callable and value class, public or private, has a complete
   English rST docstring and source modules stay below 200 lines.
 
 ## Contract
 
-- `run_cli(application, context, *, resolver=None, preset=None)` is async and
-  returns an integer process status without raising expected usage/help errors.
-  `run_cli_sync` is the sole CLI sync adapter and rejects an already-running loop.
-- Help/version requests write stdout and return 0. Usage/routing/conversion errors
-  write stderr and return 2. Config errors return 3. LCL/handler failures return
-  1. Cancellation and `KeyboardInterrupt` are not converted.
-- Handlers may be sync Python, async Python, or LCL. `None` means status 0; `int`
-  in 0..255 is the status; `str` is written with one trailing newline and status
-  0. Other results and invalid integers are handler failures.
-- The runner writes diagnostics through context streams, never calls process
-  `exit`, and always closes invocation-owned resources before returning/raising.
-- Unexpected host bugs retain tracebacks for API callers; an entry-point adapter
-  may render them according to M090 policy.
+- `Command.run(args=None)` and `CliEntrance.run(args=None)` are async and return
+  integer statuses. The caller may use `asyncio.run(...)`; the library adds no
+  synchronous adapter and never calls process exit.
+- Both accept full argv. Direct command run optionally consumes its own name and
+  skips group routing; entrance run routes the full nested command path.
+- Explicit help/version return 0 on stdout. Missing/unknown commands and usage
+  errors return 2 on stderr. A handler must return `CliResult`; any other value is
+  an execution exception.
+- Print and log each non-empty description exactly once: SUCCESS to stdout/INFO,
+  FAILURE to stderr/ERROR, explicit EXCEPTION to stderr/ERROR. The enum value is
+  the program status.
+- Catch ordinary `Exception`, write a concise description to stderr, call
+  `logger.exception` when a logger exists, and return 2. Cancellation,
+  `KeyboardInterrupt`, and `SystemExit` propagate after best-effort cleanup.
+- Close all Frames and the logger on every path. Cleanup failure upgrades a
+  completed SUCCESS/FAILURE to EXCEPTION; with a primary exception, retain its
+  description and log cleanup separately.
+- Help/version short-circuit before config load, Frame construction, log directory
+  creation, logger configuration, required checks, or handler invocation.
 
 ## TDD matrix
 
-- Sunny: execute all handler kinds/results plus help through async and sync
-  boundaries with exact output/status.
-- Rainy: cover every error class/exit mapping, stream failure, invalid result,
-  nested-loop rejection, cancellation, and cleanup.
-- Composite-complex: route/load/bind an LCL handler using config, CLI values,
-  stdlib and async resources, then verify output, dependencies, status, and close.
+- Sunny: execute each `CliResultStatus` through direct and routed runs and assert
+  exact stdout/stderr, records, integer status, and cleanup.
+- Rainy: cover route/parse/config/required/logging/handler/result/output/cleanup
+  failures, plus cancellation and process-control propagation.
+- Composite-complex: route a nested handler over a static Unicode include graph,
+  evaluate lazy values, emit parameterized logs/results, and verify dependency,
+  stream, status, traceback, and reverse cleanup behavior.
 
 ## Completion evidence
 

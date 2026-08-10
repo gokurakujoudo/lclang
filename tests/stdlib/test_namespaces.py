@@ -30,6 +30,7 @@ def test_namespace_is_an_ordered_mapping_and_attribute_view() -> None:
     assert len(namespace) == 2
     assert namespace["opaque"] is opaque
     assert namespace.first == 1
+    assert repr(namespace) == "StdlibNamespace(namespace='tools')"
     missing = "missing"
     with pytest.raises(AttributeError, match="tools"):
         getattr(namespace, missing)

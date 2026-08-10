@@ -24,6 +24,10 @@ async def test_shortcuts_use_the_complete_default_hierarchy() -> None:
     assert pylcl.LCL_RUNTIME.parent is pylcl.LCL_BUILTINS
     assert pylcl.LCL_BUILTINS.parent is pylcl.LCL_ROOT
     assert pylcl.LCL_ROOT.parent is None
+    assert pylcl.LCL_ROOT.native_values is True
+    assert pylcl.LCL_BUILTINS.native_values is True
+    assert pylcl.LCL_RUNTIME.native_values is False
+    assert pylcl.LCL_IMPORTS.native_values is False
     assert tuple(pylcl.LCL_ROOT.values) == ("lhs", "iter", "text", "data", "json")
     assert pylcl.to_source(module.definitions["result"]) != expressions["result"]
 
@@ -58,6 +62,7 @@ def test_builtin_layer_has_a_fixed_ambient_free_inventory() -> None:
         "pow",
         "parse_ymd",
         "range",
+        "recursive",
         "repr",
         "reversed",
         "round",

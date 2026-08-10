@@ -68,6 +68,14 @@ def test_file_magic_becomes_eager_constants_with_physical_origin(tmp_path: Path)
     assert analyze_dependencies(formatted.expression) == ()
 
 
+def test_nested_file_magic_requires_a_physical_origin() -> None:
+    """Magic inside an f-string field cannot bypass the path requirement."""
+    with pytest.raises(LclConfigSyntaxError, match="physical source path") as caught:
+        parse_config("value: f'{__file__}'\n")
+    assert caught.value.span is not None
+    assert caught.value.span.origin.path is None
+
+
 @pytest.mark.parametrize(
     ("text", "error"),
     [

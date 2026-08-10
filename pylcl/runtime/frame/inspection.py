@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING
 
 from pylcl.ast import LclAstNode
 from pylcl.lang.printer import to_source
+from pylcl.stdlib.namespaces import StdlibNamespace
+from pylcl.stdlib.recursion import RecursiveFunction
 from pylcl.types import FrameId, VarName
 
 if TYPE_CHECKING:
@@ -27,6 +29,8 @@ class VariableInspectionStatus(StrEnum):
     NOT_EVALUATED = "NotEvaluated"
     # Lookup selected an opaque host-provided value.
     EXTERNAL_PROVIDED = "ExternalProvided"
+    # Lookup selected a canonical pylcl-provided value.
+    NATIVE_PROVIDED = "NativeProvided"
 
 
 @dataclass(slots=True)
@@ -68,7 +72,11 @@ class VariableInspectionTree:
         if self.definition is None:
             definition = (
                 ""
-                if self.status is VariableInspectionStatus.EXTERNAL_PROVIDED
+                if self.status
+                in {
+                    VariableInspectionStatus.EXTERNAL_PROVIDED,
+                    VariableInspectionStatus.NATIVE_PROVIDED,
+                }
                 else "<missing> "
             )
         else:
@@ -78,10 +86,16 @@ class VariableInspectionTree:
                 f"{type(self.current_exception).__name__}: "
                 f"{compact_text(str(self.current_exception))}"
             )
+        elif isinstance(self.current_value, RecursiveFunction):
+            payload = compact_repr(self.current_value)
         else:
             payload = (
-                f"{type(self.current_value).__name__}: "
-                f"{compact_repr(self.current_value)}"
+                native_value_payload(str(self.var_name), self.current_value)
+                if self.status is VariableInspectionStatus.NATIVE_PROVIDED
+                else (
+                    f"{type(self.current_value).__name__}: "
+                    f"{compact_repr(self.current_value)}"
+                )
             )
         return (
             f"{self.var_name}@{path}: {definition}"
@@ -116,12 +130,31 @@ def compact_repr(value: object) -> str:
     """Return one physical line for an arbitrary current value.
 
     :param value: Opaque cached value, host object, or exception.
-    :returns: Its representation with physical newline characters escaped.
+    :returns: Canonical LCL source for supported AST values, otherwise repr.
 
     .. note::
-       Escaping guarantees one physical output line even for unusual reprs.
+       Unsupported custom AST nodes retain ordinary repr; all output is one line.
     """
+    if isinstance(value, LclAstNode):
+        try:
+            return compact_text(to_source(value))
+        except TypeError:
+            pass
     return compact_text(repr(value))
+
+
+def native_value_payload(name: str, value: object) -> str:
+    """Return the uniform dependency-tree payload for a canonical native value.
+
+    :param name: Selected binding name used for callable diagnostics.
+    :param value: Reviewed pylcl value retained by a canonical Frame.
+    :returns: Builtin function/namespace grammar or a typed fallback payload.
+    """
+    if isinstance(value, StdlibNamespace):
+        return f"Builtin Namespace: {value.namespace}"
+    if callable(value):
+        return f"Builtin Function: {name}"
+    return f"{type(value).__name__}: {compact_repr(value)}"
 
 
 def compact_text(value: str) -> str:

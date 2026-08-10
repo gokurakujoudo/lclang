@@ -8,10 +8,10 @@ from contextvars import ContextVar
 
 from pylcl.errors import LclEvaluationError
 
-# Active Frame definition name, absent outside definition evaluation.
-ACTIVE_DEFINITION: ContextVar[str | None] = ContextVar(
-    "pylcl_active_definition",
-    default=None,
+# Active ordered Frame and lexical-function definition owners.
+ACTIVE_DEFINITION_STACK: ContextVar[tuple[str, ...]] = ContextVar(
+    "pylcl_active_definition_stack",
+    default=(),
 )
 
 
@@ -28,11 +28,13 @@ def definition_scope(name: str) -> Iterator[None]:
     """
     if not name:
         raise ValueError("definition name cannot be empty")
-    token = ACTIVE_DEFINITION.set(name)
+    stack = ACTIVE_DEFINITION_STACK.get()
+    selected = stack if stack[-1:] == (name,) else (*stack, name)
+    token = ACTIVE_DEFINITION_STACK.set(selected)
     try:
         yield
     finally:
-        ACTIVE_DEFINITION.reset(token)
+        ACTIVE_DEFINITION_STACK.reset(token)
 
 
 def lhs() -> str:
@@ -44,11 +46,11 @@ def lhs() -> str:
     .. note::
        Direct expression evaluation has no left-hand definition context.
     """
-    name = ACTIVE_DEFINITION.get()
-    if name is None:
+    stack = ACTIVE_DEFINITION_STACK.get()
+    if not stack:
         message = "lhs() is only available while evaluating a Frame definition"
         raise LclEvaluationError(message)
-    return name
+    return stack[-1]
 
 
 def active_definition() -> str | None:
@@ -59,4 +61,16 @@ def active_definition() -> str | None:
     .. note::
        Function values capture this name to preserve lexical ``lhs()`` meaning.
     """
-    return ACTIVE_DEFINITION.get()
+    stack = ACTIVE_DEFINITION_STACK.get()
+    return stack[-1] if stack else None
+
+
+def active_definition_stack() -> tuple[str, ...]:
+    """Return the ordered variable owners active in this task.
+
+    :returns: Immutable direct-to-innermost definition owner path.
+
+    .. note::
+       Adjacent calls owned by the same lexical definition occupy one entry.
+    """
+    return ACTIVE_DEFINITION_STACK.get()

@@ -35,6 +35,10 @@ def test_empty_function_and_nested_form_body_parse() -> None:
     assert node.parameters == ()
     assert isinstance(node.body, LclAssert)
 
+    trailing = parse_expression("def (value,): value")
+    assert isinstance(trailing, LclFunction)
+    assert tuple(parameter.name for parameter in trailing.parameters) == (VarName("value"),)
+
 
 def test_raise_and_assert_call_like_forms() -> None:
     """Error forms have explicit value and optional-message boundaries."""

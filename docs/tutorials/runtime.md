@@ -189,9 +189,32 @@ asyncio.run(main())
 issue reports, or a notebook. Definitions use canonical LCL source followed by
 one space. External leaves omit definition text; missing leaves display
 `<missing>`. Values use `type: repr`, and errors use `ErrorType: message`.
+An `LclAstNode` stored as a host or cached value is the source-oriented
+exception to ordinary Python repr: inspection prints its concrete type followed
+by canonical LCL expression text. For example, a host value created with
+`parse_expression("base+2")` renders as:
+
+```text
+expression@frame-app: (ExternalProvided) LclBinary: base + 2
+```
+
+The original AST object remains in `current_value`; inspection only changes its
+display and performs no evaluation. Evaluated LCL functions use the same
+source-oriented style:
+
+```text
+quicksort@frame-app: definition (Cached) LclFunctionValue: def (items): ...
+```
+
+The closure keeps working normally, while its representation hides bound
+parameter, resolver, evaluator, and source-span implementation details.
+Values produced by the native `recursive` builtin similarly use
+`Recursive Function: <original source>`; LCL builders retain canonical source
+and Python builders use their function name.
 `Cached` means a definition has a committed value or failure snapshot;
-`NotEvaluated` means it does not; `ExternalProvided` means lookup selected a
-host value. Missing references remain visible as `NotEvaluated` leaves with an
+`NotEvaluated` means it does not; `ExternalProvided` means lookup selected an
+application host value; `NativeProvided` means it selected a reviewed canonical
+pylcl builtin or namespace. Missing references remain visible as `NotEvaluated` leaves with an
 `LclNameError` in `current_exception`. Repeated direct names collapse, cycles
 end at the repeated node on that branch, and the same variable reached through
 different branches remains as separate children.
@@ -208,6 +231,13 @@ The nearest definition or host value wins. pylcl's reviewed defaults include
 ordinary pure helpers such as `len`, `range`, `sorted`, and `sum`, plus the
 `iter`, `text`, `data`, and `json` namespaces. They deliberately exclude file,
 network, process, environment, reflection, and dynamic-import capabilities.
+Inspection renders all reviewed functions and namespaces with one uniform,
+implementation-independent grammar:
+
+```text
+len@frame-app/LCL_BUILTINS: (NativeProvided) Builtin Function: len
+iter@frame-app/LCL_BUILTINS/LCL_ROOT: (NativeProvided) Builtin Namespace: iter
+```
 
 Two compact calendar helpers live in the builtin layer. `parse_ymd(text)`
 strictly parses eight ASCII `YYYYMMDD` digits into `datetime.date`, while
@@ -230,6 +260,13 @@ finally:
 `evaluate(parse_expression("lhs()"))` has no left-hand name and fails. Nested
 definition evaluation receives the nested owner's name; task-local context
 keeps concurrent definitions isolated.
+
+The same task-local ownership produces actionable evaluation errors. If
+`RESULT` depends on `subtotal`, whose expression fails, the structured error has
+`variable_stack == ("RESULT", "subtotal")` and its text ends with
+`[variable evaluation stack: RESULT -> subtotal]`. Calls through an LCL function
+include that function's lexical definition owner. The deepest route is retained
+when the same failure propagates or is returned from the Frame failure cache.
 
 Supply application values narrowly:
 

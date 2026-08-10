@@ -2,40 +2,44 @@
 
 ## Goal
 
-Prove the CLI contract is stable on Windows and POSIX without relying on shell
-quoting folklore, terminal capabilities, locale, or repository-relative imports.
+Prove Python-script CLI behavior is stable on Windows and POSIX without shell
+parsing, terminal assumptions, mutable runtime config generation, or leaked logs.
 
 ## Module and test layout
 
 - No new feature module is planned; fixes remain in their owning CLI/config
   modules.
-- In-process cases live in `tests/cli/test_platform.py`; subprocess helpers and
-  installed smoke cases live in `tests/cli/platform_support.py` and release tests.
-- Any production change keeps modules below 200 lines and documents all private
-  and public callables/value classes with complete English rST docstrings.
+- In-process cases live in `tests/cli/test_platform.py`; subprocess support lives
+  in `tests/cli/platform_support.py` and release tests.
+- All runtime `.lclcfg` contents are static fixtures declared beside their cases.
+  Each filesystem case materializes those fixtures under a separate temporary
+  root; every enabled log directory is a child of an automatically cleaned
+  temporary directory.
 
 ## Contract
 
-- In-process tests pass argv arrays directly; subprocess tests never build a
-  command through `shell=True`. Each token is preserved exactly by the host API.
-- The matrix covers Windows and POSIX path separators, drive-letter/absolute and
-  relative paths, spaces, quotes as literal token data, leading dashes after `--`,
-  Unicode filenames/argv/environment/output, and CRLF/LF input.
-- stdout and stderr are captured separately as text and exit codes are asserted.
-  Help output remains newline-deterministic and contains no ANSI escape sequences.
-- Filesystem tests use temporary roots and explicit resolvers, never change global
-  CWD for concurrent tests, and close all files/tasks before cleanup.
-- CI must run supported Python 3.14+ on Windows and Linux. Platform skips require
-  a named unavailable capability and cannot hide shared contract failures.
+- In-process tests pass full argv arrays directly; subprocess tests never use
+  `shell=True`. Each token is preserved exactly by the host API.
+- Cover Windows/POSIX separators, drive/absolute/relative paths, spaces, literal
+  quote characters, Unicode filenames/argv/output, and option-looking values.
+- stdout/stderr remain separate text streams; statuses and ANSI-free fixed-width
+  help are exact and newline deterministic.
+- Static config fixtures cover valid roots/includes and fixed invalid inputs;
+  tests do not generate configuration semantics dynamically from execution state.
+- Log assertions use only per-test temporary roots, close handlers before cleanup,
+  and verify disabled logging creates nothing.
+- CI runs supported Python 3.14+ on Windows and Linux. Skips name an unavailable
+  platform capability and cannot hide shared behavior failures.
 
 ## TDD matrix
 
-- Sunny: execute the common argv/output/status corpus in process and subprocess
-  on both platform families.
-- Rainy: cover missing/unreadable paths, invalid UTF-8 files, broken output
-  streams, interrupts, option-looking paths, and cleanup failures.
-- Composite-complex: clean-install then load nested config under spaced Unicode
-  paths, pass quote/dash/newline-like tokens without a shell, dry-run and execute.
+- Sunny: execute the common argv/output/status/log corpus in process and
+  subprocess on both platform families.
+- Rainy: cover missing/unreadable/static-invalid configs, broken output/log paths,
+  interrupts, option-looking values, and cleanup failures.
+- Composite-complex: clean-install, run a nested command from a spaced Unicode
+  script, load a static include graph, apply literal/LCL overrides, dryrun and
+  execute, then prove temporary logs and config materialization clean up.
 
 ## Completion evidence
 

@@ -27,6 +27,8 @@ with deterministic receiver/argument order and async-aware results.
 - `*` arguments consume sync or async iterables. `**` arguments require a
   mapping with string keys. Duplicate keyword names raise `TypeError` before the
   callable runs.
+- Manually constructed call ASTs reject argument nodes outside the declared four
+  wrapper types instead of silently omitting them.
 - Sync callables run inline because inputs are trusted application values.
   Awaitable call results are automatically resolved by central evaluation.
 - Descriptor, subscription, iteration, callable, and user-function exceptions

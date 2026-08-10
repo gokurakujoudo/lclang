@@ -1,45 +1,39 @@
-# M090: console entry points and process adapter
+# M090: Python-script process adapter
 
 ## Goal
 
-Connect the context-based CLI runner to installed console scripts without moving
-ambient process behaviour into the core implementation.
+Adapt ambient Python-script argv to the async entrance without adding a console
+entry point or moving process exit into the library.
 
 ## Module and test layout
 
-- Process adaptation lives in `pylcl/cli/main.py`; package metadata declares the
-  console script only after its application contract is finalized.
-- Tests live in `tests/cli/test_main.py` plus isolated installed-script smoke
-  tests in the release tooling.
+- Ambient argv adaptation lives in `pylcl/cli/process.py`; run methods retain
+  orchestration ownership.
+- Tests live in `tests/cli/test_process.py` plus isolated sample-script smoke tests.
 - Every production callable and value class, including private ones, has a full
   English rST docstring; source files remain below 200 lines.
 
 ## Contract
 
-- `main(argv: Sequence[str] | None = None) -> int` snapshots a process context,
-  runs the sync adapter once, and returns status. Only the generated console
-  wrapper turns that return value into process exit status.
-- Explicit argv excludes the executable name and enables in-process tests.
-  `None` uses `sys.argv[1:]`. Program display name comes from configured
-  application metadata rather than an unstable absolute executable path.
-- The installed `pylcl` tool exposes language/config inspection built-ins and a
-  host API can construct other applications; there is no automatic module,
-  entry-point, filesystem, or plugin discovery.
-- Expected CLI/config/runtime errors use established renderers. Unexpected
-  exceptions are allowed to propagate from `main`; the console wrapper does not
-  suppress tracebacks. `KeyboardInterrupt` maps to conventional status 130 after
-  best-effort async cleanup.
-- Importing `pylcl.cli.main` performs no argv parse, I/O, event-loop creation,
-  logging configuration, environment mutation, or process exit.
+- Explicit `run(args)` requires full argv including Python executable and `.py`
+  script. `run(None)` snapshots `[sys.executable, *sys.argv]` exactly once.
+- `CliParams.executable_path` preserves the supplied executable token. Script
+  path is not public params state; its basename labels usage/version output.
+- Application scripts call `asyncio.run(cli_entrance.run())` or
+  `asyncio.run(cli_entrance.run(full_args))` and return/use the integer result.
+- Importing `pylcl.cli` performs no argv parse, I/O, event-loop creation, logging
+  setup, environment mutation, process exit, filesystem/application/plugin
+  discovery, or handler execution.
+- The package adds no `[project.scripts]` entry and no synchronous CLI adapter.
 
 ## TDD matrix
 
-- Sunny: call `main` with explicit argv and run the installed console wrapper,
-  checking output and status.
-- Rainy: verify unexpected errors propagate, interrupt maps to 130, import is
-  inert, and no application/plugin discovery occurs.
-- Composite-complex: clean-install the package and invoke help, config-check, and
-  dry-run against Unicode paths while separating stdout/stderr and exit statuses.
+- Sunny: call explicit and ambient paths from a sample `.py` application and
+  assert captured executable, display label, output, and status.
+- Rainy: reject incomplete/non-text/non-`.py` argv; prove imports are inert and
+  process-control exceptions remain visible.
+- Composite-complex: clean-install and invoke a spaced Unicode sample-script path
+  directly through Python using token arrays, static config, and temporary logs.
 
 ## Completion evidence
 

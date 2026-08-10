@@ -2,7 +2,7 @@
 
 import pytest
 
-from pylcl.ast import LclDictUnpack, LclKeyValue, LclStarred
+from pylcl.ast import LclConstant, LclDictUnpack, LclKeyValue, LclName, LclStarred
 from pylcl.ast.comprehensions import (
     LclDictComprehension,
     LclGenerator,
@@ -10,7 +10,13 @@ from pylcl.ast.comprehensions import (
     LclSetComprehension,
 )
 from pylcl.errors import LclSyntaxError
+from pylcl.lang.lexer import TokenKind, scan_tokens
 from pylcl.lang.parser import parse_expression
+from pylcl.lang.parser.comprehensions import (
+    ComprehensionKind,
+    parse_comprehension,
+)
+from pylcl.lang.parser.stream import TokenStream
 from pylcl.types import VarName
 
 
@@ -84,3 +90,24 @@ def test_double_underscore_comprehension_binding_is_rejected() -> None:
     """Reserved double-underscore names cannot become comprehension targets."""
     with pytest.raises(LclSyntaxError, match="double underscore"):
         parse_expression("[item for __item in items]")
+
+
+def test_dictionary_comprehension_helper_rejects_non_entry_head() -> None:
+    """Direct parser-helper use cannot construct a dictionary from a sequence head."""
+    stream = TokenStream(scan_tokens("for item in items}"))
+    head = LclConstant(value=1)
+
+    def parse_name() -> LclName:
+        """Consume and return the simple iterable name used by this focused fixture."""
+        token = stream.expect(TokenKind.IDENTIFIER, "expected fixture name")
+        return LclName(VarName(token.lexeme), span=token.span)
+
+    with pytest.raises(LclSyntaxError, match="invalid dictionary comprehension head") as caught:
+        parse_comprehension(
+            stream,
+            head,
+            ComprehensionKind.DICT,
+            stream.current.span,
+            parse_name,
+        )
+    assert caught.value.span == head.span

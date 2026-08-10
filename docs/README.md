@@ -9,6 +9,7 @@ This directory contains English design material and user tutorials.
 - [LCL examples gallery](tutorials/lcl_examples.md)
 - [Configuration-file tutorial](tutorials/config_file.md)
 - [Dependency analytics tutorial](tutorials/dependency-analytics.md)
+- [Python-script CLI tutorial](tutorials/cli.md)
 - [Runtime API guide](reference/runtime-api.md)
 - [Complete LCL V1 language syntax](lcl-lang.md)
 - [`.lclcfg` configuration guide](configuration.md)

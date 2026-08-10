@@ -17,6 +17,7 @@ from pylcl.config import (
     load_config,
 )
 from pylcl.config.errors import LclConfigSyntaxError
+from pylcl.config.sources import LoadedConfigSource
 from tests.config.support import MappingResolver
 
 
@@ -255,6 +256,48 @@ async def test_owner_cancellation_is_removed_and_retries(tmp_path: Path) -> None
     release.set()
     assert (await loader.source_for(root, None)).document.declarations
     assert calls == 2
+
+
+@pytest.mark.asyncio
+async def test_failed_former_owner_does_not_remove_replacement_task(tmp_path: Path) -> None:
+    """A failing source owner cannot delete a newer task installed for the same path."""
+    root = (tmp_path / "replacement.lclcfg").resolve()
+    replacement: asyncio.Task[LoadedConfigSource] | None = None
+    blocker = asyncio.Event()
+
+    async def replacement_owner() -> LoadedConfigSource:
+        """Remain pending until the test cancels the synthetic replacement."""
+        await blocker.wait()
+        raise AssertionError("replacement should be cancelled")
+
+    class ReplacingResolver:
+        """Replace the loader cache entry before failing the former owner."""
+
+        loader: ConfigLoader
+
+        async def resolve(
+            self,
+            path: Path,
+            *,
+            importer: ResolvedConfigSource | None,
+        ) -> ResolvedConfigSource:
+            """Install a new owner task and raise a structured failure."""
+            nonlocal replacement
+            del importer
+            replacement = asyncio.create_task(replacement_owner())
+            self.loader.tasks[path] = replacement
+            raise LclConfigSyntaxError("former owner failed")
+
+    resolver = ReplacingResolver()
+    loader = ConfigLoader(resolver)
+    resolver.loader = loader
+    with pytest.raises(LclConfigSyntaxError, match="former owner failed"):
+        await loader.source_for(root, None)
+    assert replacement is not None
+    assert loader.tasks[root] is replacement
+    replacement.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await replacement
 
 
 def test_loader_rejects_cross_loop_reuse(tmp_path: Path) -> None:

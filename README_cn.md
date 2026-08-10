@@ -2,18 +2,19 @@
 
 [English](README.md)
 
-`pylcl` 是面向 Python 3.14+、异步优先的纯 Python 配置表达式语言。0.2.0
-语言、运行时与 `.lclcfg` release candidate 已完成验证；正式发布是独立的维护者操作。
+`pylcl` 是面向 Python 3.14+、异步优先的纯 Python 配置表达式语言。0.3.0
+语言、运行时、`.lclcfg` 与强类型 CLI release candidate 已完成验证；正式发布是独立的维护者操作。
 详见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 项目状态
 
 - 目标版本：0.4.0 开发版本
-- 最新完成：M072 — 配置文档与 0.2 发布门
-- 下一计划：M080 — 强类型 CLI 应用契约
+- 最新完成：M602 — scoped 工作流步骤
+- 下一计划：M100 — 可信输入安全边界审计
 - 已实现：基础工程、强制英文 rST API 文档、带源码位置的 lexer、不可变 AST、
   完整表达式/comprehension 解析、全部计划内 V1 表达式 form，以及确定性的
-  AST 到源码渲染、semantic f-string 解析、稳定的根包 parse/print API、异步表达式求值、
+  AST 到源码渲染、semantic f-string 解析、稳定的根包 parse/print API、对同步/异步
+  iterable item 递归 await 的异步表达式求值、
   词法闭包、结构化错误、断言、try 恢复、finalization、同步/异步上下文管理与
   semantic f-string 求值、不可变 runtime module、层级 single-flight Frame 缓存与
   结构化环检测、取消隔离、不失效 dependant 的原子定向重算，以及 task-local 的
@@ -27,20 +28,30 @@
   shortcut、`LCL_ROOT -> LCL_BUILTINS -> LCL_RUNTIME -> LCL_IMPORTS -> user` 标准层级，
   首选的 `Frame.derive` child 构造、不触发求值的 Frame `has`/`get_definition` 检查，
   以及受控、右侧优先的 `Frame.mixin` host-value 更新、定义上下文 `lhs()`、严格的
-  `YYYYMMDD` 日期内建函数，以及不触发求值、包含 Frame 路径和值终点的依赖图
+  `YYYYMMDD` 日期内建函数、原生可变参数不动点内建函数 `recursive`，以及不触发求值、包含 Frame 路径和值终点的依赖图
   ，并支持闭包中词法化的 `lhs()`、可直接接收源码的 `evaluate_sync`、确定性的
-  FrameFactory 默认 ID，以及配套依赖分析教程和经过审计的嵌套模块布局
-- 测试状态：695 个测试以 99.34% 分支覆盖率通过；strict mypy、Ruff、完整
+  FrameFactory 默认 ID，以及配套依赖分析教程和经过审计的嵌套模块布局，
+  并实现不可变 CLI 值、精确异步命令装饰器、嵌套 snake_case 命令组、完整 argv
+  解析、结构化帮助、惰性 preset/default/config/override Frame 层级、由处理函数负责的
+  dryrun、隔离日志与结果/清理映射，以及 `CliResult.success`/`fail` 快捷方法、
+  无值覆盖键作为布尔 `True`、可选求值后检查的 `parse_lcl`、惰性
+  `eval_lcl` 与确定性嵌套输出的 `builtins` 模块命令；标准层内建值与 namespace
+  会标记为 `NativeProvided`，并统一表示为 `Builtin Function` 或
+  `Builtin Namespace`；结构化错误会携带从直接变量到失败变量的求值栈；此外还提供有序的
+  工作流执行状态树、共享子任务 manager cursor、确定性父状态汇总、子树锁定、不会
+  吞掉异常的 `with` 自动 finalization，以及支持原子描述/状态更新与正常退出自动成功的 step scope
+- 测试状态：842 个测试以 100.00% 分支覆盖率通过；strict mypy、Ruff、完整
   source/docstring policy、可执行文档与 artifact 闸门均通过
 
 `Frame` 现在可直接接收字符串 ID，省略时使用 `frame-<module name>`；
 `inspect_variable()` 可在不触发求值的前提下生成包含缓存状态、定义、Frame 路径、
 当前值或异常的调试树；每个父节点下的直接依赖按首次出现的变量名去重，而不同
 分支仍可分别包含同一变量，并使用
-`name@frame/path: [definition ](Status) typed-payload` 单行格式；外部值不显示定义，值与错误均显示类型。Frame 子系统现统一位于
+  `name@frame/path: [definition ](Status) typed-payload` 单行格式；外部值不显示定义，值与错误均显示类型，AST 值统一显示为标准的
+  `<节点类型>: <LCL 表达式>`，已求值的 LCL 函数闭包也使用标准函数源码表示。Frame 子系统现统一位于
 `pylcl.runtime.frame` 嵌套包中。
 
-package metadata 现报告 `0.2.0`；wheel 与 sdist 均在全新 Python 3.14 环境完成
+package metadata 现报告 `0.3.0`；wheel 与 sdist 均在全新 Python 3.14 环境完成
 无依赖安装与配置加载验证。正式发布是独立的维护者操作。
 
 权威进度与验证证据保存在 [progress.md](progress.md)。计划能力不会被描述为已经实现。
@@ -72,12 +83,26 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
+可以通过同一套惰性 Frame 流程分析或求值命令行定义的结果：
+
+```console
+python -m pylcl.cli builtins
+python -m pylcl.cli parse_lcl -o a 100 -o b 200 -o RESULT "LCL[a+b]"
+python -m pylcl.cli eval_lcl -o a 100 -o b 200 -o RESULT "LCL[a+b]"
+```
+
+第一条命令列出标准内建值及嵌套 namespace 方法；第二条输出静态的
+`RESULT -> a, b` 依赖树，不执行表达式；第三条输出 `100200`，因为未标记的
+CLI 覆盖值始终是字符串。
+
 新的教程结构目前仅提供英文版：从[教程索引](docs/tutorials/README.md)开始，
 再阅读 [runtime 指南](docs/tutorials/runtime.md)、
 [LCL 示例库](docs/tutorials/lcl_examples.md)或
 [配置文件指南](docs/tutorials/config_file.md)，并可阅读英文
-[依赖分析教程](docs/tutorials/dependency-analytics.md)。中文
-[runtime API 指南](doc_cn/runtime-api_cn.md)继续保留。
+[依赖分析教程](docs/tutorials/dependency-analytics.md)与
+[工作流状态教程](docs/tutorials/workflow-status.md)。中文
+[runtime API 指南](doc_cn/runtime-api_cn.md)与
+[CLI 教程](doc_cn/cli_cn.md)继续保留。
 
 ## JihuLab CI/CD
 
@@ -125,6 +150,9 @@ JihuLab CI/CD 的 masked/protected 变量。
 - 英文 LCL 示例库：[docs/tutorials/lcl_examples.md](docs/tutorials/lcl_examples.md)
 - 英文配置文件教程：[docs/tutorials/config_file.md](docs/tutorials/config_file.md)
 - 英文依赖分析教程：[docs/tutorials/dependency-analytics.md](docs/tutorials/dependency-analytics.md)
+- 英文 CLI 教程：[docs/tutorials/cli.md](docs/tutorials/cli.md)
+- 英文工作流状态教程：[docs/tutorials/workflow-status.md](docs/tutorials/workflow-status.md)
+- 中文 CLI 教程：[doc_cn/cli_cn.md](doc_cn/cli_cn.md)
 - 中文教程：`doc_cn/`
 
 ## 许可证

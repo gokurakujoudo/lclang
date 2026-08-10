@@ -11,6 +11,7 @@ from pylcl.runtime import (
     build_dependency_graph,
     topological_order,
 )
+from pylcl.runtime.dependency.ordering import _find_cycle
 from pylcl.types import ModuleName, VarName
 
 
@@ -65,3 +66,11 @@ def test_self_cycle_is_reported_without_hanging() -> None:
     graph = _graph(value="value")
     with pytest.raises(LclCircularDependencyError, match="value -> value"):
         topological_order(graph)
+
+
+def test_cycle_search_returns_none_after_complete_acyclic_traversal() -> None:
+    """The DFS exhausts acyclic branches, shared descendants, and visited roots."""
+    graph = _graph(alpha="beta + gamma", beta="gamma", gamma="external")
+    local = {str(name) for name in graph.definitions}
+    selected = tuple(edge for edge in graph.edges if str(edge.target) in local)
+    assert _find_cycle(graph, selected) is None

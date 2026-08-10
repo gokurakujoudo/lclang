@@ -18,13 +18,17 @@ source-oriented line that users can read directly in logs and markdown trees.
   precedence-aware `to_source()` printer. Exactly one space separates an AST
   from `(<status>)`. An external host-value node has no definition text and
   begins directly with `(<status>)`; an unresolved node retains `<missing>`.
-- `<status>` is the public status value exactly: `Cached`, `NotEvaluated`, or
-  `ExternalProvided`.
+- `<status>` is the public status value exactly: `Cached`, `NotEvaluated`,
+  `ExternalProvided`, or the M095 addition `NativeProvided`.
 - `<typed-payload>` uses `current_exception` when present and otherwise
   `current_value`. An error is `<error type>: <error message>`, using the concrete
   class name and `str(error)` with one space after the colon. A value is
   `<type>: <single-line repr>`, including `NoneType: None` for unevaluated
-  definitions. Physical CR/LF characters are escaped in both forms.
+  definitions. The M096 native refinement instead uses `Builtin Function: name`
+  or `Builtin Namespace: name`. The M098 value refinement replaces a supported
+  AST node's Python repr with canonical LCL source while retaining its concrete
+  type prefix; evaluated `LclFunctionValue` closures similarly render their
+  originating function source. Physical CR/LF characters are escaped.
 - The representation has no recursive children, AST/Frame repr, dependency
   count, surrounding class name, or trailing whitespace.
 - `to_lines()` retains its indentation and prefix contract but uses the new
@@ -36,6 +40,8 @@ source-oriented line that users can read directly in logs and markdown trees.
 answer@frame-app: base + 2 (NotEvaluated) NoneType: None
 base@frame-app: 40 (Cached) int: 40
 rate@request/imports: (ExternalProvided) float: 0.2
+expression@request/imports: (ExternalProvided) LclBinary: base + 2
+len@request/LCL_BUILTINS: (NativeProvided) Builtin Function: len
 missing@request/imports: <missing> (NotEvaluated) LclNameError: [LCL2001] unknown variable: missing
 ```
 

@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import AsyncIterable, AsyncIterator, Iterable
 from typing import cast
 
+from pylcl.lang.evaluator.awaitables import resolve_awaitable
+
 
 async def iterate_values(value: object) -> AsyncIterator[object]:
     """Yield values from an asynchronous or synchronous iterable.
@@ -15,10 +17,11 @@ async def iterate_values(value: object) -> AsyncIterator[object]:
 
     .. note::
        Async iteration is preferred when an object implements both protocols.
+       Every yielded item is recursively resolved before reaching its consumer.
     """
     if isinstance(value, AsyncIterable):
         async for item in value:
-            yield item
+            yield await resolve_awaitable(item)
         return
     for item in cast(Iterable[object], value):
-        yield item
+        yield await resolve_awaitable(item)

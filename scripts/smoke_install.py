@@ -36,10 +36,21 @@ def smoke_program(artifact_kind: str) -> str:
         raise ValueError("artifact kind cannot be empty")
     return f'''\
 import asyncio
+import io
 import sys
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 import pylcl
+from pylcl.cli import (
+    CliContext,
+    CliEntrance,
+    CliResult,
+    CliResultStatus,
+    CommandGroup,
+    ParameterDoc,
+    cli,
+)
 from pylcl.config import load_config
 from pylcl.runtime import build_dependency_graph, topological_order
 
@@ -100,11 +111,89 @@ async def main() -> None:
     finally:
         await config_frame.close()
     assert config_frame.closed is True
+
+    cli_seen = {{}}
+
+    @cli.command(parameter_docs=[ParameterDoc("answer", int, True, "answer")])
+    async def check_command(context: CliContext) -> CliResult:
+        """Check the installed CLI runtime.
+
+        :param context: Current smoke invocation.
+        :returns: Successful empty result.
+        """
+        cli_seen["answer"] = await context.frame.get("answer")
+        cli_seen["dryrun"] = context.dryrun
+        assert context.raw_params.executable_path == sys.executable
+        context.logger.info("installed-answer=%s", cli_seen["answer"])
+        return CliResult(CliResultStatus.SUCCESS, "")
+
+    @cli.command(name="boom")
+    async def boom_handler(context: CliContext) -> CliResult:
+        """Raise an ordinary installed-handler failure.
+
+        :param context: Current smoke invocation.
+        :returns: No result because execution fails.
+        :raises RuntimeError: Always.
+        """
+        del context
+        raise RuntimeError("installed boom")
+
+    admin = CommandGroup("admin", "Admin", [check_command, boom_handler])
+    application = CliEntrance(CommandGroup("root", "Smoke", [admin]), pylcl.__version__)
+    log_dir = Path("cli-logs")
+    cli_status = await application.run(
+        [
+            sys.executable,
+            str(Path("smoke.py")),
+            "admin",
+            "check",
+            "-c",
+            str(entry),
+            "-o",
+            "answer",
+            "LCL[base + 2]",
+            "-a",
+            "20260809",
+            "-wif",
+            "-o",
+            "log_dir",
+            str(log_dir),
+        ]
+    )
+    assert cli_status == 0
+    assert cli_seen == {{"answer": 43, "dryrun": True}}
+    assert "installed-answer=43" in (log_dir / "pylcl.log").read_text(encoding="utf-8")
+
+    help_output = io.StringIO()
+    with redirect_stdout(help_output):
+        assert await application.run([sys.executable, "smoke.py", "admin", "-h"]) == 0
+    assert "Commands:" in help_output.getvalue()
+    assert "check" in help_output.getvalue()
+
+    version_output = io.StringIO()
+    with redirect_stdout(version_output):
+        assert await application.run([sys.executable, "smoke.py", "-v"]) == 0
+    assert version_output.getvalue() == "smoke.py " + pylcl.__version__ + "\\n"
+
+    usage_error = io.StringIO()
+    with redirect_stderr(usage_error):
+        assert await application.run([sys.executable, "smoke.py"]) == 2
+    assert "missing command" in usage_error.getvalue()
+
+    handler_error = io.StringIO()
+    with redirect_stderr(handler_error):
+        assert await application.run(
+            [sys.executable, "smoke.py", "admin", "boom"]
+        ) == 2
+    assert "installed boom" in handler_error.getvalue()
     assert Path(pylcl.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())
     print("pylcl-smoke version=" + pylcl.__version__ +
           " artifact={artifact_kind} value=" + str(value) +
           " dependency=" + dependency + " config=42 history=2 closed=" +
-          str(frame.closed and config_frame.closed).lower())
+          str(frame.closed and config_frame.closed).lower() +
+          " cli=" + str(cli_seen["answer"]) +
+          " dryrun=" + str(cli_seen["dryrun"]).lower() +
+          " builtins=true logging=true exception=true")
 
 
 asyncio.run(main())

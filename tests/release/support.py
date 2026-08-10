@@ -7,7 +7,7 @@ import tarfile
 import zipfile
 from pathlib import Path
 
-DIST_INFO = "pylcl-0.2.0.dist-info"
+DIST_INFO = "pylcl-0.3.0.dist-info"
 
 
 def wheel_fixture(path: Path, extra: tuple[str, ...] = ()) -> Path:
@@ -18,12 +18,12 @@ def wheel_fixture(path: Path, extra: tuple[str, ...] = ()) -> Path:
     :returns: The written archive path.
     """
     metadata = (
-        "Metadata-Version: 2.4\nName: pylcl\nVersion: 0.2.0\n"
+        "Metadata-Version: 2.4\nName: pylcl\nVersion: 0.3.0\n"
         "Requires-Python: >=3.14\nLicense-Expression: MIT\n"
     )
     values = {
-        "pylcl/__init__.py": b"__version__ = '0.2.0'\n",
-        "pylcl/_version.py": b"__version__ = '0.2.0'\n",
+        "pylcl/__init__.py": b"__version__ = '0.3.0'\n",
+        "pylcl/_version.py": b"__version__ = '0.3.0'\n",
         "pylcl/py.typed": b"",
         "LICENSE": b"MIT License\n",
         f"{DIST_INFO}/METADATA": metadata.encode(),
@@ -44,7 +44,7 @@ def sdist_fixture(path: Path, extra: tuple[str, ...] = ()) -> Path:
     :param extra: Additional member paths used for rainy cases.
     :returns: The written archive path.
     """
-    prefix = "pylcl-0.2.0/"
+    prefix = "pylcl-0.3.0/"
     names = [
         "AGENTS.md", "CHANGELOG.md", "LICENSE", "README.md", "README_cn.md",
         "progress.md", "pyproject.toml", "pylcl/py.typed", "docs/index.md",

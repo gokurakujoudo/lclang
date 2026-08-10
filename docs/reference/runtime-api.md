@@ -30,19 +30,25 @@ creates a fresh user Frame. Lookup proceeds from the nearest layer through:
 
 `LCL_ROOT` owns definition-scoped `lhs()` and the reviewed LCL namespaces.
 `LCL_BUILTINS` owns curated ambient-I/O-free Python types/functions, including
-strict `parse_ymd`/`to_ymd` date conversion; `LCL_RUNTIME` is the empty package
-default and may be replaced with one CLI-aware base per run; `LCL_IMPORTS` is
-the detached preset layer. User definitions therefore win over presets, which
-win over runtime values. Canonical ancestors are borrowed and closing a user
-Frame never closes them.
+strict `parse_ymd`/`to_ymd` date conversion and the variadic eager fixed-point
+helper `recursive`; `LCL_RUNTIME` is the empty package default and may be
+replaced with one CLI-aware base per run; `LCL_IMPORTS` is the detached preset
+layer. User definitions therefore win over presets, which win over runtime
+values. Canonical ancestors are borrowed and closing a user Frame never closes
+them.
 
 The fixed builtin inventory is: value types `bool`, `bytes`, `dict`, `float`,
 `frozenset`, `int`, `list`, `set`, `str`, and `tuple`; functions `abs`, `all`,
 `any`, `bin`, `chr`, `divmod`, `enumerate`, `filter`, `format`, `hex`,
 `isinstance`, `len`, `map`, `max`, `min`, `oct`, `ord`, `parse_ymd`, `pow`,
-`range`, `repr`, `reversed`, `round`, `slice`, `sorted`, `sum`, `to_ymd`, and
-`zip`. File/process input,
+`range`, `recursive`, `repr`, `reversed`, `round`, `slice`, `sorted`, `sum`,
+`to_ymd`, and `zip`. File/process input,
 dynamic import/code, reflection, and mutation helpers are deliberately absent.
+
+`recursive(builder)` returns a callable eager fixed point. Its representation is
+`Recursive Function: <original source>`: an LCL function builder uses canonical
+LCL source, while a Python builder uses its function name. Frame inspection
+uses this representation directly and never includes a Python object address.
 
 ## Explicit Module, Preset, and FrameFactory
 
@@ -68,6 +74,20 @@ owner task. Waiter cancellation is isolated. Circular dependency paths raise a
 structured error before an owner can deadlock. Parent definitions always run in
 their defining Frame.
 
+Structured errors raised while evaluating Frame definitions expose
+`variable_stack`, an immutable direct-to-failing owner tuple. Their one-line
+text appends the same route, for example
+`[variable evaluation stack: RESULT -> intermediate -> failing]`. Lazy child
+definitions and LCL closure calls add their lexical owner; propagation and
+cached failures retain the first, deepest stack. Errors created by direct
+expression evaluation outside a Frame have an empty stack.
+
+All synchronous and asynchronous iterable items pass through the recursive
+auto-await boundary before comprehensions, starred expansion, or reviewed
+`iter.collect`/`iter.first` helpers consume them. In particular,
+`[*map(def (x): x.lower(), ["A", "B"])]` evaluates to `["a", "b"]` without
+retaining coroutine objects.
+
 `frame.has(name)` checks whether that same recursive lookup selects either a
 definition or host value. `frame.get_definition(name)` returns the selected
 custom AST without evaluation, or `None` when the name is missing or a nearer
@@ -76,15 +96,28 @@ dependency, task, and lifecycle state.
 
 `frame.inspect_variable(name)` returns a `VariableInspectionTree` whose direct
 children are unique by first-seen variable name. Each node exposes its status (`Cached`,
-`NotEvaluated`, or `ExternalProvided`), selected AST, exact lookup path, owning
+`NotEvaluated`, `ExternalProvided`, or `NativeProvided`), selected AST, exact lookup path, owning
 Frame, current value or exception, and static dependency children. Missing
 names remain diagnostic leaves and cycles stop only on the repeating branch;
 the same name can still appear independently beneath separate parent branches.
 Inspection never evaluates or awaits anything, joins work, changes caches, or
 publishes traces. `repr(tree)` is a compact
 `name@frame/path: [definition ](Status) typed-payload` line using canonical LCL
-source. External values omit definition text, unresolved names use `<missing>`,
-values use `type: repr`, and errors use `ErrorType: message`.
+source. External and native values omit definition text, unresolved names use
+`<missing>`, ordinary values use `type: repr`, and errors use
+`ErrorType: message`.
+When a current value is a supported `LclAstNode`, its typed payload uses
+canonical LCL source instead of the Python dataclass repr, for example
+`LclBinary: base + 2`. Evaluated LCL closures similarly render as
+`LclFunctionValue: def (...): ...`, without exposing their bound parameters,
+resolver, evaluator, source spans, or other implementation state. This applies
+equally to external host values and cached definition results, without
+evaluating the represented value.
+Canonical reviewed values in `LCL_ROOT` and `LCL_BUILTINS` are
+`NativeProvided`; every callable uses `Builtin Function: <binding-name>` and
+every reviewed namespace uses `Builtin Namespace: <namespace-name>`.
+Application, preset, and CLI host values remain `ExternalProvided` and retain
+their ordinary typed reprs.
 `tree.to_lines()` returns a markdown-style nested list of those lines.
 
 `frame.mixin(values)` atomically copies a right-biased dictionary into the open

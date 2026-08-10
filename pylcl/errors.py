@@ -11,7 +11,9 @@ class LclError(Exception):
     :param message: Non-empty human-readable failure description.
     :param span: Optional source range responsible for the failure.
     :param code: Optional stable machine-readable override.
-    :raises ValueError: If *message* or the selected code is empty.
+    :param variable_stack: Ordered definition owners active at failure time.
+    :raises TypeError: If *variable_stack* is not a tuple of strings.
+    :raises ValueError: If the message, code, or a variable name is empty.
 
     .. note::
        String conversion is stable and includes source coordinates when present.
@@ -25,30 +27,65 @@ class LclError(Exception):
         *,
         span: SourceSpan | None = None,
         code: str | None = None,
+        variable_stack: tuple[str, ...] = (),
     ) -> None:
         """Create a structured error.
 
         :param message: Non-empty human-readable failure description.
         :param span: Optional source range responsible for the failure.
         :param code: Optional stable machine-readable override.
-        :raises ValueError: If the message or selected code is empty.
+        :param variable_stack: Ordered definition owners active at failure time.
+        :raises TypeError: If *variable_stack* is not a tuple of strings.
+        :raises ValueError: If the message, code, or a variable name is empty.
         """
         selected_code = self.default_code if code is None else code
         if not message:
             raise ValueError("LCL error message cannot be empty")
         if not selected_code:
             raise ValueError("LCL error code cannot be empty")
+        if not isinstance(variable_stack, tuple) or any(
+            not isinstance(name, str) for name in variable_stack
+        ):
+            raise TypeError("variable evaluation stack must be a tuple of strings")
+        if any(not name for name in variable_stack):
+            raise ValueError("variable evaluation stack names cannot be empty")
         super().__init__(message)
         self.message = message
         self.span = span
         self.code = selected_code
+        self.variable_stack = variable_stack
+
+    def attach_variable_stack(self, variable_stack: tuple[str, ...]) -> None:
+        """Attach the first non-empty variable evaluation path.
+
+        :param variable_stack: Ordered definition owners active at failure time.
+        :returns: ``None`` after retaining a previously absent stack.
+        :raises TypeError: If *variable_stack* is not a tuple of strings.
+        :raises ValueError: If a variable name is empty.
+
+        .. note::
+           A deeper stack already attached during propagation is never replaced.
+        """
+        if not isinstance(variable_stack, tuple) or any(
+            not isinstance(name, str) for name in variable_stack
+        ):
+            raise TypeError("variable evaluation stack must be a tuple of strings")
+        if any(not name for name in variable_stack):
+            raise ValueError("variable evaluation stack names cannot be empty")
+        if self.variable_stack or not variable_stack:
+            return
+        self.variable_stack = variable_stack
 
     def __str__(self) -> str:
         """Render a stable single-line diagnostic.
 
         :returns: Code, message, and optional source coordinates.
         """
-        diagnostic = f"[{self.code}] {self.message}"
+        stack = ""
+        if self.variable_stack:
+            path = " -> ".join(self.variable_stack)
+            stack = f" [variable evaluation stack: {path}]"
+        diagnostic = f"[{self.code}] {self.message}{stack}"
         if self.span is None:
             return diagnostic
         start = self.span.start

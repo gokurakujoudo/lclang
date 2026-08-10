@@ -58,6 +58,13 @@ class StdlibNamespace(Mapping[str, object]):
         """
         return len(self.members)
 
+    def __repr__(self) -> str:
+        """Return a stable summary without member implementation details.
+
+        :returns: Namespace-name representation without mappings or addresses.
+        """
+        return f"StdlibNamespace(namespace={self.namespace!r})"
+
     def __getattr__(self, name: str) -> object:
         """Return a declared member or a namespace-aware attribute error.
 

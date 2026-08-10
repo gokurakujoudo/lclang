@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pylcl"
-version = "0.2.0"
+version = "0.3.0"
 description = "A typed, async-first configuration expression language"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -47,7 +47,7 @@ addopts = [
   "--cov=pylcl",
   "--cov-branch",
   "--cov-report=term-missing",
-  "--cov-fail-under=99",
+  "--cov-fail-under=100",
 ]
 asyncio_mode = "strict"
 testpaths = ["tests"]
@@ -57,7 +57,7 @@ branch = true
 source = ["pylcl"]
 
 [tool.coverage.report]
-fail_under = 99
+fail_under = 100
 show_missing = true
 skip_covered = false
 
