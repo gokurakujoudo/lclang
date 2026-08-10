@@ -1,16 +1,16 @@
-"""Unit tests mirroring :mod:`pylcl.ast.forms`."""
+"""Unit tests mirroring :mod:`lclang.ast.forms`."""
 
 import pytest
 
-from pylcl.ast import LclConstant
-from pylcl.ast.forms import (
+from lclang.ast import LclConstant
+from lclang.ast.forms import (
     LclAssert,
     LclFunction,
     LclParameter,
     LclRaise,
     ParameterKind,
 )
-from pylcl.types import VarName
+from lclang.types import VarName
 
 
 def test_parameter_and_form_children_are_deterministic() -> None:

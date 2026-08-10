@@ -1,18 +1,21 @@
-"""Unit tests mirroring :mod:`pylcl.lang.printer.forms`."""
+"""Unit tests mirroring :mod:`lclang.lang.printer.forms`."""
 
 import pytest
 
-from pylcl.lang.parser import parse_expression
-from pylcl.lang.printer import to_source
+from lclang.lang.parser import parse_expression
+from lclang.lang.printer import to_source
 
 
 @pytest.mark.parametrize(
     ("source", "canonical"),
     [
         (
-            "def(x,y=1,*args,option=2,**kwargs):x+y",
-            "def (x, y=1, *args, option=2, **kwargs): x + y",
+            "(x,y=1,*args,option=2,**kwargs)->x+y",
+            "(x, y=1, *args, option=2, **kwargs) -> x + y",
         ),
+        ("x->x", "(x) -> x"),
+        ("()->1", "() -> 1"),
+        ("x->y->x+y", "(x) -> (y) -> x + y"),
         ("raise(Error('x'))", "raise(Error('x'))"),
         ("assert(value,'bad')", "assert(value, 'bad')"),
         (
@@ -27,4 +30,6 @@ from pylcl.lang.printer import to_source
 )
 def test_form_source_is_canonical(source: str, canonical: str) -> None:
     """Function, error, and control forms print with unambiguous boundaries."""
-    assert to_source(parse_expression(source)) == canonical
+    printed = to_source(parse_expression(source))
+    assert printed == canonical
+    assert to_source(parse_expression(printed)) == canonical

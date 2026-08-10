@@ -5,7 +5,7 @@ from datetime import date
 
 import pytest
 
-from pylcl.cli import (
+from lclang.cli import (
     CliConfig,
     CliContext,
     CliEntrance,
@@ -15,8 +15,8 @@ from pylcl.cli import (
     CommandGroup,
     cli,
 )
-from pylcl.runtime import Frame, Module
-from pylcl.types import ModuleName
+from lclang.runtime import Frame, Module
+from lclang.types import ModuleName
 
 
 @cli.command()

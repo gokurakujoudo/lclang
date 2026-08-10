@@ -1,14 +1,15 @@
-# pylcl Agent Handoff
+# lclang Agent Handoff
 
-Read this file, `progress.md`, the active milestone specification, and both
-README files before changing the project.
+Read this file, `progress.md`, both root README files, and the relevant user or
+reference documentation before changing the project.
 
 ## Project identity
 
-- Distribution and import name: `pylcl`.
+- Distribution and import name: `lclang`.
+- Production package root: `src/lclang`.
 - Runtime: Python 3.14 or newer; no third-party runtime dependencies.
 - License: MIT.
-- Target: complete and verify the 0.4 release described in `progress.md`.
+- Release line: stable 1.0.
 - Security model: trusted configuration language, not a hostile-code sandbox.
 
 ## Non-negotiable architecture
@@ -21,45 +22,48 @@ README files before changing the project.
 - No class or function name can start with an underscore.
 - A `Frame` is safe for concurrent tasks in one event loop, not across loops.
 - Cached values are snapshots. Recalculation never invalidates dependants.
-- Source files must stay below 200 lines, excluding docstrings and imports. Split modules by responsibility.
-- Every production docstring is English rST. All functions and methods (including private ones)
-  document how it works, and every parameter with `:param name:`, their result with `:returns:` unless no return or `None`,
-  every intentional exception with `:raises Type:`, and genuinely useful special
-  behaviour with an rST `.. note::`. Do not add notes that merely restate the
-  declaration, owning subsystem, or ordinary lifecycle. All value classes
-  (including private ones) document constructor fields
-  and edge cases with the same conventions.
-- A Comment for each constant values to describe it.
-- In unittest, mock any external connectivities, and use separated TemporaryDirectory to hold file input and outputs.
-- CLI unittest configuration sources are static fixtures declared with their test
-  cases. Every enabled log file is rooted in a per-test temporary directory that
-  is cleaned automatically.
+- Source files stay below 200 lines, excluding docstrings and imports. Split
+  modules by responsibility.
+- Every production docstring is English rST. Functions and methods document how
+  they work, every parameter with `:param name:`, results with `:returns:` unless
+  no value is returned, and intentional exceptions with `:raises Type:`.
+  Useful special behavior may use an rST `.. note::`; do not add notes that
+  merely restate ordinary lifecycle or ownership. Value classes document
+  constructor fields and edge cases with the same conventions.
+- Add a descriptive comment for every constant value.
+- Unit tests mock external connectivity and isolate file input/output in a
+  separate `TemporaryDirectory`.
+- CLI test configuration sources are static fixtures declared with their cases.
+  Enabled logs are rooted in per-test temporary directories.
 
-Runtime packages and tests follow `docs/architecture/module-layout.md`. Tests
+Runtime packages and tests follow `docs/development/architecture.md`. Tests
 mirror production subsystem boundaries; reusable fixtures live in dedicated
-support modules rather than unrelated test files.
+support modules.
 
 ## Required workflow
 
-For every implementation milestone:
+For behavior changes:
 
-1. Write or update its English specification in `docs/specs/`.
-2. Add a behavioural test and run it to prove RED, test must include practical and meaningful sunny, rainy, composite-complex cases.
-3. Implement the smallest correct behaviour and prove GREEN.
-4. Refactor, then run milestone and full quality checks.
-5. Update `README.md`, `README_cn.md`, and `progress.md`.
-6. Mark `DONE` only with commands and evidence recorded in `progress.md`.
+1. Update the relevant English reference or guide.
+2. Add a behavioral test and prove it fails. Cover practical sunny, rainy, and
+   composite cases where applicable.
+3. Implement the smallest correct behavior and prove it passes.
+4. Refactor, then run focused and complete quality checks.
+5. Update both README files, the changelog, or the feature inventory when their
+   public claims change.
 
 For a bug, reproduce it with a failing test before fixing it. Documentation-only
-milestones use link, metadata, or structural checks rather than artificial unit
-test failures.
+work uses link, metadata, structural, or executable-example checks appropriate
+to the changed artifact.
 
 ## Sources of truth
 
-- `progress.md`: current work, status, evidence, and release gates.
-- `docs/specs/`: behaviour and public contracts.
+- `docs/reference/`: language and public API contracts.
+- `docs/tutorials/`: executable user workflows and examples.
+- `tests/`: behavioral and distribution contracts.
+- `progress.md`: concise inventory of the stable 1.0 feature set.
 - `README.md` and `README_cn.md`: user-visible implemented capability only.
 - `pyproject.toml`: supported Python and tool configuration.
 
-Do not advertise planned behaviour as implemented. Preserve unrelated user
+Do not advertise planned behavior as implemented. Preserve unrelated user
 changes. Update this file only when durable architecture or workflow changes.

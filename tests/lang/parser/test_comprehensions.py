@@ -1,23 +1,23 @@
-"""Unit tests mirroring :mod:`pylcl.lang.parser.comprehensions`."""
+"""Unit tests mirroring :mod:`lclang.lang.parser.comprehensions`."""
 
 import pytest
 
-from pylcl.ast import LclConstant, LclDictUnpack, LclKeyValue, LclName, LclStarred
-from pylcl.ast.comprehensions import (
+from lclang.ast import LclConstant, LclDictUnpack, LclKeyValue, LclName, LclStarred
+from lclang.ast.comprehensions import (
     LclDictComprehension,
     LclGenerator,
     LclListComprehension,
     LclSetComprehension,
 )
-from pylcl.errors import LclSyntaxError
-from pylcl.lang.lexer import TokenKind, scan_tokens
-from pylcl.lang.parser import parse_expression
-from pylcl.lang.parser.comprehensions import (
+from lclang.errors import LclSyntaxError
+from lclang.lang.lexer import TokenKind, scan_tokens
+from lclang.lang.parser import parse_expression
+from lclang.lang.parser.comprehensions import (
     ComprehensionKind,
     parse_comprehension,
 )
-from pylcl.lang.parser.stream import TokenStream
-from pylcl.types import VarName
+from lclang.lang.parser.stream import TokenStream
+from lclang.types import VarName
 
 
 def test_generator_and_collection_comprehension_forms() -> None:

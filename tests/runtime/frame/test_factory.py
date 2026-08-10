@@ -1,12 +1,12 @@
-"""Unit tests mirroring :mod:`pylcl.runtime.frame.factory`."""
+"""Unit tests mirroring :mod:`lclang.runtime.frame.factory`."""
 
 from dataclasses import FrozenInstanceError
 
 import pytest
 
-from pylcl.lang.parser import parse_expression
-from pylcl.runtime import EvaluationLimits, FrameFactory, Module, Preset
-from pylcl.types import FrameId, ModuleName
+from lclang.lang.parser import parse_expression
+from lclang.runtime import EvaluationLimits, FrameFactory, Module, Preset
+from lclang.types import FrameId, ModuleName
 
 
 def _module(source: str = "base + extra") -> Module:

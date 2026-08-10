@@ -1,7 +1,7 @@
-"""Unit tests mirroring :mod:`pylcl.ast.displays`."""
+"""Unit tests mirroring :mod:`lclang.ast.displays`."""
 
-from pylcl.ast import LclConstant
-from pylcl.ast.displays import (
+from lclang.ast import LclConstant
+from lclang.ast.displays import (
     LclDict,
     LclDictUnpack,
     LclKeyValue,

@@ -1,1 +1,1 @@
-"""Package containing pylcl verification suites."""
+"""Package containing lclang verification suites."""

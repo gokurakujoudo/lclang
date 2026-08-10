@@ -1,12 +1,12 @@
-"""Behavioural tests for structured pylcl errors."""
+"""Behavioural tests for structured lclang errors."""
 
 from __future__ import annotations
 
 import pytest
 
-from pylcl.errors import LclError, LclEvaluationError, LclNameError, LclSyntaxError
-from pylcl.source import SourceOrigin, SourcePosition, SourceSpan
-from pylcl.types import SourceName
+from lclang.errors import LclError, LclEvaluationError, LclNameError, LclSyntaxError
+from lclang.source import SourceOrigin, SourcePosition, SourceSpan
+from lclang.types import SourceName
 
 
 def test_error_without_span_has_stable_code_and_rendering() -> None:

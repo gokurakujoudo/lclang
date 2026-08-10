@@ -1,16 +1,16 @@
-"""Unit tests mirroring :mod:`pylcl.runtime.dependency.tracing`."""
+"""Unit tests mirroring :mod:`lclang.runtime.dependency.tracing`."""
 
 from collections.abc import Awaitable, Callable
 from typing import cast
 
 import pytest
 
-from pylcl import evaluate
-from pylcl.errors import LclNameError
-from pylcl.lang.evaluator.context import MappingResolver
-from pylcl.lang.parser import parse_expression
-from pylcl.runtime import DependencyKind, DependencyTrace, TracingResolver
-from pylcl.types import VarName
+from lclang import evaluate
+from lclang.errors import LclNameError
+from lclang.lang.evaluator.context import MappingResolver
+from lclang.lang.parser import parse_expression
+from lclang.runtime import DependencyKind, DependencyTrace, TracingResolver
+from lclang.types import VarName
 
 
 def test_trace_validates_source_and_retains_bounded_ordered_snapshots() -> None:
@@ -52,7 +52,7 @@ async def test_captured_resolver_traces_later_free_names_not_local_parameters() 
     """A closure extends its defining trace only for delegated free lookups."""
     trace = DependencyTrace(VarName("function"))
     resolver = TracingResolver(trace, MappingResolver({"outer": 40}))
-    function = await evaluate(parse_expression("def (x): x + outer"), resolver)
+    function = await evaluate(parse_expression("(x) -> x + outer"), resolver)
     before_call = trace.edges
     assert before_call == ()
     call = cast(Callable[..., Awaitable[object]], function)

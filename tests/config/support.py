@@ -2,9 +2,9 @@
 
 from pathlib import Path
 
-from pylcl.config import ResolvedConfigSource
-from pylcl.source import SourceOrigin, SourcePosition, SourceSpan
-from pylcl.types import SourceName
+from lclang.config import ResolvedConfigSource
+from lclang.source import SourceOrigin, SourcePosition, SourceSpan
+from lclang.types import SourceName
 
 
 def source_span(name: str = "test") -> SourceSpan:

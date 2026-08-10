@@ -1,4 +1,4 @@
-"""Run the fail-fast, no-publication pylcl 0.3 release-candidate gate."""
+"""Run the fail-fast, no-publication lclang release-candidate gate."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ def safe_extract(source: Path, destination: Path) -> Path:
     """
     destination.mkdir(parents=True, exist_ok=True)
     with tarfile.open(source, "r:gz") as archive:
-        root = destination / f"pylcl-{VERSION}"
+        root = destination / f"lclang-{VERSION}"
         for member in archive.getmembers():
             if not member.isfile() and not member.isdir():
                 raise ValueError("sdist contains a link or special archive member")
@@ -57,8 +57,14 @@ def build_sdist_wheel(python: Path, root: Path, output: Path) -> int:
     environment.pop("PYTHONPATH", None)
     environment["PIP_NO_INDEX"] = "1"
     command = (
-        str(python), "-m", "hatchling", "build", "--target", "wheel",
-        "--directory", str(output),
+        str(python),
+        "-m",
+        "hatchling",
+        "build",
+        "--target",
+        "wheel",
+        "--directory",
+        str(output),
     )
     return subprocess.run(command, cwd=root, env=environment, check=False).returncode
 
@@ -70,15 +76,20 @@ def artifact_record(reports: tuple[ArtifactReport, ...]) -> str:
     :returns: Machine-readable JSON evidence.
     """
     values = [
-        {"kind": report.kind, "name": report.path.name, "bytes": report.path.stat().st_size,
-         "sha256": report.digest, "members": len(report.members)}
+        {
+            "kind": report.kind,
+            "name": report.path.name,
+            "bytes": report.path.stat().st_size,
+            "sha256": report.digest,
+            "members": len(report.members),
+        }
         for report in reports
     ]
     return json.dumps({"version": VERSION, "artifacts": values}, sort_keys=True)
 
 
 def run_release(output: Path, python: Path = Path(sys.executable)) -> int:
-    """Build, inspect, rebuild, and smoke-test the 0.3 artifacts.
+    """Build, inspect, rebuild, and smoke-test the current artifacts.
 
     :param output: New or empty caller-selected release output directory.
     :param python: Python interpreter used for build and smoke tooling.
@@ -92,15 +103,15 @@ def run_release(output: Path, python: Path = Path(sys.executable)) -> int:
         ensure_empty_output(output)
         if build_package(python, output):
             return 1
-        sdist = output / f"pylcl-{VERSION}.tar.gz"
-        wheel = output / f"pylcl-{VERSION}-py3-none-any.whl"
+        sdist = output / f"lclang-{VERSION}.tar.gz"
+        wheel = output / f"lclang-{VERSION}-py3-none-any.whl"
         expected = {sdist.name, wheel.name}
         actual = {entry.name for entry in output.iterdir()}
         if actual != expected:
             raise ValueError("build output does not contain exactly the two release artifacts")
         source_report = inspect_sdist(sdist)
         wheel_report = inspect_wheel(wheel)
-        temporary = output.parent / f"pylcl-release-{uuid.uuid4().hex}"
+        temporary = output.parent / f"lclang-release-{uuid.uuid4().hex}"
         temporary.mkdir()
         try:
             extracted = safe_extract(sdist, temporary)

@@ -1,186 +1,248 @@
-# pylcl
+# lclang
 
-[中文说明](README_cn.md)
+`lclang` is a small, async-first configuration language for Python applications.
+It lets you describe related values as expressions, provide environment-specific
+inputs from Python, and evaluate only the values a particular run needs.
 
-`pylcl` is a pure-Python, async-first configuration expression language for
-Python 3.14+. The 0.3.0 language, runtime, `.lclcfg`, and typed CLI release candidate is
-verified; publication is a separate maintainer action. See
-[CHANGELOG.md](CHANGELOG.md).
+Use it when configuration is more than static data but should remain explicit,
+inspectable, and separate from application code—for example, derived service
+settings, deployment policy, command defaults, or request-scoped calculations.
 
-## Project status
+`lclang` is pure Python, requires Python 3.14 or newer, has no third-party
+runtime dependencies, and is distributed under the MIT license.
 
-- Target: 0.4.0 development release
-- Latest completed milestone: M602 — scoped workflow steps
-- Next planned milestone: M100 — trusted-input security boundary audit
-- Implemented: foundation, enforced English rST API docs, source-aware lexer,
-  immutable AST, complete expression/comprehension parsing, all planned V1
-  expression forms, deterministic AST-to-source rendering, semantic f-string
-  parsing, stable root parse/print APIs, async expression evaluation with
-  recursively awaited sync/async iterable items, lexical
-  closures, structured failures, assertions, try recovery, finalization, and
-  synchronous/asynchronous context management, semantic f-string evaluation,
-  immutable runtime modules, and hierarchical single-flight Frame caching with
-  structured cycle detection, cancellation isolation, and atomic targeted
-  recalculation without dependant invalidation, plus task-local depth, work, and
-  materialized-collection limits, deterministic Frame close/resource cleanup,
-  scope-aware eager/conditional/deferred dependency analysis, immutable module
-  dependency graphs, filtered queries, deterministic topological ordering,
-  bounded runtime lookup tracing, static/dynamic edge reconciliation, and
-  owner-aware immutable Frame dependency snapshots with atomic refresh semantics,
-  plus shallow immutable host presets, reusable independent Frame factories,
-  manifest-driven read-only attribute namespaces, and reviewed async iterable,
-  text, immutable data, and strict JSON helpers in a standard preset, exposed
-  through a focused root API for the complete runtime workflow, plus preferred
-  source-string `define_module`/`define_frame` shortcuts and the canonical
-  `LCL_ROOT -> LCL_BUILTINS -> LCL_RUNTIME -> LCL_IMPORTS -> user` hierarchy,
-  preferred `Frame.derive` child construction, non-evaluating `has` and
-  `get_definition` lookup inspection, side-effect-free `inspect_variable`
-  dependency trees with first-seen direct-name deduplication and source-oriented
-  one-line representations with typed value/error payloads, including canonical
-  `<node-type>: <LCL expression>` payloads for AST values and canonical source
-  reprs for evaluated LCL function closures, plus controlled
-  right-biased `Frame.mixin`
-  host-value updates, definition-scoped `lhs()`, strict `YYYYMMDD` date builtins,
-  the native variadic fixed-point builtin `recursive`,
-  and non-evaluating Frame-qualified dependency graphs with value terminals and
-  lookup paths, lexical closure ownership for `lhs()`, source-string
-  `evaluate_sync`, deterministic direct/FrameFactory IDs, and a dependency
-  analytics tutorial backed by audited nested dependency and Frame packages,
-  plus immutable CLI values, exact async command decorators, nested snake_case
-  groups, full-argv parsing, structured help, lazy preset/default/config/override
-  Frame layering, handler-owned dryrun, isolated logging, result/cleanup mapping,
-  concise `CliResult.success`/`fail` constructors, valueless override keys as
-  boolean `True`, and built-in `parse_lcl` with optional evaluated inspection,
-  lazy `eval_lcl`, and deterministic nested `builtins` module commands, with canonical pylcl
-  builtins and standard namespaces identified as `NativeProvided` and rendered
-  uniformly as `Builtin Function` or `Builtin Namespace`, plus structured
-  failures carrying direct-to-failing variable evaluation stacks, plus ordered
-  workflow execution-status trees, shared sub-task manager cursors, deterministic
-  parent aggregation, subtree locking, exception-transparent `with` finalization,
-  and scoped steps with atomic description/status updates and clean auto-success
-- Test status: 842 tests pass at 100.00% branch coverage; strict mypy, Ruff,
-  exhaustive source/docstring policy, executable documentation, and artifact
-  gates pass
+> LCL is intended for trusted application configuration. It is not a sandbox
+> for expressions supplied by an attacker. Values and callables provided by the
+> host application retain their ordinary Python capabilities.
 
-The authoritative milestone ledger is in [progress.md](progress.md). Planned
-features are deliberately not presented as implemented features.
+## Installation
 
-## Quickstart
+```console
+python -m pip install lclang
+```
 
-Run from a checkout with its development environment installed. The example is
-extracted and executed by the test suite.
+## The mental model
+
+Most applications need only two concepts:
+
+- A `Module` is an immutable set of named, unevaluated definitions. It answers:
+  **what can be calculated?**
+- A `Frame` combines a Module with host inputs, a lookup hierarchy, lazy result
+  snapshots, and owned asynchronous work. It answers: **what do those
+  definitions mean for this run?**
+
+```text
+          parse once                              create per run
+
+  expression source ──> Module       Module + host inputs ──> Frame
+                         │                                      │
+                  reusable definitions                 lazy value snapshots
+```
+
+Modules are safe to reuse across requests, tenants, commands, and tests because
+they contain no evaluation state. Frames are intentionally stateful and belong
+to one event loop. Create a fresh Frame for each independent run and close it
+when that run finishes.
+
+This separation is the central lclang usage pattern: **define once, evaluate in
+a short-lived context**.
+
+## Preferred application pattern
+
+Define the Module when the application loads. Supply narrow Python values when
+creating the Frame, request the outputs you need, and close the Frame in a
+`finally` block.
 
 ```python
 import asyncio
 
-import pylcl
+import lclang
+
+
+INVOICE = lclang.define_module(
+    "invoice",
+    {
+        "subtotal": "unit_price * quantity",
+        "total": "subtotal + tax",
+        "label": 'f"Total: {total:.2f}"',
+    },
+)
+
+
+async def price_invoice(*, unit_price: float, quantity: int, tax: float) -> str:
+    frame = lclang.define_frame(
+        INVOICE,
+        preset={
+            "unit_price": unit_price,
+            "quantity": quantity,
+            "tax": tax,
+        },
+    )
+    try:
+        return await frame.get("label")
+    finally:
+        await frame.close()
 
 
 async def main() -> None:
-    module = pylcl.define_module(
-        "quickstart",
-        {"result": 'json.encode({"message": "hello pylcl"})'},
-    )
-    frame = pylcl.define_frame(module)
-    try:
-        print(await frame.get("result"))
-        snapshot = frame.dependency_snapshot("result")
-        print(",".join(str(edge.target) for edge in snapshot.dynamic_edges))
-    finally:
-        await frame.close()
+    label = await price_invoice(unit_price=6.5, quantity=4, tax=2.0)
+    assert label == "Total: 28.00"
 
 
 asyncio.run(main())
 ```
 
-Inspect an override-defined result without evaluating it, or evaluate it through
-the same lazy Frame pipeline:
+Definition order is not evaluation order. Here `total` may refer to `subtotal`
+regardless of where either appears in the mapping. Parsing validates every
+expression up front; evaluation follows name lookups only when `frame.get()` is
+called.
 
-```console
-python -m pylcl.cli builtins
-python -m pylcl.cli parse_lcl -o a 100 -o b 200 -o RESULT "LCL[a+b]"
-python -m pylcl.cli eval_lcl -o a 100 -o b 200 -o RESULT "LCL[a+b]"
+`define_module()` and `define_frame()` are the preferred high-level APIs. A
+Frame created this way also receives lclang's reviewed pure builtins and the
+`iter`, `text`, `data`, and `json` namespaces.
+
+## Choose the smallest entry point
+
+| Need | Preferred API | Ownership model |
+| --- | --- | --- |
+| Evaluate one expression in synchronous code | `evaluate_sync(source, values)` | lclang owns the temporary event loop |
+| Evaluate related named definitions | `define_module()` + `define_frame()` | reuse the Module; close each Frame |
+| Load a `.lclcfg` file and read one value | `load_config()` + `evaluate_config()` | `evaluate_config()` closes its temporary Frame |
+| Evaluate one parsed expression asynchronously | `parse_expression()` + `await evaluate()` | caller supplies the resolver values |
+| Parse, print, or analyze syntax without running it | `parse_expression()` + `to_source()` or runtime analysis APIs | no evaluation state is created |
+| Create many runs with the same policy | `FrameFactory` or `Config.frame_factory()` | close every created Frame |
+
+For a small synchronous script, keep things direct:
+
+```python
+import lclang
+
+total = lclang.evaluate_sync(
+    "unit_price * quantity",
+    {"unit_price": 6, "quantity": 4},
+)
+assert total == 24
 ```
 
-The first command lists canonical builtins and nested namespace methods. The
-second prints the static `RESULT -> a, b` inspection tree. The third prints
-`100200` because ordinary CLI override values are literal strings.
+Do not call `evaluate_sync()` from a running event loop. Async applications
+should use Frames or await `evaluate()`.
 
-Continue with the [tutorial index](docs/tutorials/README.md), then choose the
-[runtime guide](docs/tutorials/runtime.md),
-[LCL examples gallery](docs/tutorials/lcl_examples.md), or
-[configuration-file guide](docs/tutorials/config_file.md). Use the
-[dependency analytics tutorial](docs/tutorials/dependency-analytics.md) for
-static graphs, Frame paths, runtime traces, and reconciliation. The
-[CLI tutorial](docs/tutorials/cli.md) shows how to build a configuration-driven
-Python script. The [workflow-status tutorial](docs/tutorials/workflow-status.md)
-explains task/step trees, aggregation, descriptions, locking, and scoped error
-capture for both tasks and steps. The
-[runtime API guide](docs/reference/runtime-api.md) remains the detailed
-reference.
+## Values are snapshots, not reactive cells
 
-## JihuLab CI/CD
+The first `await frame.get("name")` evaluates the selected definition and caches
+either its value or its ordinary failure. Concurrent callers in the same event
+loop share that work. Later reads return the same snapshot.
 
-The repository pipeline is defined in `.gitlab-ci.yml` with one shared verify
-job for setup, build, test, and package inspection, followed by publication.
-The verify job exports Cobertura coverage for JihuLab merge
-request annotations and a percentage for pipeline coverage reporting. Tag-only
-manual jobs publish the verified wheel and sdist to a local Artifactory and to
-PyPI. Configure `ARTIFACTORY_REPOSITORY_URL`,
-`ARTIFACTORY_USERNAME`, `ARTIFACTORY_PASSWORD`, `PYPI_USERNAME`, and
-`PYPI_PASSWORD` as masked/protected JihuLab CI/CD variables before publishing.
+Changing a host input does not automatically invalidate cached definitions or
+their dependants. This is deliberate: recalculation is explicit and local.
 
-## JihuLab CI/CD
+```python
+frame.mixin({"unit_price": 10})
+await frame.recalculate("subtotal")
+await frame.recalculate("total")
+```
 
-The repository pipeline is defined in `.gitlab-ci.yml` with one shared verify
-job for setup, build, test, and package inspection, followed by publication.
-The verify job exports Cobertura coverage for JihuLab merge
-request annotations and a percentage for pipeline coverage reporting. Tag-only
-manual jobs publish the verified wheel and sdist to a local Artifactory and to
-PyPI. Configure `ARTIFACTORY_REPOSITORY_URL`,
-`ARTIFACTORY_USERNAME`, `ARTIFACTORY_PASSWORD`, `PYPI_USERNAME`, and
-`PYPI_PASSWORD` as masked/protected JihuLab CI/CD variables before publishing.
+Think of a Frame as one reproducible calculation run, not as a spreadsheet. If
+many inputs change together, creating a new Frame is often clearer than
+refreshing an existing one. Use `mixin()` and `recalculate()` when retaining the
+run's other snapshots is intentional.
 
-## Intended capability
+## Configuration files are Modules with provenance
 
-The 0.4 target comprises:
+Use `.lclcfg` when definitions should live outside Python, be composed from
+multiple files, or retain file and line information in diagnostics.
 
-- a versioned Python-like expression grammar with a custom AST;
-- an async-first interpreter and cached hierarchical runtime frames;
-- dependency analysis with eager, conditional, deferred, and dynamic edges;
-- UTF-8 `.lclcfg` files with versioned `using` expansion and source-aware diagnostics;
-- a typed framework for building configuration-driven command-line tools;
-- strict typing, branch coverage, parser differential tests, stress tests,
-  memory-leak checks, and portable package verification.
+```lclcfg
+__LCL_VERSION__: 1
 
-## Engineering policy
+scheme: "https"
+host: f"api.{environment}.example.com"
+endpoint: f"{scheme}://{host}"
+```
 
-Development is documentation-first and test-driven. Every implementation
-milestone starts with an executable behavioural contract, demonstrates a
-failing test, implements the behaviour, passes the complete quality gate, and
-then updates both README files and the progress ledger. Production and unit-test
-submodules mirror one another as defined in
-[the module-layout specification](docs/architecture/module-layout.md).
+Load files asynchronously. Use `evaluate_config()` when you need one result and
+do not need to retain a Frame:
 
-The language is intended for trusted application configuration. It is not a
-security sandbox for hostile expressions.
+```python
+from pathlib import Path
 
-## Documentation
+from lclang.config import evaluate_config, load_config
 
-- Durable development rules: [AGENTS.md](AGENTS.md)
-- Progress and verification evidence: [progress.md](progress.md)
-- English specifications: `docs/specs/`
-- Complete LCL syntax: [docs/lcl-lang.md](docs/lcl-lang.md)
-- English tutorial index: [docs/tutorials/README.md](docs/tutorials/README.md)
-- Runtime tutorial: [docs/tutorials/runtime.md](docs/tutorials/runtime.md)
-- LCL examples gallery: [docs/tutorials/lcl_examples.md](docs/tutorials/lcl_examples.md)
-- Configuration-file tutorial: [docs/tutorials/config_file.md](docs/tutorials/config_file.md)
-- Dependency analytics tutorial: [docs/tutorials/dependency-analytics.md](docs/tutorials/dependency-analytics.md)
-- Python-script CLI tutorial: [docs/tutorials/cli.md](docs/tutorials/cli.md)
-- Workflow-status tutorial: [docs/tutorials/workflow-status.md](docs/tutorials/workflow-status.md)
-- Chinese CLI tutorial: [doc_cn/cli_cn.md](doc_cn/cli_cn.md)
-- Chinese tutorials: `doc_cn/`
 
-## License
+async def endpoint_for(environment: str) -> str:
+    config = await load_config(Path("settings.lclcfg"))
+    result = await evaluate_config(
+        config,
+        "endpoint",
+        values={"environment": environment},
+    )
+    assert isinstance(result, str)
+    return result
+```
 
-MIT. Version 0.3.0 requires Python 3.14+ and has no runtime dependencies.
+If several values must share one cache, convert the loaded configuration into a
+Module or use `config.frame_factory()`, then create and close a Frame in the
+usual way. `using` declarations expand other configuration sources in source
+order; later definitions win while origin and history remain available for
+diagnostics.
+
+## Keep the Python boundary narrow
+
+Names resolve through the user Module, supplied application values, runtime
+values, reviewed builtins, and standard namespaces. Prefer passing plain values
+or purpose-built callables rather than exposing broad service objects.
+
+Host callables may be synchronous or asynchronous. lclang awaits resolver
+values, call results, iterator operations, and context-manager protocols when
+needed. Application code remains responsible for the behavior and authority of
+anything it provides.
+
+The language is expression-only and intentionally familiar:
+
+```lcl
+profile?.display_name ?? "anonymous"
+[item * 2 for item in values if item > 0]
+f"{service}: {port}"
+value -> value * 2
+(left, right=10) -> left + right
+try primary() except ServiceError: fallback()
+```
+
+Arrow functions use `() -> expression`, `name -> expression`, or
+`(parameters) -> expression`. Definitions are immutable syntax; lexical
+closures retain the definition context in which they were created.
+
+## Diagnostics and inspection
+
+Expected library failures derive from `lclang.LclError`. Syntax, name,
+evaluation, circular-dependency, closed-Frame, and configuration failures have
+specific subclasses and retain source information where available.
+
+Use `frame.has()` and `frame.get_definition()` for lookup checks that must not
+evaluate anything. Use `frame.inspect_variable()` when debugging a value's
+owner, cache state, dependency tree, or failure path. Dependency graphs and
+snapshots are available when an application needs ordering or change-impact
+analysis; they are not required for normal evaluation.
+
+## Practical rules
+
+1. Parse definitions once and reuse the resulting Module.
+2. Create one Frame per independent run or request.
+3. Pass only the host values that configuration actually needs.
+4. Treat cached results as snapshots; recalculate explicitly.
+5. Close every Frame you create, normally in `finally`.
+6. Prefer `evaluate_config()` when reading only one configuration value.
+7. Catch `LclError` at the application boundary and preserve its source-aware
+   diagnostic text.
+
+## Project resources
+
+- [Documentation](https://jihulab.com/midnightprotocol/lclang/-/tree/main/docs)
+- [Source](https://jihulab.com/midnightprotocol/lclang)
+- [Issue tracker](https://jihulab.com/midnightprotocol/lclang/-/work_items)
+
+## Requirements and license
+
+- Python 3.14 or newer
+- No third-party runtime dependencies
+- MIT license

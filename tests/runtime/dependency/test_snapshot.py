@@ -1,17 +1,17 @@
-"""Tests mirroring :mod:`pylcl.runtime.dependency.snapshot`."""
+"""Tests mirroring :mod:`lclang.runtime.dependency.snapshot`."""
 
 from dataclasses import FrozenInstanceError, replace
 
 import pytest
 
-from pylcl.lang.parser import parse_expression
-from pylcl.runtime import (
+from lclang.lang.parser import parse_expression
+from lclang.runtime import (
     DependencyEdge,
     DependencyKind,
     DependencySnapshot,
     reconcile_dependency_edges,
 )
-from pylcl.types import VarName
+from lclang.types import VarName
 
 
 def _evidence() -> tuple[DependencyEdge, DependencyEdge]:

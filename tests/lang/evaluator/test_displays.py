@@ -1,4 +1,4 @@
-"""Unit tests mirroring :mod:`pylcl.lang.evaluator.displays`."""
+"""Unit tests mirroring :mod:`lclang.lang.evaluator.displays`."""
 
 from collections.abc import Awaitable
 from inspect import isawaitable
@@ -6,12 +6,12 @@ from typing import cast
 
 import pytest
 
-from pylcl import evaluate
-from pylcl.ast import LclConstant, LclDict
-from pylcl.errors import LclEvaluationError
-from pylcl.lang.parser import parse_expression
-from pylcl.source import SourceSpan
-from pylcl.types import VarName
+from lclang import evaluate
+from lclang.ast import LclConstant, LclDict
+from lclang.errors import LclEvaluationError
+from lclang.lang.parser import parse_expression
+from lclang.source import SourceSpan
+from lclang.types import VarName
 
 
 @pytest.mark.asyncio
@@ -76,7 +76,7 @@ async def test_dictionary_display_rejects_invalid_ast_entry() -> None:
 async def test_starred_map_awaits_lcl_function_results() -> None:
     """Materializing Python map over an LCL function never leaks coroutines."""
     result = await evaluate(
-        parse_expression("[*map(def (x): x.lower(), ['A', 'B'])]"),
+        parse_expression("[*map((x) -> x.lower(), ['A', 'B'])]"),
         {"map": map},
     )
     for value in cast(list[object], result):

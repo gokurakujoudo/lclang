@@ -4,10 +4,10 @@ import asyncio
 
 import pytest
 
-from pylcl.errors import LclEvaluationError
-from pylcl.lang.parser import parse_expression
-from pylcl.runtime import Frame, Module
-from pylcl.types import FrameId, ModuleName
+from lclang.errors import LclEvaluationError
+from lclang.lang.parser import parse_expression
+from lclang.runtime import Frame, Module
+from lclang.types import FrameId, ModuleName
 
 
 def _frame(work: object) -> Frame:

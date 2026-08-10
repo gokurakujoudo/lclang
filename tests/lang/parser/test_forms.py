@@ -1,17 +1,17 @@
-"""Unit tests mirroring :mod:`pylcl.lang.parser.forms`."""
+"""Unit tests mirroring :mod:`lclang.lang.parser.forms`."""
 
 import pytest
 
-from pylcl.ast import LclBinary, LclCall, LclList
-from pylcl.ast.forms import LclAssert, LclFunction, LclRaise, ParameterKind
-from pylcl.errors import LclSyntaxError
-from pylcl.lang.parser import parse_expression
-from pylcl.types import VarName
+from lclang.ast import LclBinary, LclCall, LclList, LclName, LclTuple
+from lclang.ast.forms import LclAssert, LclFunction, LclRaise, ParameterKind
+from lclang.errors import LclSyntaxError
+from lclang.lang.parser import parse_expression
+from lclang.types import VarName
 
 
 def test_function_parameters_preserve_kind_default_and_body() -> None:
     """All parameter categories become ordered explicit AST values."""
-    node = parse_expression("def (x, y=1, *args, option=2, **kwargs): x + y")
+    node = parse_expression("(x, y=1, *args, option=2, **kwargs) -> x + y")
     assert isinstance(node, LclFunction)
     assert tuple(parameter.name for parameter in node.parameters) == tuple(
         VarName(name) for name in ("x", "y", "args", "option", "kwargs")
@@ -30,14 +30,39 @@ def test_function_parameters_preserve_kind_default_and_body() -> None:
 
 def test_empty_function_and_nested_form_body_parse() -> None:
     """No-argument functions and complete-expression bodies are valid."""
-    node = parse_expression("def (): assert(flag, 'disabled')")
+    node = parse_expression("() -> assert(flag, 'disabled')")
     assert isinstance(node, LclFunction)
     assert node.parameters == ()
     assert isinstance(node.body, LclAssert)
 
-    trailing = parse_expression("def (value,): value")
+    trailing = parse_expression("(value,) -> value")
     assert isinstance(trailing, LclFunction)
     assert tuple(parameter.name for parameter in trailing.parameters) == (VarName("value"),)
+
+
+def test_single_parameter_shorthand_and_nested_body_parse() -> None:
+    """Bare single parameters normalize structurally and bodies nest rightward."""
+    bare = parse_expression("value -> value")
+    parenthesized = parse_expression("(value) -> value")
+    nested = parse_expression("outer -> inner -> outer + inner")
+    assert isinstance(bare, LclFunction)
+    assert isinstance(parenthesized, LclFunction)
+    assert bare.parameters[0].name == parenthesized.parameters[0].name
+    assert bare.parameters[0].kind is parenthesized.parameters[0].kind
+    assert bare.parameters[0].default is parenthesized.parameters[0].default
+    assert isinstance(nested, LclFunction)
+    assert isinstance(nested.body, LclFunction)
+
+
+def test_parenthesized_lookahead_preserves_displays_and_nested_defaults() -> None:
+    """Balanced arrow lookahead distinguishes functions from ordinary displays."""
+    assert isinstance(parse_expression("(value)"), LclName)
+    assert isinstance(parse_expression("()"), LclTuple)
+    assert isinstance(parse_expression("(left, right)"), LclTuple)
+    assert isinstance(parse_expression("((value) -> value)(1)"), LclCall)
+    function = parse_expression("(callback=((value) -> value)) -> callback")
+    assert isinstance(function, LclFunction)
+    assert isinstance(function.parameters[0].default, LclFunction)
 
 
 def test_raise_and_assert_call_like_forms() -> None:
@@ -61,12 +86,13 @@ def test_parentheses_allow_forms_in_nested_expression_context() -> None:
 @pytest.mark.parametrize(
     "source",
     [
-        "def x: x",
-        "def (x, x): x",
-        "def (x=1, y): x",
-        "def (**kwargs, x): x",
-        "def (*args=1): x",
-        "def (x)",
+        "(x, x) -> x",
+        "(x=1, y) -> x",
+        "(**kwargs, x) -> x",
+        "(*args=1) -> x",
+        "(x) ->",
+        "(x + y) -> x",
+        "x - > y",
         "raise()",
         "raise(value",
         "assert()",
@@ -80,7 +106,7 @@ def test_invalid_form_reports_syntax_error(source: str) -> None:
     assert caught.value.span is not None
 
 
-@pytest.mark.parametrize("source", ["def (__arg): __arg", "def (**__kwargs): 1"])
+@pytest.mark.parametrize("source", ["__arg -> __arg", "(**__kwargs) -> 1"])
 def test_double_underscore_function_bindings_are_rejected(source: str) -> None:
     """Reserved double-underscore names cannot become function bindings."""
     with pytest.raises(LclSyntaxError, match="double underscore"):

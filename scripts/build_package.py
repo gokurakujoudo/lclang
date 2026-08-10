@@ -1,4 +1,4 @@
-"""Build pylcl source and wheel distributions."""
+"""Build lclang source and wheel distributions."""
 
 from __future__ import annotations
 

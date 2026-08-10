@@ -2,8 +2,8 @@
 
 import pytest
 
-from pylcl import evaluate
-from pylcl.lang.parser import parse_expression
+from lclang import evaluate
+from lclang.lang.parser import parse_expression
 
 
 @pytest.mark.asyncio

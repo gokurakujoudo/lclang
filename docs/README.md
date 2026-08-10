@@ -1,20 +1,33 @@
-# pylcl design documentation
+# lclang documentation
 
-This directory contains English design material and user tutorials.
+## Getting started
 
-- [Milestone specifications](specs/)
-- [Architecture](architecture/)
-- [Tutorials and three-minute start](tutorials/README.md)
-- [Runtime: Modules and Frames](tutorials/runtime.md)
-- [LCL examples gallery](tutorials/lcl_examples.md)
-- [Configuration-file tutorial](tutorials/config_file.md)
-- [Dependency analytics tutorial](tutorials/dependency-analytics.md)
-- [Python-script CLI tutorial](tutorials/cli.md)
-- [Runtime API guide](reference/runtime-api.md)
-- [Complete LCL V1 language syntax](lcl-lang.md)
-- [`.lclcfg` configuration guide](configuration.md)
-- [Project progress](../progress.md)
-- [User README](../README.md)
+- [Installation](installation.md)
+- [Quick Start Guide](quick-start.md)
 
-Specifications are authoritative for behaviour under development. README files
-only describe implemented capability.
+## Tutorials and examples
+
+- [Tutorial index](tutorials/README.md)
+- [Runtime Modules and Frames](tutorials/runtime.md)
+- [LCL examples](tutorials/language.md)
+- [Configuration files](tutorials/configuration.md)
+- [Dependency analysis](tutorials/dependency-analysis.md)
+- [Command-line applications](tutorials/cli.md)
+- [Workflow status](tutorials/workflow.md)
+
+## References
+
+- [Reference index](reference/README.md)
+- [LCL V1 language specification](reference/language.md)
+- [Runtime API](reference/runtime.md)
+- [Configuration format and API](reference/configuration.md)
+- [Standard and workflow utilities](reference/utilities.md)
+
+## Local development
+
+- [Local Development Guide](development/README.md)
+- [Architecture and module layout](development/architecture.md)
+
+## Other languages
+
+- [简体中文文档](zh/README.md)

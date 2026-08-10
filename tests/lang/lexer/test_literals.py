@@ -1,10 +1,10 @@
-"""Unit tests mirroring :mod:`pylcl.lang.lexer.literals`."""
+"""Unit tests mirroring :mod:`lclang.lang.lexer.literals`."""
 
 import pytest
 
-from pylcl.errors import LclSyntaxError
-from pylcl.lang.lexer import TokenKind, scan_tokens
-from pylcl.lang.lexer.literals import LiteralMatch, scan_literal
+from lclang.errors import LclSyntaxError
+from lclang.lang.lexer import TokenKind, scan_tokens
+from lclang.lang.lexer.literals import LiteralMatch, scan_literal
 
 
 @pytest.mark.parametrize(

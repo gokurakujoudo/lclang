@@ -1,14 +1,14 @@
-"""Unit tests mirroring :mod:`pylcl.runtime.frame.lifecycle`."""
+"""Unit tests mirroring :mod:`lclang.runtime.frame.lifecycle`."""
 
 import asyncio
 
 import pytest
 
-from pylcl import evaluate
-from pylcl.errors import LclClosedFrameError, LclEvaluationError
-from pylcl.lang.parser import parse_expression
-from pylcl.runtime import Frame, Module
-from pylcl.types import FrameId, ModuleName
+from lclang import evaluate
+from lclang.errors import LclClosedFrameError, LclEvaluationError
+from lclang.lang.parser import parse_expression
+from lclang.runtime import Frame, Module
+from lclang.types import FrameId, ModuleName
 from tests.runtime.frame.lifecycle_support import (
     AsyncResource,
     BlockingResource,

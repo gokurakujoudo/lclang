@@ -1,7 +1,7 @@
 """Public API acceptance tests for the CLI subpackage."""
 
-import pylcl
-import pylcl.cli as cli_api
+import lclang
+import lclang.cli as cli_api
 
 
 def test_cli_exports_are_curated_without_expanding_package_root() -> None:
@@ -22,4 +22,4 @@ def test_cli_exports_are_curated_without_expanding_package_root() -> None:
     }
     assert set(cli_api.__all__) == expected
     assert all(hasattr(cli_api, name) for name in expected)
-    assert "CliEntrance" not in pylcl.__all__
+    assert "CliEntrance" not in lclang.__all__

@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from pylcl.cli import (
+from lclang.cli import (
     CliConfig,
     CliContext,
     CliEntrance,
@@ -19,9 +19,9 @@ from pylcl.cli import (
     ParameterDoc,
     cli,
 )
-from pylcl.cli.logging import LoggerHandle
-from pylcl.cli.routing import RouteAction, RouteResult
-from pylcl.cli.run import execute_command, script_label_from_args, write_result
+from lclang.cli.logging import LoggerHandle
+from lclang.cli.routing import RouteAction, RouteResult
+from lclang.cli.run import execute_command, script_label_from_args, write_result
 
 # Static configuration fixture used by the complete invocation case.
 STATIC_CONFIG = "using \"child.lclcfg\"\nmessage: prefix + suffix\n"
@@ -82,7 +82,7 @@ def test_complete_run_uses_layers_context_logging_and_cleanup(
         assert status == 0
         assert capsys.readouterr().out == "hello override\n"
         assert observed == {"date": date(2026, 8, 9), "dryrun": True, "message": "hello override"}
-        log_text = (root / "logs" / "pylcl.log").read_text(encoding="utf-8")
+        log_text = (root / "logs" / "lclang.log").read_text(encoding="utf-8")
         assert "message=hello override" in log_text
         assert "args=" in log_text
 
@@ -285,7 +285,7 @@ def test_logger_cleanup_output_and_internal_route_failures_are_converted(
         """
         raise RuntimeError("cleanup failed")
 
-    monkeypatch.setattr("pylcl.cli.binding.FrameStack.close", fail_close)
+    monkeypatch.setattr("lclang.cli.binding.FrameStack.close", fail_close)
     assert asyncio.run(entrance.run(["python", "tool.py", "result"])) == 2
     monkeypatch.undo()
 
@@ -299,7 +299,7 @@ def test_logger_cleanup_output_and_internal_route_failures_are_converted(
         """
         raise OSError("output failed")
 
-    monkeypatch.setattr("pylcl.cli.run.write_result", fail_output)
+    monkeypatch.setattr("lclang.cli.run.write_result", fail_output)
     assert asyncio.run(entrance.run(["python", "tool.py", "result"])) == 2
     monkeypatch.undo()
 
@@ -313,7 +313,7 @@ def test_logger_cleanup_output_and_internal_route_failures_are_converted(
         del tokens
         return RouteResult(RouteAction.COMMAND, root, None, (), ())  # type: ignore[arg-type]
 
-    monkeypatch.setattr("pylcl.cli.run.route_command", empty_route)
+    monkeypatch.setattr("lclang.cli.run.route_command", empty_route)
     assert asyncio.run(entrance.run(["python", "tool.py", "result"])) == 2
     monkeypatch.undo()
     assert asyncio.run(entrance.run(["python", "tool", "result"])) == 2

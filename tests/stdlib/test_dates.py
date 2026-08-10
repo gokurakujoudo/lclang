@@ -4,8 +4,8 @@ from datetime import date
 
 import pytest
 
-import pylcl
-from pylcl.stdlib.dates import parse_ymd, to_ymd
+import lclang
+from lclang.stdlib.dates import parse_ymd, to_ymd
 
 
 def test_date_helpers_round_trip_leap_day_and_early_year() -> None:
@@ -36,8 +36,8 @@ def test_date_helpers_reject_wrong_types() -> None:
 @pytest.mark.asyncio
 async def test_date_helpers_are_available_through_lcl_builtins() -> None:
     """Canonical Frames parse and format dates through ordinary definitions."""
-    frame = pylcl.define_frame(
-        pylcl.define_module(
+    frame = lclang.define_frame(
+        lclang.define_module(
             "dates",
             {
                 "parsed": 'parse_ymd("20240229")',

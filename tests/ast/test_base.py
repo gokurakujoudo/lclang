@@ -6,8 +6,8 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from pylcl.ast import LclAstNode, LclConstant, LclName, LclTuple, LclVisitor
-from pylcl.types import VarName
+from lclang.ast import LclAstNode, LclConstant, LclName, LclTuple, LclVisitor
+from lclang.types import VarName
 
 
 class TypeNameVisitor(LclVisitor[str]):

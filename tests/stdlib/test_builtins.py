@@ -1,4 +1,4 @@
-"""Unit tests mirroring :mod:`pylcl.stdlib.builtins`."""
+"""Unit tests mirroring :mod:`lclang.stdlib.builtins`."""
 
 import ast
 from collections.abc import AsyncIterator
@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from pylcl.lang.parser import parse_expression
-from pylcl.runtime import FrameFactory, Module
-from pylcl.stdlib import STANDARD_MANIFESTS, STANDARD_PRESET
-from pylcl.types import FrameId, ModuleName
+from lclang.lang.parser import parse_expression
+from lclang.runtime import FrameFactory, Module
+from lclang.stdlib import STANDARD_MANIFESTS, STANDARD_PRESET
+from lclang.types import FrameId, ModuleName
 
 
 def test_standard_manifests_and_preset_have_stable_reviewed_order() -> None:
@@ -49,8 +49,8 @@ async def test_standard_preset_composes_async_helpers_in_a_frame() -> None:
 
 def test_helper_modules_import_only_reviewed_capability_roots() -> None:
     """The concrete helper surface cannot acquire ambient I/O capabilities."""
-    root = Path(__file__).parents[2] / "pylcl" / "stdlib"
-    allowed = {"__future__", "collections", "json", "pylcl", "types"}
+    root = Path(__file__).parents[2] / "src" / "lclang" / "stdlib"
+    allowed = {"__future__", "collections", "json", "lclang", "types"}
     for name in ("iterables.py", "text.py", "data.py", "json_values.py", "builtins.py"):
         tree = ast.parse((root / name).read_text(encoding="utf-8"))
         imports = (

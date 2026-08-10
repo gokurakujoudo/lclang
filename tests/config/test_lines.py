@@ -1,17 +1,17 @@
-"""Unit tests mirroring :mod:`pylcl.config.lines`."""
+"""Unit tests mirroring :mod:`lclang.config.lines`."""
 
 import pytest
 
-from pylcl.config.errors import LclConfigSyntaxError
-from pylcl.config.lines import (
+from lclang.config.errors import LclConfigSyntaxError
+from lclang.config.lines import (
     comment_offset,
     mask_physical_line,
     scan_logical_lines,
     split_physical_lines,
 )
-from pylcl.config.positions import advance_position, end_position
-from pylcl.source import SourceOrigin, SourcePosition
-from pylcl.types import SourceName
+from lclang.config.positions import advance_position, end_position
+from lclang.source import SourceOrigin, SourcePosition
+from lclang.types import SourceName
 
 
 def test_physical_helpers_cover_newlines_quotes_comments_and_markers() -> None:

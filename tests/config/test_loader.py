@@ -6,8 +6,8 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from pylcl.ast import LclConstant
-from pylcl.config import (
+from lclang.ast import LclConstant
+from lclang.config import (
     ConfigLoader,
     ConfigLoadLimits,
     LclConfigCycleError,
@@ -16,15 +16,15 @@ from pylcl.config import (
     ResolvedConfigSource,
     load_config,
 )
-from pylcl.config.errors import LclConfigSyntaxError
-from pylcl.config.sources import LoadedConfigSource
+from lclang.config.errors import LclConfigSyntaxError
+from lclang.config.sources import LoadedConfigSource
 from tests.config.support import MappingResolver
 
 
 @pytest.mark.asyncio
 async def test_nested_using_binds_file_magic_to_each_physical_source() -> None:
     """Every nested definition receives its own canonical physical file path."""
-    with TemporaryDirectory(prefix="pylcl-nested-magic-", dir=Path.cwd()) as directory:
+    with TemporaryDirectory(prefix="lclang-nested-magic-", dir=Path.cwd()) as directory:
         root = Path(directory)
         first = root / "a.lclcfg"
         second = root / "b.lclcfg"

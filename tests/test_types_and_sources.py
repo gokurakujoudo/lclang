@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from pylcl.source import SourceOrigin, SourcePosition, SourceSpan
-from pylcl.types import FrameId, ModuleName, SourceName, VarName
-from pylcl.version import LCL_V1, LanguageVersion
+from lclang.source import SourceOrigin, SourcePosition, SourceSpan
+from lclang.types import FrameId, ModuleName, SourceName, VarName
+from lclang.version import LCL_V1, LanguageVersion
 
 
 def test_identifier_newtypes_preserve_strings_at_runtime() -> None:

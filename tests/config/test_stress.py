@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from pylcl.config import (
+from lclang.config import (
     Config,
     ConfigLoader,
     ConfigLoadLimits,

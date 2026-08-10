@@ -1,16 +1,16 @@
-"""Behavioural tests for :mod:`pylcl.runtime.frame.values`."""
+"""Behavioural tests for :mod:`lclang.runtime.frame.values`."""
 
 from typing import Any, cast
 
 import pytest
 
-import pylcl
+import lclang
 
 
 @pytest.mark.asyncio
 async def test_mixin_detaches_values_and_updates_direct_lookup() -> None:
     """Sunny: a right-biased mixin is visible without retaining caller state."""
-    frame = pylcl.define_frame(preset={"value": 1})
+    frame = lclang.define_frame(preset={"value": 1})
     values: dict[str, object] = {"value": 2, "added": 3}
 
     mixin = cast(Any, frame.mixin)
@@ -26,8 +26,8 @@ async def test_mixin_detaches_values_and_updates_direct_lookup() -> None:
 @pytest.mark.asyncio
 async def test_mixin_preserves_cached_snapshots_until_recalculation() -> None:
     """Composite: mixed inputs affect direct reads and explicit refresh only."""
-    frame = pylcl.define_frame(
-        pylcl.define_module("app", {"result": "host"}),
+    frame = lclang.define_frame(
+        lclang.define_module("app", {"result": "host"}),
         preset={"host": 1},
     )
     assert await frame.get("result") == 1
@@ -43,11 +43,11 @@ async def test_mixin_preserves_cached_snapshots_until_recalculation() -> None:
 @pytest.mark.asyncio
 async def test_definition_precedence_and_child_fallback_survive_mixin() -> None:
     """Definitions still win while descendants observe mixed parent values."""
-    parent = pylcl.define_frame(
-        pylcl.define_module("parent", {"defined": "7"}),
+    parent = lclang.define_frame(
+        lclang.define_module("parent", {"defined": "7"}),
     )
     child = parent.derive(
-        pylcl.define_module("child", {"answer": "defined + mixed"})
+        lclang.define_module("child", {"answer": "defined + mixed"})
     )
 
     parent.mixin({"defined": 100, "mixed": 5})
@@ -58,7 +58,7 @@ async def test_definition_precedence_and_child_fallback_survive_mixin() -> None:
 
 def test_mixin_validates_atomically_and_rejects_wrong_types() -> None:
     """Rainy: invalid updates neither mutate nor partially populate values."""
-    frame = pylcl.define_frame(preset={"stable": 1})
+    frame = lclang.define_frame(preset={"stable": 1})
     before = dict(frame.values)
     with pytest.raises(TypeError):
         frame.mixin(cast(Any, [("value", 2)]))
@@ -72,7 +72,7 @@ def test_mixin_validates_atomically_and_rejects_wrong_types() -> None:
 @pytest.mark.asyncio
 async def test_mixin_rejects_closed_frames() -> None:
     """Lifecycle safety prevents updates after close begins or completes."""
-    frame = pylcl.define_frame()
+    frame = lclang.define_frame()
     await frame.close()
-    with pytest.raises(pylcl.LclClosedFrameError):
+    with pytest.raises(lclang.LclClosedFrameError):
         frame.mixin({"value": 1})

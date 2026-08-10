@@ -1,15 +1,15 @@
-"""Unit tests mirroring :mod:`pylcl.lang.evaluator.errors`."""
+"""Unit tests mirroring :mod:`lclang.lang.evaluator.errors`."""
 
 import asyncio
 
 import pytest
 
-from pylcl import evaluate
-from pylcl.ast import LclAstNode, LclConstant, LclExceptHandler
-from pylcl.errors import LclEvaluationError
-from pylcl.lang.evaluator.context import MappingResolver, Resolver
-from pylcl.lang.evaluator.errors import _matches
-from pylcl.lang.parser import parse_expression
+from lclang import evaluate
+from lclang.ast import LclAstNode, LclConstant, LclExceptHandler
+from lclang.errors import LclEvaluationError
+from lclang.lang.evaluator.context import MappingResolver, Resolver
+from lclang.lang.evaluator.errors import internal_matches
+from lclang.lang.parser import parse_expression
 
 
 @pytest.mark.asyncio
@@ -112,7 +112,9 @@ async def test_bare_matcher_helper_short_circuits_evaluation() -> None:
         raise AssertionError("bare matcher evaluated")
 
     handler = LclExceptHandler(None, None, LclConstant(value=None))
-    assert await _matches(handler, ValueError("problem"), MappingResolver({}), forbidden_evaluate)
+    assert await internal_matches(
+        handler, ValueError("problem"), MappingResolver({}), forbidden_evaluate
+    )
     assert called is False
 
 

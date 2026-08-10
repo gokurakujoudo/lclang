@@ -6,7 +6,7 @@ from typing import cast
 
 import pytest
 
-from pylcl.cli import (
+from lclang.cli import (
     CliConfig,
     CliContext,
     CliParams,
@@ -15,9 +15,9 @@ from pylcl.cli import (
     ParameterDoc,
     cli,
 )
-from pylcl.cli.binding import FrameStack, build_binding, default_definitions
-from pylcl.errors import LclCliUsageError
-from pylcl.runtime import Frame, VariableInspectionStatus
+from lclang.cli.binding import FrameStack, build_binding, default_definitions
+from lclang.errors import LclCliUsageError
+from lclang.runtime import Frame, VariableInspectionStatus
 
 
 @cli.command(

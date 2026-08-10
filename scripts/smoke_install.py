@@ -1,4 +1,4 @@
-"""Install pylcl artifacts into fresh environments and run public API smoke tests."""
+"""Install lclang artifacts into fresh environments and run public API smoke tests."""
 
 from __future__ import annotations
 
@@ -41,8 +41,8 @@ import sys
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
-import pylcl
-from pylcl.cli import (
+import lclang
+from lclang.cli import (
     CliContext,
     CliEntrance,
     CliResult,
@@ -51,18 +51,18 @@ from pylcl.cli import (
     ParameterDoc,
     cli,
 )
-from pylcl.config import load_config
-from pylcl.runtime import build_dependency_graph, topological_order
+from lclang.config import load_config
+from lclang.runtime import build_dependency_graph, topological_order
 
-sync_value = pylcl.evaluate_sync(pylcl.parse_expression("3 + 4"), {{}})
+sync_value = lclang.evaluate_sync(lclang.parse_expression("3 + 4"), {{}})
 
 
 async def main() -> None:
-    expression = pylcl.parse_expression("1 + 2")
-    assert pylcl.to_source(expression) == "1 + 2"
-    assert await pylcl.evaluate(expression, {{}}) == 3
+    expression = lclang.parse_expression("1 + 2")
+    assert lclang.to_source(expression) == "1 + 2"
+    assert await lclang.evaluate(expression, {{}}) == 3
     assert sync_value == 7
-    module = pylcl.define_module(
+    module = lclang.define_module(
         "smoke",
         {{
             "base": "1",
@@ -73,7 +73,7 @@ async def main() -> None:
             "data_value": 'data.lookup({{"x": 1}}, "x")',
         }},
     )
-    frame = pylcl.define_frame(module)
+    frame = lclang.define_frame(module)
     try:
         value = await frame.get("value")
         snapshot = frame.dependency_snapshot("value")
@@ -139,7 +139,7 @@ async def main() -> None:
         raise RuntimeError("installed boom")
 
     admin = CommandGroup("admin", "Admin", [check_command, boom_handler])
-    application = CliEntrance(CommandGroup("root", "Smoke", [admin]), pylcl.__version__)
+    application = CliEntrance(CommandGroup("root", "Smoke", [admin]), lclang.__version__)
     log_dir = Path("cli-logs")
     cli_status = await application.run(
         [
@@ -162,7 +162,7 @@ async def main() -> None:
     )
     assert cli_status == 0
     assert cli_seen == {{"answer": 43, "dryrun": True}}
-    assert "installed-answer=43" in (log_dir / "pylcl.log").read_text(encoding="utf-8")
+    assert "installed-answer=43" in (log_dir / "lclang.log").read_text(encoding="utf-8")
 
     help_output = io.StringIO()
     with redirect_stdout(help_output):
@@ -173,7 +173,7 @@ async def main() -> None:
     version_output = io.StringIO()
     with redirect_stdout(version_output):
         assert await application.run([sys.executable, "smoke.py", "-v"]) == 0
-    assert version_output.getvalue() == "smoke.py " + pylcl.__version__ + "\\n"
+    assert version_output.getvalue() == "smoke.py " + lclang.__version__ + "\\n"
 
     usage_error = io.StringIO()
     with redirect_stderr(usage_error):
@@ -186,8 +186,8 @@ async def main() -> None:
             [sys.executable, "smoke.py", "admin", "boom"]
         ) == 2
     assert "installed boom" in handler_error.getvalue()
-    assert Path(pylcl.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())
-    print("pylcl-smoke version=" + pylcl.__version__ +
+    assert Path(lclang.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())
+    print("lclang-smoke version=" + lclang.__version__ +
           " artifact={artifact_kind} value=" + str(value) +
           " dependency=" + dependency + " config=42 history=2 closed=" +
           str(frame.closed and config_frame.closed).lower() +
@@ -236,7 +236,7 @@ def smoke_install(wheel: Path, artifact_kind: str = "wheel") -> int:
     :param artifact_kind: Label identifying the artifact in the success record.
     :returns: Zero when installation and public runtime smoke succeed.
     """
-    root = create_temp_root(wheel.parent, "pylcl-smoke-")
+    root = create_temp_root(wheel.parent, "lclang-smoke-")
     try:
         environment = root / "venv"
         previous_temp = {name: os.environ.get(name) for name in ("TEMP", "TMP", "TMPDIR")}

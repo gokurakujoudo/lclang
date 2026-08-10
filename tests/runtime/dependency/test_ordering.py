@@ -1,18 +1,18 @@
-"""Unit tests mirroring :mod:`pylcl.runtime.dependency.ordering`."""
+"""Unit tests mirroring :mod:`lclang.runtime.dependency.ordering`."""
 
 import pytest
 
-from pylcl.errors import LclCircularDependencyError
-from pylcl.lang.parser import parse_expression
-from pylcl.runtime import (
+from lclang.errors import LclCircularDependencyError
+from lclang.lang.parser import parse_expression
+from lclang.runtime import (
     DependencyGraph,
     DependencyKind,
     Module,
     build_dependency_graph,
     topological_order,
 )
-from pylcl.runtime.dependency.ordering import _find_cycle
-from pylcl.types import ModuleName, VarName
+from lclang.runtime.dependency.ordering import internal_find_cycle
+from lclang.types import ModuleName, VarName
 
 
 def _graph(**definitions: str) -> DependencyGraph:
@@ -26,9 +26,7 @@ def _graph(**definitions: str) -> DependencyGraph:
 def test_eager_order_places_local_dependencies_first_deterministically() -> None:
     """External names and repeated edges do not disturb stable local ordering."""
     graph = _graph(alpha="beta + gamma + beta", beta="gamma", gamma="external")
-    assert topological_order(graph) == tuple(
-        VarName(name) for name in ("gamma", "beta", "alpha")
-    )
+    assert topological_order(graph) == tuple(VarName(name) for name in ("gamma", "beta", "alpha"))
 
 
 def test_empty_kind_filter_returns_definition_order() -> None:
@@ -52,9 +50,7 @@ def test_unselected_conditional_cycle_does_not_block_eager_order() -> None:
 def test_selected_cycle_reports_closing_edge_span() -> None:
     """Cycle diagnostics identify the occurrence that closes the ordered path."""
     graph = _graph(alpha="beta", beta="alpha")
-    closing = next(
-        edge for edge in graph.edges if edge.source == VarName("beta")
-    )
+    closing = next(edge for edge in graph.edges if edge.source == VarName("beta"))
     with pytest.raises(LclCircularDependencyError) as caught:
         topological_order(graph)
     assert caught.value.span == closing.span
@@ -73,4 +69,4 @@ def test_cycle_search_returns_none_after_complete_acyclic_traversal() -> None:
     graph = _graph(alpha="beta + gamma", beta="gamma", gamma="external")
     local = {str(name) for name in graph.definitions}
     selected = tuple(edge for edge in graph.edges if str(edge.target) in local)
-    assert _find_cycle(graph, selected) is None
+    assert internal_find_cycle(graph, selected) is None

@@ -1,7 +1,7 @@
-"""Unit tests mirroring :mod:`pylcl.runtime.dependency.analysis`."""
+"""Unit tests mirroring :mod:`lclang.runtime.dependency.analysis`."""
 
-from pylcl.lang.parser import parse_expression
-from pylcl.runtime import DependencyKind, analyze_dependencies
+from lclang.lang.parser import parse_expression
+from lclang.runtime import DependencyKind, analyze_dependencies
 
 
 def _summary(source: str) -> list[tuple[str, DependencyKind]]:
@@ -43,7 +43,7 @@ def test_short_circuit_and_conditional_nodes_weaken_only_skipped_paths() -> None
 
 def test_function_defaults_are_eager_and_bound_body_is_deferred() -> None:
     """Parameter scope begins in the body but not in default expressions."""
-    source = "def (value=default, *items): value + items + outer"
+    source = "(value=default, *items) -> value + items + outer"
     assert _summary(source) == [
         ("default", DependencyKind.EAGER),
         ("outer", DependencyKind.DEFERRED),
@@ -117,7 +117,7 @@ def test_try_assert_and_with_apply_precise_control_and_binding_scopes() -> None:
 
 def test_nested_deferred_context_dominates_conditional_children() -> None:
     """Optional paths inside a lazy function cannot become less deferred."""
-    source = "def (): yes if condition else no"
+    source = "() -> yes if condition else no"
     assert _summary(source) == [
         ("condition", DependencyKind.DEFERRED),
         ("yes", DependencyKind.DEFERRED),

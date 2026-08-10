@@ -7,7 +7,9 @@ import tarfile
 import zipfile
 from pathlib import Path
 
-DIST_INFO = "pylcl-0.3.0.dist-info"
+from scripts.inspect_package import VERSION
+
+DIST_INFO = f"lclang-{VERSION}.dist-info"
 
 
 def wheel_fixture(path: Path, extra: tuple[str, ...] = ()) -> Path:
@@ -18,13 +20,13 @@ def wheel_fixture(path: Path, extra: tuple[str, ...] = ()) -> Path:
     :returns: The written archive path.
     """
     metadata = (
-        "Metadata-Version: 2.4\nName: pylcl\nVersion: 0.3.0\n"
+        f"Metadata-Version: 2.4\nName: lclang\nVersion: {VERSION}\n"
         "Requires-Python: >=3.14\nLicense-Expression: MIT\n"
     )
     values = {
-        "pylcl/__init__.py": b"__version__ = '0.3.0'\n",
-        "pylcl/_version.py": b"__version__ = '0.3.0'\n",
-        "pylcl/py.typed": b"",
+        "lclang/__init__.py": f"__version__ = '{VERSION}'\n".encode(),
+        "lclang/_version.py": f"__version__ = '{VERSION}'\n".encode(),
+        "lclang/py.typed": b"",
         "LICENSE": b"MIT License\n",
         f"{DIST_INFO}/METADATA": metadata.encode(),
         f"{DIST_INFO}/WHEEL": b"Wheel-Version: 1.0\nRoot-Is-Purelib: true\nTag: py3-none-any\n",
@@ -44,11 +46,19 @@ def sdist_fixture(path: Path, extra: tuple[str, ...] = ()) -> Path:
     :param extra: Additional member paths used for rainy cases.
     :returns: The written archive path.
     """
-    prefix = "pylcl-0.3.0/"
+    prefix = f"lclang-{VERSION}/"
     names = [
-        "AGENTS.md", "CHANGELOG.md", "LICENSE", "README.md", "README_cn.md",
-        "progress.md", "pyproject.toml", "pylcl/py.typed", "docs/index.md",
-        "doc_cn/index.md", "tests/index.py",
+        "AGENTS.md",
+        "CHANGELOG.md",
+        "LICENSE",
+        "README.md",
+        "README_cn.md",
+        "progress.md",
+        "pyproject.toml",
+        "src/lclang/py.typed",
+        "docs/index.md",
+        "docs/zh/README.md",
+        "tests/index.py",
     ]
     names.extend(extra)
     with tarfile.open(path, "w:gz") as archive:

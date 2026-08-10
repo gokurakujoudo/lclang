@@ -3,16 +3,16 @@ requires = ["hatchling==1.31.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "pylcl"
-version = "0.3.0"
+name = "lclang"
+version = "1.0.0"
 description = "A typed, async-first configuration expression language"
 readme = "README.md"
 requires-python = ">=3.14"
 license = "MIT"
 license-files = ["LICENSE"]
-authors = [{ name = "pylcl contributors" }]
+authors = [{ name = "RuntimeRomance" }]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 5 - Production/Stable",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
@@ -21,9 +21,9 @@ classifiers = [
 ]
 
 [project.urls]
-Documentation = "https://github.com/pylcl/pylcl#readme"
-Issues = "https://github.com/pylcl/pylcl/issues"
-Source = "https://github.com/pylcl/pylcl"
+Documentation = "https://jihulab.com/midnightprotocol/lclang/-/tree/main/docs"
+Issues = "https://jihulab.com/midnightprotocol/lclang/-/work_items"
+Source = "https://jihulab.com/midnightprotocol/lclang"
 
 [dependency-groups]
 dev = [
@@ -44,17 +44,18 @@ addopts = [
   "no:cacheprovider",
   "--strict-config",
   "--strict-markers",
-  "--cov=pylcl",
+  "--cov=lclang",
   "--cov-branch",
   "--cov-report=term-missing",
   "--cov-fail-under=100",
 ]
 asyncio_mode = "strict"
+pythonpath = ["src"]
 testpaths = ["tests"]
 
 [tool.coverage.run]
 branch = true
-source = ["pylcl"]
+source = ["lclang"]
 
 [tool.coverage.report]
 fail_under = 100
@@ -64,7 +65,7 @@ skip_covered = false
 [tool.mypy]
 python_version = "3.14"
 strict = true
-files = ["pylcl", "tests", "scripts"]
+files = ["src/lclang", "tests", "scripts"]
 pretty = true
 show_error_codes = true
 warn_unreachable = true
@@ -89,11 +90,10 @@ include = [
   "/README.md",
   "/README_cn.md",
   "/docs",
-  "/doc_cn",
   "/progress.md",
-  "/pylcl",
+  "/src/lclang",
   "/tests",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["pylcl"]
+packages = ["src/lclang"]

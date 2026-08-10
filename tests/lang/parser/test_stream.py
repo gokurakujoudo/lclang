@@ -1,10 +1,10 @@
-"""Unit tests mirroring :mod:`pylcl.lang.parser.stream`."""
+"""Unit tests mirroring :mod:`lclang.lang.parser.stream`."""
 
 import pytest
 
-from pylcl.errors import LclSyntaxError
-from pylcl.lang.lexer import Token, TokenKind, scan_tokens
-from pylcl.lang.parser.stream import TokenStream
+from lclang.errors import LclSyntaxError
+from lclang.lang.lexer import Token, TokenKind, scan_tokens
+from lclang.lang.parser.stream import TokenStream
 
 
 def test_stream_normalizes_newlines_and_supports_lookahead() -> None:

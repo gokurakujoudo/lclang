@@ -5,7 +5,7 @@ from typing import Any, cast
 
 import pytest
 
-from pylcl.cli import (
+from lclang.cli import (
     CliContext,
     CliResult,
     CliResultStatus,

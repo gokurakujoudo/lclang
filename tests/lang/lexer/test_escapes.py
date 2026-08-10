@@ -1,8 +1,8 @@
-"""Unit tests mirroring :mod:`pylcl.lang.lexer.escapes`."""
+"""Unit tests mirroring :mod:`lclang.lang.lexer.escapes`."""
 
 import pytest
 
-from pylcl.lang.lexer.escapes import EscapeDecodeError, decode_content
+from lclang.lang.lexer.escapes import EscapeDecodeError, decode_content
 
 
 def test_decode_content_handles_text_raw_and_bytes_modes() -> None:

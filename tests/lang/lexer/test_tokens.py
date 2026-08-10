@@ -1,11 +1,11 @@
-"""Unit tests mirroring :mod:`pylcl.lang.lexer.tokens`."""
+"""Unit tests mirroring :mod:`lclang.lang.lexer.tokens`."""
 
 from dataclasses import FrozenInstanceError
 
 import pytest
 
-from pylcl.lang.lexer import Token, TokenKind
-from pylcl.source import UNKNOWN_SPAN
+from lclang.lang.lexer import Token, TokenKind
+from lclang.source import UNKNOWN_SPAN
 
 
 def test_token_is_an_immutable_source_value() -> None:
@@ -23,4 +23,5 @@ def test_token_kind_names_are_stable() -> None:
     assert TokenKind.IDENTIFIER.value == "identifier"
     assert TokenKind.KW_TRUE.value == "true"
     assert TokenKind.QUESTION_DOT.value == "?."
+    assert TokenKind.ARROW.value == "->"
     assert TokenKind.EOF.value == "end of input"

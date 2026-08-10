@@ -4,8 +4,8 @@ import sys
 
 import pytest
 
-from pylcl.cli.process import split_argv
-from pylcl.errors import LclCliUsageError
+from lclang.cli.process import split_argv
+from lclang.errors import LclCliUsageError
 
 
 def test_ambient_process_arguments_are_snapshotted_once(monkeypatch: pytest.MonkeyPatch) -> None:

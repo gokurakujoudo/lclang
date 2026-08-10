@@ -1,9 +1,9 @@
-"""Unit tests mirroring :mod:`pylcl.ast.expressions`."""
+"""Unit tests mirroring :mod:`lclang.ast.expressions`."""
 
 import pytest
 
-from pylcl.ast import LclConstant, LclName
-from pylcl.ast.expressions import (
+from lclang.ast import LclConstant, LclName
+from lclang.ast.expressions import (
     LclBinary,
     LclBoolean,
     LclCoalesce,
@@ -11,13 +11,13 @@ from pylcl.ast.expressions import (
     LclConditional,
     LclUnary,
 )
-from pylcl.ast.operators import (
+from lclang.ast.operators import (
     BinaryOperator,
     BooleanOperator,
     ComparisonOperator,
     UnaryOperator,
 )
-from pylcl.types import VarName
+from lclang.types import VarName
 
 
 def test_expression_children_preserve_structural_source_order() -> None:

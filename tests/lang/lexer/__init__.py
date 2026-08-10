@@ -1,1 +1,1 @@
-"""Tests mirroring :mod:`pylcl.lang.lexer`."""
+"""Tests mirroring :mod:`lclang.lang.lexer`."""

@@ -1,15 +1,15 @@
-"""Unit tests mirroring :mod:`pylcl.lang.evaluator.calls`."""
+"""Unit tests mirroring :mod:`lclang.lang.evaluator.calls`."""
 
 from collections.abc import AsyncIterator
 
 import pytest
 
-from pylcl import evaluate
-from pylcl.ast import LclCall, LclConstant
-from pylcl.errors import LclEvaluationError
-from pylcl.lang.parser import parse_expression
-from pylcl.source import SourceSpan
-from pylcl.types import VarName
+from lclang import evaluate
+from lclang.ast import LclCall, LclConstant
+from lclang.errors import LclEvaluationError
+from lclang.lang.parser import parse_expression
+from lclang.source import SourceSpan
+from lclang.types import VarName
 
 
 @pytest.mark.asyncio

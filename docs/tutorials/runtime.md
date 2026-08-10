@@ -1,6 +1,6 @@
 # Runtime: Modules and Frames
 
-The pylcl runtime turns expression source into values while keeping parsing,
+The lclang runtime turns expression source into values while keeping parsing,
 host inputs, evaluation, and lifecycle ownership explicit. This guide starts
 with the two concepts used by almost every application: **Module** and **Frame**.
 
@@ -27,11 +27,11 @@ stateful: each Frame has independent snapshots and belongs to one event loop.
 
 For a small synchronous script, pass source text directly to `evaluate_sync`:
 
-<!-- pylcl-exec -->
+<!-- lclang-exec -->
 ```python
-import pylcl
+import lclang
 
-assert pylcl.evaluate_sync("unit_price * quantity", {"unit_price": 6, "quantity": 4}) == 24
+assert lclang.evaluate_sync("unit_price * quantity", {"unit_price": 6, "quantity": 4}) == 24
 ```
 
 This is the preferred synchronous convenience. Use `parse_expression` first
@@ -44,15 +44,15 @@ already parsed AST; `evaluate_sync` deliberately rejects a running event loop.
 `define_module(name, expressions)` is the normal construction API. The keys are
 definition names and the values are complete LCL expressions.
 
-<!-- pylcl-exec -->
+<!-- lclang-exec -->
 ```python
 import asyncio
 
-import pylcl
+import lclang
 
 
 async def main() -> None:
-    module = pylcl.define_module(
+    module = lclang.define_module(
         "invoice",
         {
             "total": "subtotal + tax",
@@ -60,7 +60,7 @@ async def main() -> None:
             "label": 'f"Total: {total:.2f}"',
         },
     )
-    frame = pylcl.define_frame(
+    frame = lclang.define_frame(
         module,
         preset={"unit_price": 6.5, "quantity": 4, "tax": 2.0},
     )
@@ -89,22 +89,22 @@ This is deliberately not a spreadsheet-style reactive system. Updating a host
 value or recalculating one definition never invalidates its dependants. You
 choose which snapshots to refresh and in what order.
 
-<!-- pylcl-exec -->
+<!-- lclang-exec -->
 ```python
 import asyncio
 
-import pylcl
+import lclang
 
 
 async def main() -> None:
-    module = pylcl.define_module(
+    module = lclang.define_module(
         "mutable-inputs",
         {
             "subtotal": "unit_price * quantity",
             "total": "subtotal + tax",
         },
     )
-    frame = pylcl.define_frame(
+    frame = lclang.define_frame(
         module,
         preset={"unit_price": 6, "quantity": 5, "tax": 2},
     )
@@ -139,29 +139,29 @@ or exception, and one child for each first-seen direct dependency name. It does 
 evaluate a definition, call or await a host value, join in-flight work, or add a
 runtime dependency trace.
 
-<!-- pylcl-exec -->
+<!-- lclang-exec -->
 ```python
 import asyncio
 
-import pylcl
+import lclang
 
 
 async def main() -> None:
-    module = pylcl.define_module(
+    module = lclang.define_module(
         "invoice-debug",
         {
             "total": "subtotal + tax",
             "subtotal": "unit_price * quantity",
         },
     )
-    frame = pylcl.Frame(
+    frame = lclang.Frame(
         module,
         values={"unit_price": 6, "quantity": 4, "tax": 2},
     )
     try:
         tree = frame.inspect_variable("total")
         assert tree.status.value == "NotEvaluated"
-        assert tree.definition_path == [pylcl.FrameId("frame-invoice-debug")]
+        assert tree.definition_path == [lclang.FrameId("frame-invoice-debug")]
         assert [str(item.var_name) for item in tree.dependencies] == ["subtotal", "tax"]
         assert tree.dependencies[1].status.value == "ExternalProvided"
         assert tree.dependencies[1].current_value == 2
@@ -203,18 +203,21 @@ display and performs no evaluation. Evaluated LCL functions use the same
 source-oriented style:
 
 ```text
-quicksort@frame-app: definition (Cached) LclFunctionValue: def (items): ...
+quicksort@frame-app: definition (Cached) LclFunctionValue: (items) -> ...
 ```
 
 The closure keeps working normally, while its representation hides bound
 parameter, resolver, evaluator, and source-span implementation details.
+LCL function source uses `() -> expression`, `name -> expression`, or a full
+`(parameters) -> expression` signature. Canonical representations always retain
+the parentheses.
 Values produced by the native `recursive` builtin similarly use
 `Recursive Function: <original source>`; LCL builders retain canonical source
 and Python builders use their function name.
 `Cached` means a definition has a committed value or failure snapshot;
 `NotEvaluated` means it does not; `ExternalProvided` means lookup selected an
 application host value; `NativeProvided` means it selected a reviewed canonical
-pylcl builtin or namespace. Missing references remain visible as `NotEvaluated` leaves with an
+lclang builtin or namespace. Missing references remain visible as `NotEvaluated` leaves with an
 `LclNameError` in `current_exception`. Repeated direct names collapse, cycles
 end at the repeated node on that branch, and the same variable reached through
 different branches remains as separate children.
@@ -227,7 +230,7 @@ The preferred `define_frame` helper builds this lookup chain:
 user Module -> imports/preset -> runtime -> builtins -> standard namespaces
 ```
 
-The nearest definition or host value wins. pylcl's reviewed defaults include
+The nearest definition or host value wins. lclang's reviewed defaults include
 ordinary pure helpers such as `len`, `range`, `sorted`, and `sum`, plus the
 `iter`, `text`, `data`, and `json` namespaces. They deliberately exclude file,
 network, process, environment, reflection, and dynamic-import capabilities.
@@ -248,8 +251,8 @@ The root layer also provides `lhs()`. During `name: expression` evaluation it
 returns `"name"`, which is useful for self-describing values:
 
 ```python
-module = pylcl.define_module("named", {"k": '{"name": lhs()}'})
-frame = pylcl.define_frame(module)
+module = lclang.define_module("named", {"k": '{"name": lhs()}'})
+frame = lclang.define_frame(module)
 try:
     assert await frame.get("k") == {"name": "k"}
 finally:
@@ -271,7 +274,7 @@ when the same failure propagates or is returned from the Frame failure cache.
 Supply application values narrowly:
 
 ```python
-frame = pylcl.define_frame(
+frame = lclang.define_frame(
     module,
     preset={
         "region": "eu-west",
@@ -291,23 +294,23 @@ each run. A `FrameFactory` packages a Module, optional `Preset`, and default
 `EvaluationLimits`; every `create` call still receives fresh cache and lifecycle
 state.
 
-<!-- pylcl-exec -->
+<!-- lclang-exec -->
 ```python
 import asyncio
 
-import pylcl
+import lclang
 
 
 async def main() -> None:
-    module = pylcl.define_module("price", {"total": "price * quantity"})
-    factory = pylcl.FrameFactory(module)
+    module = lclang.define_module("price", {"total": "price * quantity"})
+    factory = lclang.FrameFactory(module)
     retail = factory.create(values={"price": 8, "quantity": 2})
     wholesale = factory.create(
-        pylcl.FrameId("wholesale"),
+        lclang.FrameId("wholesale"),
         values={"price": 5, "quantity": 20},
     )
     try:
-        assert retail.frame_id == pylcl.FrameId("frame-price")
+        assert retail.frame_id == lclang.FrameId("frame-price")
         assert await retail.get("total") == 16
         assert await wholesale.get("total") == 100
     finally:
@@ -336,9 +339,9 @@ Parent definitions always evaluate and cache in the Frame that owns them.
 Closing a child does not close its borrowed parent.
 
 ```python
-parent_module = pylcl.define_module("environment", {"region": '"eu"'})
-child_module = pylcl.define_module("service", {"endpoint": 'f"api.{region}"'})
-parent = pylcl.define_frame(parent_module)
+parent_module = lclang.define_module("environment", {"region": '"eu"'})
+child_module = lclang.define_module("service", {"endpoint": 'f"api.{region}"'})
+parent = lclang.define_frame(parent_module)
 child = parent.derive(child_module)
 try:
     endpoint = await child.get("endpoint")
@@ -359,7 +362,7 @@ for edge in snapshot.dynamic_edges:
     print(f"{edge.source} -> {edge.target}")
 ```
 
-For whole-Module analysis, `pylcl.runtime.build_dependency_graph(module)` is
+For whole-Module analysis, `lclang.runtime.build_dependency_graph(module)` is
 pure and does not evaluate anything. Passing a Frame instead returns a
 `FrameDependencyGraph`: definitions and host-value terminals carry qualified
 Frame paths, and every edge records the exact owner lookup path plus the
@@ -369,8 +372,8 @@ Graph construction never calls a value, resolves an awaitable, fills a cache,
 or changes a dynamic trace.
 
 Advanced graph queries and topological ordering are described in the
-[dependency analytics tutorial](dependency-analytics.md) and
-[runtime API guide](../reference/runtime-api.md).
+[dependency analysis tutorial](dependency-analysis.md) and
+[runtime API guide](../reference/runtime.md).
 
 ## Limits and errors
 
@@ -378,7 +381,7 @@ Advanced graph queries and topological ordering are described in the
 materialized collection. Limits are operational guardrails, not a security
 sandbox or a timeout for blocking host code.
 
-Expected library failures derive from `pylcl.LclError`:
+Expected library failures derive from `lclang.LclError`:
 
 - `LclSyntaxError` — invalid expression source;
 - `LclNameError` — no definition or host value resolves a name;
@@ -397,5 +400,5 @@ new work, cancels and settles owned tasks, and closes cached resources once in
 reverse acquisition order. A parent is borrowed; close it separately only when
 your code owns it.
 
-Next, explore the [LCL examples gallery](lcl_examples.md), or load a complete
-[configuration file](config_file.md).
+Next, explore the [LCL examples gallery](language.md), or load a complete
+[configuration file](configuration.md).

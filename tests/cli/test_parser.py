@@ -4,8 +4,8 @@ from datetime import date
 
 import pytest
 
-from pylcl.ast import LclConstant, LclName
-from pylcl.cli.parser import (
+from lclang.ast import LclConstant, LclName
+from lclang.cli.parser import (
     help_requested,
     lazy_override_expression,
     override_expression,
@@ -13,7 +13,7 @@ from pylcl.cli.parser import (
     parse_common_options,
     split_argv,
 )
-from pylcl.errors import LclCliUsageError
+from lclang.errors import LclCliUsageError
 
 
 def test_parser_accepts_aliases_last_override_and_dates() -> None:

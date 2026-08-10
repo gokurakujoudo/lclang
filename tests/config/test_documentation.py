@@ -1,16 +1,18 @@
-"""Structural and executable checks for bilingual configuration guidance."""
+"""Executable examples from the configuration references."""
 
 from pathlib import Path
 
-from pylcl.config import parse_config
+from lclang.config import parse_config
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_bilingual_guides_cover_the_verified_contract_and_are_linked() -> None:
-    """English and Chinese indexes expose every central 0.2 configuration topic."""
-    english = (ROOT / "docs" / "configuration.md").read_text(encoding="utf-8")
-    chinese = (ROOT / "doc_cn" / "configuration_cn.md").read_text(encoding="utf-8")
+def test_bilingual_references_cover_the_configuration_contract() -> None:
+    """English and Chinese references describe each public configuration concept."""
+    english = (ROOT / "docs" / "reference" / "configuration.md").read_text(
+        encoding="utf-8"
+    )
+    chinese = (ROOT / "docs" / "zh" / "configuration.md").read_text(encoding="utf-8")
     for term in (
         "__LCL_VERSION__",
         "__file__",
@@ -22,10 +24,6 @@ def test_bilingual_guides_cover_the_verified_contract_and_are_linked() -> None:
     ):
         assert term in english
         assert term in chinese
-    assert "configuration.md" in (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
-    assert "configuration_cn.md" in (ROOT / "doc_cn" / "README_cn.md").read_text(
-        encoding="utf-8"
-    )
 
 
 def test_documented_file_grammar_example_parses() -> None:

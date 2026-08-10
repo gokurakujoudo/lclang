@@ -1,39 +1,39 @@
-"""Behavioral tests mirroring :mod:`pylcl.stdlib.recursion`."""
+"""Behavioral tests mirroring :mod:`lclang.stdlib.recursion`."""
 
 from collections.abc import Awaitable, Callable
 
 import pytest
 
-import pylcl
-from pylcl.stdlib import recursive
+import lclang
+from lclang.stdlib import recursive
 
 
 @pytest.mark.asyncio
 async def test_recursive_builtin_evaluates_factorial_in_default_frame() -> None:
     """A normal LCL definition uses the builtin without supplying a combinator."""
-    module = pylcl.define_module(
+    module = lclang.define_module(
         "factorial",
         {
             "factorial": (
-                "recursive(def (again): def (n): "
+                "recursive((again) -> (n) -> "
                 "1 if n <= 1 else n * again(n - 1))"
             ),
             "result": "factorial(6)",
         },
     )
-    frame = pylcl.define_frame(module)
+    frame = lclang.define_frame(module)
     try:
         assert await frame.get("result") == 720
         function = await frame.get("factorial")
         assert repr(function) == (
-            "Recursive Function: def (again): def (n): "
+            "Recursive Function: (again) -> (n) -> "
             "1 if n <= 1 else n * again(n - 1)"
         )
         rendered = repr(frame.inspect_variable("factorial"))
-        assert "(Cached) Recursive Function: def (again): def (n):" in rendered
+        assert "(Cached) Recursive Function: (again) -> (n) ->" in rendered
         assert "0x" not in rendered
-        assert pylcl.LCL_BUILTINS.values["recursive"] is recursive
-        assert repr(pylcl.LCL_BUILTINS.inspect_variable("recursive")).endswith(
+        assert lclang.LCL_BUILTINS.values["recursive"] is recursive
+        assert repr(lclang.LCL_BUILTINS.inspect_variable("recursive")).endswith(
             "(NativeProvided) Builtin Function: recursive"
         )
     finally:
@@ -80,11 +80,11 @@ async def test_recursive_rejects_noncallable_builder_and_step() -> None:
 @pytest.mark.asyncio
 async def test_recursive_builtin_sorts_composite_values() -> None:
     """The variadic fixed point supports recursive quicksort in ordinary LCL."""
-    module = pylcl.define_module(
+    module = lclang.define_module(
         "quicksort",
         {
             "quicksort": (
-                "recursive(def (again): def (items): [] if not items else "
+                "recursive((again) -> (items) -> [] if not items else "
                 "again([item for item in items[1:] if item < items[0]]) + "
                 "[items[0]] + "
                 "again([item for item in items[1:] if item >= items[0]]))"
@@ -92,7 +92,7 @@ async def test_recursive_builtin_sorts_composite_values() -> None:
             "result": "quicksort([7, 2, 9, 2, -1, 5])",
         },
     )
-    frame = pylcl.define_frame(module)
+    frame = lclang.define_frame(module)
     try:
         assert await frame.get("result") == [-1, 2, 2, 5, 7, 9]
     finally:

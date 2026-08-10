@@ -1,10 +1,10 @@
-"""Unit tests mirroring :mod:`pylcl.stdlib.text`."""
+"""Unit tests mirroring :mod:`lclang.stdlib.text`."""
 
 from collections.abc import AsyncIterator
 
 import pytest
 
-from pylcl.stdlib import join, lines
+from lclang.stdlib import join, lines
 
 
 @pytest.mark.asyncio
