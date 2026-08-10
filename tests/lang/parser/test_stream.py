@@ -3,7 +3,7 @@
 import pytest
 
 from pylcl.errors import LclSyntaxError
-from pylcl.lang.lexer import TokenKind, scan_tokens
+from pylcl.lang.lexer import Token, TokenKind, scan_tokens
 from pylcl.lang.parser.stream import TokenStream
 
 
@@ -43,3 +43,10 @@ def test_peek_supports_bounded_non_consuming_lookahead() -> None:
     assert stream.current.kind is TokenKind.IDENTIFIER
     with pytest.raises(ValueError):
         stream.peek(-1)
+
+
+@pytest.mark.parametrize("tokens", [[], scan_tokens("name")[:-1]])
+def test_stream_requires_a_final_eof_sentinel(tokens: list[Token]) -> None:
+    """Empty and abruptly truncated token sequences are rejected at construction."""
+    with pytest.raises(ValueError, match="final EOF"):
+        TokenStream(tokens)

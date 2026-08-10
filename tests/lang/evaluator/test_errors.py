@@ -5,7 +5,10 @@ import asyncio
 import pytest
 
 from pylcl import evaluate
+from pylcl.ast import LclAstNode, LclConstant, LclExceptHandler
 from pylcl.errors import LclEvaluationError
+from pylcl.lang.evaluator.context import MappingResolver, Resolver
+from pylcl.lang.evaluator.errors import _matches
 from pylcl.lang.parser import parse_expression
 
 
@@ -94,6 +97,23 @@ async def test_handlers_use_source_order_and_bare_fallback() -> None:
     source = "try: fail() except KeyError: 'wrong' except: 'recovered'"
     values = {"fail": fail, "KeyError": KeyError}
     assert await evaluate(parse_expression(source), values) == "recovered"
+
+
+@pytest.mark.asyncio
+async def test_bare_matcher_helper_short_circuits_evaluation() -> None:
+    """The documented matcher helper accepts a bare handler without evaluating a type."""
+    called = False
+
+    async def forbidden_evaluate(node: LclAstNode, resolver: Resolver) -> object:
+        """Fail if a bare handler unexpectedly evaluates a matcher."""
+        nonlocal called
+        del node, resolver
+        called = True
+        raise AssertionError("bare matcher evaluated")
+
+    handler = LclExceptHandler(None, None, LclConstant(value=None))
+    assert await _matches(handler, ValueError("problem"), MappingResolver({}), forbidden_evaluate)
+    assert called is False
 
 
 @pytest.mark.asyncio

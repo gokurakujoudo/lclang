@@ -6,6 +6,7 @@ from pylcl.stdlib.iterables import collect, first
 from pylcl.stdlib.json_values import json_decode, json_encode
 from pylcl.stdlib.manifest import StdlibEntry, StdlibManifest
 from pylcl.stdlib.namespaces import StdlibNamespace, assemble_stdlib
+from pylcl.stdlib.recursion import RecursiveFunction, recursive
 from pylcl.stdlib.text import join, lines
 
 __all__ = [
@@ -14,6 +15,7 @@ __all__ = [
     "StdlibEntry",
     "StdlibManifest",
     "StdlibNamespace",
+    "RecursiveFunction",
     "assemble_stdlib",
     "collect",
     "first",
@@ -23,4 +25,5 @@ __all__ = [
     "lines",
     "lookup",
     "merge",
+    "recursive",
 ]

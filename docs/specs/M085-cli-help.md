@@ -1,40 +1,44 @@
-# M085: deterministic help and usage rendering
+# M085: deterministic structured help
 
 ## Goal
 
-Render application, command, and usage-error help without terminal probing or
-execution side effects.
+Render entrance, group, command, and usage-error help as structured plain text
+without terminal probing, ANSI codes, configuration, or execution.
 
 ## Module and test layout
 
-- Rendering lives in `pylcl/cli/help.py`; immutable render options may live in
-  `pylcl/cli/help_model.py`.
-- Tests live in `tests/cli/test_help.py` and assert complete stable output.
+- Rendering lives in `pylcl/cli/help.py`; immutable render values may live in a
+  focused sibling module.
+- Tests live in `tests/cli/test_routing_help.py` and assert complete stable output.
 - Every private/public production callable and value class has a full English
   rST docstring; each source module remains below 200 lines.
 
 ## Contract
 
-- `render_help(application, entrance=None, *, width=80)` returns Unicode text
-  ending in one newline. Width is explicit and must be at least 40.
-- Application help lists usage, summary, commands, and built-ins in declaration
-  order. Entrance help lists command usage, positionals, options/aliases,
-  required markers, defaults safe for display, and wrapped descriptions.
-- Usage syntax is canonical: required values use angle brackets, optional values
-  brackets, options their declared metavar, and literal `--` only when useful.
+- Renderers return Unicode text ending in one newline at fixed width 100. They
+  use standard-library wrapping and aligned sections, with no Rich dependency.
+- Root/group help shows usage, normalized description, ordered commands/groups,
+  and applicable help/version options. Root usage omits the root-group name.
+- Command help shows usage, one-line summary, common options, and a configuration
+  parameter table: name, stable displayed type, required state, default, and
+  normalized description. `None` defaults display as absent.
+- Canonical options are `-c, --config <file>`,
+  `-o, --override <key> [<value>]`, `-a, --as-of <YYYYMMDD>`,
+  `-wif, --dryrun`, and `-h, --help`; root adds `-v, --version`.
+- Explicit help writes stdout and returns 0 without config, Frames, logging, or a
+  handler. Usage errors write a concise `error:` plus nearest help to stderr and
+  return 2.
 - Rendering never consults terminal width, color capability, locale, environment,
-  or current directory. It emits no ANSI codes and normalizes embedded whitespace.
-- Usage errors render a concise `error:` line, relevant usage, and `Try ... --help`;
-  sensitive default values may be marked hidden and never rendered.
+  CWD, configuration, or logging state and emits no ANSI/control sequences.
 
 ## TDD matrix
 
-- Sunny: snapshot root/command help at narrow and wide widths with aliases and
-  visible defaults.
-- Rainy: reject invalid widths and prove hidden defaults, control characters,
-  terminal state, and locale cannot leak into output.
-- Composite-complex: render a nested Unicode application with long wrapped help,
-  required/optional arguments, negative flags, built-ins, and a usage error.
+- Sunny: snapshot root, nested-group, and command help with aliases, types,
+  required markers, defaults, and version.
+- Rainy: prove control characters, terminal state, locale, config/log paths, and
+  handler side effects cannot leak into help; verify exact error-stream behavior.
+- Composite-complex: render a nested Unicode application with long wrapped prose,
+  mixed parameter metadata, repeated overrides, and nearest-scope usage errors.
 
 ## Completion evidence
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from pylcl.errors import LclError, LclNameError, LclSyntaxError
+from pylcl.errors import LclError, LclEvaluationError, LclNameError, LclSyntaxError
 from pylcl.source import SourceOrigin, SourcePosition, SourceSpan
 from pylcl.types import SourceName
 
@@ -28,6 +28,36 @@ def test_error_with_span_renders_source_start() -> None:
     )
     error = LclSyntaxError("unexpected token", span=span, code="CUSTOM")
     assert str(error) == "config.lcl:3:7: [CUSTOM] unexpected token"
+
+
+def test_evaluation_error_renders_an_immutable_variable_stack() -> None:
+    """An attached owner path remains ordered and on one diagnostic line."""
+    error = LclEvaluationError(
+        "division by zero",
+        variable_stack=("RESULT", "middle", "failing"),
+    )
+    assert error.variable_stack == ("RESULT", "middle", "failing")
+    assert str(error) == (
+        "[LCL3001] division by zero "
+        "[variable evaluation stack: RESULT -> middle -> failing]"
+    )
+    error.attach_variable_stack(("replacement",))
+    assert error.variable_stack == ("RESULT", "middle", "failing")
+
+    empty = LclEvaluationError("failure")
+    empty.attach_variable_stack(("RESULT",))
+    assert empty.variable_stack == ("RESULT",)
+    with pytest.raises(TypeError):
+        empty.attach_variable_stack(["invalid"])  # type: ignore[arg-type]
+    with pytest.raises(ValueError):
+        empty.attach_variable_stack(("",))
+
+
+@pytest.mark.parametrize("stack", [("",), ("value", 1), ["value"]])
+def test_error_rejects_invalid_variable_stacks(stack: object) -> None:
+    """Variable diagnostics accept only immutable non-empty string names."""
+    with pytest.raises((TypeError, ValueError)):
+        LclEvaluationError("failure", variable_stack=stack)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(("message", "code"), [("", "LCL0000"), ("failure", "")])

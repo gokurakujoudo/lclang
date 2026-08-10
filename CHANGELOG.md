@@ -2,7 +2,51 @@
 
 ## Unreleased
 
-No unreleased changes.
+- Added ordered workflow execution-status trees, shared sub-task manager cursors,
+  deterministic parent aggregation, subtree locking, and synchronous scoped
+  finalization that records exceptions without suppressing them.
+- Added scoped step handles that begin running, accept atomic description/status
+  updates, succeed on clean exit, and record errors without suppressing them.
+- Raised the enforced project gate to 100% branch coverage and added behavioral
+  assertions for every previously uncovered statement and branch.
+- Manually malformed call, dictionary-display, and dictionary-comprehension AST
+  wrapper values now fail explicitly instead of being silently ignored.
+
+## 0.3.0 release candidate — 2026-08-09
+
+- Added immutable CLI parameters, results, contexts, and logging configuration
+  through the focused `pylcl.cli` public API without expanding the package root.
+- Added exact async command decorators, nested snake_case groups, full Python
+  executable/script argv parsing, command routing, and dependency-free structured help.
+- Added lazy preset/default/config/override/runtime Frame layering, strict as-of
+  dates, literal and deferred `LCL[...]` overrides, required presence checks,
+  handler-owned dryrun behavior, isolated UTF-8 logging, and deterministic cleanup.
+- Added executable English and Chinese Python-script CLI tutorials, static config
+  fixture guidance, temporary-log testing, platform cases, and clean-install CLI smokes.
+- Added `CliResult.success`/`fail` shortcuts and executable `python -m pylcl.cli`
+  commands for non-evaluating `RESULT` inspection and lazy result evaluation.
+- Literal and malformed-marker CLI overrides now remain external-provided string
+  bindings; only successfully parsed `LCL[...]` values become lazy definitions.
+- Dependency inspection now classifies canonical reviewed builtins/namespaces as
+  `NativeProvided`, with stable address-free callable and concise namespace reprs.
+- Native inspection payloads now use uniform `Builtin Function: name` and
+  `Builtin Namespace: name` syntax. Structured evaluation failures include the
+  direct-to-failing variable owner stack, including lexical LCL function calls.
+- Valueless `-o/--override KEY` now stores boolean `True`, and a following
+  override option can no longer be consumed as a value. `parse_lcl -o EVAL`
+  evaluates `RESULT` first and renders either its successful or failed cache tree.
+- Dependency-tree values that are supported `LclAstNode` objects or evaluated
+  LCL function closures now render with canonical LCL expressions instead of
+  nested dataclass, closure, resolver, evaluator, and source-span reprs.
+- Added the native `recursive(builder)` builtin, a Python variadic eager Z
+  combinator for defining recursive LCL functions without supplying an LCL
+  combinator; its results use stable `Recursive Function: <source-or-name>`
+  reprs, and the original LCL Y/Z examples remain supported and documented.
+- Added `python -m pylcl.cli builtins` with sorted one-line descriptions and
+  manifest-ordered, two-space-indented methods beneath builtin namespaces.
+- Iterable items are now recursively awaited at the shared sync/async iteration
+  boundary, fixing Python `map` with async LCL functions in starred displays,
+  comprehensions, call expansion, and reviewed iterable helpers.
 
 ## 0.2.0 release candidate — 2026-08-08
 

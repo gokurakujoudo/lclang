@@ -40,6 +40,8 @@ class Frame(
     :param values: Optional initial host bindings copied at construction time.
     :param parent: Optional ancestor used after local definitions and bindings.
     :param limits: Optional resource ceilings, or stable defaults when omitted.
+    :param native_values: Whether local host bindings are canonical pylcl values.
+    :raises TypeError: If an optional identifier or native flag has the wrong type.
     :raises ValueError: If *frame_id* or any host binding name is empty.
 
     .. note::
@@ -54,6 +56,7 @@ class Frame(
         values: Mapping[str, object] | None = None,
         parent: Frame | None = None,
         limits: EvaluationLimits | None = None,
+        native_values: bool = False,
     ) -> None:
         """Create an empty result cache over immutable inputs.
 
@@ -62,8 +65,9 @@ class Frame(
         :param values: Optional initial host bindings copied at construction time.
         :param parent: Optional ancestor used after local definitions and bindings.
         :param limits: Optional resource ceilings, or defaults when omitted.
+        :param native_values: Whether local host bindings are canonical pylcl values.
         :returns: ``None`` after independent runtime state is initialized.
-        :raises TypeError: If *frame_id* is neither a string nor ``None``.
+        :raises TypeError: If *frame_id* or *native_values* has the wrong type.
         :raises ValueError: If the effective ID or a host binding name is empty.
 
         .. note::
@@ -71,6 +75,8 @@ class Frame(
         """
         if frame_id is not None and not isinstance(frame_id, str):
             raise TypeError("frame identifier must be a string")
+        if not isinstance(native_values, bool):
+            raise TypeError("native-values flag must be Boolean")
         effective_id = FrameId(f"frame-{module.name}") if frame_id is None else FrameId(frame_id)
         if not effective_id:
             raise ValueError("frame identifier cannot be empty")
@@ -83,6 +89,7 @@ class Frame(
         self.values: Mapping[str, object] = MappingProxyType(self._values)
         self.parent = parent
         self.limits = EvaluationLimits() if limits is None else limits
+        self.native_values = native_values
         self._results: dict[str, object] = {}
         self._failures: dict[str, Exception] = {}
         self._inflight: dict[str, asyncio.Task[object]] = {}

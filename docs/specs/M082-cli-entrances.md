@@ -1,42 +1,45 @@
-# M082: entrance declaration and callable binding
+# M082: commands, decorators, and command groups
 
 ## Goal
 
-Provide explicit builders/decorators that turn typed Python callables or LCL
-targets into M080 entrances without executing them.
+Turn exactly typed async Python handlers into immutable commands and compose
+commands into validated nested groups without executing user code.
 
 ## Module and test layout
 
-- Declaration helpers live in `pylcl/cli/entrances.py`; Python signature mapping
-  may be split into `pylcl/cli/signatures.py`.
-- Tests live in `tests/cli/test_entrances.py`.
+- Declarations live in `pylcl/cli/commands.py`; signature and docstring handling
+  may be split into focused sibling modules.
+- Tests live in `tests/cli/test_commands.py`.
 - Every production callable/value class, public or private, follows the complete
   English rST docstring contract; modules stay below 200 lines.
 
 ## Contract
 
-- `entrance(...)` records metadata on a callable without mutating its signature;
-  `CliApplicationBuilder.add(...)` converts declarations into immutable models.
-- Supported signature inference is deliberately narrow: positional parameters,
-  keyword-only options, `str`/`int`/`float`/`bool` annotations, optional defaults,
-  and async or sync callables. Unannotated, variadic, positional-only, union,
-  container, and unsupported annotations require explicit `CliParameter` models.
-- Explicit declarations always win over inferred help/metavar/converter but must
-  remain compatible with the callable signature.
-- LCL handler targets are declared by configuration name/expression and use an
-  explicit parameter list; Python reflection is never attempted for them.
-- Decoration/building performs no handler call, import discovery, config load,
-  event-loop creation, or stdout write. Reusing a callable in two builders creates
-  independent metadata.
+- Module-level `cli.command(name=None, summary=None, parameter_docs=(),
+  preset=None)` returns a decorator whose result is a `Command`; the original
+  function remains available as `Command.handler`.
+- A handler must be an async function with exactly one parameter named and
+  annotated `context: CliContext` and return annotation `CliResult`. Resolve
+  postponed annotations and reject all other signatures at decoration time.
+- The default command name drops one trailing `_command`; command and group names
+  match `[a-z][a-z0-9_]*`. The default one-line summary collapses handler prose
+  before the first rST field or directive.
+- Commands snapshot ordered unique `ParameterDoc` values and a shallow preset.
+  Parameter/log/runtime reserved-name conflicts fail during declaration.
+- `CommandGroup(name, description, commands)` snapshots commands/groups, rejects
+  invalid child types and sibling-name collisions, and preserves declaration
+  order. The entrance root group is a descriptive container, not an argv segment.
+- Declaration performs no handler call, import discovery, config load, Frame
+  construction, logger setup, event-loop creation, or output.
 
 ## TDD matrix
 
-- Sunny: infer a typed sync and async callable and explicitly declare an LCL
-  entrance.
-- Rainy: reject unsupported signatures, conflicting explicit metadata, duplicate
-  decorators, and missing handler targets.
-- Composite-complex: combine inferred and explicit parameters across nested
-  entrances, defaults, aliases, and two independent applications.
+- Sunny: decorate explicit/default-named handlers, extract rST summaries, and
+  assemble nested groups with stable ordering.
+- Rainy: reject every incompatible signature, invalid/default-empty name,
+  duplicate parameter/child, reserved name, and unsupported child type.
+- Composite-complex: detach mutable parameter/preset/child inputs and reuse one
+  handler in independent nested application graphs without shared state.
 
 ## Completion evidence
 

@@ -16,6 +16,7 @@ from pylcl.lang.evaluator.function_arguments import (
     bind_arguments,
     resolve_default,
 )
+from pylcl.lang.printer import to_source
 from pylcl.source import SourceSpan
 
 # Active closure identities used for same-task recursion rejection.
@@ -34,6 +35,7 @@ class LclFunctionValue:
     :param closure: Defining resolver used beneath invocation locals.
     :param span: Function source range used for recursion diagnostics.
     :param definition_name: Optional lexical Frame definition owner.
+    :param source: Original function node retained for canonical representation.
 
     .. note::
        Calls are async, task-safe, and deliberately non-recursive in LCL V1.
@@ -44,7 +46,15 @@ class LclFunctionValue:
     closure: Resolver
     span: SourceSpan
     definition_name: str | None
+    source: LclFunction
     _evaluate: EvaluateNode
+
+    def __repr__(self) -> str:
+        """Return the canonical LCL function expression.
+
+        :returns: Source-oriented function representation without closure internals.
+        """
+        return to_source(self.source)
 
     async def __call__(self, *args: object, **kwargs: object) -> object:
         """Bind arguments and evaluate the body in the lexical closure.
@@ -100,5 +110,6 @@ async def create_function(
         resolver,
         node.span,
         active_definition(),
+        node,
         evaluate,
     )

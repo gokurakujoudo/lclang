@@ -19,6 +19,7 @@ pylcl/
   stdlib/          reviewed manifests, namespaces and async helpers
   config/          logical lines, includes, origins and config diagnostics
   cli/             typed contexts, parsing, routing, runners and built-ins
+  workflow/        execution-status values, task/step handles and finalization
 ```
 
 Shared public value objects and errors remain small top-level modules. Package
@@ -28,7 +29,7 @@ approaches the limit, split by a behavioural axis before adding more branches.
 
 Dependencies flow inward: CLI may depend on config/runtime; config may depend
 on language/runtime; runtime may depend on AST/language primitives. AST, source,
-types, and errors never import runtime, config, or CLI.
+types, errors, and workflow status never import runtime, config, or CLI.
 
 ## Test packages
 
@@ -44,6 +45,7 @@ tests/
   stdlib/          manifest and async-helper behaviour
   config/          text, include, origin and diagnostic behaviour
   cli/             argv, routing, stream and exit-code behaviour
+  workflow/        status values, aggregation, locking and scoped finalization
   support/         reusable factories, fake resources and corpus loaders
   stress/          opt-in scale, concurrency and leak scenarios
 ```

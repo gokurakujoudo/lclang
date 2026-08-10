@@ -212,6 +212,17 @@ comprehension.
 {**mapping for mapping in mappings}
 ```
 
+Items yielded by synchronous or asynchronous iterables are recursively awaited
+before binding or expansion. Python `map` therefore composes with async LCL
+functions without leaking coroutine objects:
+
+```lcl
+[*map(def (value): value.lower(), ["A", "B"])]
+```
+
+The result is `["a", "b"]`. The same rule applies to comprehension iterables,
+PEP 798 starred heads, call-argument stars, and `iter.collect`/`iter.first`.
+
 Parenthesized comprehension syntax produces a lazy async generator. Its source
 is not iterated until a consumer asks for items.
 
@@ -299,6 +310,61 @@ with source() as rows, transaction(rows) as tx: tx.write([transform(row) for row
 
 These are expression forms, so they can be nested inside calls, collections,
 functions, and conditions.
+
+## Builtin recursion
+
+The native `recursive(builder)` builtin is the Python implementation of the
+variadic eager Z combinator. The builder receives `again` and returns the LCL
+function for one recursive step. Factorial needs no user-defined combinator:
+
+```lcl
+recursive(def (again): def (n): 1 if n <= 1 else n * again(n - 1))
+```
+
+The same builtin supports variadic recursive functions and nested collection
+work. This complete Frame example calculates factorial and quicksort:
+
+<!-- pylcl-exec -->
+```python
+import asyncio
+
+import pylcl
+
+
+async def main() -> None:
+    module = pylcl.define_module(
+        "builtin-recursion",
+        {
+            "factorial": (
+                "recursive(def (again): def (n): "
+                "1 if n <= 1 else n * again(n - 1))"
+            ),
+            "quicksort": (
+                "recursive(def (again): def (items): [] if not items else "
+                "again([item for item in items[1:] if item < items[0]]) + "
+                "[items[0]] + "
+                "again([item for item in items[1:] if item >= items[0]]))"
+            ),
+            "factorial_result": "factorial(6)",
+            "sorted_result": "quicksort([7, 2, 9, 2, -1, 5])",
+        },
+    )
+    frame = pylcl.define_frame(module)
+    try:
+        assert await frame.get("factorial_result") == 720
+        assert await frame.get("sorted_result") == [-1, 2, 2, 5, 7, 9]
+    finally:
+        await frame.close()
+
+
+asyncio.run(main())
+```
+
+The value returned by `recursive` has a stable source-oriented representation.
+An LCL builder appears as `Recursive Function: def (again): ...`; when Python
+code calls `recursive(python_builder)`, it appears as
+`Recursive Function: python_builder`. Dependency-tree output uses the same form
+without Python object addresses.
 
 ## Hard example: fixed points under eager evaluation
 

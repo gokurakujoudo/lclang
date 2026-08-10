@@ -83,3 +83,56 @@ async def test_indirect_cycle_reports_ordered_path() -> None:
         await frame.get("alpha")
     assert "alpha -> beta -> alpha" in caught.value.message
     assert caught.value.span == module.definitions["beta"].span
+
+
+@pytest.mark.asyncio
+async def test_nested_failure_reports_direct_to_failing_variable_stack() -> None:
+    """A cached failure retains the complete first evaluation owner path."""
+    module = Module(
+        ModuleName("diagnostics"),
+        {
+            "RESULT": parse_expression("middle"),
+            "middle": parse_expression("failing"),
+            "failing": parse_expression("1 / 0"),
+        },
+    )
+    frame = Frame(module)
+
+    with pytest.raises(LclEvaluationError) as first:
+        await frame.get("RESULT")
+    with pytest.raises(LclEvaluationError) as second:
+        await frame.get("RESULT")
+
+    assert first.value is second.value
+    assert first.value.variable_stack == ("RESULT", "middle", "failing")
+    assert str(first.value).endswith(
+        "[variable evaluation stack: RESULT -> middle -> failing]"
+    )
+
+
+@pytest.mark.asyncio
+async def test_concurrent_failures_keep_independent_variable_stacks() -> None:
+    """Parallel owner tasks cannot leak their diagnostic paths to each other."""
+    async def fail(label: str) -> None:
+        await asyncio.sleep(0)
+        raise ValueError(label)
+
+    module = Module(
+        ModuleName("concurrent-errors"),
+        {
+            "left": parse_expression("fail('left')"),
+            "right": parse_expression("fail('right')"),
+        },
+    )
+    frame = Frame(module, values={"fail": fail})
+    outcomes = await asyncio.gather(
+        frame.get("left"),
+        frame.get("right"),
+        return_exceptions=True,
+    )
+
+    assert all(isinstance(item, LclEvaluationError) for item in outcomes)
+    assert [item.variable_stack for item in outcomes if isinstance(item, LclEvaluationError)] == [
+        ("left",),
+        ("right",),
+    ]

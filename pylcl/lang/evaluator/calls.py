@@ -28,6 +28,7 @@ async def _evaluate_call(
     :param resolver: Resolver used for every nested argument evaluation.
     :param evaluate: Recursive evaluator for nested AST expressions.
     :returns: Result returned by invoking the evaluated target.
+    :raises TypeError: If an argument has an unsupported AST wrapper type.
 
     .. note::
        Starred positional values and keyword mappings are expanded only after
@@ -49,6 +50,8 @@ async def _evaluate_call(
         elif isinstance(argument, LclKeywordUnpackArgument):
             value = await evaluate(argument.value, resolver)
             _merge_keywords(value, keywords)
+        else:
+            raise TypeError("unsupported call argument")
     return cast(Callable[..., object], target)(*positional, **keywords)
 
 

@@ -39,11 +39,13 @@ class QualityConfigurationTests(unittest.TestCase):
         }
         self.assertTrue({"pytest", "pytest-cov", "mypy", "ruff", "build"} <= names)
 
-    def test_coverage_requires_branches_and_ninety_nine_percent(self) -> None:
+    def test_coverage_requires_branches_and_full_coverage(self) -> None:
         """Coverage configuration must enforce the documented branch gate."""
         coverage = self.config["tool"]["coverage"]
         self.assertTrue(coverage["run"]["branch"])
-        self.assertEqual(coverage["report"]["fail_under"], 99)
+        self.assertEqual(coverage["report"]["fail_under"], 100)
+        pytest_options = self.config["tool"]["pytest"]["ini_options"]["addopts"]
+        self.assertIn("--cov-fail-under=100", pytest_options)
 
     def test_mypy_and_ruff_are_strict(self) -> None:
         """Type and lint configurations must retain their strict modes."""

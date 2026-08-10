@@ -1,4 +1,4 @@
-"""Run the fail-fast, no-publication pylcl 0.2 release-candidate gate."""
+"""Run the fail-fast, no-publication pylcl 0.3 release-candidate gate."""
 
 from __future__ import annotations
 
@@ -78,7 +78,7 @@ def artifact_record(reports: tuple[ArtifactReport, ...]) -> str:
 
 
 def run_release(output: Path, python: Path = Path(sys.executable)) -> int:
-    """Build, inspect, rebuild, and smoke-test the 0.2 artifacts.
+    """Build, inspect, rebuild, and smoke-test the 0.3 artifacts.
 
     :param output: New or empty caller-selected release output directory.
     :param python: Python interpreter used for build and smoke tooling.

@@ -1,8 +1,13 @@
 """Unit tests mirroring :mod:`pylcl.lang.evaluator.displays`."""
 
+from collections.abc import Awaitable
+from inspect import isawaitable
+from typing import cast
+
 import pytest
 
 from pylcl import evaluate
+from pylcl.ast import LclConstant, LclDict
 from pylcl.errors import LclEvaluationError
 from pylcl.lang.parser import parse_expression
 from pylcl.source import SourceSpan
@@ -56,3 +61,25 @@ async def test_invalid_unpack_protocols_propagate_type_error() -> None:
     with pytest.raises(LclEvaluationError) as mapping:
         await evaluate(parse_expression("{**value}"), {"value": 1})
     assert isinstance(mapping.value.__cause__, TypeError)
+
+
+@pytest.mark.asyncio
+async def test_dictionary_display_rejects_invalid_ast_entry() -> None:
+    """A manually malformed dictionary entry is rejected instead of silently skipped."""
+    malformed = LclDict((LclConstant(value="invalid"),))  # type: ignore[arg-type]
+    with pytest.raises(LclEvaluationError, match="unsupported dictionary display entry") as caught:
+        await evaluate(malformed)
+    assert isinstance(caught.value.__cause__, TypeError)
+
+
+@pytest.mark.asyncio
+async def test_starred_map_awaits_lcl_function_results() -> None:
+    """Materializing Python map over an LCL function never leaks coroutines."""
+    result = await evaluate(
+        parse_expression("[*map(def (x): x.lower(), ['A', 'B'])]"),
+        {"map": map},
+    )
+    for value in cast(list[object], result):
+        if isawaitable(value):
+            await cast(Awaitable[object], value)
+    assert result == ["a", "b"]

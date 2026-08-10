@@ -35,7 +35,7 @@ replaces only the requested value.
 
 All product work follows the workflow in `AGENTS.md`. Public APIs are fully
 typed and documented. Runtime source files stay below 200 lines. Each release
-gate requires strict mypy, clean Ruff, at least 99% branch coverage, portable
+gate requires strict mypy, clean Ruff, 100% branch coverage, portable
 build/install checks, and synchronized English and Chinese README status.
 
 ## Acceptance

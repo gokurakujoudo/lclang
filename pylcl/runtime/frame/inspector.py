@@ -26,6 +26,7 @@ class InspectionFrame(Protocol):
     :param frame_id: Diagnostic identifier retained in lookup paths.
     :param values: Read-only local host-value view.
     :param parent: Optional next Frame in lookup order.
+    :param native_values: Whether local host bindings are canonical pylcl values.
 
     .. note::
        Cache dictionaries are read for membership only and are never changed.
@@ -35,6 +36,7 @@ class InspectionFrame(Protocol):
     frame_id: FrameId
     values: Mapping[str, object]
     parent: InspectionFrame | None
+    native_values: bool
     _results: dict[str, object]
     _failures: dict[str, Exception]
     _lifecycle: _FrameLifecycle
@@ -100,9 +102,14 @@ def build_inspection_tree(
     owner._lifecycle.ensure_open(None)
     definition = owner.module.definitions.get(name)
     if definition is None:
+        status = (
+            VariableInspectionStatus.NATIVE_PROVIDED
+            if owner.native_values
+            else VariableInspectionStatus.EXTERNAL_PROVIDED
+        )
         return VariableInspectionTree(
             VarName(name),
-            VariableInspectionStatus.EXTERNAL_PROVIDED,
+            status,
             None,
             path,
             cast("Frame", owner),

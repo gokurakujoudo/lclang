@@ -31,6 +31,9 @@ README files before changing the project.
   and edge cases with the same conventions.
 - A Comment for each constant values to describe it.
 - In unittest, mock any external connectivities, and use separated TemporaryDirectory to hold file input and outputs.
+- CLI unittest configuration sources are static fixtures declared with their test
+  cases. Every enabled log file is rooted in a per-test temporary directory that
+  is cleaned automatically.
 
 Runtime packages and tests follow `docs/architecture/module-layout.md`. Tests
 mirror production subsystem boundaries; reusable fixtures live in dedicated

@@ -20,7 +20,7 @@
 `user module -> LCL_IMPORTS -> LCL_RUNTIME -> LCL_BUILTINS -> LCL_ROOT`。
 
 `LCL_ROOT` 保存经审查的 LCL namespace；`LCL_BUILTINS` 保存不带 ambient I/O 的
-Python type/function；`LCL_RUNTIME` 是空的 package default，也可替换为每次 run 独立的
+Python type/function，包括 Python 实现的 Z 组合子 `recursive`；`LCL_RUNTIME` 是空的 package default，也可替换为每次 run 独立的
 CLI-aware base；`LCL_IMPORTS` 是 detached preset 层。因此 user definition 覆盖 preset，
 preset 覆盖 runtime value。标准 ancestor 只被借用，关闭 user Frame 不会关闭它们。
 
@@ -28,8 +28,17 @@ preset 覆盖 runtime value。标准 ancestor 只被借用，关闭 user Frame �
 `frozenset`、`int`、`list`、`set`、`str`、`tuple`；function `abs`、`all`、
 `any`、`bin`、`chr`、`divmod`、`enumerate`、`filter`、`format`、`hex`、
 `isinstance`、`len`、`map`、`max`、`min`、`oct`、`ord`、`pow`、`range`、
-`repr`、`reversed`、`round`、`slice`、`sorted`、`sum`、`zip`。文件/进程输入、
+`recursive`、`repr`、`reversed`、`round`、`slice`、`sorted`、`sum`、`zip`。文件/进程输入、
 动态 import/code、reflection 与 mutation helper 均不提供。
+
+`recursive(builder)` 返回可调用的不动点值，表示为
+`Recursive Function: <original source>`。LCL builder 使用标准 LCL 源码，Python
+builder 使用函数名；Frame 检查不会输出 Python 对象地址。
+
+同步或异步 iterable 产生的每个 item 都会在 comprehension、星号展开或
+`iter.collect`/`iter.first` 消费前递归 await。因此
+`[*map(def (x): x.lower(), ["A", "B"])]` 会得到 `["a", "b"]`，不会保留
+coroutine 对象。
 
 ## 显式 Module、Preset 与 FrameFactory
 
@@ -52,6 +61,17 @@ loop 的并发调用共享 owner task，waiter 取消相互隔离。结构化环
 `frame.get_definition(name)` 不求值地返回选中的 custom AST；name 不存在，或更近的 host
 value 遮蔽 ancestor definition 时返回 `None`。两者都不修改 cache、dependency、task 或
 lifecycle state。
+
+`frame.inspect_variable(name)` 的当前值如果是受支持的 `LclAstNode`，表示会保留
+具体节点类型，并把 Python dataclass repr 替换为标准 LCL 表达式。例如：
+
+```text
+expression@frame-app: (ExternalProvided) LclBinary: base + 2
+```
+
+原 AST 对象仍保存在 `current_value` 中；该转换只影响显示，不会求值。已经求值的
+LCL 闭包同样显示为 `LclFunctionValue: def (...): ...`，不会泄漏已绑定参数、
+resolver、evaluator 或源码位置等内部状态。
 
 `frame.mixin(values)` 把右侧优先的 dictionary 原子复制到 open Frame 的 host binding。
 现有 `frame.values` view 保持只读，但会反映更新。直接查找和未缓存 definition 可看到 mixed

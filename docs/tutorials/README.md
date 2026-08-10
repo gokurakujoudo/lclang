@@ -17,10 +17,10 @@ python -m pip install .
 You can also install a verified wheel directly:
 
 ```console
-python -m pip install ./dist/pylcl-0.2.0-py3-none-any.whl
+python -m pip install ./dist/pylcl-0.3.0-py3-none-any.whl
 ```
 
-The 0.2.0 release candidate is verified with Python 3.14. It has no third-party
+The 0.3.0 release candidate is verified with Python 3.14. It has no third-party
 runtime dependencies. Publication is a separate maintainer action, so install
 the locally built wheel or source tree until a package index release exists.
 Confirm the environment with:
@@ -82,13 +82,18 @@ Read these in order, or jump directly to the job at hand:
    values, understand lazy caching, derive Frames, inspect dependencies, and
    clean up safely.
 2. [LCL examples gallery](lcl_examples.md) — learn the whole expression
-   language from literals through comprehensions, control forms, fixed-point
-   combinators, Fibonacci, and quicksort.
+   language from literals through comprehensions, control forms, builtin
+   recursion, fixed-point combinators, Fibonacci, and quicksort.
 3. [Configuration files](config_file.md) — write `.lclcfg` files, compose them
    with `using`, load them asynchronously, and integrate them into an
    application.
 4. [Dependency analytics](dependency-analytics.md) — inspect static references,
    Module and Frame graphs, runtime traces, reconciliation, and safe ordering.
+5. [Build a CLI in a Python script](cli.md) — declare typed async commands,
+   compose command groups, layer config and overrides, handle dryrun, and log.
+
+6. [Track workflow execution status](workflow-status.md) — collect nested task
+   and step outcomes, propagate failures, and finalize sub-tasks with `with`.
 
 ## References
 
@@ -97,5 +102,4 @@ Read these in order, or jump directly to the job at hand:
 - [Detailed `.lclcfg` reference](../configuration.md)
 - [Project status and verification evidence](../../progress.md)
 
-The tutorials cover implemented behavior only. CLI integration belongs to a
-later release and is intentionally absent here.
+The tutorials cover implemented behavior only.

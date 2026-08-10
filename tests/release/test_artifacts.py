@@ -17,9 +17,9 @@ from tests.release.support import sdist_fixture, wheel_fixture
 
 def test_valid_wheel_and_sdist_have_coherent_release_reports(tmp_path: Path) -> None:
     """A complete pair passes metadata, member, and normalized-set inspection."""
-    wheel = wheel_fixture(tmp_path / "pylcl-0.2.0-py3-none-any.whl")
-    sdist = sdist_fixture(tmp_path / "pylcl-0.2.0.tar.gz")
-    assert inspect_wheel(wheel).metadata["Version"] == "0.2.0"
+    wheel = wheel_fixture(tmp_path / "pylcl-0.3.0-py3-none-any.whl")
+    sdist = sdist_fixture(tmp_path / "pylcl-0.3.0.tar.gz")
+    assert inspect_wheel(wheel).metadata["Version"] == "0.3.0"
     assert inspect_sdist(sdist).metadata["Name"] == "pylcl"
     assert "pylcl/__init__.py" in normalized_wheel_members(wheel)
 
@@ -27,7 +27,7 @@ def test_valid_wheel_and_sdist_have_coherent_release_reports(tmp_path: Path) -> 
 def test_wheel_rejects_injected_repository_member(tmp_path: Path) -> None:
     """A wheel containing an unrelated member fails without modifying the archive."""
     wheel = wheel_fixture(
-        tmp_path / "pylcl-0.2.0-py3-none-any.whl",
+        tmp_path / "pylcl-0.3.0-py3-none-any.whl",
         ("tests/injected.py",),
     )
     with pytest.raises(ValueError, match="repository"):
@@ -36,9 +36,9 @@ def test_wheel_rejects_injected_repository_member(tmp_path: Path) -> None:
 
 def test_sdist_rejects_cache_member_and_metadata_rejects_dependency(tmp_path: Path) -> None:
     """Composite rainy input rejects both source caches and runtime dependencies."""
-    sdist = sdist_fixture(tmp_path / "pylcl-0.2.0.tar.gz", ("pylcl/__pycache__/x.pyc",))
+    sdist = sdist_fixture(tmp_path / "pylcl-0.3.0.tar.gz", ("pylcl/__pycache__/x.pyc",))
     with pytest.raises(ValueError, match="ignored"):
         inspect_sdist(sdist)
-    raw = "Name: pylcl\nVersion: 0.2.0\nRequires-Python: >=3.14\nLicense: MIT\nRequires-Dist: bad\n"
+    raw = "Name: pylcl\nVersion: 0.3.0\nRequires-Python: >=3.14\nLicense: MIT\nRequires-Dist: bad\n"
     with pytest.raises(ValueError, match="dependency"):
         metadata_fields(raw)

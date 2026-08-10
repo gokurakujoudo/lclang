@@ -85,7 +85,8 @@ async def _dictionary(
     :param resolver: Resolver providing values for keys, values, and unpacking.
     :param evaluate: Recursive evaluator for dictionary entry expressions.
     :returns: Materialized dictionary assembled in source order.
-    :raises TypeError: If a dictionary-unpacking value is not a mapping.
+    :raises TypeError: If an entry has an unsupported AST type or a
+       dictionary-unpacking value is not a mapping.
 
     .. note::
        Later entries replace earlier values for duplicate keys, matching normal
@@ -101,4 +102,6 @@ async def _dictionary(
             if not isinstance(value, Mapping):
                 raise TypeError("dictionary unpacking requires a mapping")
             result.update(cast(Mapping[object, object], value))
+        else:
+            raise TypeError("unsupported dictionary display entry")
     return result

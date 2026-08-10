@@ -100,3 +100,12 @@ def test_invalid_fstring_is_source_aware(source: str) -> None:
         scan_tokens(source)
     assert caught.value.span is not None
     assert caught.value.span.start.offset == 0
+
+
+def test_unterminated_field_at_end_of_input_reports_exact_boundary() -> None:
+    """A non-empty field reaching physical EOF reports an unterminated-field diagnostic."""
+    source = "f'{value"
+    with pytest.raises(LclSyntaxError, match="unterminated f-string field") as caught:
+        scan_tokens(source)
+    assert caught.value.span is not None
+    assert caught.value.span.end.offset == len(source)

@@ -25,6 +25,7 @@ def test_bare_handler_has_only_body_child() -> None:
     body = LclConstant(value=None)
     handler = LclExceptHandler(None, None, body)
     assert handler.children() == (body,)
+    assert LclTry(body, (handler,)).children() == (body, handler)
 
 
 def test_try_requires_handler_or_finally() -> None:
@@ -40,3 +41,12 @@ def test_with_requires_item_and_nonempty_target() -> None:
         LclWith((), value)
     with pytest.raises(ValueError):
         LclWithItem(value, VarName(""))
+
+
+def test_except_handler_rejects_empty_and_bare_bindings() -> None:
+    """Exception bindings must be non-empty and require a typed matcher."""
+    value = LclConstant(value=1)
+    with pytest.raises(ValueError, match="cannot be empty"):
+        LclExceptHandler(value, VarName(""), value)
+    with pytest.raises(ValueError, match="bare except"):
+        LclExceptHandler(None, VarName("error"), value)

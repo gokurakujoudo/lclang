@@ -27,6 +27,10 @@ asynchronous inputs with isolated loop-target bindings and deterministic order.
   caller resolver or mapping.
 - Every iterable may implement either `__iter__` or `__aiter__`. Async iteration
   is consumed without blocking; invalid inputs raise their ordinary `TypeError`.
+- Every item produced by either iteration protocol is recursively auto-awaited
+  before it is bound by a comprehension, expanded by `*`, or returned by the
+  reviewed iterable helpers. This makes Python `map` over an async LCL function
+  compose with displays and comprehensions without leaking coroutine objects.
 - Conditions are evaluated in source order and short-circuit the remaining
   conditions and head for that item.
 - List, set, and dict comprehensions materialize eagerly. Generator expressions
@@ -34,6 +38,9 @@ asynchronous inputs with isolated loop-target bindings and deterministic order.
   consumed.
 - PEP 798 starred comprehension heads expand iterables; dictionary double-star
   heads expand mappings in iteration order.
+- Dictionary displays and comprehensions reject manually constructed AST entries
+  outside the declared key/value-or-unpack union instead of silently dropping
+  them.
 - Public docstrings remain complete English rST and source files stay below 200
   lines.
 
@@ -42,3 +49,8 @@ asynchronous inputs with isolated loop-target bindings and deterministic order.
 RED requires the three mirrored suites to fail on unsupported collection nodes.
 GREEN requires display, scope, sync/async iteration, and lazy-generator cases.
 DONE requires the complete quality gate and synchronized documentation.
+
+The post-M099 awaitable-item refinement adds screenshot-shaped Python `map`
+coverage, direct comprehension binding, async iterables that yield awaitables,
+lazy generator consumption, starred displays, and reviewed `iter.collect`/
+`iter.first` integration.

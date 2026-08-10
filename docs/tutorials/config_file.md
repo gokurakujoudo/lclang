@@ -193,9 +193,9 @@ loaded configuration. Every created Frame has its own cache and must be closed.
 it owns and always closes its temporary Frame.
 
 Both APIs use pylcl's canonical runtime hierarchy by default. That makes
-`lhs()`, `parse_ymd`, `to_ymd`, ordinary safe builtins, and the reviewed
-standard namespaces available to config definitions. Pass an explicit parent
-when an application owns a different runtime base; construct a raw
+`lhs()`, `parse_ymd`, `to_ymd`, `recursive`, ordinary safe builtins, and the
+reviewed standard namespaces available to config definitions. Pass an explicit
+parent when an application owns a different runtime base; construct a raw
 `FrameFactory(config.to_module())` only when a hierarchy-free Module is
 intentional.
 

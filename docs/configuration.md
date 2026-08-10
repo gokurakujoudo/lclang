@@ -89,8 +89,9 @@ Frames they create; `evaluate_config` owns and always closes its temporary Frame
 
 Config-created Frames use the canonical pylcl hierarchy by default. Definitions
 therefore have the root `lhs()` function (the current definition name), builtin
-`parse_ymd`/`to_ymd` date conversion, safe Python builtins, and reviewed
-standard namespaces. An explicit parent replaces the canonical imports layer.
+`parse_ymd`/`to_ymd` date conversion, the `recursive` fixed-point helper, safe
+Python builtins, and reviewed standard namespaces. An explicit parent replaces
+the canonical imports layer.
 
 `ConfigLoadLimits` caps distinct paths, recursive depth, decoded characters,
 and declarations. `ConfigLoader` is safe for concurrent tasks in one event loop,

@@ -1,11 +1,14 @@
 """Unit tests mirroring :mod:`pylcl.lang.evaluator.comprehensions`."""
 
-from collections.abc import AsyncIterable, AsyncIterator, Iterator
+from collections.abc import AsyncIterable, AsyncIterator, Awaitable, Iterator
+from inspect import isawaitable
 from typing import cast
 
 import pytest
 
 from pylcl import evaluate
+from pylcl.ast import LclConstant, LclDictComprehension
+from pylcl.errors import LclEvaluationError
 from pylcl.lang.parser import parse_expression
 
 
@@ -123,6 +126,31 @@ async def test_pep798_heads_expand_values() -> None:
 
 
 @pytest.mark.asyncio
+async def test_dictionary_comprehension_rejects_non_mapping_unpack() -> None:
+    """Every accepted binding must still produce a mapping for double-star expansion."""
+    with pytest.raises(LclEvaluationError, match="requires a mapping") as caught:
+        await evaluate(
+            parse_expression("{**value for value in values}"),
+            {"values": [{"ok": 1}, ["not", "mapping"]]},
+        )
+    assert isinstance(caught.value.__cause__, TypeError)
+
+
+@pytest.mark.asyncio
+async def test_dictionary_comprehension_rejects_invalid_ast_entry() -> None:
+    """A manually malformed dictionary head is rejected instead of silently skipped."""
+    valid = parse_expression("{**value for value in values}")
+    assert isinstance(valid, LclDictComprehension)
+    malformed = LclDictComprehension(
+        LclConstant(value="invalid"),  # type: ignore[arg-type]
+        valid.clauses,
+        span=valid.span,
+    )
+    with pytest.raises(LclEvaluationError, match="unsupported dictionary comprehension entry"):
+        await evaluate(malformed, {"values": [1]})
+
+
+@pytest.mark.asyncio
 async def test_generator_is_lazy_and_returns_async_iterator() -> None:
     """Clause and head evaluation begins only when the generator is consumed."""
     events: list[str] = []
@@ -141,3 +169,16 @@ async def test_generator_is_lazy_and_returns_async_iterator() -> None:
     stream = cast(AsyncIterable[object], generator)
     assert [value async for value in stream] == [2, 4]
     assert events == ["iterate"]
+
+
+@pytest.mark.asyncio
+async def test_starred_comprehension_awaits_mapped_lcl_results() -> None:
+    """PEP 798 flattening resolves every async function result from Python map."""
+    result = await evaluate(
+        parse_expression("[*map(def (x): x.lower(), group) for group in groups]"),
+        {"map": map, "groups": [["A"], ["B", "C"]]},
+    )
+    for value in cast(list[object], result):
+        if isawaitable(value):
+            await cast(Awaitable[object], value)
+    assert result == ["a", "b", "c"]

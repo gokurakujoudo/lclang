@@ -27,8 +27,11 @@ def test_frame_normalizes_optional_and_string_identifiers() -> None:
     module = Module(ModuleName("app"), {})
     assert Frame(module).frame_id == FrameId("frame-app")
     assert Frame(module, "custom").frame_id == FrameId("custom")
+    assert Frame(module, native_values=True).native_values is True
     with pytest.raises(TypeError, match="frame identifier must be a string"):
         Frame(module, 42)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="native-values"):
+        Frame(module, native_values=1)  # type: ignore[arg-type]
 
 
 @pytest.mark.asyncio
