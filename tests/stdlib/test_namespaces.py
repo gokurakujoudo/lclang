@@ -1,18 +1,18 @@
-"""Unit tests mirroring :mod:`pylcl.stdlib.namespaces`."""
+"""Unit tests mirroring :mod:`lclang.stdlib.namespaces`."""
 
 from collections.abc import Iterator
 
 import pytest
 
-from pylcl.lang.parser import parse_expression
-from pylcl.runtime import FrameFactory, Module
-from pylcl.stdlib import (
+from lclang.lang.parser import parse_expression
+from lclang.runtime import FrameFactory, Module
+from lclang.stdlib import (
     StdlibEntry,
     StdlibManifest,
     StdlibNamespace,
     assemble_stdlib,
 )
-from pylcl.types import FrameId, ModuleName
+from lclang.types import FrameId, ModuleName
 
 
 def _manifest(namespace: str, name: str, value: object) -> StdlibManifest:

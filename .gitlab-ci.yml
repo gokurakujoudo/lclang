@@ -14,15 +14,15 @@ default:
     - python --version
     - >-
       python -m pip install --disable-pip-version-check
-      "pip==${PYLCL_CI_PIP_VERSION}"
+      "pip==${LCLANG_CI_PIP_VERSION}"
 
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
-  PYLCL_CI_PIP_VERSION: "25.3"
+  LCLANG_CI_PIP_VERSION: "25.3"
   PYPI_REPOSITORY_URL: "https://upload.pypi.org/legacy/"
 
 cache:
-  key: "pylcl-python-3.14"
+  key: "lclang-python-3.14"
   paths:
     - .cache/pip
 
@@ -35,8 +35,8 @@ verify:
     - >-
       export PACKAGE_VERSION="$(python -c 'import tomllib; from pathlib import Path; print(tomllib.loads(Path("pyproject.toml").read_text())[
       "project"]["version"])')"
-    - test -f "dist/pylcl-${PACKAGE_VERSION}.tar.gz"
-    - test -f "dist/pylcl-${PACKAGE_VERSION}-py3-none-any.whl"
+    - test -f "dist/lclang-${PACKAGE_VERSION}.tar.gz"
+    - test -f "dist/lclang-${PACKAGE_VERSION}-py3-none-any.whl"
     - test "$(find dist -maxdepth 1 -type f | wc -l)" -eq 2
     - python -m scripts.quality
     - python -m coverage xml -o coverage.xml
@@ -65,7 +65,7 @@ publish-artifactory:
     - python --version
     - >-
       python -m pip install --disable-pip-version-check
-      "pip==${PYLCL_CI_PIP_VERSION}"
+      "pip==${LCLANG_CI_PIP_VERSION}"
     - python -m pip install --disable-pip-version-check --group publish
   script:
     - ': "${ARTIFACTORY_REPOSITORY_URL:?Set ARTIFACTORY_REPOSITORY_URL in CI/CD variables}"'
@@ -90,7 +90,7 @@ publish-pypi:
     - python --version
     - >-
       python -m pip install --disable-pip-version-check
-      "pip==${PYLCL_CI_PIP_VERSION}"
+      "pip==${LCLANG_CI_PIP_VERSION}"
     - python -m pip install --disable-pip-version-check --group publish
   script:
     - ': "${PYPI_USERNAME:?Set PYPI_USERNAME in CI/CD variables}"'

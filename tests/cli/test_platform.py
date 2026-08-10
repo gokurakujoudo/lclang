@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from pylcl.cli.parser import parse_cli_params, split_argv
+from lclang.cli.parser import parse_cli_params, split_argv
 from tests.cli.platform_support import materialize_platform_case
 
 
@@ -52,8 +52,8 @@ def test_unicode_spaced_script_runs_without_a_shell_and_cleans_logs() -> None:
         script, config = materialize_platform_case(root)
         log_dir = root / "automatic logs"
         environment = os.environ.copy()
-        repository = Path(__file__).resolve().parents[2]
-        environment["PYTHONPATH"] = str(repository)
+        source_root = Path(__file__).resolve().parents[2] / "src"
+        environment["PYTHONPATH"] = str(source_root)
         environment["PYTHONIOENCODING"] = "utf-8"
         completed = subprocess.run(
             [
@@ -86,7 +86,7 @@ def test_unicode_spaced_script_runs_without_a_shell_and_cleans_logs() -> None:
             text=True,
             encoding="utf-8",
         )
-        log_path = log_dir / "pylcl.log"
+        log_path = log_dir / "lclang.log"
         log_text = log_path.read_text(encoding="utf-8") if log_path.exists() else ""
         assert completed.returncode == 0, (completed.stderr, log_text)
         assert completed.stdout == (

@@ -5,17 +5,17 @@ from dataclasses import dataclass
 
 import pytest
 
-from pylcl.api import LCL_BUILTIN_VALUES, LCL_BUILTINS, LCL_ROOT, LCL_RUNTIME
-from pylcl.ast import LclAstNode
-from pylcl.errors import LclClosedFrameError, LclEvaluationError, LclNameError
-from pylcl.lang.parser import parse_expression
-from pylcl.runtime import (
+from lclang.api import LCL_BUILTIN_VALUES, LCL_BUILTINS, LCL_ROOT, LCL_RUNTIME
+from lclang.ast import LclAstNode
+from lclang.errors import LclClosedFrameError, LclEvaluationError, LclNameError
+from lclang.lang.parser import parse_expression
+from lclang.runtime import (
     Frame,
     Module,
     VariableInspectionStatus,
     VariableInspectionTree,
 )
-from pylcl.types import FrameId, ModuleName, VarName
+from lclang.types import FrameId, ModuleName, VarName
 
 
 def module(name: str, definitions: dict[str, str]) -> Module:
@@ -316,7 +316,7 @@ def test_inspection_repr_escapes_multiline_host_values() -> None:
 async def test_inspection_renders_ast_values_as_typed_canonical_lcl_source() -> None:
     """Supported AST host/cache/native values use source while custom nodes fall back."""
     expression = parse_expression("base+2")
-    function = parse_expression("def (items): [item*2 for item in items if item]")
+    function = parse_expression("(items) -> [item*2 for item in items if item]")
     frame = Frame(
         module("ast-values", {"result": "expression"}),
         values={
@@ -335,7 +335,7 @@ async def test_inspection_renders_ast_values_as_typed_canonical_lcl_source() -> 
     assert "LclBinary(" not in repr(external)
     assert repr(frame.inspect_variable("function")) == (
         "function@frame-ast-values: (ExternalProvided) "
-        "LclFunction: def (items): [item * 2 for item in items if item]"
+        "LclFunction: (items) -> [item * 2 for item in items if item]"
     )
     assert repr(frame.inspect_variable("text")) == (
         "text@frame-ast-values: (ExternalProvided) str: 'base+2'"
@@ -362,7 +362,7 @@ async def test_inspection_renders_ast_values_as_typed_canonical_lcl_source() -> 
 async def test_cached_lcl_function_uses_typed_canonical_source_repr() -> None:
     """An evaluated closure hides its resolver, evaluator, and AST internals."""
     source = (
-        "def (items): [] if not items else "
+        "(items) -> [] if not items else "
         "[item for item in items if item >= items[0]]"
     )
     frame = Frame(module("function-value", {"quicksort": source}))
@@ -371,15 +371,15 @@ async def test_cached_lcl_function_uses_typed_canonical_source_repr() -> None:
     rendered = repr(frame.inspect_variable("quicksort"))
 
     assert repr(function) == (
-        "def (items): [] if not items else "
+        "(items) -> [] if not items else "
         "[item for item in items if item >= items[0]]"
     )
     assert rendered == (
         "quicksort@frame-function-value: "
-        "def (items): [] if not items else "
+        "(items) -> [] if not items else "
         "[item for item in items if item >= items[0]] "
         "(Cached) LclFunctionValue: "
-        "def (items): [] if not items else "
+        "(items) -> [] if not items else "
         "[item for item in items if item >= items[0]]"
     )
     for leaked in ("BoundParameter", "SourceSpan", "ScopedResolver", "_evaluate"):

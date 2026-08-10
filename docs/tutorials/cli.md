@@ -1,6 +1,6 @@
 # Build a CLI in a Python script
 
-`pylcl.cli` is a typed framework for Python scripts whose parameters come from
+`lclang.cli` is a typed framework for Python scripts whose parameters come from
 defaults, `.lclcfg` files, and command-line overrides. It has no third-party
 runtime dependency. Configuration is trusted application code, not a sandbox
 for hostile expressions.
@@ -11,11 +11,11 @@ The root `CommandGroup` describes the application but is not a command-line
 segment. A decorated async handler receives one `CliContext` and returns one
 `CliResult`.
 
-<!-- pylcl-cli-exec -->
+<!-- lclang-cli-exec -->
 ```python
 import asyncio
 
-from pylcl.cli import (
+from lclang.cli import (
     CliContext,
     CliEntrance,
     CliResult,
@@ -27,7 +27,7 @@ from pylcl.cli import (
 
 @cli.command(
     parameter_docs=[
-        ParameterDoc("message", str, True, "Message to display", "Hello from pylcl")
+        ParameterDoc("message", str, True, "Message to display", "Hello from lclang")
     ]
 )
 async def greet_command(context: CliContext) -> CliResult:
@@ -53,7 +53,7 @@ assert status == 0
 Output:
 
 ```text
-Hello from pylcl (as of 2026-08-09)
+Hello from lclang (as of 2026-08-09)
 ```
 
 In a real script, replace the explicit token list with
@@ -203,13 +203,13 @@ Use `Command.run(full_argv)` for a command-level unit test and
 `CliEntrance.run(full_argv)` for routing/integration tests. Pass token arrays
 directly—never reconstruct shell quoting in a test.
 
-## Built-in pylcl module commands
+## Built-in lclang module commands
 
 The package itself is an entrance with three commands. `builtins` prints every
 canonical LCL builtin with stable descriptions:
 
 ```console
-python -m pylcl.cli builtins
+python -m lclang.cli builtins
 ```
 
 Ordinary functions and values use one list level. Reviewed namespace methods
@@ -229,7 +229,7 @@ By default, `parse_lcl` prints the existing side-effect-free variable inspection
 tree without evaluating `RESULT`:
 
 ```console
-python -m pylcl.cli parse_lcl -o a 100 -o b 200 -o RESULT "LCL[a+b]"
+python -m lclang.cli parse_lcl -o a 100 -o b 200 -o RESULT "LCL[a+b]"
 ```
 
 Its first line describes `RESULT` as `a + b (NotEvaluated)` and its two child
@@ -237,14 +237,14 @@ lines describe external-provided string values `'100'` and `'200'`. A direct
 literal result is likewise external-provided:
 
 ```console
-python -m pylcl.cli parse_lcl -o RESULT 100
+python -m lclang.cli parse_lcl -o RESULT 100
 ```
 
 ```text
 - RESULT@cli_runtime/cli_overrides: (ExternalProvided) str: '100'
 ```
 
-Dependencies resolved from pylcl's reviewed canonical layers use
+Dependencies resolved from lclang's reviewed canonical layers use
 `NativeProvided`. Every function and namespace uses the same concise grammar,
 while CLI literals remain external:
 
@@ -257,7 +257,7 @@ Add the valueless `EVAL` override to evaluate first and then render cached
 values:
 
 ```console
-python -m pylcl.cli parse_lcl -o RESULT "LCL[1 + 2]" -o EVAL
+python -m lclang.cli parse_lcl -o RESULT "LCL[1 + 2]" -o EVAL
 ```
 
 ```text
@@ -271,7 +271,7 @@ ordinary mode remains non-evaluating.
 `eval_lcl` evaluates the same binding exactly once:
 
 ```console
-python -m pylcl.cli eval_lcl -o a 100 -o b 200 -o RESULT "LCL[a+b]"
+python -m lclang.cli eval_lcl -o a 100 -o b 200 -o RESULT "LCL[a+b]"
 ```
 
 Output:

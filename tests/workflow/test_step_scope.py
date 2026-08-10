@@ -4,7 +4,7 @@ from typing import Any, cast
 
 import pytest
 
-from pylcl.workflow import (
+from lclang.workflow import (
     ExecutionStatus,
     ExecutionStatusManager,
     ExecutionStatusStep,

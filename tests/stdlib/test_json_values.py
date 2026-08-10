@@ -1,8 +1,8 @@
-"""Unit tests mirroring :mod:`pylcl.stdlib.json_values`."""
+"""Unit tests mirroring :mod:`lclang.stdlib.json_values`."""
 
 import pytest
 
-from pylcl.stdlib import json_decode, json_encode
+from lclang.stdlib import json_decode, json_encode
 
 
 def test_json_round_trip_is_compact_utf8_friendly_and_ordered() -> None:

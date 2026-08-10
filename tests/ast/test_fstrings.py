@@ -1,9 +1,9 @@
-"""Unit tests mirroring :mod:`pylcl.ast.fstrings`."""
+"""Unit tests mirroring :mod:`lclang.ast.fstrings`."""
 
 import pytest
 
-from pylcl.ast import LclConstant
-from pylcl.ast.fstrings import LclFormattedValue, LclJoinedString, LclStringText
+from lclang.ast import LclConstant
+from lclang.ast.fstrings import LclFormattedValue, LclJoinedString, LclStringText
 
 
 def test_joined_string_children_preserve_part_order() -> None:

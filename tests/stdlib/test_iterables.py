@@ -1,4 +1,4 @@
-"""Unit tests mirroring :mod:`pylcl.stdlib.iterables`."""
+"""Unit tests mirroring :mod:`lclang.stdlib.iterables`."""
 
 from collections.abc import AsyncIterator, Awaitable
 from inspect import isawaitable
@@ -6,7 +6,7 @@ from typing import cast
 
 import pytest
 
-from pylcl.stdlib import collect, first
+from lclang.stdlib import collect, first
 
 
 @pytest.mark.asyncio

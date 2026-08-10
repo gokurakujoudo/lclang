@@ -1,12 +1,12 @@
-"""Unit tests mirroring :mod:`pylcl.lang.parser.control_forms`."""
+"""Unit tests mirroring :mod:`lclang.lang.parser.control_forms`."""
 
 import pytest
 
-from pylcl.ast import LclAssert
-from pylcl.ast.control_forms import LclTry, LclWith
-from pylcl.errors import LclSyntaxError
-from pylcl.lang.parser import parse_expression
-from pylcl.types import VarName
+from lclang.ast import LclAssert
+from lclang.ast.control_forms import LclTry, LclWith
+from lclang.errors import LclSyntaxError
+from lclang.lang.parser import parse_expression
+from lclang.types import VarName
 
 
 def test_try_handlers_bind_names_and_preserve_finally() -> None:

@@ -1,4 +1,4 @@
-"""Check pylcl source-size and exhaustive documentation policies."""
+"""Check lclang source-size and exhaustive documentation policies."""
 
 from __future__ import annotations
 
@@ -77,8 +77,7 @@ def requires_return_field(node: CallableNode) -> bool:
     if node.returns is not None:
         return True
     return any(
-        isinstance(child, ast.Return) and child.value is not None
-        for child in ast.walk(node)
+        isinstance(child, ast.Return) and child.value is not None for child in ast.walk(node)
     )
 
 
@@ -107,8 +106,7 @@ def effective_source_lines(source: str, tree: ast.Module) -> int:
                 end_line = body[0].end_lineno or body[0].lineno
                 excluded.update(range(body[0].lineno, end_line + 1))
     return sum(
-        line_number not in excluded
-        for line_number, _ in enumerate(source.splitlines(), start=1)
+        line_number not in excluded for line_number, _ in enumerate(source.splitlines(), start=1)
     )
 
 
@@ -148,6 +146,13 @@ def check_source(source: str, path: Path) -> list[str]:
     if effective_source_lines(source, tree) > MAX_SOURCE_LINES:
         failures.append(f"{path}: source exceeds 200 lines")
     nodes = _documented_nodes(tree)
+    for node in nodes:
+        if (
+            not isinstance(node, ast.Module)
+            and node.name.startswith("_")
+            and not node.name.endswith("__")
+        ):
+            failures.append(f"{path}:{node.name}: declaration name starts with underscore")
     missing = [node for node in nodes if ast.get_docstring(node) is None]
     if missing:
         names = ", ".join(node.name for node in missing if not isinstance(node, ast.Module))
@@ -176,7 +181,7 @@ def main() -> int:
     """
     failures = [
         failure
-        for path in sorted((ROOT / "pylcl").rglob("*.py"))
+        for path in sorted((ROOT / "src" / "lclang").rglob("*.py"))
         for failure in check_file(path)
     ]
     for failure in failures:

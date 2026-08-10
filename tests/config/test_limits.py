@@ -1,8 +1,8 @@
-"""Unit tests mirroring :mod:`pylcl.config.limits`."""
+"""Unit tests mirroring :mod:`lclang.config.limits`."""
 
 import pytest
 
-from pylcl.config import ConfigLoadLimits
+from lclang.config import ConfigLoadLimits
 
 
 @pytest.mark.parametrize("value", [0, -1, True, 1.5])

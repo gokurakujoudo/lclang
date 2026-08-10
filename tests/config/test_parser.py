@@ -4,15 +4,15 @@ from pathlib import Path
 
 import pytest
 
-from pylcl.ast import LclBinary, LclConstant, LclJoinedString, LclList
-from pylcl.config import (
+from lclang.ast import LclBinary, LclConstant, LclJoinedString, LclList
+from lclang.config import (
     ConfigDefinition,
     ConfigUsing,
     LclConfigSyntaxError,
     LclConfigVersionError,
     parse_config,
 )
-from pylcl.runtime import analyze_dependencies
+from lclang.runtime import analyze_dependencies
 
 
 def test_parse_colon_definitions_comments_continuation_and_duplicates(tmp_path: Path) -> None:

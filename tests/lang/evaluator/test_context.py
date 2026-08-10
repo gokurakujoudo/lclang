@@ -1,11 +1,11 @@
-"""Unit tests mirroring :mod:`pylcl.lang.evaluator.context`."""
+"""Unit tests mirroring :mod:`lclang.lang.evaluator.context`."""
 
 import pytest
 
-from pylcl.errors import LclNameError
-from pylcl.lang.evaluator import MappingResolver, Resolver, ScopedResolver
-from pylcl.source import UNKNOWN_SPAN
-from pylcl.types import VarName
+from lclang.errors import LclNameError
+from lclang.lang.evaluator import MappingResolver, Resolver, ScopedResolver
+from lclang.source import UNKNOWN_SPAN
+from lclang.types import VarName
 
 
 @pytest.mark.asyncio

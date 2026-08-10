@@ -1,4 +1,4 @@
-"""Unit tests mirroring :mod:`pylcl.lang.evaluator.comprehensions`."""
+"""Unit tests mirroring :mod:`lclang.lang.evaluator.comprehensions`."""
 
 from collections.abc import AsyncIterable, AsyncIterator, Awaitable, Iterator
 from inspect import isawaitable
@@ -6,10 +6,10 @@ from typing import cast
 
 import pytest
 
-from pylcl import evaluate
-from pylcl.ast import LclConstant, LclDictComprehension
-from pylcl.errors import LclEvaluationError
-from pylcl.lang.parser import parse_expression
+from lclang import evaluate
+from lclang.ast import LclConstant, LclDictComprehension
+from lclang.errors import LclEvaluationError
+from lclang.lang.parser import parse_expression
 
 
 class AsyncValues:
@@ -175,7 +175,7 @@ async def test_generator_is_lazy_and_returns_async_iterator() -> None:
 async def test_starred_comprehension_awaits_mapped_lcl_results() -> None:
     """PEP 798 flattening resolves every async function result from Python map."""
     result = await evaluate(
-        parse_expression("[*map(def (x): x.lower(), group) for group in groups]"),
+        parse_expression("[*map((x) -> x.lower(), group) for group in groups]"),
         {"map": map, "groups": [["A"], ["B", "C"]]},
     )
     for value in cast(list[object], result):

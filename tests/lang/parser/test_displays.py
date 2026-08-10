@@ -1,8 +1,8 @@
-"""Unit tests mirroring :mod:`pylcl.lang.parser.displays`."""
+"""Unit tests mirroring :mod:`lclang.lang.parser.displays`."""
 
 import pytest
 
-from pylcl.ast import (
+from lclang.ast import (
     LclDict,
     LclDictUnpack,
     LclKeyValue,
@@ -11,8 +11,8 @@ from pylcl.ast import (
     LclStarred,
     LclTuple,
 )
-from pylcl.errors import LclSyntaxError
-from pylcl.lang.parser import parse_expression
+from lclang.errors import LclSyntaxError
+from lclang.lang.parser import parse_expression
 
 
 def test_grouping_and_tuple_forms_are_distinct() -> None:

@@ -1,11 +1,11 @@
-"""Unit tests mirroring :mod:`pylcl.config.model`."""
+"""Unit tests mirroring :mod:`lclang.config.model`."""
 
 import pytest
 
-from pylcl.ast import LclConstant
-from pylcl.config import ConfigDefinition, ConfigDocument, ConfigUsing
-from pylcl.source import SourceOrigin, SourcePosition, SourceSpan
-from pylcl.types import SourceName, VarName
+from lclang.ast import LclConstant
+from lclang.config import ConfigDefinition, ConfigDocument, ConfigUsing
+from lclang.source import SourceOrigin, SourcePosition, SourceSpan
+from lclang.types import SourceName, VarName
 from tests.config.support import source_span
 
 

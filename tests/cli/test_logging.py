@@ -6,9 +6,10 @@ from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from pylcl.cli import CliConfig, CliContext, CliParams, CliResult, CliResultStatus, LogConfig, cli
-from pylcl.cli.binding import build_binding
-from pylcl.cli.logging import build_handler, create_logger, numeric_log_level, resolve_log_config
+import lclang
+from lclang.cli import CliConfig, CliContext, CliParams, CliResult, CliResultStatus, LogConfig, cli
+from lclang.cli.binding import build_binding
+from lclang.cli.logging import build_handler, create_logger, numeric_log_level, resolve_log_config
 
 
 @cli.command()
@@ -38,10 +39,54 @@ def test_disabled_and_enabled_loggers_are_isolated_and_close() -> None:
         record = logging.LogRecord("x", logging.INFO, __file__, 1, "value=%s", (2,), None)
         handler.emit(record)
         handler.close()
-        assert "value=2" in (Path(directory) / "pylcl.log").read_text(encoding="utf-8")
+        assert "value=2" in (Path(directory) / "lclang.log").read_text(encoding="utf-8")
 
 
 def test_numeric_log_levels_accept_names_and_integers() -> None:
     """Validated standard logging levels map to numeric values."""
     assert numeric_log_level("info") == logging.INFO
     assert numeric_log_level(logging.ERROR) == logging.ERROR
+
+
+def test_multiple_invocation_loggers_do_not_mutate_root_or_leak_handlers() -> None:
+    """Composite invocations remain isolated and reveal only explicit records."""
+    root = logging.getLogger()
+    root_handlers = tuple(root.handlers)
+    with TemporaryDirectory() as directory:
+        module = lclang.define_module("logging-audit", {})
+        frame = lclang.define_frame(
+            module,
+            preset={
+                "log_dir": directory,
+                "log_file_name": "audit.log",
+                "log_level": "INFO",
+                "log_format": (
+                    "%(asctime)s %(filename)s:%(lineno)d %(funcName)s "
+                    "%(message)s args=%(args)r"
+                ),
+            },
+        )
+
+        async def exercise() -> None:
+            """Create, use, and close two independent logger owners."""
+            first = await create_logger(frame, "first")
+            second = await create_logger(frame, "second")
+            try:
+                assert first.logger is not second.logger
+                assert first.handlers[0] is not second.handlers[0]
+                assert first.logger.propagate is second.logger.propagate is False
+                first.logger.info("explicit-first")
+                second.logger.info("explicit-second")
+            finally:
+                first.close()
+                second.close()
+                await frame.close()
+            assert first.logger.handlers == []
+            assert second.logger.handlers == []
+
+        asyncio.run(exercise())
+        contents = (Path(directory) / "audit.log").read_text(encoding="utf-8")
+        assert "explicit-first" in contents
+        assert "explicit-second" in contents
+        assert "logging-audit" not in contents
+    assert tuple(root.handlers) == root_handlers

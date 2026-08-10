@@ -1,11 +1,11 @@
-"""Unit tests mirroring :mod:`pylcl.lang.lexer.scanner`."""
+"""Unit tests mirroring :mod:`lclang.lang.lexer.scanner`."""
 
 import pytest
 
-from pylcl.errors import LclSyntaxError
-from pylcl.lang.lexer import TokenKind, scan_tokens
-from pylcl.source import SourceOrigin
-from pylcl.types import SourceName
+from lclang.errors import LclSyntaxError
+from lclang.lang.lexer import TokenKind, scan_tokens
+from lclang.source import SourceOrigin
+from lclang.types import SourceName
 
 
 def kinds(source: str) -> list[TokenKind]:
@@ -49,7 +49,7 @@ def test_scans_identifiers_keywords_and_delimiters() -> None:
 
 def test_longest_operator_wins() -> None:
     """Compound operators cannot be split into valid shorter operators."""
-    assert kinds("** // << >> <= >= == != ?. ??") == [
+    assert kinds("** // << >> <= >= == != ?. ?? ->") == [
         TokenKind.DOUBLE_STAR,
         TokenKind.DOUBLE_SLASH,
         TokenKind.LEFT_SHIFT,
@@ -60,6 +60,7 @@ def test_longest_operator_wins() -> None:
         TokenKind.NOT_EQUAL,
         TokenKind.QUESTION_DOT,
         TokenKind.DOUBLE_QUESTION,
+        TokenKind.ARROW,
         TokenKind.EOF,
     ]
 
@@ -67,7 +68,7 @@ def test_longest_operator_wins() -> None:
 def test_all_v1_keywords_are_reserved() -> None:
     """The keyword table is explicit rather than parser-context dependent."""
     source = (
-        "and or not if else for in is True False None def raise try except "
+        "and or not if else for in is True False None raise try except "
         "finally assert with as"
     )
     assert all(token.kind is not TokenKind.IDENTIFIER for token in scan_tokens(source)[:-1])

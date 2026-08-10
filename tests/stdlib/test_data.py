@@ -1,8 +1,8 @@
-"""Unit tests mirroring :mod:`pylcl.stdlib.data`."""
+"""Unit tests mirroring :mod:`lclang.stdlib.data`."""
 
 import pytest
 
-from pylcl.stdlib import lookup, merge
+from lclang.stdlib import lookup, merge
 
 
 def test_merge_is_shallow_ordered_right_biased_and_read_only() -> None:

@@ -1,14 +1,14 @@
-"""Unit tests mirroring :mod:`pylcl.lang.evaluator.primaries`."""
+"""Unit tests mirroring :mod:`lclang.lang.evaluator.primaries`."""
 
 from dataclasses import dataclass
 
 import pytest
 
-from pylcl import evaluate
-from pylcl.errors import LclEvaluationError
-from pylcl.lang.parser import parse_expression
-from pylcl.source import SourceSpan
-from pylcl.types import VarName
+from lclang import evaluate
+from lclang.errors import LclEvaluationError
+from lclang.lang.parser import parse_expression
+from lclang.source import SourceSpan
+from lclang.types import VarName
 
 
 @dataclass

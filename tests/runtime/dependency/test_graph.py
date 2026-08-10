@@ -1,16 +1,16 @@
-"""Unit tests mirroring :mod:`pylcl.runtime.dependency.graph`."""
+"""Unit tests mirroring :mod:`lclang.runtime.dependency.graph`."""
 
 import pytest
 
-from pylcl.errors import LclNameError
-from pylcl.lang.parser import parse_expression
-from pylcl.runtime import (
+from lclang.errors import LclNameError
+from lclang.lang.parser import parse_expression
+from lclang.runtime import (
     DependencyGraph,
     DependencyKind,
     Module,
     build_dependency_graph,
 )
-from pylcl.types import ModuleName, VarName
+from lclang.types import ModuleName, VarName
 
 
 def _module() -> Module:
@@ -18,7 +18,7 @@ def _module() -> Module:
         ModuleName("app"),
         {
             "alpha": parse_expression("beta + external + beta"),
-            "lazy": parse_expression("def (): alpha + later"),
+            "lazy": parse_expression("() -> alpha + later"),
             "beta": parse_expression("1"),
         },
     )

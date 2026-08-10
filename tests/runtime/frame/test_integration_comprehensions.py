@@ -2,9 +2,9 @@
 
 import pytest
 
-from pylcl.lang.parser import parse_expression
-from pylcl.runtime import Frame, Module
-from pylcl.types import FrameId, ModuleName
+from lclang.lang.parser import parse_expression
+from lclang.runtime import Frame, Module
+from lclang.types import FrameId, ModuleName
 
 
 @pytest.mark.asyncio

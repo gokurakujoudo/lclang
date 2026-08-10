@@ -1,11 +1,11 @@
-"""Unit tests mirroring :mod:`pylcl.lang.printer.primaries`."""
+"""Unit tests mirroring :mod:`lclang.lang.printer.primaries`."""
 
 import pytest
 
-from pylcl.ast import LclCall, LclConstant, LclName, LclSlice
-from pylcl.lang.parser import parse_expression
-from pylcl.lang.printer import to_source
-from pylcl.types import VarName
+from lclang.ast import LclCall, LclConstant, LclName, LclSlice
+from lclang.lang.parser import parse_expression
+from lclang.lang.printer import to_source
+from lclang.types import VarName
 
 
 @pytest.mark.parametrize(

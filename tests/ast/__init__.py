@@ -1,1 +1,1 @@
-"""Tests mirroring :mod:`pylcl.ast`."""
+"""Tests mirroring :mod:`lclang.ast`."""

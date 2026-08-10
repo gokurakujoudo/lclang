@@ -1,13 +1,13 @@
-"""Unit tests mirroring :mod:`pylcl.lang.parser.atoms`."""
+"""Unit tests mirroring :mod:`lclang.lang.parser.atoms`."""
 
 import pytest
 
-from pylcl.ast import LclConstant, LclName
-from pylcl.errors import LclSyntaxError
-from pylcl.lang.lexer import scan_tokens
-from pylcl.lang.parser.atoms import parse_atom
-from pylcl.lang.parser.stream import TokenStream
-from pylcl.types import VarName
+from lclang.ast import LclConstant, LclName
+from lclang.errors import LclSyntaxError
+from lclang.lang.lexer import scan_tokens
+from lclang.lang.parser.atoms import parse_atom
+from lclang.lang.parser.stream import TokenStream
+from lclang.types import VarName
 
 
 def atom(source: str) -> LclConstant | LclName:

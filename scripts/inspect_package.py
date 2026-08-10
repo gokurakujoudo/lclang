@@ -1,4 +1,4 @@
-"""Inspect pylcl release archives against the 0.3 artifact contract."""
+"""Inspect lclang release archives against current project metadata."""
 
 from __future__ import annotations
 
@@ -9,11 +9,24 @@ from dataclasses import dataclass
 from email.parser import Parser
 from pathlib import Path, PurePosixPath
 
-VERSION = "0.3.0"
+from scripts.versioning import project_version
+
+# Distribution version selected from authoritative project metadata.
+VERSION = project_version()
 # Archive members that can never be part of a clean source distribution.
 FORBIDDEN_PARTS = frozenset(
-    {"..", ".git", ".mypy_cache", ".pytest_cache", ".ruff_cache", ".codex_tmp",
-     "__pycache__", "build", "dist", "venv"}
+    {
+        "..",
+        ".git",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".codex_tmp",
+        "__pycache__",
+        "build",
+        "dist",
+        "venv",
+    }
 )
 
 
@@ -54,7 +67,7 @@ def metadata_fields(raw: str) -> dict[str, str]:
 
     :param raw: RFC-style metadata text.
     :returns: Case-normalized selected metadata values.
-    :raises ValueError: If the metadata does not identify pylcl 0.3.0.
+    :raises ValueError: If the metadata does not identify the current release.
     """
     message = Parser().parsestr(raw)
     fields = {
@@ -64,7 +77,7 @@ def metadata_fields(raw: str) -> dict[str, str]:
         "License": message.get("License-Expression", "") or message.get("License", ""),
         "Requires-Dist": ",".join(message.get_all("Requires-Dist", [])),
     }
-    if fields["Name"] != "pylcl" or fields["Version"] != VERSION:
+    if fields["Name"] != "lclang" or fields["Version"] != VERSION:
         raise ValueError("wheel metadata has an inconsistent name or version")
     if fields["Requires-Python"] != ">=3.14" or fields["License"] != "MIT":
         raise ValueError("wheel metadata has an inconsistent Python or license field")
@@ -83,13 +96,14 @@ def wheel_member_policy(members: tuple[str, ...], dist_info: str) -> None:
     """
     if len(set(members)) != len(members) or any("\\" in name for name in members):
         raise ValueError("wheel contains duplicate or non-portable member names")
+
     def allowed(name: str) -> bool:
         """Return whether one member belongs to the package or metadata tree."""
-        return name.startswith("pylcl/") or name.startswith(f"{dist_info}/")
+        return name.startswith("lclang/") or name.startswith(f"{dist_info}/")
 
     if any(not allowed(name) and PurePosixPath(name).name != "LICENSE" for name in members):
         raise ValueError("wheel contains a repository or build-tree member")
-    required = {"pylcl/__init__.py", "pylcl/_version.py", "pylcl/py.typed"}
+    required = {"lclang/__init__.py", "lclang/_version.py", "lclang/py.typed"}
     required |= {f"{dist_info}/METADATA", f"{dist_info}/WHEEL", f"{dist_info}/RECORD"}
     has_license = any(PurePosixPath(name).name == "LICENSE" for name in members)
     if not required <= set(members) or not has_license:
@@ -99,14 +113,14 @@ def wheel_member_policy(members: tuple[str, ...], dist_info: str) -> None:
 
 
 def inspect_wheel(path: Path) -> ArtifactReport:
-    """Inspect one universal pylcl wheel and return its release report.
+    """Inspect one universal lclang wheel and return its release report.
 
     :param path: Wheel archive to inspect.
     :returns: Validated archive report.
     :raises ValueError: If filename, members, tags, or metadata drift.
     :raises OSError: If the archive cannot be read.
     """
-    expected = f"pylcl-{VERSION}-py3-none-any.whl"
+    expected = f"lclang-{VERSION}-py3-none-any.whl"
     if path.name != expected:
         raise ValueError(f"unexpected wheel filename: {path.name}")
     with zipfile.ZipFile(path) as archive:
@@ -131,7 +145,7 @@ def sdist_member_policy(members: tuple[str, ...]) -> None:
     :returns: ``None`` when the source member set is valid.
     :raises ValueError: If the root, required trees, or exclusions are wrong.
     """
-    prefix = f"pylcl-{VERSION}/"
+    prefix = f"lclang-{VERSION}/"
     if any(not name.startswith(prefix) for name in members):
         raise ValueError("sdist contains an unexpected archive root")
     if len(set(members)) != len(members):
@@ -141,31 +155,37 @@ def sdist_member_policy(members: tuple[str, ...]) -> None:
         if any(part in FORBIDDEN_PARTS for part in parts) or name.endswith((".pyc", ".pyo")):
             raise ValueError("sdist contains ignored build output")
     required = {
-        "AGENTS.md", "CHANGELOG.md", "LICENSE", "README.md", "README_cn.md",
-        "progress.md", "pyproject.toml", "pylcl/py.typed",
+        "AGENTS.md",
+        "CHANGELOG.md",
+        "LICENSE",
+        "README.md",
+        "README_cn.md",
+        "progress.md",
+        "pyproject.toml",
+        "src/lclang/py.typed",
     }
-    for tree in ("docs", "doc_cn", "pylcl", "tests"):
+    for tree in ("docs", "src/lclang", "tests"):
         if not any(name.startswith(f"{prefix}{tree}/") for name in members):
             raise ValueError(f"sdist is missing the {tree} tree")
-    if not required <= {name[len(prefix):] for name in members}:
+    if not required <= {name[len(prefix) :] for name in members}:
         raise ValueError("sdist is missing a required release file")
 
 
 def inspect_sdist(path: Path) -> ArtifactReport:
-    """Inspect one pylcl source distribution and return its release report.
+    """Inspect one lclang source distribution and return its release report.
 
     :param path: Source distribution archive to inspect.
     :returns: Validated archive report.
     :raises ValueError: If filename or members violate the source contract.
     :raises OSError: If the archive cannot be read.
     """
-    expected = f"pylcl-{VERSION}.tar.gz"
+    expected = f"lclang-{VERSION}.tar.gz"
     if path.name != expected:
         raise ValueError(f"unexpected sdist filename: {path.name}")
     with tarfile.open(path, "r:gz") as archive:
         members = tuple(member.name for member in archive.getmembers())
     sdist_member_policy(members)
-    metadata = {"Name": "pylcl", "Version": VERSION}
+    metadata = {"Name": "lclang", "Version": VERSION}
     return ArtifactReport(path, "sdist", members, metadata, sha256(path))
 
 

@@ -1,16 +1,16 @@
-"""Unit tests mirroring :mod:`pylcl.ast.call_arguments`."""
+"""Unit tests mirroring :mod:`lclang.ast.call_arguments`."""
 
 import pytest
 
-from pylcl.ast import LclConstant, LclName
-from pylcl.ast.call_arguments import (
+from lclang.ast import LclConstant, LclName
+from lclang.ast.call_arguments import (
     LclKeywordArgument,
     LclKeywordUnpackArgument,
     LclPositionalArgument,
     LclStarArgument,
 )
-from pylcl.ast.primaries import LclCall
-from pylcl.types import VarName
+from lclang.ast.primaries import LclCall
+from lclang.types import VarName
 
 
 def test_call_children_preserve_receiver_then_arguments() -> None:

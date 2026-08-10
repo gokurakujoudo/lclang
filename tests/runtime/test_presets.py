@@ -1,4 +1,4 @@
-"""Unit tests mirroring :mod:`pylcl.runtime.presets`."""
+"""Unit tests mirroring :mod:`lclang.runtime.presets`."""
 
 from collections.abc import MutableMapping
 from dataclasses import FrozenInstanceError
@@ -6,7 +6,7 @@ from typing import cast
 
 import pytest
 
-from pylcl.runtime import Preset
+from lclang.runtime import Preset
 
 
 def test_preset_detaches_an_ordered_read_only_binding_snapshot() -> None:

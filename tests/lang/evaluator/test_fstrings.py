@@ -1,10 +1,10 @@
-"""Unit tests mirroring :mod:`pylcl.lang.evaluator.fstrings`."""
+"""Unit tests mirroring :mod:`lclang.lang.evaluator.fstrings`."""
 
 import pytest
 
-from pylcl import evaluate
-from pylcl.errors import LclEvaluationError
-from pylcl.lang.parser import parse_expression
+from lclang import evaluate
+from lclang.errors import LclEvaluationError
+from lclang.lang.parser import parse_expression
 
 
 @pytest.mark.asyncio

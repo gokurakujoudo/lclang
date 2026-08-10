@@ -5,7 +5,7 @@ from typing import Any, cast
 
 import pytest
 
-from pylcl.cli import CliConfig, CliParams, CliResult, CliResultStatus, LogConfig, ParameterDoc
+from lclang.cli import CliConfig, CliParams, CliResult, CliResultStatus, LogConfig, ParameterDoc
 
 InvalidParameterDoc = cast(Any, ParameterDoc)
 InvalidCliParams = cast(Any, CliParams)

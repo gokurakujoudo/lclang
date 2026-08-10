@@ -1,4 +1,4 @@
-"""Unit tests mirroring :mod:`pylcl.lang.evaluator.iteration`."""
+"""Unit tests mirroring :mod:`lclang.lang.evaluator.iteration`."""
 
 from collections.abc import AsyncIterator, Awaitable
 from inspect import isawaitable
@@ -6,7 +6,7 @@ from typing import cast
 
 import pytest
 
-from pylcl.lang.evaluator.iteration import iterate_values
+from lclang.lang.evaluator.iteration import iterate_values
 
 
 class AsyncValues:

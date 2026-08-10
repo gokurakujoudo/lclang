@@ -1,9 +1,9 @@
-"""Unit tests mirroring :mod:`pylcl.lang.evaluator.function_arguments`."""
+"""Unit tests mirroring :mod:`lclang.lang.evaluator.function_arguments`."""
 
 import pytest
 
-from pylcl.ast import ParameterKind
-from pylcl.lang.evaluator.function_arguments import (
+from lclang.ast import ParameterKind
+from lclang.lang.evaluator.function_arguments import (
     MISSING_PARAMETER,
     BoundParameter,
     bind_arguments,

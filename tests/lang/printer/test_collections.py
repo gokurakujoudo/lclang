@@ -1,10 +1,10 @@
-"""Unit tests mirroring :mod:`pylcl.lang.printer.collections`."""
+"""Unit tests mirroring :mod:`lclang.lang.printer.collections`."""
 
 import pytest
 
-from pylcl.ast import LclConstant, LclDict
-from pylcl.lang.parser import parse_expression
-from pylcl.lang.printer import to_source
+from lclang.ast import LclConstant, LclDict
+from lclang.lang.parser import parse_expression
+from lclang.lang.printer import to_source
 
 
 @pytest.mark.parametrize(

@@ -1,6 +1,6 @@
 """Acceptance tests for the workflow status public namespace."""
 
-import pylcl.workflow as workflow
+import lclang.workflow as workflow
 
 
 def test_workflow_namespace_exports_only_status_contract() -> None:

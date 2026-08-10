@@ -1,18 +1,18 @@
-"""Behavioral tests mirroring :mod:`pylcl.cli.builtin_docs`."""
+"""Behavioral tests mirroring :mod:`lclang.cli.builtin_docs`."""
 
 from collections.abc import Mapping
 
 import pytest
 
-import pylcl.cli.builtin_docs as builtin_docs
-from pylcl.api import LCL_BUILTIN_VALUES
-from pylcl.cli.builtin_docs import (
+import lclang.cli.builtin_docs as builtin_docs
+from lclang.api import LCL_BUILTIN_VALUES
+from lclang.cli.builtin_docs import (
     BUILTIN_DESCRIPTIONS,
     NAMESPACE_DESCRIPTIONS,
     ROOT_BUILTIN_DESCRIPTIONS,
     render_builtin_docs,
 )
-from pylcl.stdlib import STANDARD_MANIFESTS
+from lclang.stdlib import STANDARD_MANIFESTS
 
 
 def test_builtin_docs_render_complete_deterministic_nested_inventory() -> None:

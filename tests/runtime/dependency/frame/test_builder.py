@@ -1,9 +1,9 @@
-"""Behavioural tests mirroring :mod:`pylcl.runtime.dependency.frame.builder`."""
+"""Behavioural tests mirroring :mod:`lclang.runtime.dependency.frame.builder`."""
 
 import pytest
 
-from pylcl.lang.parser import parse_expression
-from pylcl.runtime import (
+from lclang.lang.parser import parse_expression
+from lclang.runtime import (
     DependencyKind,
     Frame,
     FrameBindingKind,
@@ -12,7 +12,7 @@ from pylcl.runtime import (
     Module,
     build_dependency_graph,
 )
-from pylcl.types import FrameId, ModuleName, VarName
+from lclang.types import FrameId, ModuleName, VarName
 
 
 def module(name: str, definitions: dict[str, str]) -> Module:
@@ -126,7 +126,7 @@ def test_frame_graph_filters_kinds_and_rejects_invalid_hierarchies() -> None:
     """Queries filter statically while bad inputs and parent cycles fail early."""
     parent = Frame(module("parent", {}), FrameId("parent"))
     child = Frame(
-        module("child", {"lazy": "def (): host"}),
+        module("child", {"lazy": "() -> host"}),
         FrameId("child"),
         values={"host": 1},
         parent=parent,

@@ -1,4 +1,4 @@
-"""Tests mirroring :mod:`pylcl.runtime.frame.dependencies`."""
+"""Tests mirroring :mod:`lclang.runtime.frame.dependencies`."""
 
 import asyncio
 from collections.abc import Awaitable, Callable
@@ -6,10 +6,10 @@ from typing import cast
 
 import pytest
 
-from pylcl.errors import LclClosedFrameError, LclEvaluationError, LclNameError
-from pylcl.lang.parser import parse_expression
-from pylcl.runtime import DependencyKind, Frame, Module
-from pylcl.types import FrameId, ModuleName, VarName
+from lclang.errors import LclClosedFrameError, LclEvaluationError, LclNameError
+from lclang.lang.parser import parse_expression
+from lclang.runtime import DependencyKind, Frame, Module
+from lclang.types import FrameId, ModuleName, VarName
 
 
 def _frame(definitions: dict[str, str], **values: object) -> Frame:
@@ -63,7 +63,7 @@ async def test_failure_and_later_closure_lookup_are_published() -> None:
         await failed.get("value")
     assert _targets(failed, "value") == (VarName("missing"),)
 
-    closure = _frame({"function": "def (x): x + outer"}, outer=40)
+    closure = _frame({"function": "(x) -> x + outer"}, outer=40)
     function = await closure.get("function")
     initial = closure.dependency_snapshot("function")
     call = cast(Callable[..., Awaitable[object]], function)

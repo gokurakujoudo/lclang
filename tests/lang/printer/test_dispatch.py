@@ -1,12 +1,12 @@
-"""Integration tests mirroring :mod:`pylcl.lang.printer.dispatch`."""
+"""Integration tests mirroring :mod:`lclang.lang.printer.dispatch`."""
 
 from dataclasses import dataclass
 
 import pytest
 
-from pylcl.ast import LclAstNode
-from pylcl.lang.parser import parse_expression
-from pylcl.lang.printer import to_source
+from lclang.ast import LclAstNode
+from lclang.lang.parser import parse_expression
+from lclang.lang.printer import to_source
 
 
 def test_print_parse_print_is_idempotent() -> None:

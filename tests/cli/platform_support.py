@@ -7,7 +7,7 @@ SAMPLE_SCRIPT = '''\
 import asyncio
 import sys
 
-from pylcl.cli import (
+from lclang.cli import (
     CliContext,
     CliEntrance,
     CliResult,

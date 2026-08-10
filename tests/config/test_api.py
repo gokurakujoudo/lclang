@@ -5,15 +5,15 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from pylcl.config import evaluate_config, load_config
-from pylcl.runtime import DependencyKind, Frame, FrameDependencyGraph, build_dependency_graph
-from pylcl.types import FrameId
+from lclang.config import evaluate_config, load_config
+from lclang.runtime import DependencyKind, Frame, FrameDependencyGraph, build_dependency_graph
+from lclang.types import FrameId
 
 
 @pytest.mark.asyncio
 async def test_using_flattens_cross_file_dependencies_into_one_module() -> None:
     """Using adds definitions, not evaluation or a runtime dependency layer."""
-    with TemporaryDirectory(prefix="pylcl-flat-using-", dir=Path.cwd()) as directory:
+    with TemporaryDirectory(prefix="lclang-flat-using-", dir=Path.cwd()) as directory:
         root = Path(directory)
         used = root / "b.lclcfg"
         entry = root / "a.lclcfg"
@@ -77,7 +77,7 @@ async def test_loaded_config_builds_independent_runtime_frames(tmp_path: Path) -
 @pytest.mark.asyncio
 async def test_config_frames_use_lhs_dates_and_static_hierarchy_analysis() -> None:
     """Config runtime defaults expose root/builtins before any graph evaluation."""
-    with TemporaryDirectory(prefix="pylcl-config-context-", dir=Path.cwd()) as directory:
+    with TemporaryDirectory(prefix="lclang-config-context-", dir=Path.cwd()) as directory:
         path = Path(directory) / "context.lclcfg"
         path.write_text(
             'k: {"name": lhs()}\n'

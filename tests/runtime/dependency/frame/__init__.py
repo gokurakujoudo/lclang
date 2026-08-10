@@ -1,1 +1,1 @@
-"""Tests mirroring :mod:`pylcl.runtime.dependency.frame`."""
+"""Tests mirroring :mod:`lclang.runtime.dependency.frame`."""

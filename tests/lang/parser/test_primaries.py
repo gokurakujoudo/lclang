@@ -1,8 +1,8 @@
-"""Unit tests mirroring :mod:`pylcl.lang.parser.primaries`."""
+"""Unit tests mirroring :mod:`lclang.lang.parser.primaries`."""
 
 import pytest
 
-from pylcl.ast import (
+from lclang.ast import (
     LclAttribute,
     LclCall,
     LclKeywordArgument,
@@ -14,9 +14,9 @@ from pylcl.ast import (
     LclSubscript,
     LclTuple,
 )
-from pylcl.errors import LclSyntaxError
-from pylcl.lang.parser import parse_expression
-from pylcl.types import VarName
+from lclang.errors import LclSyntaxError
+from lclang.lang.parser import parse_expression
+from lclang.types import VarName
 
 
 def test_attribute_and_safe_attribute_chain() -> None:

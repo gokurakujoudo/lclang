@@ -1,4 +1,4 @@
-"""Run the authoritative pylcl quality gate."""
+"""Run the authoritative lclang quality gate."""
 
 from __future__ import annotations
 
@@ -22,6 +22,7 @@ def quality_commands(python: Path) -> tuple[Command, ...]:
         (executable, "-m", "mypy"),
         (executable, "-m", "ruff", "check", "."),
         (executable, "-m", "scripts.check_project"),
+        (executable, "-m", "scripts.security_audit"),
     )
 
 

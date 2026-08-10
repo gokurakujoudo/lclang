@@ -1,6 +1,6 @@
-"""Unit tests mirroring :mod:`pylcl.ast.operators`."""
+"""Unit tests mirroring :mod:`lclang.ast.operators`."""
 
-from pylcl.ast.operators import (
+from lclang.ast.operators import (
     BinaryOperator,
     BooleanOperator,
     ComparisonOperator,

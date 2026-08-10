@@ -1,160 +1,232 @@
-# pylcl
+# lclang
 
-[English](README.md)
+`lclang` 是面向 Python 应用的小型、异步优先配置语言。你可以用表达式描述一组
+相互关联的值，从 Python 提供当前环境所需的输入，并且只计算本次运行真正请求的
+结果。
 
-`pylcl` 是面向 Python 3.14+、异步优先的纯 Python 配置表达式语言。0.3.0
-语言、运行时、`.lclcfg` 与强类型 CLI release candidate 已完成验证；正式发布是独立的维护者操作。
-详见 [CHANGELOG.md](CHANGELOG.md)。
+当配置不再只是静态数据，但仍应当保持明确、可检查，并与应用代码分离时，可以使用
+`lclang`。典型场景包括派生服务设置、部署策略、命令默认值以及请求级计算。
 
-## 项目状态
+`lclang` 使用纯 Python 实现，要求 Python 3.14 或更高版本，没有第三方运行时依赖，
+采用 MIT License。
 
-- 目标版本：0.4.0 开发版本
-- 最新完成：M602 — scoped 工作流步骤
-- 下一计划：M100 — 可信输入安全边界审计
-- 已实现：基础工程、强制英文 rST API 文档、带源码位置的 lexer、不可变 AST、
-  完整表达式/comprehension 解析、全部计划内 V1 表达式 form，以及确定性的
-  AST 到源码渲染、semantic f-string 解析、稳定的根包 parse/print API、对同步/异步
-  iterable item 递归 await 的异步表达式求值、
-  词法闭包、结构化错误、断言、try 恢复、finalization、同步/异步上下文管理与
-  semantic f-string 求值、不可变 runtime module、层级 single-flight Frame 缓存与
-  结构化环检测、取消隔离、不失效 dependant 的原子定向重算，以及 task-local 的
-  深度、工作量和物化集合限制、确定性的 Frame 关闭与资源清理，以及作用域感知的
-  eager/conditional/deferred 依赖分析、不可变 module 依赖图、按边类型过滤的查询，
-  确定性的拓扑排序、有界 runtime 查找追踪、静态/动态边协调，以及具有原子重算语义、
-  能路由到真正 owner 的不可变 Frame 依赖快照，以及浅层不可变 host preset 和可复用、
-  每次创建独立状态的 Frame factory、由 manifest 驱动的只读标准库 namespace，以及经审查的
-  async iterable、文本、不可变数据与严格 JSON helper preset，并通过聚焦的根包 API
-  暴露完整 runtime 工作流，并提供首选的 source-string `define_module`/`define_frame`
-  shortcut、`LCL_ROOT -> LCL_BUILTINS -> LCL_RUNTIME -> LCL_IMPORTS -> user` 标准层级，
-  首选的 `Frame.derive` child 构造、不触发求值的 Frame `has`/`get_definition` 检查，
-  以及受控、右侧优先的 `Frame.mixin` host-value 更新、定义上下文 `lhs()`、严格的
-  `YYYYMMDD` 日期内建函数、原生可变参数不动点内建函数 `recursive`，以及不触发求值、包含 Frame 路径和值终点的依赖图
-  ，并支持闭包中词法化的 `lhs()`、可直接接收源码的 `evaluate_sync`、确定性的
-  FrameFactory 默认 ID，以及配套依赖分析教程和经过审计的嵌套模块布局，
-  并实现不可变 CLI 值、精确异步命令装饰器、嵌套 snake_case 命令组、完整 argv
-  解析、结构化帮助、惰性 preset/default/config/override Frame 层级、由处理函数负责的
-  dryrun、隔离日志与结果/清理映射，以及 `CliResult.success`/`fail` 快捷方法、
-  无值覆盖键作为布尔 `True`、可选求值后检查的 `parse_lcl`、惰性
-  `eval_lcl` 与确定性嵌套输出的 `builtins` 模块命令；标准层内建值与 namespace
-  会标记为 `NativeProvided`，并统一表示为 `Builtin Function` 或
-  `Builtin Namespace`；结构化错误会携带从直接变量到失败变量的求值栈；此外还提供有序的
-  工作流执行状态树、共享子任务 manager cursor、确定性父状态汇总、子树锁定、不会
-  吞掉异常的 `with` 自动 finalization，以及支持原子描述/状态更新与正常退出自动成功的 step scope
-- 测试状态：842 个测试以 100.00% 分支覆盖率通过；strict mypy、Ruff、完整
-  source/docstring policy、可执行文档与 artifact 闸门均通过
+> LCL 用于受信任的应用配置，不是执行攻击者表达式的安全沙箱。宿主应用提供的值和
+> callable 仍然拥有普通 Python 对象原本具备的能力。
 
-`Frame` 现在可直接接收字符串 ID，省略时使用 `frame-<module name>`；
-`inspect_variable()` 可在不触发求值的前提下生成包含缓存状态、定义、Frame 路径、
-当前值或异常的调试树；每个父节点下的直接依赖按首次出现的变量名去重，而不同
-分支仍可分别包含同一变量，并使用
-  `name@frame/path: [definition ](Status) typed-payload` 单行格式；外部值不显示定义，值与错误均显示类型，AST 值统一显示为标准的
-  `<节点类型>: <LCL 表达式>`，已求值的 LCL 函数闭包也使用标准函数源码表示。Frame 子系统现统一位于
-`pylcl.runtime.frame` 嵌套包中。
+## 安装
 
-package metadata 现报告 `0.3.0`；wheel 与 sdist 均在全新 Python 3.14 环境完成
-无依赖安装与配置加载验证。正式发布是独立的维护者操作。
+```console
+python -m pip install lclang
+```
 
-权威进度与验证证据保存在 [progress.md](progress.md)。计划能力不会被描述为已经实现。
+## 心智模型
 
-## 快速开始
+大多数应用只需要理解两个概念：
 
-在已经安装开发环境的 checkout 中运行。测试套件会直接提取并执行下面的示例。
+- `Module` 是一组不可变、尚未求值的命名定义。它回答：**可以计算什么？**
+- `Frame` 把 Module、宿主输入、名称查找层级、惰性结果快照以及它所拥有的异步工作
+  组合起来。它回答：**这些定义在本次运行中代表什么？**
+
+```text
+            只解析一次                              每次运行创建
+
+  表达式源码 ──> Module                Module + 宿主输入 ──> Frame
+                  │                                         │
+             可复用的定义                              惰性结果快照
+```
+
+Module 不包含求值状态，因此可以安全地在不同请求、租户、命令和测试之间复用。Frame
+则有意保留状态，并且属于一个 event loop。每次独立运行都应创建新的 Frame，并在该次
+运行结束时将其关闭。
+
+这是 lclang 最核心的使用方式：**定义一次，在短生命周期的上下文中求值**。
+
+## 推荐的应用模式
+
+在应用启动时定义 Module。创建 Frame 时只提供必要的 Python 值，按需请求输出，并在
+`finally` 中关闭 Frame。
 
 ```python
 import asyncio
 
-import pylcl
+import lclang
+
+
+INVOICE = lclang.define_module(
+    "invoice",
+    {
+        "subtotal": "unit_price * quantity",
+        "total": "subtotal + tax",
+        "label": 'f"Total: {total:.2f}"',
+    },
+)
+
+
+async def price_invoice(*, unit_price: float, quantity: int, tax: float) -> str:
+    frame = lclang.define_frame(
+        INVOICE,
+        preset={
+            "unit_price": unit_price,
+            "quantity": quantity,
+            "tax": tax,
+        },
+    )
+    try:
+        return await frame.get("label")
+    finally:
+        await frame.close()
 
 
 async def main() -> None:
-    module = pylcl.define_module(
-        "quickstart",
-        {"result": 'json.encode({"message": "hello pylcl"})'},
-    )
-    frame = pylcl.define_frame(module)
-    try:
-        print(await frame.get("result"))
-        snapshot = frame.dependency_snapshot("result")
-        print(",".join(str(edge.target) for edge in snapshot.dynamic_edges))
-    finally:
-        await frame.close()
+    label = await price_invoice(unit_price=6.5, quantity=4, tax=2.0)
+    assert label == "Total: 28.00"
 
 
 asyncio.run(main())
 ```
 
-可以通过同一套惰性 Frame 流程分析或求值命令行定义的结果：
+定义的书写顺序不是求值顺序。无论 `total` 和 `subtotal` 在 mapping 中如何排列，
+`total` 都可以引用 `subtotal`。解析阶段会预先验证全部表达式；只有调用
+`frame.get()` 请求某个值时，Frame 才会沿着名称依赖执行计算。
 
-```console
-python -m pylcl.cli builtins
-python -m pylcl.cli parse_lcl -o a 100 -o b 200 -o RESULT "LCL[a+b]"
-python -m pylcl.cli eval_lcl -o a 100 -o b 200 -o RESULT "LCL[a+b]"
+`define_module()` 和 `define_frame()` 是首选的高层 API。通过这种方式创建的 Frame
+也可以使用 lclang 提供的、经过审查的纯函数 builtin，以及 `iter`、`text`、`data`
+和 `json` namespace。
+
+## 选择最小且合适的入口
+
+| 需求 | 首选 API | 所有权模型 |
+| --- | --- | --- |
+| 在同步代码中计算一个表达式 | `evaluate_sync(source, values)` | 临时 event loop 由 lclang 管理 |
+| 计算一组相互关联的命名定义 | `define_module()` + `define_frame()` | 复用 Module；关闭每个 Frame |
+| 加载 `.lclcfg` 并读取一个值 | `load_config()` + `evaluate_config()` | `evaluate_config()` 自动关闭临时 Frame |
+| 异步计算一个已经解析的表达式 | `parse_expression()` + `await evaluate()` | 调用者提供 resolver values |
+| 只解析、打印或分析语法 | `parse_expression()` + `to_source()` 或 runtime 分析 API | 不创建求值状态 |
+| 使用同一策略执行多次独立计算 | `FrameFactory` 或 `Config.frame_factory()` | 关闭每个创建出来的 Frame |
+
+对于小型同步脚本，直接使用 `evaluate_sync()`：
+
+```python
+import lclang
+
+total = lclang.evaluate_sync(
+    "unit_price * quantity",
+    {"unit_price": 6, "quantity": 4},
+)
+assert total == 24
 ```
 
-第一条命令列出标准内建值及嵌套 namespace 方法；第二条输出静态的
-`RESULT -> a, b` 依赖树，不执行表达式；第三条输出 `100200`，因为未标记的
-CLI 覆盖值始终是字符串。
+不要在正在运行的 event loop 中调用 `evaluate_sync()`。异步应用应使用 Frame，或者
+直接 `await evaluate()`。
 
-新的教程结构目前仅提供英文版：从[教程索引](docs/tutorials/README.md)开始，
-再阅读 [runtime 指南](docs/tutorials/runtime.md)、
-[LCL 示例库](docs/tutorials/lcl_examples.md)或
-[配置文件指南](docs/tutorials/config_file.md)，并可阅读英文
-[依赖分析教程](docs/tutorials/dependency-analytics.md)与
-[工作流状态教程](docs/tutorials/workflow-status.md)。中文
-[runtime API 指南](doc_cn/runtime-api_cn.md)与
-[CLI 教程](doc_cn/cli_cn.md)继续保留。
+## 值是快照，不是响应式单元
 
-## JihuLab CI/CD
+第一次执行 `await frame.get("name")` 时，Frame 会计算选中的定义，并缓存它的值或
+普通失败。处于同一 event loop 的并发调用者会共享这次计算，后续读取返回相同快照。
 
-仓库流水线定义在 `.gitlab-ci.yml` 中；setup、build、test 和包检查在同一个 verify 任务环境中执行，
-之后再进入发布阶段。verify 任务会导出
-Cobertura 覆盖率，供 JihuLab 合并请求注释和流水线覆盖率统计使用。仅标签流水线中的手动任务会将已验证的
-wheel 和 sdist 发布到本地 Artifactory 及 PyPI。发布前，请将 `ARTIFACTORY_REPOSITORY_URL`、
-`ARTIFACTORY_USERNAME`、`ARTIFACTORY_PASSWORD`、`PYPI_USERNAME` 和 `PYPI_PASSWORD` 配置为
-JihuLab CI/CD 的 masked/protected 变量。
+修改宿主输入不会自动让已经缓存的定义或其依赖者失效。这是有意设计的行为：重算是
+明确且局部的操作。
 
-## JihuLab CI/CD
+```python
+frame.mixin({"unit_price": 10})
+await frame.recalculate("subtotal")
+await frame.recalculate("total")
+```
 
-仓库流水线定义在 `.gitlab-ci.yml` 中；setup、build、test 和包检查在同一个 verify 任务环境中执行，
-之后再进入发布阶段。verify 任务会导出
-Cobertura 覆盖率，供 JihuLab 合并请求注释和流水线覆盖率统计使用。仅标签流水线中的手动任务会将已验证的
-wheel 和 sdist 发布到本地 Artifactory 及 PyPI。发布前，请将 `ARTIFACTORY_REPOSITORY_URL`、
-`ARTIFACTORY_USERNAME`、`ARTIFACTORY_PASSWORD`、`PYPI_USERNAME` 和 `PYPI_PASSWORD` 配置为
-JihuLab CI/CD 的 masked/protected 变量。
+应当把 Frame 理解为一次可复现的计算，而不是电子表格。如果许多输入需要同时变化，
+创建新 Frame 通常比逐个刷新现有快照更清晰。只有在确实希望保留本次运行中的其他
+快照时，才使用 `mixin()` 和 `recalculate()`。
 
-## 0.4 目标能力
+## 配置文件是带来源信息的 Module
 
-- 带自定义 AST 的独立版本化 Python 风格表达式语法；
-- 异步优先解释器和带缓存的层级运行时 Frame；
-- 区分立即、条件、延迟和动态边的依赖分析；
-- 支持版本化 include 和来源诊断的 UTF-8 `.lclcfg`；
-- 用于构建配置驱动命令行程序的强类型框架；
-- 严格类型、分支覆盖率、差分测试、压力测试、泄漏检查和跨平台打包验证。
+当定义应当位于 Python 代码之外、需要由多个文件组合，或者诊断信息必须保留文件和
+行号时，使用 `.lclcfg`。
 
-## 工程协议
+```lclcfg
+__LCL_VERSION__: 1
 
-项目采用文档先行和 TDD。每个实现 milestone 必须先形成可执行行为规范，证明测试失败，
-实现最小正确行为，通过完整质量门，最后同步更新两份 README 和进度账本。生产代码与
-单元测试的子模块必须按[模块布局规范](docs/architecture/module-layout.md)保持同构。
+scheme: "https"
+host: f"api.{environment}.example.com"
+endpoint: f"{scheme}://{host}"
+```
 
-本语言面向受信的应用配置，不是处理敌意表达式的安全沙箱。
+配置文件应异步加载。如果只需要一个结果，并且不需要保留 Frame，可以使用
+`evaluate_config()`：
 
-## 文档
+```python
+from pathlib import Path
 
-- 长期开发规则：[AGENTS.md](AGENTS.md)
-- 进度与验证证据：[progress.md](progress.md)
-- 英文规范：`docs/specs/`
-- 完整 LCL 语法（英文）：[docs/lcl-lang.md](docs/lcl-lang.md)
-- 英文教程索引：[docs/tutorials/README.md](docs/tutorials/README.md)
-- 英文 runtime 教程：[docs/tutorials/runtime.md](docs/tutorials/runtime.md)
-- 英文 LCL 示例库：[docs/tutorials/lcl_examples.md](docs/tutorials/lcl_examples.md)
-- 英文配置文件教程：[docs/tutorials/config_file.md](docs/tutorials/config_file.md)
-- 英文依赖分析教程：[docs/tutorials/dependency-analytics.md](docs/tutorials/dependency-analytics.md)
-- 英文 CLI 教程：[docs/tutorials/cli.md](docs/tutorials/cli.md)
-- 英文工作流状态教程：[docs/tutorials/workflow-status.md](docs/tutorials/workflow-status.md)
-- 中文 CLI 教程：[doc_cn/cli_cn.md](doc_cn/cli_cn.md)
-- 中文教程：`doc_cn/`
+from lclang.config import evaluate_config, load_config
 
-## 许可证
 
-MIT。当前包要求 Python 3.14+，没有运行时第三方依赖。
+async def endpoint_for(environment: str) -> str:
+    config = await load_config(Path("settings.lclcfg"))
+    result = await evaluate_config(
+        config,
+        "endpoint",
+        values={"environment": environment},
+    )
+    assert isinstance(result, str)
+    return result
+```
+
+如果多个值需要共享同一份缓存，可以把加载结果转换成 Module，或者使用
+`config.frame_factory()`，然后按普通方式创建并关闭 Frame。`using` 声明按源码顺序
+展开其他配置源；后出现的定义获胜，同时来源和历史记录仍可用于诊断。
+
+## 保持清晰且收敛的 Python 边界
+
+名称依次通过用户 Module、应用提供的值、runtime values、经过审查的 builtin 和
+标准 namespace 进行查找。优先传入普通值或职责明确的 callable，不要直接暴露能力
+过于宽泛的 service object。
+
+宿主 callable 可以是同步或异步的。当 resolver value、调用结果、迭代器操作或
+context-manager protocol 返回 awaitable 时，lclang 会自动等待。应用仍需对其提供的
+任何对象所具有的行为和权限负责。
+
+LCL 是 expression-only 语言，并且有意采用熟悉的表达方式：
+
+```lcl
+profile?.display_name ?? "anonymous"
+[item * 2 for item in values if item > 0]
+f"{service}: {port}"
+value -> value * 2
+(left, right=10) -> left + right
+try primary() except ServiceError: fallback()
+```
+
+箭头函数使用 `() -> expression`、`name -> expression` 或
+`(parameters) -> expression`。定义是不可变语法；词法闭包会保留它创建时所在的
+定义上下文。
+
+## 诊断与检查
+
+预期的库错误均派生自 `lclang.LclError`。语法错误、名称错误、求值失败、循环依赖、
+已关闭 Frame 以及配置错误都有对应的具体子类，并在可用时保留源码位置。
+
+当检查名称查找但不能触发求值时，使用 `frame.has()` 和
+`frame.get_definition()`。调试某个值的 owner、缓存状态、依赖树或失败路径时，使用
+`frame.inspect_variable()`。当应用确实需要排序或变更影响分析时，还可以使用依赖图
+和 dependency snapshot；正常求值不依赖这些高级接口。
+
+## 实用规则
+
+1. 只解析定义一次，并复用得到的 Module。
+2. 每次独立运行或请求都创建一个 Frame。
+3. 只传入配置实际需要的宿主值。
+4. 把缓存结果视为快照；需要更新时明确重算。
+5. 关闭自己创建的每个 Frame，通常在 `finally` 中完成。
+6. 只读取一个配置值时，优先使用 `evaluate_config()`。
+7. 在应用边界捕获 `LclError`，并保留其中带源码位置的诊断文本。
+
+## 项目资源
+
+- [文档](https://jihulab.com/midnightprotocol/lclang/-/tree/main/docs)
+- [源码](https://jihulab.com/midnightprotocol/lclang)
+- [问题跟踪](https://jihulab.com/midnightprotocol/lclang/-/work_items)
+
+## 要求与许可证
+
+- Python 3.14 或更高版本
+- 无第三方运行时依赖
+- MIT License

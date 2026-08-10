@@ -1,10 +1,10 @@
-"""Unit tests mirroring :mod:`pylcl.config.files`."""
+"""Unit tests mirroring :mod:`lclang.config.files`."""
 
 from pathlib import Path
 
 import pytest
 
-from pylcl.config import FileConfigResolver, LclConfigUsingError, load_config
+from lclang.config import FileConfigResolver, LclConfigUsingError, load_config
 
 
 @pytest.mark.asyncio

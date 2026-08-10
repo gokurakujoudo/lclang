@@ -2,7 +2,7 @@
 
 import pytest
 
-from pylcl.cli.validation import freeze_mapping, is_lcl_identifier, normalize_text
+from lclang.cli.validation import freeze_mapping, is_lcl_identifier, normalize_text
 
 
 def test_text_identifier_and_mapping_validation() -> None:
