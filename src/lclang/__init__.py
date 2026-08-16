@@ -23,6 +23,7 @@ from lclang.errors import (
 )
 from lclang.lang import evaluate, evaluate_sync, parse_expression, to_source
 from lclang.runtime import (
+    NO_FALLBACK,
     DependencySnapshot,
     EvaluationLimits,
     Frame,
@@ -63,6 +64,7 @@ __all__ = [
     "LclVisitor",
     "ModuleName",
     "Module",
+    "NO_FALLBACK",
     "Preset",
     "STANDARD_PRESET",
     "SourceName",

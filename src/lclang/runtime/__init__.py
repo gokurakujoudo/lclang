@@ -21,6 +21,7 @@ from lclang.runtime.dependency.reconciliation import (
 from lclang.runtime.dependency.snapshot import DependencySnapshot
 from lclang.runtime.dependency.tracing import DependencyTrace, TracingResolver
 from lclang.runtime.frame import (
+    NO_FALLBACK,
     EvaluationLimits,
     Frame,
     FrameFactory,
@@ -46,6 +47,7 @@ __all__ = [
     "FrameDependencyGraph",
     "FrameFactory",
     "Module",
+    "NO_FALLBACK",
     "Preset",
     "TracingResolver",
     "VariableInspectionStatus",

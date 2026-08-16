@@ -60,16 +60,14 @@ async def main() -> None:
             "label": 'f"Total: {total:.2f}"',
         },
     )
-    frame = lclang.define_frame(
+    async with lclang.define_frame(
         module,
         preset={"unit_price": 6.5, "quantity": 4, "tax": 2.0},
-    )
-    try:
+    ) as frame:
         assert await frame.get("subtotal") == 26.0
         assert await frame.get("total") == 28.0
         assert await frame.get("label") == "Total: 28.00"
-    finally:
-        await frame.close()
+        assert await frame.get("currency", fallback="USD") == "USD"
 
 
 asyncio.run(main())
@@ -77,7 +75,11 @@ asyncio.run(main())
 
 Definition order does not control dependency order: `total` can appear before
 `subtotal`. Parsing builds syntax trees; the Frame follows name lookups only
-when a value is requested.
+when a value is requested. Use `frame.get(name, fallback=value)` for an optional
+name: the fallback is returned only when that name is absent from the complete
+Frame hierarchy. Omitting it, or passing `lclang.NO_FALLBACK`, preserves the
+usual `LclNameError`. An error from an existing definition is never replaced by
+the fallback.
 
 ## Lazy snapshots, not reactive cells
 
@@ -104,19 +106,16 @@ async def main() -> None:
             "total": "subtotal + tax",
         },
     )
-    frame = lclang.define_frame(
+    async with lclang.define_frame(
         module,
         preset={"unit_price": 6, "quantity": 5, "tax": 2},
-    )
-    try:
+    ) as frame:
         assert await frame.get("total") == 32
         frame.mixin({"unit_price": 10})
 
         assert await frame.recalculate("subtotal") == 50
         assert await frame.get("total") == 32  # still the old snapshot
         assert await frame.recalculate("total") == 52
-    finally:
-        await frame.close()
 
 
 asyncio.run(main())
@@ -154,11 +153,10 @@ async def main() -> None:
             "subtotal": "unit_price * quantity",
         },
     )
-    frame = lclang.Frame(
+    async with lclang.Frame(
         module,
         values={"unit_price": 6, "quantity": 4, "tax": 2},
-    )
-    try:
+    ) as frame:
         tree = frame.inspect_variable("total")
         assert tree.status.value == "NotEvaluated"
         assert tree.definition_path == [lclang.FrameId("frame-invoice-debug")]
@@ -176,8 +174,6 @@ async def main() -> None:
             "  - subtotal@frame-invoice-debug: "
             "unit_price * quantity (NotEvaluated) NoneType: None"
         )
-    finally:
-        await frame.close()
 
 
 asyncio.run(main())
@@ -252,11 +248,8 @@ returns `"name"`, which is useful for self-describing values:
 
 ```python
 module = lclang.define_module("named", {"k": '{"name": lhs()}'})
-frame = lclang.define_frame(module)
-try:
+async with lclang.define_frame(module) as frame:
     assert await frame.get("k") == {"name": "k"}
-finally:
-    await frame.close()
 ```
 
 `lhs()` is definition context, not general reflection. Direct
@@ -274,13 +267,14 @@ when the same failure propagates or is returned from the Frame failure cache.
 Supply application values narrowly:
 
 ```python
-frame = lclang.define_frame(
+async with lclang.define_frame(
     module,
     preset={
         "region": "eu-west",
         "feature_flags": {"new_checkout": True},
     },
-)
+) as frame:
+    result = await frame.get("result")
 ```
 
 Host callables may be synchronous or asynchronous. LCL automatically awaits
@@ -304,18 +298,14 @@ import lclang
 async def main() -> None:
     module = lclang.define_module("price", {"total": "price * quantity"})
     factory = lclang.FrameFactory(module)
-    retail = factory.create(values={"price": 8, "quantity": 2})
-    wholesale = factory.create(
-        lclang.FrameId("wholesale"),
-        values={"price": 5, "quantity": 20},
-    )
-    try:
-        assert retail.frame_id == lclang.FrameId("frame-price")
-        assert await retail.get("total") == 16
-        assert await wholesale.get("total") == 100
-    finally:
-        await retail.close()
-        await wholesale.close()
+    async with factory.create(values={"price": 8, "quantity": 2}) as retail:
+        async with factory.create(
+            lclang.FrameId("wholesale"),
+            values={"price": 5, "quantity": 20},
+        ) as wholesale:
+            assert retail.frame_id == lclang.FrameId("frame-price")
+            assert await retail.get("total") == 16
+            assert await wholesale.get("total") == 100
 
 
 asyncio.run(main())
@@ -333,21 +323,18 @@ identities.
 
 ## Parent and child Frames
 
-A child Frame falls back to its parent after local definitions and values. Use
-`parent.derive(child_module, values={...})` for normal child construction.
-Parent definitions always evaluate and cache in the Frame that owns them.
-Closing a child does not close its borrowed parent.
+A child Frame falls back to its parent after local definitions and values.
+Prefer `async with parent.derive(child_module, values={...}) as child:` so the
+derived Frame closes at the end of its scope. Parent definitions always
+evaluate and cache in the Frame that owns them. Closing a child does not close
+its borrowed parent.
 
 ```python
 parent_module = lclang.define_module("environment", {"region": '"eu"'})
 child_module = lclang.define_module("service", {"endpoint": 'f"api.{region}"'})
-parent = lclang.define_frame(parent_module)
-child = parent.derive(child_module)
-try:
-    endpoint = await child.get("endpoint")
-finally:
-    await child.close()
-    await parent.close()
+async with lclang.define_frame(parent_module) as parent:
+    async with parent.derive(child_module) as child:
+        endpoint = await child.get("endpoint")
 ```
 
 ## Inspect dependencies
@@ -393,12 +380,14 @@ Expected library failures derive from `lclang.LclError`:
 Errors retain source spans where possible. Ordinary host exceptions are wrapped
 once and remain available as `error.__cause__`.
 
-## Always close owned Frames
+## Manage owned Frames with `async with`
 
-Use `try/finally` around every Frame you create. `await frame.close()` rejects
-new work, cancels and settles owned tasks, and closes cached resources once in
-reverse acquisition order. A parent is borrowed; close it separately only when
-your code owns it.
+Prefer `async with lclang.define_frame(...) as frame:` for every Frame you own.
+Leaving the block rejects new work, cancels and settles owned tasks, and closes
+cached resources once in reverse acquisition order. The context manager does
+not suppress an exception from the block. A parent is borrowed, so give it its
+own outer `async with` scope only when your code owns it. Direct
+`await frame.close()` remains available for lower-level lifecycle integration.
 
 Next, explore the [LCL examples gallery](language.md), or load a complete
 [configuration file](configuration.md).

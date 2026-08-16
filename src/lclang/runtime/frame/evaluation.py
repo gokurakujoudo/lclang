@@ -12,6 +12,7 @@ from lclang.lang.evaluator.awaitables import resolve_awaitable
 from lclang.lang.evaluator.context import Resolver
 from lclang.lang.evaluator.definition_context import definition_scope
 from lclang.runtime.frame.dependencies import InternalFrameDependencies
+from lclang.runtime.frame.fallback import NO_FALLBACK
 from lclang.runtime.frame.flights import (
     internal_check_cycle,
     internal_enter_flight,
@@ -53,22 +54,29 @@ class FrameEvaluationApi:
        Owner delegation keeps parent definitions in their lexical Frame.
     """
 
-    async def get(self, name: str) -> object:
+    async def get(self, name: str, fallback: object = NO_FALLBACK) -> object:
         """Resolve one local definition or host binding.
 
         :param name: Non-empty variable name to resolve.
-        :returns: Cached or newly evaluated value.
+        :param fallback: Value returned unchanged when *name* is absent.
+        :returns: Cached or newly evaluated value, or the explicit fallback.
         :raises ValueError: If *name* is empty.
-        :raises LclNameError: If no definition or host binding exists.
+        :raises LclNameError: If no binding exists and fallback is ``NO_FALLBACK``.
         :raises Exception: If definition evaluation fails.
 
         .. note::
            Successful values and ordinary failure instances are cached by name.
+           A fallback is neither resolved nor cached and never replaces a
+           failure from an existing definition.
         """
         frame = cast(EvaluationFrame, self)
         frame._lifecycle.ensure_open(None)
         if not name:
             raise ValueError("variable name cannot be empty")
+        if find_frame(self, name) is None:
+            if fallback is NO_FALLBACK:
+                raise LclNameError(f"unknown variable: {name}")
+            return fallback
         return await self.get_resolved(name, None)
 
     async def resolve(self, name: VarName, *, span: SourceSpan) -> object:

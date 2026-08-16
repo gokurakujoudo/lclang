@@ -18,12 +18,9 @@ async def main() -> None:
             "result": "greeting + ' Welcome to lclang.'",
         },
     )
-    frame = lclang.define_frame(module, preset={"name": "Ada"})
-    try:
+    async with lclang.define_frame(module, preset={"name": "Ada"}) as frame:
         assert await frame.get("result") == "Hello, Ada! Welcome to lclang."
         assert await frame.get("greeting") == "Hello, Ada!"
-    finally:
-        await frame.close()
 
 
 asyncio.run(main())
@@ -31,8 +28,8 @@ asyncio.run(main())
 
 `define_module` parses all definitions up front. `define_frame` creates an
 independent cache. Asking for `result` evaluates `greeting` first; the second
-lookup returns its cached snapshot. Closing the Frame releases its owned tasks
-and resources.
+lookup returns its cached snapshot. Leaving the `async with` block closes the
+Frame and releases its owned tasks and resources.
 
 For one expression in synchronous code:
 

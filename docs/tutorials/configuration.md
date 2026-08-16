@@ -126,8 +126,8 @@ normalizes paths, expands `using`, and returns an immutable `Config` without
 evaluating any definition.
 
 This complete example writes two isolated files, loads the root, inspects
-precedence, creates a Frame from the resulting Module, evaluates values, and
-closes the Frame:
+precedence, creates a Frame from the resulting Module, and evaluates values in
+an `async with` scope:
 
 <!-- lclang-exec -->
 ```python
@@ -170,13 +170,10 @@ async def main() -> None:
         assert await evaluate_config(config, "base_url") == "https://api.example.test/v1"
 
         module = config.to_module("application")
-        frame = config.frame_factory().create(FrameId("request"))
-        try:
+        async with config.frame_factory().create(FrameId("request")) as frame:
             assert frame.module.definitions == module.definitions
             assert await frame.get("request_timeout") == 30
             assert await frame.get("retry_delay") == 15
-        finally:
-            await frame.close()
 
 
 asyncio.run(main())
@@ -188,9 +185,10 @@ asyncio.run(main())
 `to_module()` copies only the final expression ASTs and performs no evaluation.
 
 `Config.frame_factory()` is convenient when several independent runs share one
-loaded configuration. Every created Frame has its own cache and must be closed.
-`evaluate_config(config, name)` is the small convenience for evaluating one name;
-it owns and always closes its temporary Frame.
+loaded configuration. Every created Frame has its own cache and should be used
+as an async context manager. `evaluate_config(config, name)` is the small
+convenience for evaluating one name; it owns and always closes its temporary
+Frame.
 
 Both APIs use lclang's canonical runtime hierarchy by default. That makes
 `lhs()`, `parse_ymd`, `to_ymd`, `recursive`, ordinary safe builtins, and the
