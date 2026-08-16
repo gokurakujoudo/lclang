@@ -32,12 +32,42 @@ async def test_close_rejects_all_evaluation_boundaries() -> None:
     with pytest.raises(LclClosedFrameError):
         await frame.get("value")
     with pytest.raises(LclClosedFrameError):
+        await frame.get("missing", fallback=None)
+    with pytest.raises(LclClosedFrameError):
         await frame.recalculate("value")
     node = parse_expression("value")
     with pytest.raises(LclClosedFrameError) as caught:
         await evaluate(node, frame)
     assert caught.value.span == node.span
     await frame.close()
+
+
+@pytest.mark.asyncio
+async def test_async_context_manager_returns_frame_and_closes_resources() -> None:
+    """Sunny: entering returns the Frame and normal exit releases its results."""
+    events: list[str] = []
+    resource = AsyncResource("resource", events)
+    frame = _frame({"resource": "make()"}, make=lambda: resource)
+
+    async with frame as entered:
+        assert entered is frame
+        assert await entered.get("resource") is resource
+        assert entered.closed is False
+
+    assert frame.closed is True
+    assert events == ["resource"]
+
+
+@pytest.mark.asyncio
+async def test_async_context_manager_closes_without_suppressing_body_error() -> None:
+    """Rainy: exceptional exit closes the Frame and preserves the body error."""
+    frame = _frame({"value": "1"})
+
+    with pytest.raises(RuntimeError, match="body failed"):
+        async with frame:
+            raise RuntimeError("body failed")
+
+    assert frame.closed is True
 
 
 @pytest.mark.asyncio

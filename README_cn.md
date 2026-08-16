@@ -43,8 +43,8 @@ Module 不包含求值状态，因此可以安全地在不同请求、租户、�
 
 ## 推荐的应用模式
 
-在应用启动时定义 Module。创建 Frame 时只提供必要的 Python 值，按需请求输出，并在
-`finally` 中关闭 Frame。
+在应用启动时定义 Module。创建 Frame 时只提供必要的 Python 值，按需请求输出，并使用
+`async with` 确定性地关闭 Frame。
 
 ```python
 import asyncio
@@ -63,18 +63,15 @@ INVOICE = lclang.define_module(
 
 
 async def price_invoice(*, unit_price: float, quantity: int, tax: float) -> str:
-    frame = lclang.define_frame(
+    async with lclang.define_frame(
         INVOICE,
         preset={
             "unit_price": unit_price,
             "quantity": quantity,
             "tax": tax,
         },
-    )
-    try:
+    ) as frame:
         return await frame.get("label")
-    finally:
-        await frame.close()
 
 
 async def main() -> None:
@@ -98,11 +95,11 @@ asyncio.run(main())
 | 需求 | 首选 API | 所有权模型 |
 | --- | --- | --- |
 | 在同步代码中计算一个表达式 | `evaluate_sync(source, values)` | 临时 event loop 由 lclang 管理 |
-| 计算一组相互关联的命名定义 | `define_module()` + `define_frame()` | 复用 Module；关闭每个 Frame |
+| 计算一组相互关联的命名定义 | `define_module()` + `async with define_frame()` | 复用 Module；context manager 关闭每个 Frame |
 | 加载 `.lclcfg` 并读取一个值 | `load_config()` + `evaluate_config()` | `evaluate_config()` 自动关闭临时 Frame |
 | 异步计算一个已经解析的表达式 | `parse_expression()` + `await evaluate()` | 调用者提供 resolver values |
 | 只解析、打印或分析语法 | `parse_expression()` + `to_source()` 或 runtime 分析 API | 不创建求值状态 |
-| 使用同一策略执行多次独立计算 | `FrameFactory` 或 `Config.frame_factory()` | 关闭每个创建出来的 Frame |
+| 使用同一策略执行多次独立计算 | `FrameFactory` 或 `Config.frame_factory()` | 把创建的 Frame 用作 async context manager |
 
 对于小型同步脚本，直接使用 `evaluate_sync()`：
 
@@ -123,6 +120,15 @@ assert total == 24
 
 第一次执行 `await frame.get("name")` 时，Frame 会计算选中的定义，并缓存它的值或
 普通失败。处于同一 event loop 的并发调用者会共享这次计算，后续读取返回相同快照。
+
+可选的直接查找可传入 `fallback=value`。只有请求的名称在完整 Frame 层级中不存在时，
+才会原样返回该 fallback，而且不会缓存它。省略 fallback 或传入
+`lclang.NO_FALLBACK` 时仍抛出通常的 `LclNameError`。已有定义在求值时失败仍会抛出
+对应错误，因此 `fallback=None` 不会隐藏损坏的定义。
+
+```python
+region = await frame.get("region", fallback="global")
+```
 
 修改宿主输入不会自动让已经缓存的定义或其依赖者失效。这是有意设计的行为：重算是
 明确且局部的操作。
@@ -171,8 +177,8 @@ async def endpoint_for(environment: str) -> str:
 ```
 
 如果多个值需要共享同一份缓存，可以把加载结果转换成 Module，或者使用
-`config.frame_factory()`，然后按普通方式创建并关闭 Frame。`using` 声明按源码顺序
-展开其他配置源；后出现的定义获胜，同时来源和历史记录仍可用于诊断。
+`config.frame_factory()`，然后把创建的 Frame 放在 `async with` scope 中。`using`
+声明按源码顺序展开其他配置源；后出现的定义获胜，同时来源和历史记录仍可用于诊断。
 
 ## 保持清晰且收敛的 Python 边界
 
@@ -215,7 +221,7 @@ try primary() except ServiceError: fallback()
 2. 每次独立运行或请求都创建一个 Frame。
 3. 只传入配置实际需要的宿主值。
 4. 把缓存结果视为快照；需要更新时明确重算。
-5. 关闭自己创建的每个 Frame，通常在 `finally` 中完成。
+5. 把自己创建的每个 Frame 用作 async context manager，使其在离开 block 时关闭。
 6. 只读取一个配置值时，优先使用 `evaluate_config()`。
 7. 在应用边界捕获 `LclError`，并保留其中带源码位置的诊断文本。
 

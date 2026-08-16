@@ -63,45 +63,41 @@ import lclang
 
 
 async def main() -> None:
-    parent = lclang.Frame(
+    async with lclang.Frame(
         lclang.define_module("rates", {"tax": "subtotal * rate"}),
         "rates",
         values={"rate": 0.2},
-    )
-    child = lclang.Frame(
-        lclang.define_module(
+    ) as parent:
+        async with lclang.Frame(
+            lclang.define_module(
+                "invoice",
+                {
+                    "subtotal": "price * quantity",
+                    "total": "subtotal + tax + tax",
+                },
+            ),
             "invoice",
-            {
-                "subtotal": "price * quantity",
-                "total": "subtotal + tax + tax",
-            },
-        ),
-        "invoice",
-        values={"price": 10, "quantity": 3},
-        parent=parent,
-    )
-    try:
-        tree = child.inspect_variable("total")
-        assert [str(item.var_name) for item in tree.dependencies] == ["subtotal", "tax"]
-        first_tax = tree.dependencies[1]
-        assert first_tax.definition_path == [
-            lclang.FrameId("invoice"),
-            lclang.FrameId("rates"),
-        ]
-        assert first_tax.defined_at is parent
-        assert first_tax.dependencies[0].definition_path == [lclang.FrameId("rates")]
-        assert tree.status.value == "NotEvaluated"
-        assert child.dependency_snapshot("total").dynamic_edges == ()
+            values={"price": 10, "quantity": 3},
+            parent=parent,
+        ) as child:
+            tree = child.inspect_variable("total")
+            assert [str(item.var_name) for item in tree.dependencies] == ["subtotal", "tax"]
+            first_tax = tree.dependencies[1]
+            assert first_tax.definition_path == [
+                lclang.FrameId("invoice"),
+                lclang.FrameId("rates"),
+            ]
+            assert first_tax.defined_at is parent
+            assert first_tax.dependencies[0].definition_path == [lclang.FrameId("rates")]
+            assert tree.status.value == "NotEvaluated"
+            assert child.dependency_snapshot("total").dynamic_edges == ()
 
-        rendered = "\n".join(tree.to_lines())
-        assert (
-            "total@invoice: subtotal + tax + tax "
-            "(NotEvaluated) NoneType: None"
-        ) in rendered
-        assert rendered.count("tax@invoice/rates:") == 1
-    finally:
-        await child.close()
-        await parent.close()
+            rendered = "\n".join(tree.to_lines())
+            assert (
+                "total@invoice: subtotal + tax + tax "
+                "(NotEvaluated) NoneType: None"
+            ) in rendered
+            assert rendered.count("tax@invoice/rates:") == 1
 
 
 asyncio.run(main())
@@ -206,12 +202,11 @@ async def main() -> None:
             "danger": "explode()",
         },
     )
-    frame = lclang.Frame(
+    async with lclang.Frame(
         module,
         lclang.FrameId("request"),
         values={"unit_price": 3, "explode": explode},
-    )
-    try:
+    ) as frame:
         graph = build_dependency_graph(frame)
         assert isinstance(graph, FrameDependencyGraph)
         subtotal = next(item for item in graph.definitions if item.name == "subtotal")
@@ -234,8 +229,6 @@ async def main() -> None:
         assert snapshot.reconciliation.inactive == ()
         assert snapshot.reconciliation.unexpected == ()
         assert calls == 0
-    finally:
-        await frame.close()
 
 
 asyncio.run(main())

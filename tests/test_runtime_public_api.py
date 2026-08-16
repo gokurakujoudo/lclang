@@ -4,6 +4,7 @@ import pytest
 
 import lclang
 from lclang.runtime import (
+    NO_FALLBACK,
     DependencySnapshot,
     EvaluationLimits,
     Frame,
@@ -26,6 +27,7 @@ def test_root_runtime_exports_are_canonical_and_listed_once() -> None:
         "Frame": Frame,
         "FrameFactory": FrameFactory,
         "Module": Module,
+        "NO_FALLBACK": NO_FALLBACK,
         "Preset": Preset,
         "STANDARD_PRESET": STANDARD_PRESET,
     }
@@ -50,12 +52,11 @@ async def test_root_only_runtime_workflow_evaluates_inspects_and_closes() -> Non
         "app",
         {"value": 'json.encode({"answer": 42})'},
     )
-    frame = lclang.define_frame(module)
-    assert await frame.get("value") == '{"answer":42}'
-    snapshot = frame.dependency_snapshot("value")
-    assert isinstance(snapshot, lclang.DependencySnapshot)
-    assert tuple(edge.target for edge in snapshot.dynamic_edges) == ("json",)
-    await frame.close()
+    async with lclang.define_frame(module) as frame:
+        assert await frame.get("value") == '{"answer":42}'
+        snapshot = frame.dependency_snapshot("value")
+        assert isinstance(snapshot, lclang.DependencySnapshot)
+        assert tuple(edge.target for edge in snapshot.dynamic_edges) == ("json",)
     assert frame.closed is True
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Frames now support `async with`, the preferred lifecycle syntax for
+  deterministic owned-resource cleanup.
+- `Frame.get()` now accepts an explicit missing-name fallback, with the public
+  `NO_FALLBACK` sentinel preserving the existing exception behavior by default.
+
 ## 1.0.0 - 2026-08-10
 
 - Stable LCL expression language with arrow functions, canonical source

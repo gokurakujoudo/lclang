@@ -367,12 +367,9 @@ async def main() -> None:
             "sorted_result": "quicksort([7, 2, 9, 2, -1, 5])",
         },
     )
-    frame = lclang.define_frame(module)
-    try:
+    async with lclang.define_frame(module) as frame:
         assert await frame.get("factorial_result") == 720
         assert await frame.get("sorted_result") == [-1, 2, 2, 5, 7, 9]
-    finally:
-        await frame.close()
 
 
 asyncio.run(main())

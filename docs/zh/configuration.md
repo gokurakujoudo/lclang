@@ -72,7 +72,7 @@ async def read_result() -> object:
 
 `Config.definitions` 提供最终定义，`Config.history` 提供完整来源，
 `Config.to_module()` 创建不可变 Module，`Config.frame_factory()` 创建可复用且
-相互独立的 Frame 构造策略。调用方负责关闭自己创建的 Frame；
+相互独立的 Frame 构造策略。调用方应把自己创建的 Frame 用作 async context manager；
 `evaluate_config` 始终关闭它临时拥有的 Frame。
 
 `ConfigLoadLimits` 限制 source 数量、递归深度、解码字符数和声明数。

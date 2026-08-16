@@ -42,6 +42,60 @@ async def test_frame_get_rejects_empty_variable_name() -> None:
     frame = Frame(Module(ModuleName("app"), {}), FrameId("frame:1"))
     with pytest.raises(ValueError):
         await frame.get("")
+    with pytest.raises(ValueError):
+        await frame.get("", fallback=42)
+
+
+@pytest.mark.asyncio
+async def test_frame_get_returns_explicit_fallback_for_an_absent_name() -> None:
+    """Sunny: any explicit fallback, including None, represents a result."""
+    from lclang.runtime import Frame, Module
+
+    marker = object()
+    frame = Frame(Module(ModuleName("app"), {}), FrameId("frame:1"))
+
+    assert await frame.get("missing", fallback=marker) is marker
+    assert await frame.get("missing", fallback=None) is None
+    assert frame.has("missing") is False
+    frame.mixin({"missing": 7})
+    assert await frame.get("missing", fallback=marker) == 7
+
+
+@pytest.mark.asyncio
+async def test_frame_get_no_fallback_preserves_missing_name_error() -> None:
+    """Rainy: omission and the public sentinel retain existing diagnostics."""
+    from lclang.runtime import NO_FALLBACK, Frame, Module
+
+    frame = Frame(Module(ModuleName("app"), {}), FrameId("frame:1"))
+    with pytest.raises(LclNameError, match="unknown variable: missing"):
+        await frame.get("missing")
+    with pytest.raises(LclNameError, match="unknown variable: missing"):
+        await frame.get("missing", fallback=NO_FALLBACK)
+
+
+@pytest.mark.asyncio
+async def test_frame_get_fallback_does_not_replace_selected_name_outcomes() -> None:
+    """Composite: hierarchy hits and definition failures ignore the fallback."""
+    from lclang.runtime import Frame, Module
+
+    fallback = object()
+    parent = Frame(
+        Module(ModuleName("parent"), {}),
+        FrameId("parent:1"),
+        values={"inherited": 7},
+    )
+    child_module = Module(
+        ModuleName("child"),
+        {
+            "present": parse_expression("40 + 2"),
+            "broken": parse_expression("missing_dependency"),
+        },
+    )
+    async with parent, parent.derive(child_module) as child:
+        assert await child.get("inherited", fallback=fallback) == 7
+        assert await child.get("present", fallback=fallback) == 42
+        with pytest.raises(LclNameError, match="missing_dependency"):
+            await child.get("broken", fallback=fallback)
 
 
 @pytest.mark.asyncio

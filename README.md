@@ -1,19 +1,121 @@
 # lclang
 
-`lclang` is a small, async-first configuration language for Python applications.
-It lets you describe related values as expressions, provide environment-specific
-inputs from Python, and evaluate only the values a particular run needs.
+LCL stands for **Lazy Context Language**. **Lazy** means that a definition is
+evaluated only when a result needs it. **Context** means that reusable
+definitions receive their concrete host inputs, lookup hierarchy, cache, and
+lifecycle inside a short-lived `Frame`. **Language** means those definitions are
+explicit expressions parsed and interpreted by lclang rather than ad hoc
+substitution rules hidden in application code.
 
 Use it when configuration is more than static data but should remain explicit,
 inspectable, and separate from application code—for example, derived service
 settings, deployment policy, command defaults, or request-scoped calculations.
 
+
+## Why use LCL?
+
+LCL is useful when configuration describes relationships between values, not
+only values stored in a file. The questions below identify the problems its
+Module-and-Frame model is designed to solve.
+
 `lclang` is pure Python, requires Python 3.14 or newer, has no third-party
 runtime dependencies, and is distributed under the MIT license.
 
-> LCL is intended for trusted application configuration. It is not a sandbox
-> for expressions supplied by an attacker. Values and callables provided by the
-> host application retain their ordinary Python capabilities.
+### Are derived settings duplicated across environments?
+
+Static data works well until several fields must agree. Copying a host name,
+URL, or policy result into every environment creates multiple values that can
+drift apart. LCL keeps the relationship itself in configuration:
+
+```lclcfg
+__LCL_VERSION__: 1
+
+scheme: "https"
+host: f"api.{environment}.example.com"
+endpoint: f"{scheme}://{host}"
+```
+
+The application supplies `environment` for the current run. `host` and
+`endpoint` remain derived definitions, so changing the input or the relationship
+does not require synchronizing copied results. File-backed definitions also
+retain source origins for diagnostics.
+
+### Do the same rules need different inputs for each request or command?
+
+Putting all configuration logic in Python can mix stable policy with transient
+request data. LCL separates them: an immutable `Module` records what can be
+calculated, while each `Frame` supplies what those definitions mean for one
+run.
+
+```python
+import lclang
+
+
+PRICING = lclang.define_module(
+    "pricing",
+    {
+        "subtotal": "unit_price * quantity",
+        "discount": "discount_for(customer_id, subtotal)",
+        "total": "subtotal - discount",
+    },
+)
+
+
+async def price_order(unit_price, quantity, customer_id, discount_for):
+    async with lclang.define_frame(
+        PRICING,
+        preset={
+            "unit_price": unit_price,
+            "quantity": quantity,
+            "customer_id": customer_id,
+            "discount_for": discount_for,
+        },
+    ) as frame:
+        return await frame.get("total")
+```
+
+`PRICING` can be parsed once and reused. Every call creates an independent
+context with fresh inputs, result snapshots, dependency observations, and owned
+asynchronous work. The supplied `discount_for` callable may be synchronous or
+asynchronous; lclang awaits its result when necessary.
+
+### Are optional or expensive values calculated even when nobody uses them?
+
+Eager configuration generation can perform unnecessary work or fail because of
+an unused branch. A Frame starts from the requested name and evaluates only the
+definitions needed to produce it. In the pricing example,
+`frame.get("subtotal")` does not call `discount_for`; `frame.get("total")` does.
+
+The first lookup stores a value or ordinary failure as a snapshot. Concurrent
+callers in the same event loop share the in-flight calculation, and later reads
+receive the same result. Recalculation is explicit and never silently
+invalidates dependants, making one Frame a predictable record of one run rather
+than a reactive spreadsheet.
+
+### Can you explain where a computed value came from?
+
+Once configuration contains expressions, debugging only the final value is not
+enough. LCL can inspect a definition without evaluating it:
+
+```python
+tree = frame.inspect_variable("total")
+print("\n".join(tree.to_lines()))
+```
+
+The inspection tree reports definition owners, lookup paths, cache states,
+dependencies, typed values, and failures. Source-aware errors carry the
+variable evaluation stack, while static graphs and runtime dependency snapshots
+support ordering and change-impact analysis. This keeps computed configuration
+explicit even when it becomes more capable than a static data file.
+
+### Is LCL the wrong tool for this configuration?
+
+Use JSON, TOML, YAML, or plain Python data when the input is already static and
+has no meaningful derived relationships. LCL is also not a hostile-code
+sandbox: expressions, host values, and host callables must come from trusted
+application configuration. Its purpose is to make trusted, contextual
+calculation lazy and inspectable, not to execute untrusted user programs.
+
 
 ## Installation
 
@@ -50,8 +152,8 @@ a short-lived context**.
 ## Preferred application pattern
 
 Define the Module when the application loads. Supply narrow Python values when
-creating the Frame, request the outputs you need, and close the Frame in a
-`finally` block.
+creating the Frame, request the outputs you need, and use `async with` to close
+the Frame deterministically.
 
 ```python
 import asyncio
@@ -70,18 +172,15 @@ INVOICE = lclang.define_module(
 
 
 async def price_invoice(*, unit_price: float, quantity: int, tax: float) -> str:
-    frame = lclang.define_frame(
+    async with lclang.define_frame(
         INVOICE,
         preset={
             "unit_price": unit_price,
             "quantity": quantity,
             "tax": tax,
         },
-    )
-    try:
+    ) as frame:
         return await frame.get("label")
-    finally:
-        await frame.close()
 
 
 async def main() -> None:
@@ -106,11 +205,11 @@ Frame created this way also receives lclang's reviewed pure builtins and the
 | Need | Preferred API | Ownership model |
 | --- | --- | --- |
 | Evaluate one expression in synchronous code | `evaluate_sync(source, values)` | lclang owns the temporary event loop |
-| Evaluate related named definitions | `define_module()` + `define_frame()` | reuse the Module; close each Frame |
+| Evaluate related named definitions | `define_module()` + `async with define_frame()` | reuse the Module; the context manager closes each Frame |
 | Load a `.lclcfg` file and read one value | `load_config()` + `evaluate_config()` | `evaluate_config()` closes its temporary Frame |
 | Evaluate one parsed expression asynchronously | `parse_expression()` + `await evaluate()` | caller supplies the resolver values |
 | Parse, print, or analyze syntax without running it | `parse_expression()` + `to_source()` or runtime analysis APIs | no evaluation state is created |
-| Create many runs with the same policy | `FrameFactory` or `Config.frame_factory()` | close every created Frame |
+| Create many runs with the same policy | `FrameFactory` or `Config.frame_factory()` | use each created Frame as an async context manager |
 
 For a small synchronous script, keep things direct:
 
@@ -132,6 +231,16 @@ should use Frames or await `evaluate()`.
 The first `await frame.get("name")` evaluates the selected definition and caches
 either its value or its ordinary failure. Concurrent callers in the same event
 loop share that work. Later reads return the same snapshot.
+
+For an optional direct lookup, pass `fallback=value`. The fallback is returned
+unchanged only when the requested name is absent from the complete Frame
+hierarchy; it is not cached. Omitting it, or passing `lclang.NO_FALLBACK`, keeps
+the normal `LclNameError`. Existing definitions that fail still raise their
+evaluation error, so `fallback=None` does not hide a broken definition.
+
+```python
+region = await frame.get("region", fallback="global")
+```
 
 Changing a host input does not automatically invalidate cached definitions or
 their dependants. This is deliberate: recalculation is explicit and local.
@@ -181,10 +290,10 @@ async def endpoint_for(environment: str) -> str:
 ```
 
 If several values must share one cache, convert the loaded configuration into a
-Module or use `config.frame_factory()`, then create and close a Frame in the
-usual way. `using` declarations expand other configuration sources in source
-order; later definitions win while origin and history remain available for
-diagnostics.
+Module or use `config.frame_factory()`, then use each created Frame in an
+`async with` scope. `using` declarations expand other configuration sources in
+source order; later definitions win while origin and history remain available
+for diagnostics.
 
 ## Keep the Python boundary narrow
 
@@ -230,7 +339,7 @@ analysis; they are not required for normal evaluation.
 2. Create one Frame per independent run or request.
 3. Pass only the host values that configuration actually needs.
 4. Treat cached results as snapshots; recalculate explicitly.
-5. Close every Frame you create, normally in `finally`.
+5. Use every owned Frame as an async context manager so it closes on block exit.
 6. Prefer `evaluate_config()` when reading only one configuration value.
 7. Catch `LclError` at the application boundary and preserve its source-aware
    diagnostic text.

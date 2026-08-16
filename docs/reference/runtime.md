@@ -5,7 +5,8 @@
 The package root exposes the preferred `define_module`/`define_frame` workflow,
 the canonical `LCL_ROOT`, `LCL_BUILTINS`, `LCL_RUNTIME`, and `LCL_IMPORTS`
 Frames, and the lower-level `Module`, `Frame`, `FrameFactory`, `Preset`,
-`EvaluationLimits`, `DependencySnapshot`, and `STANDARD_PRESET` APIs.
+`EvaluationLimits`, `DependencySnapshot`, `NO_FALLBACK`, and `STANDARD_PRESET`
+APIs.
 
 Use `lclang.runtime` for advanced static graph construction, topological order,
 dynamic tracing, reconciliation values, and standard runtime types. Use
@@ -65,18 +66,26 @@ Frames are borrowed, not owned. `create()` and direct `Frame(module)` both
 default their ID to `frame-<module name>`; an ordinary non-empty string or
 `FrameId` overrides that diagnostic default.
 
-Prefer `parent.derive(module, values={})` for an ordinary child Frame. It copies
-local host values, uses the module name as the child ID, owns fresh cache/task/
-dependency/lifecycle state, and borrows `parent`. Use direct `Frame`
-construction when child-specific limits or values are required.
+Prefer `async with parent.derive(module, values={}) as child:` for an ordinary
+owned child Frame. It copies local host values, uses the module name as the
+child ID, owns fresh cache/task/dependency/lifecycle state, and borrows
+`parent`. Leaving the child block closes only that child; the parent remains
+open. Use direct `Frame` construction when child-specific limits or values are
+required.
 
 ## Frame caching and concurrency
 
-`await frame.get(name)` lazily evaluates a local definition once, caching either
-its result or ordinary failure. Concurrent callers in one event loop share one
-owner task. Waiter cancellation is isolated. Circular dependency paths raise a
-structured error before an owner can deadlock. Parent definitions always run in
-their defining Frame.
+`await frame.get(name, fallback=NO_FALLBACK)` lazily evaluates a selected
+definition once, caching either its result or ordinary failure. If *name* is
+absent from the complete Frame hierarchy, an explicitly supplied fallback is
+returned unchanged and is not cached. `None` is a valid fallback. The exported
+`NO_FALLBACK` sentinel is the default and preserves the normal `LclNameError`.
+Fallbacks do not replace failures raised while evaluating an existing
+definition.
+
+Concurrent callers in one event loop share one owner task. Waiter cancellation
+is isolated. Circular dependency paths raise a structured error before an owner
+can deadlock. Parent definitions always run in their defining Frame.
 
 Structured errors raised while evaluating Frame definitions expose
 `variable_stack`, an immutable direct-to-failing owner tuple. Their one-line
@@ -160,10 +169,16 @@ for the complete static-to-runtime methodology and executable examples.
 collection. One root evaluation chain shares its task-local budget; cached reads
 consume none and recalculate starts fresh.
 
-`await frame.close()` rejects new work, cancels and settles owned tasks, and
-cleans cached resources once in reverse acquisition order. It recognizes sync
-`close` and async `aclose`. Parent resources remain parent-owned. Cleanup errors
-are stable, and cancelling a waiter does not cancel shared close work.
+Frames implement the asynchronous context-manager protocol. Prefer
+`async with lclang.define_frame(...) as frame:` so leaving the block always
+awaits owned cleanup. The context manager returns the same Frame and never
+suppresses an exception raised by the block.
+
+`await frame.close()` is the lower-level explicit equivalent. It rejects new
+work, cancels and settles owned tasks, and cleans cached resources once in
+reverse acquisition order. It recognizes sync `close` and async `aclose`.
+Parent resources remain parent-owned. Cleanup errors are stable, and cancelling
+a waiter does not cancel shared close work.
 
 ## Standard preset and errors
 

@@ -24,10 +24,11 @@ runtime dependencies.
   boundary.
 - Immutable Modules, Presets, standard hierarchy, Frame factories, child Frames,
   and controlled host-value overlays.
-- Lazy result and failure snapshots, parent lookup, per-name single-flight,
-  circular-dependency diagnostics, and cancellation isolation.
-- Atomic targeted recalculation, task-local evaluation limits, deterministic
-  close, and owned-resource cleanup.
+- Lazy result and failure snapshots, parent lookup, explicit missing-name
+  fallbacks, per-name single-flight, circular diagnostics, and cancellation
+  isolation.
+- Atomic targeted recalculation, task-local evaluation limits, async
+  context-manager finalization, deterministic close, and owned-resource cleanup.
 - Definition context through `lhs()`, strict date conversion, and eager
   fixed-point recursion.
 

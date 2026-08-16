@@ -85,7 +85,8 @@ async def read_result() -> object:
 `Config.definitions` exposes final declarations, `Config.history` exposes
 provenance, `Config.to_module()` creates an immutable Module, and
 `Config.frame_factory()` creates reusable independent-Frame policy. Callers own
-Frames they create; `evaluate_config` owns and always closes its temporary Frame.
+Frames they create and should use them as async context managers;
+`evaluate_config` owns and always closes its temporary Frame.
 
 Config-created Frames use the canonical lclang hierarchy by default. Definitions
 therefore have the root `lhs()` function (the current definition name), builtin

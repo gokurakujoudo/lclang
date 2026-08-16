@@ -34,6 +34,8 @@ class FrameDerivationApi:
         .. note::
            The default and caller dictionary are never mutated or retained;
            Frame construction always snapshots the mapping.
+           Prefer entering the returned child with ``async with`` so its owned
+           state closes while this borrowed parent remains open.
         """
         from lclang.runtime.frame.core import Frame
 

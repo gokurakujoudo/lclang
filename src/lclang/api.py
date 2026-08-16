@@ -137,6 +137,8 @@ def define_frame(
     .. note::
        With the default base and no preset, the immutable empty `LCL_IMPORTS`
        ancestor is reused; every user Frame still owns independent runtime state.
+       Prefer ``async with define_frame(...) as frame:`` so scope exit closes
+       that owned state deterministically.
     """
     if module is not None and not isinstance(module, Module):
         raise TypeError("frame module must be a Module")

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Protocol, cast
+from types import TracebackType
+from typing import Protocol, Self, cast
 
 from lclang.runtime.frame.lifecycle import InternalFrameLifecycle
 
@@ -23,6 +24,30 @@ class FrameClosingApi:
     .. note::
        Concrete Frames retain the lifecycle object and all resource ownership.
     """
+
+    async def __aenter__(self) -> Self:
+        """Enter an owned Frame lifecycle scope.
+
+        :returns: The same open Frame for evaluation inside the scope.
+        """
+        return self
+
+    async def __aexit__(
+        self,
+        error_type: type[BaseException] | None,
+        error: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """Close the Frame when its asynchronous lifecycle scope exits.
+
+        :param error_type: Exception type raised by the scope, when present.
+        :param error: Exception raised by the scope, when present.
+        :param traceback: Traceback associated with *error*, when present.
+        :returns: ``None`` so an exception from the scope is never suppressed.
+        :raises LclEvaluationError: If an owned resource cleanup fails.
+        :raises BaseException: If cleanup itself raises a direct base exception.
+        """
+        await self.close()
 
     @property
     def closed(self) -> bool:
