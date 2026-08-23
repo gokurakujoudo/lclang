@@ -157,4 +157,25 @@ config-owned `message` definition's lexical lookup.
 Help, version, invalid arguments, logging, and the built-in `builtins`,
 `parse_lcl`, and `eval_lcl` commands use the same deterministic routing model.
 
+## Trace parsing and evaluation
+
+Place `--verbose` after a leaf command to follow top-level parsing, value
+lookup provenance, caching, fallbacks, and evaluation without changing normal
+stdout:
+
+```console
+python -m lclang.cli eval_lcl --verbose -o RESULT "LCL[40 + 2]"
+```
+
+Trace lines go to stderr. When file logging is enabled, the invocation log also
+receives setup records buffered before its effective configuration was known and
+all later trace records. Values use bounded one-line `(type) value`
+representations. They are not redacted, so do not enable verbose tracing where
+configuration values must remain undisclosed.
+
+`--verbose` has no short spelling because `-v/--version` remains the root
+version operation. Like other common options, verbose belongs after the selected
+command. An override still treats its optional next token literally, including
+`--verbose`; place the verbose flag before a valueless override.
+
 [Previous: Dependency analysis](08-dependency-analysis.md) | [Next: Workflow status](10-workflow-status.md)

@@ -1,6 +1,6 @@
-# lclang 1.0.2 feature inventory
+# lclang feature inventory
 
-Version 1.0.2 is the stable release of `lclang` for Python 3.14 and newer. The
+Version is the stable release of `lclang` for Python 3.14 and newer. The
 package is pure Python, MIT licensed, fully typed, and has no third-party
 runtime dependencies.
 
@@ -69,7 +69,8 @@ runtime dependencies.
   groups, full-argument parsing, structured help, and platform-neutral process
   entry points.
 - Preset/default/config/override Frame layering, boolean overrides, dry-run
-  pass-through, isolated logging, and deterministic result/cleanup mapping.
+  pass-through, isolated logging, opt-in task-local verbose tracing, and
+  deterministic result/cleanup mapping.
 - Built-in `builtins`, `parse_lcl`, and `eval_lcl` commands for inventory,
   inspection, and evaluation.
 

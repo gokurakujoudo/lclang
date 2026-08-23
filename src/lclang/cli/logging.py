@@ -5,8 +5,9 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
+from logging.handlers import MemoryHandler
 from pathlib import Path
-from typing import cast
+from typing import TextIO, cast
 
 from lclang.cli.models import LogConfig
 from lclang.runtime import Frame
@@ -36,6 +37,77 @@ class LoggerHandle:
         for handler in self.handlers:
             self.logger.removeHandler(handler)
             handler.close()
+
+
+@dataclass(slots=True)
+class VerboseLoggerHandle:
+    """Own one stderr trace logger and its temporary replay buffer.
+
+    :param logger: Non-propagating DEBUG logger activated task-locally.
+    :param stream_handler: Immediate deterministic stderr output.
+    :param buffer_handler: Early records awaiting effective file configuration.
+    :param borrowed_handler: Invocation handler receiving replayed and future records.
+    :param closed: Whether owned handlers have already been detached.
+    """
+
+    logger: logging.Logger
+    stream_handler: logging.StreamHandler[TextIO]
+    buffer_handler: MemoryHandler | None
+    borrowed_handler: logging.Handler | None = None
+    closed: bool = False
+
+    def attach(self, handler: logging.Handler) -> None:
+        """Replay early records and forward future traces to an invocation handler.
+
+        :param handler: Configured handler borrowed from a :class:`LoggerHandle`.
+        :returns: ``None``.
+        """
+        if self.closed or self.borrowed_handler is not None:
+            return
+        buffer = cast(MemoryHandler, self.buffer_handler)
+        for record in tuple(buffer.buffer):
+            handler.handle(record)
+        buffer.buffer.clear()
+        self.logger.removeHandler(buffer)
+        buffer.close()
+        self.buffer_handler = None
+        self.borrowed_handler = handler
+        self.logger.addHandler(handler)
+
+    def close(self) -> None:
+        """Detach borrowed state and close only handlers owned by this trace logger.
+
+        :returns: ``None``.
+        """
+        if self.closed:
+            return
+        self.closed = True
+        if self.borrowed_handler is not None:
+            self.logger.removeHandler(self.borrowed_handler)
+            self.borrowed_handler = None
+        if self.buffer_handler is not None:
+            self.logger.removeHandler(self.buffer_handler)
+            self.buffer_handler.close()
+            self.buffer_handler = None
+        self.logger.removeHandler(self.stream_handler)
+        self.stream_handler.close()
+
+
+def create_verbose_logger(identity: str) -> VerboseLoggerHandle:
+    """Create one non-propagating stderr logger with an early-record buffer.
+
+    :param identity: Stable per-call logger suffix.
+    :returns: Owned verbose logger ready for task-local activation.
+    """
+    logger = logging.Logger(f"lclang.verbose.{identity}", logging.DEBUG)
+    logger.propagate = False
+    stream: logging.StreamHandler[TextIO] = logging.StreamHandler()
+    stream.setFormatter(logging.Formatter("%(message)s"))
+    # The configured CLI handler does not exist until Frame log values resolve.
+    buffer = MemoryHandler(capacity=1_000_000, flushLevel=logging.CRITICAL + 1)
+    logger.addHandler(stream)
+    logger.addHandler(buffer)
+    return VerboseLoggerHandle(logger, stream, buffer)
 
 
 async def resolve_log_config(frame: Frame) -> LogConfig:

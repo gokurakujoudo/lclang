@@ -20,6 +20,7 @@ def test_cli_values_are_detached_and_statuses_are_exit_codes() -> None:
     params = CliParams("python", ["admin", "run"], date(2026, 8, 9), True, None, overrides)
     overrides["count"] = "3"
     assert params.command == ("admin", "run")
+    assert params.verbose is False
     assert params.overrides == {"count": "2", "enabled": True}
     with pytest.raises(TypeError):
         params.overrides["count"] = "4"  # type: ignore[index]
@@ -68,6 +69,12 @@ def test_parameter_and_log_contracts_reject_invalid_values() -> None:
         (
             lambda: InvalidCliParams(
                 "python", ["run"], date.today(), False, None, {"x": False}
+            ),
+            TypeError,
+        ),
+        (
+            lambda: InvalidCliParams(
+                "python", ["run"], date.today(), False, None, {}, 1
             ),
             TypeError,
         ),

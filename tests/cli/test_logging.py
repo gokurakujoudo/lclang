@@ -9,7 +9,14 @@ from tempfile import TemporaryDirectory
 import lclang
 from lclang.cli import CliConfig, CliContext, CliParams, CliResult, CliResultStatus, LogConfig, cli
 from lclang.cli.binding import build_binding
-from lclang.cli.logging import build_handler, create_logger, numeric_log_level, resolve_log_config
+from lclang.cli.logging import (
+    build_handler,
+    create_logger,
+    create_verbose_logger,
+    numeric_log_level,
+    resolve_log_config,
+)
+from lclang.diagnostics import internal_trace, internal_verbose_scope
 
 
 @cli.command()
@@ -46,6 +53,28 @@ def test_numeric_log_levels_accept_names_and_integers() -> None:
     """Validated standard logging levels map to numeric values."""
     assert numeric_log_level("info") == logging.INFO
     assert numeric_log_level(logging.ERROR) == logging.ERROR
+
+
+def test_verbose_logger_replays_and_closes_every_lifecycle_shape() -> None:
+    """Replay attachment, duplicate calls, and unattached cleanup are idempotent."""
+    first = logging.NullHandler()
+    second = logging.NullHandler()
+    handle = create_verbose_logger("lifecycle")
+    with internal_verbose_scope(handle.logger):
+        internal_trace("test", "buffered")
+    assert handle.buffer_handler is not None
+    assert len(handle.buffer_handler.buffer) == 1
+    handle.attach(first)
+    handle.attach(second)
+    assert handle.borrowed_handler is first
+    handle.close()
+    handle.close()
+    handle.attach(second)
+    assert handle.logger.handlers == []
+
+    unattached = create_verbose_logger("unattached")
+    unattached.close()
+    assert unattached.logger.handlers == []
 
 
 def test_multiple_invocation_loggers_do_not_mutate_root_or_leak_handlers() -> None:
