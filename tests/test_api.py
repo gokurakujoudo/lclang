@@ -28,7 +28,10 @@ async def test_shortcuts_use_the_complete_default_hierarchy() -> None:
     assert lclang.LCL_BUILTINS.native_values is True
     assert lclang.LCL_RUNTIME.native_values is False
     assert lclang.LCL_IMPORTS.native_values is False
-    assert tuple(lclang.LCL_ROOT.values) == ("lhs", "iter", "text", "data", "json")
+    assert tuple(lclang.LCL_ROOT.values) == ("lhs",)
+    assert {"iter", "text", "data", "json", "calendars"} <= set(
+        lclang.LCL_BUILTINS.values
+    )
     assert lclang.to_source(module.definitions["result"]) != expressions["result"]
 
 
@@ -73,6 +76,13 @@ def test_builtin_layer_has_a_fixed_ambient_free_inventory() -> None:
         "sum",
         "tuple",
         "to_ymd",
+        "iter",
+        "text",
+        "data",
+        "json",
+        "calendars",
+        "use_calendar_manager",
+        "use_file_system_hardcoded_calendar_loader",
         "zip",
     }
     assert set(lclang.LCL_BUILTINS.values) == expected

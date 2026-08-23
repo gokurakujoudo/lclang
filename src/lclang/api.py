@@ -10,9 +10,15 @@ from lclang.stdlib.builtins import STANDARD_PRESET
 from lclang.stdlib.dates import parse_ymd, to_ymd
 from lclang.stdlib.recursion import recursive
 from lclang.types import FrameId, ModuleName
+from lclang.utils.calendar.lcl import CALENDARS_NAMESPACE
+from lclang.utils.calendar.loading import (
+    use_calendar_manager,
+    use_file_system_hardcoded_calendar_loader,
+)
 
 # Curated ordinary Python value types and ambient-I/O-free functions.
 LCL_BUILTIN_VALUES: dict[str, object] = {
+    **STANDARD_PRESET.values,
     "abs": abs,
     "all": all,
     "any": any,
@@ -51,6 +57,11 @@ LCL_BUILTIN_VALUES: dict[str, object] = {
     "sum": sum,
     "tuple": tuple,
     "to_ymd": to_ymd,
+    "calendars": CALENDARS_NAMESPACE,
+    "use_calendar_manager": use_calendar_manager,
+    "use_file_system_hardcoded_calendar_loader": (
+        use_file_system_hardcoded_calendar_loader
+    ),
     "zip": zip,
 }
 
@@ -69,7 +80,7 @@ LCL_USER_MODULE = Module(ModuleName("user"), {})
 LCL_ROOT = Frame(
     LCL_ROOT_MODULE,
     FrameId("LCL_ROOT"),
-    values={"lhs": lhs, **STANDARD_PRESET.values},
+    values={"lhs": lhs},
     native_values=True,
 )
 # Standard Python value types and pure functions above the LCL mixin.

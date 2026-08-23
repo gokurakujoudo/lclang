@@ -5,6 +5,7 @@ from types import MappingProxyType
 
 from lclang.api import LCL_BUILTIN_VALUES
 from lclang.stdlib import STANDARD_MANIFESTS
+from lclang.utils.calendar.lcl import CALENDARS_NAMESPACE
 
 # Stable descriptions for values in the canonical builtin Frame.
 BUILTIN_DESCRIPTIONS: Mapping[str, str] = MappingProxyType(
@@ -46,6 +47,10 @@ BUILTIN_DESCRIPTIONS: Mapping[str, str] = MappingProxyType(
         "str": "Convert a value to text.",
         "sum": "Sum items from a starting value.",
         "to_ymd": "Format a date as strict YYYYMMDD text.",
+        "use_calendar_manager": "Create a named business-day calendar manager.",
+        "use_file_system_hardcoded_calendar_loader": (
+            "Create a strict JSON business-day calendar loader."
+        ),
         "tuple": "Create an immutable tuple.",
         "zip": "Group corresponding items from iterables.",
     }
@@ -63,7 +68,13 @@ NAMESPACE_DESCRIPTIONS: Mapping[str, str] = MappingProxyType(
         "iter": "Synchronous and asynchronous iterable helpers.",
         "json": "Strict JSON encoding and decoding helpers.",
         "text": "Unicode text helpers.",
+        "calendars": "Business-day calendar construction and singleton values.",
     }
+)
+
+# Stable descriptions for members of the reviewed calendar namespace.
+CALENDAR_DESCRIPTIONS: Mapping[str, str] = MappingProxyType(
+    {name: "Business-day calendar value or constructor." for name in CALENDARS_NAMESPACE}
 )
 
 
@@ -77,11 +88,14 @@ def render_builtin_docs() -> str:
        Namespace methods retain manifest declaration order beneath globally
        sorted top-level names.
     """
-    if set(BUILTIN_DESCRIPTIONS) != set(LCL_BUILTIN_VALUES):
-        raise ValueError("builtin descriptions do not match canonical values")
     manifests = {item.namespace: item for item in STANDARD_MANIFESTS}
-    if set(NAMESPACE_DESCRIPTIONS) != set(manifests):
+    if set(NAMESPACE_DESCRIPTIONS) != {*manifests, "calendars"}:
         raise ValueError("namespace descriptions do not match canonical values")
+    expected_values = {*BUILTIN_DESCRIPTIONS, *NAMESPACE_DESCRIPTIONS}
+    if expected_values != set(LCL_BUILTIN_VALUES):
+        raise ValueError("builtin descriptions do not match canonical values")
+    if set(CALENDAR_DESCRIPTIONS) != set(CALENDARS_NAMESPACE):
+        raise ValueError("calendar descriptions do not match canonical values")
     groups = (
         tuple(BUILTIN_DESCRIPTIONS),
         tuple(ROOT_BUILTIN_DESCRIPTIONS),
@@ -94,6 +108,7 @@ def render_builtin_docs() -> str:
         *BUILTIN_DESCRIPTIONS.values(),
         *ROOT_BUILTIN_DESCRIPTIONS.values(),
         *NAMESPACE_DESCRIPTIONS.values(),
+        *CALENDAR_DESCRIPTIONS.values(),
     )
     if any(not value.strip() or value != value.strip() for value in descriptions):
         raise ValueError("builtin descriptions must be non-blank and trimmed")
@@ -108,5 +123,13 @@ def render_builtin_docs() -> str:
             lines.append(f"- {name}: {ROOT_BUILTIN_DESCRIPTIONS[name]}")
         else:
             lines.append(f"- {name}: {NAMESPACE_DESCRIPTIONS[name]}")
-            lines.extend(f"  - {entry.name}: {entry.summary}" for entry in manifests[name].entries)
+            if name == "calendars":
+                lines.extend(
+                    f"  - {member}: {CALENDAR_DESCRIPTIONS[member]}"
+                    for member in CALENDARS_NAMESPACE
+                )
+            else:
+                lines.extend(
+                    f"  - {entry.name}: {entry.summary}" for entry in manifests[name].entries
+                )
     return "\n".join(lines)

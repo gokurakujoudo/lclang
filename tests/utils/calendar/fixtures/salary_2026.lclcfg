@@ -1,0 +1,3 @@
+__LCL_VERSION__: 1
+
+SALARY_DAYS: calendars.nth_day_of_month(20).map_this_or_prev(calendars.ALL_WEEKDAYS).as_calendar()

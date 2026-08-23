@@ -15,6 +15,7 @@ from lclang.runtime import (
     VariableInspectionStatus,
     VariableInspectionTree,
 )
+from lclang.stdlib import StdlibNamespace
 from lclang.types import FrameId, ModuleName, VarName
 
 
@@ -127,17 +128,14 @@ def test_canonical_values_use_uniform_builtin_representations() -> None:
     assert "mappingproxy" not in rendered
     assert "0x" not in rendered
 
-    for name in LCL_BUILTIN_VALUES:
+    for name, value in LCL_BUILTIN_VALUES.items():
+        kind = "Namespace" if isinstance(value, StdlibNamespace) else "Function"
         assert repr(LCL_BUILTINS.inspect_variable(name)).endswith(
-            f"(NativeProvided) Builtin Function: {name}"
+            f"(NativeProvided) Builtin {kind}: {name}"
         )
     assert repr(LCL_ROOT.inspect_variable("lhs")).endswith(
         "(NativeProvided) Builtin Function: lhs"
     )
-    for name in ("iter", "text", "data", "json"):
-        assert repr(LCL_ROOT.inspect_variable(name)).endswith(
-            f"(NativeProvided) Builtin Namespace: {name}"
-        )
     native_scalar = Frame(
         module("native-scalar", {}),
         values={"answer": 42},

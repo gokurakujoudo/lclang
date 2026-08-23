@@ -8,11 +8,13 @@ import lclang.cli.builtin_docs as builtin_docs
 from lclang.api import LCL_BUILTIN_VALUES
 from lclang.cli.builtin_docs import (
     BUILTIN_DESCRIPTIONS,
+    CALENDAR_DESCRIPTIONS,
     NAMESPACE_DESCRIPTIONS,
     ROOT_BUILTIN_DESCRIPTIONS,
     render_builtin_docs,
 )
 from lclang.stdlib import STANDARD_MANIFESTS
+from lclang.utils.calendar.lcl import CALENDARS_NAMESPACE
 
 
 def test_builtin_docs_render_complete_deterministic_nested_inventory() -> None:
@@ -28,8 +30,10 @@ def test_builtin_docs_render_complete_deterministic_nested_inventory() -> None:
         }
     )
     assert top_names == expected_top_names
-    assert len(lines) == len(expected_top_names) + sum(
-        len(manifest.entries) for manifest in STANDARD_MANIFESTS
+    assert len(lines) == (
+        len(expected_top_names)
+        + sum(len(manifest.entries) for manifest in STANDARD_MANIFESTS)
+        + len(CALENDARS_NAMESPACE)
     )
     assert "- abs: Return the absolute value." in lines
     assert "- lhs: Return the active definition name." in lines
@@ -46,15 +50,18 @@ def test_builtin_docs_render_complete_deterministic_nested_inventory() -> None:
 
 def test_builtin_doc_metadata_exactly_covers_safe_single_line_names() -> None:
     """Description metadata cannot drift, duplicate names, or break line syntax."""
-    assert set(BUILTIN_DESCRIPTIONS) == set(LCL_BUILTIN_VALUES)
+    assert {*BUILTIN_DESCRIPTIONS, *NAMESPACE_DESCRIPTIONS} == set(LCL_BUILTIN_VALUES)
     assert set(ROOT_BUILTIN_DESCRIPTIONS) == {"lhs"}
     assert set(NAMESPACE_DESCRIPTIONS) == {
-        manifest.namespace for manifest in STANDARD_MANIFESTS
+        *(manifest.namespace for manifest in STANDARD_MANIFESTS),
+        "calendars",
     }
+    assert set(CALENDAR_DESCRIPTIONS) == set(CALENDARS_NAMESPACE)
     descriptions = (
         *BUILTIN_DESCRIPTIONS.values(),
         *ROOT_BUILTIN_DESCRIPTIONS.values(),
         *NAMESPACE_DESCRIPTIONS.values(),
+        *CALENDAR_DESCRIPTIONS.values(),
         *(
             entry.summary
             for manifest in STANDARD_MANIFESTS
@@ -71,6 +78,7 @@ def test_builtin_doc_metadata_exactly_covers_safe_single_line_names() -> None:
     [
         ("BUILTIN_DESCRIPTIONS", {}, "builtin descriptions"),
         ("NAMESPACE_DESCRIPTIONS", {}, "namespace descriptions"),
+        ("CALENDAR_DESCRIPTIONS", {}, "calendar descriptions"),
         ("ROOT_BUILTIN_DESCRIPTIONS", {"abs": "Duplicate."}, "must be unique"),
         ("ROOT_BUILTIN_DESCRIPTIONS", {"lhs": " "}, "non-blank and trimmed"),
         ("ROOT_BUILTIN_DESCRIPTIONS", {"lhs": "two\nlines"}, "occupy one line"),

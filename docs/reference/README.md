@@ -8,3 +8,5 @@
   includes, precedence, origins, diagnostics, and runtime conversion.
 - [Standard and workflow utilities](utilities.md): builtin inventory, standard
   namespaces, Python helper APIs, and execution-status values.
+- [Business day calendars](calendar.md): three-state calendars, composition,
+  mappings, strict JSON loading, management, and LCL exposure.

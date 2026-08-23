@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lclang"
-version = "1.0.0"
+version = "1.0.2"
 description = "A typed, async-first configuration expression language"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -52,6 +52,10 @@ addopts = [
 asyncio_mode = "strict"
 pythonpath = ["src"]
 testpaths = ["tests"]
+markers = [
+  "docs: documentation structure and executable-example checks",
+  "release: artifact, clean-install, portability, and release-candidate checks",
+]
 
 [tool.coverage.run]
 branch = true
@@ -88,7 +92,6 @@ include = [
   "/CHANGELOG.md",
   "/LICENSE",
   "/README.md",
-  "/README_cn.md",
   "/docs",
   "/progress.md",
   "/src/lclang",

@@ -21,7 +21,7 @@ function suitable for recursive LCL programs.
 ## Standard namespaces
 
 `STANDARD_PRESET` supplies read-only namespaces assembled from reviewed
-manifests:
+manifests. Canonical Frames merge those bindings into `LCL_BUILTINS`:
 
 - `iter.collect` and `iter.first` consume synchronous or asynchronous iterables.
 - `text.join` and `text.lines` provide deterministic text operations.
@@ -30,6 +30,11 @@ manifests:
 
 These helpers do not provide ambient filesystem, process, network, dynamic
 import, reflection, or mutation capabilities.
+
+Canonical Frames also expose the reviewed `calendars` namespace and explicit
+calendar-manager construction helpers. Filesystem access remains opt-in through
+`use_file_system_hardcoded_calendar_loader`; see the
+[business day calendar reference](calendar.md).
 
 Python integrations may import `STANDARD_MANIFESTS`, `STANDARD_PRESET`,
 `StdlibEntry`, `StdlibManifest`, `StdlibNamespace`, `RecursiveFunction`,

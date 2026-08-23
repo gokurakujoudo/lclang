@@ -12,6 +12,8 @@ import uuid
 import venv
 from pathlib import Path
 
+from scripts.versioning import project_version
+
 
 def venv_python(root: Path, platform: str = os.name) -> Path:
     """Return the Python executable inside a virtual environment.
@@ -34,6 +36,7 @@ def smoke_program(artifact_kind: str) -> str:
     """
     if not artifact_kind:
         raise ValueError("artifact kind cannot be empty")
+    expected_version = project_version()
     return f'''\
 import asyncio
 import io
@@ -55,6 +58,7 @@ from lclang.config import load_config
 from lclang.runtime import build_dependency_graph, topological_order
 
 sync_value = lclang.evaluate_sync(lclang.parse_expression("3 + 4"), {{}})
+assert lclang.__version__ == "{expected_version}"
 
 
 async def main() -> None:
