@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from lclang.ast import LclAstNode, LclBinary, LclTuple, LclUnary
 from lclang.ast.operators import BinaryOperator, UnaryOperator
+from lclang.diagnostics import (
+    internal_render_value,
+    internal_trace,
+    internal_verbose_enabled,
+)
 from lclang.errors import LclSyntaxError
 from lclang.lang.lexer import Token, TokenKind, scan_tokens
 from lclang.lang.parser.atoms import parse_atom
@@ -12,6 +17,7 @@ from lclang.lang.parser.forms import parse_form
 from lclang.lang.parser.logical import parse_logical
 from lclang.lang.parser.primaries import parse_primaries
 from lclang.lang.parser.stream import TokenStream
+from lclang.lang.printer import to_source
 from lclang.source import SourceOrigin, SourceSpan
 from lclang.version import LCL_V1, LanguageVersion
 
@@ -183,7 +189,24 @@ def parse_expression(
     .. note::
        Physical newline tokens are separators; no Python AST or execution is used.
     """
-    return parse_tokens(scan_tokens(text, origin=origin), version=version)
+    try:
+        node = parse_tokens(scan_tokens(text, origin=origin), version=version)
+    except BaseException as error:
+        if internal_verbose_enabled():
+            origin_name = "<string>" if origin is None else str(origin.name)
+            internal_trace(
+                "parse",
+                f"origin={origin_name!r} expression={internal_render_value(text)} "
+                f"error={internal_render_value(error)}",
+            )
+        raise
+    if internal_verbose_enabled():
+        internal_trace(
+            "parse",
+            f"origin={str(node.span.origin.name)!r} expression={internal_render_value(text)} "
+            f"ast={internal_render_value(node, lambda: to_source(node))}",
+        )
+    return node
 
 
 def parse_tokens(

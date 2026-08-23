@@ -40,6 +40,7 @@ def test_nested_route_and_help_scopes_are_exact() -> None:
     assert "Configuration parameters" in command_help
     assert "target" in command_help
     assert "-o, --override <key> [<value>]" in command_help
+    assert "--verbose" in command_help
     root_help = render_group_help("tool.py", root, (), True)
     assert "admin" in root_help
     assert "--version" in root_help

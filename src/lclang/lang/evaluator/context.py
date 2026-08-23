@@ -6,7 +6,13 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
+from lclang.diagnostics import (
+    internal_render_value,
+    internal_trace,
+    internal_verbose_enabled,
+)
 from lclang.errors import LclNameError
+from lclang.lang.evaluator.awaitables import resolve_awaitable
 from lclang.source import SourceSpan
 from lclang.types import VarName
 
@@ -56,9 +62,28 @@ class MappingResolver:
            Membership follows the supplied mapping's ordinary string-key rules.
         """
         try:
-            return self.values[str(name)]
+            selected = self.values[str(name)]
         except KeyError:
+            if internal_verbose_enabled():
+                internal_trace("lookup", f"name={str(name)!r} source=missing")
             raise LclNameError(f"unknown variable: {name}", span=span) from None
+        if not internal_verbose_enabled():
+            return selected
+        try:
+            result = await resolve_awaitable(selected)
+        except BaseException as error:
+            internal_trace(
+                "lookup",
+                f"name={str(name)!r} source=external-provided "
+                f"error={internal_render_value(error)}",
+            )
+            raise
+        internal_trace(
+            "lookup",
+            f"name={str(name)!r} source=external-provided "
+            f"value={internal_render_value(result)}",
+        )
+        return result
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,5 +111,22 @@ class ScopedResolver:
            A local value of ``None`` still shadows the parent binding.
         """
         if str(name) in self.values:
-            return self.values[str(name)]
+            selected = self.values[str(name)]
+            if not internal_verbose_enabled():
+                return selected
+            try:
+                result = await resolve_awaitable(selected)
+            except BaseException as error:
+                internal_trace(
+                    "lookup",
+                    f"name={str(name)!r} source=local-provided "
+                    f"error={internal_render_value(error)}",
+                )
+                raise
+            internal_trace(
+                "lookup",
+                f"name={str(name)!r} source=local-provided "
+                f"value={internal_render_value(result)}",
+            )
+            return result
         return await self.parent.resolve(name, span=span)

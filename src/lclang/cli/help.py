@@ -48,6 +48,7 @@ def common_option_rows() -> tuple[tuple[str, str], ...]:
         ),
         ("-a, --as-of <YYYYMMDD>", "Set the invocation date; defaults to today's local date."),
         ("-wif, --dryrun", "Tell the handler to avoid side effects when it supports dryrun."),
+        ("--verbose", "Trace parsing, value provenance, and evaluation to stderr and logs."),
         ("-h, --help", "Show this command help."),
     )
 

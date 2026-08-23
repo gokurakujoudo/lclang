@@ -1,5 +1,7 @@
 """Behavioural tests for `.lclcfg` document parsing."""
 
+import io
+import logging
 from pathlib import Path
 
 import pytest
@@ -12,6 +14,7 @@ from lclang.config import (
     LclConfigVersionError,
     parse_config,
 )
+from lclang.diagnostics import internal_verbose_scope
 from lclang.runtime import analyze_dependencies
 
 
@@ -124,3 +127,20 @@ def test_parser_public_validation_and_declaration_rainy_branches(tmp_path: Path)
     ):
         with pytest.raises((LclConfigSyntaxError, LclConfigVersionError)):
             parse_config(text)
+
+
+def test_config_expression_tracing_covers_success_and_both_error_families() -> None:
+    """Verbose parsing retains canonical success and structured syntax failures."""
+    output = io.StringIO()
+    logger = logging.Logger("config-trace", logging.DEBUG)
+    logger.addHandler(logging.StreamHandler(output))
+    with internal_verbose_scope(logger):
+        document = parse_config("value: 1 + 2\n")
+        assert document.declarations[0].ordinal == 0
+        with pytest.raises(LclConfigSyntaxError):
+            parse_config("value: 1 +\n")
+        with pytest.raises(LclConfigSyntaxError):
+            parse_config("value: __file__\n")
+    trace = output.getvalue()
+    assert "ast=(LclBinary) 1 + 2" in trace
+    assert trace.count("[lclang.parse]") == 3

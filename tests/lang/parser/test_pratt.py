@@ -1,11 +1,17 @@
 """Unit tests mirroring :mod:`lclang.lang.parser.pratt`."""
 
+import io
+import logging
+
 import pytest
 
 from lclang.ast import LclBinary, LclConstant, LclName, LclUnary
 from lclang.ast.operators import BinaryOperator, UnaryOperator
+from lclang.diagnostics import internal_verbose_scope
 from lclang.errors import LclSyntaxError
 from lclang.lang.parser import parse_expression
+from lclang.source import SourceOrigin
+from lclang.types import SourceName
 from lclang.version import LanguageVersion
 
 
@@ -84,3 +90,18 @@ def test_unsupported_runtime_version_is_rejected() -> None:
     with pytest.raises(ValueError):
         parse_expression("1", version="2")  # type: ignore[arg-type]
     assert isinstance(parse_expression("1", version=LanguageVersion.V1), LclConstant)
+
+
+def test_failed_parse_trace_uses_default_and_explicit_origins() -> None:
+    """Malformed expressions retain their selected origin in verbose output."""
+    output = io.StringIO()
+    logger = logging.Logger("parser-trace", logging.DEBUG)
+    logger.addHandler(logging.StreamHandler(output))
+    with internal_verbose_scope(logger):
+        with pytest.raises(LclSyntaxError):
+            parse_expression("1 +")
+        with pytest.raises(LclSyntaxError):
+            parse_expression("1 +", origin=SourceOrigin(SourceName("named")))
+    trace = output.getvalue()
+    assert "origin='<string>'" in trace
+    assert "origin='named'" in trace

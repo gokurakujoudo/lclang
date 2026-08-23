@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 1.0.3 - 2026-08-23
+
+- Added `--verbose` tracing after CLI leaf commands for top-level expression
+  parsing, typed value provenance, caching, fallbacks, and evaluation. Traces
+  stream to stderr and enabled invocation log files without changing the
+  existing `-v/--version` behavior.
 - Rebuilt the tutorial collection around one human-oriented introduction and
   twelve focused chapters. Examples progress from simple to composite
   operations, assert their results inline, explain how those results are
@@ -21,9 +27,6 @@
   builtins while moving standard namespaces into `LCL_BUILTINS`.
 - Added complete calendar reference and tutorial documentation plus independent
   behavioral, documentation, and release-candidate quality gates.
-
-## 1.0.2 - 2026-08-16
-
 - Frames now support `async with`, the preferred lifecycle syntax for
   deterministic owned-resource cleanup.
 - `Frame.get()` now accepts an explicit missing-name fallback, with the public

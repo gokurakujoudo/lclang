@@ -36,6 +36,11 @@ from lclang.ast import (
     LclWith,
 )
 from lclang.ast.operators import UnaryOperator
+from lclang.diagnostics import (
+    internal_render_value,
+    internal_trace,
+    internal_verbose_enabled,
+)
 from lclang.errors import LclError, LclEvaluationError
 from lclang.lang.evaluator.awaitables import resolve_awaitable
 from lclang.lang.evaluator.budget import (
@@ -55,6 +60,7 @@ from lclang.lang.evaluator.functions import create_function
 from lclang.lang.evaluator.logical import internal_evaluate_logical
 from lclang.lang.evaluator.operations import internal_evaluate_operation
 from lclang.lang.evaluator.primaries import internal_evaluate_primary
+from lclang.lang.printer import to_source
 
 type ResolverSource = Resolver | Mapping[str, object] | None
 
@@ -72,7 +78,27 @@ async def evaluate(node: LclAstNode, resolver: ResolverSource = None) -> object:
        Structured LCL failures pass unchanged; ordinary failures are wrapped and
        every result is recursively auto-awaited.
     """
-    return await internal_evaluate(node, internal_coerce_resolver(resolver))
+    try:
+        result = await internal_evaluate(node, internal_coerce_resolver(resolver))
+    except BaseException as error:
+        if internal_verbose_enabled():
+            definition = " -> ".join(active_definition_stack()) or "<direct>"
+            internal_trace(
+                "evaluate",
+                f"definition={definition!r} "
+                f"expression={internal_render_value(node, lambda: to_source(node))} "
+                f"error={internal_render_value(error)}",
+            )
+        raise
+    if internal_verbose_enabled():
+        definition = " -> ".join(active_definition_stack()) or "<direct>"
+        internal_trace(
+            "evaluate",
+            f"definition={definition!r} "
+            f"expression={internal_render_value(node, lambda: to_source(node))} "
+            f"result={internal_render_value(result)}",
+        )
+    return result
 
 
 def internal_coerce_resolver(source: ResolverSource) -> Resolver:

@@ -34,6 +34,7 @@ def test_parser_accepts_aliases_last_override_and_dates() -> None:
             "--as-of",
             "20260809",
             "--dryrun",
+            "--verbose",
         ]
     )
     params = parse_cli_params(parts, ("run",), parts.tokens[1:])
@@ -41,6 +42,7 @@ def test_parser_accepts_aliases_last_override_and_dates() -> None:
     assert params.command == ("run",)
     assert params.as_of_date == date(2026, 8, 9)
     assert params.dryrun is True
+    assert params.verbose is True
     assert params.config_file_path == "settings.lclcfg"
     assert params.overrides == {"count": "LCL[base + 1]"}
 
@@ -94,6 +96,7 @@ def test_parser_reports_practical_usage_errors(argv: list[str], message: str) ->
     "tokens, message",
     [
         (["-wif", "--dryrun"], "duplicate dryrun"),
+        (["--verbose", "--verbose"], "duplicate verbose"),
         (["-c"], "missing option value"),
         (["-c", "a", "--config", "b"], "duplicate config"),
         (["-a", "20260809", "--as-of", "20260810"], "duplicate as-of"),
@@ -127,6 +130,10 @@ def test_help_boundaries_and_override_classification() -> None:
     assert isinstance(lazy_override_expression("LCL[value]"), LclName)
     assert isinstance(lazy_override_expression("LCL['literal']"), LclConstant)
     assert parse_common_options(["-h"]).help_requested is True
+    assert parse_common_options(["--verbose", "-o", "flag"]).verbose is True
+    literal_verbose = parse_common_options(["-o", "value", "--verbose"])
+    assert literal_verbose.verbose is False
+    assert literal_verbose.overrides == {"value": "--verbose"}
 
 
 def test_process_argv_adaptation_and_validation(monkeypatch: pytest.MonkeyPatch) -> None:

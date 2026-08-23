@@ -6,6 +6,11 @@ import asyncio
 from collections.abc import Mapping
 from typing import Protocol, cast
 
+from lclang.diagnostics import (
+    internal_render_value,
+    internal_trace,
+    internal_verbose_enabled,
+)
 from lclang.errors import LclNameError
 from lclang.lang.evaluator import evaluate
 from lclang.lang.evaluator.awaitables import resolve_awaitable
@@ -23,23 +28,27 @@ from lclang.runtime.frame.limits import EvaluationLimits, internal_budget_scope
 from lclang.runtime.frame.lookup import find_frame
 from lclang.runtime.modules import Module
 from lclang.source import SourceSpan
-from lclang.types import VarName
+from lclang.types import FrameId, VarName
 
 
 class EvaluationFrame(Protocol):
     """Describe concrete Frame state used during lazy evaluation.
 
     :param module: Immutable local definitions.
+    :param frame_id: Diagnostic identifier for the owning Frame.
     :param values: Read-only host bindings.
     :param limits: Evaluation resource ceilings.
+    :param native_values: Whether host bindings are canonical lclang values.
 
     .. note::
        Mutable cache and flight dictionaries remain privately Frame-owned.
     """
 
     module: Module
+    frame_id: FrameId
     values: Mapping[str, object]
     limits: EvaluationLimits
+    native_values: bool
     _results: dict[str, object]
     _failures: dict[str, Exception]
     _inflight: dict[str, asyncio.Task[object]]
@@ -75,7 +84,18 @@ class FrameEvaluationApi:
             raise ValueError("variable name cannot be empty")
         if find_frame(self, name) is None:
             if fallback is NO_FALLBACK:
+                if internal_verbose_enabled():
+                    internal_trace(
+                        "lookup",
+                        f"name={name!r} owner={str(frame.frame_id)!r} source=missing",
+                    )
                 raise LclNameError(f"unknown variable: {name}")
+            if internal_verbose_enabled():
+                internal_trace(
+                    "lookup",
+                    f"name={name!r} owner={str(frame.frame_id)!r} source=fallback "
+                    f"value={internal_render_value(fallback)}",
+                )
             return fallback
         return await self.get_resolved(name, None)
 
@@ -112,20 +132,72 @@ class FrameEvaluationApi:
         internal_check_cycle(self, name, span)
         owner = find_frame(self, name)
         if owner is None:
+            if internal_verbose_enabled():
+                internal_trace(
+                    "lookup",
+                    f"name={name!r} owner={str(frame.frame_id)!r} source=missing",
+                )
             raise LclNameError(f"unknown variable: {name}", span=span)
         if owner is not self:
             return await cast(FrameEvaluationApi, owner).get_resolved(name, span)
         if name in frame._results:
-            return frame._results[name]
+            result = frame._results[name]
+            if internal_verbose_enabled():
+                internal_trace(
+                    "lookup",
+                    f"name={name!r} owner={str(frame.frame_id)!r} source=cached "
+                    f"value={internal_render_value(result)}",
+                )
+            return result
         if name in frame._failures:
+            if internal_verbose_enabled():
+                internal_trace(
+                    "lookup",
+                    f"name={name!r} owner={str(frame.frame_id)!r} source=cached-failure "
+                    f"error={internal_render_value(frame._failures[name])}",
+                )
             raise frame._failures[name]
         if name in frame.module.definitions:
             task = frame._inflight.get(name)
+            source = "shared-lcl-evaluation" if task is not None else "lcl-evaluated"
             if task is None:
                 task = asyncio.create_task(self.evaluate_definition(name))
                 frame._inflight[name] = task
-            return await asyncio.shield(task)
-        return await resolve_awaitable(frame.values[name])
+            try:
+                result = await asyncio.shield(task)
+            except BaseException as error:
+                if internal_verbose_enabled():
+                    internal_trace(
+                        "lookup",
+                        f"name={name!r} owner={str(frame.frame_id)!r} source={source} "
+                        f"error={internal_render_value(error)}",
+                    )
+                raise
+            if internal_verbose_enabled():
+                internal_trace(
+                    "lookup",
+                    f"name={name!r} owner={str(frame.frame_id)!r} source={source} "
+                    f"value={internal_render_value(result)}",
+                )
+            return result
+        source = "native-provided" if frame.native_values else "external-provided"
+        try:
+            result = await resolve_awaitable(frame.values[name])
+        except BaseException as error:
+            if internal_verbose_enabled():
+                internal_trace(
+                    "lookup",
+                    f"name={name!r} owner={str(frame.frame_id)!r} source={source} "
+                    f"error={internal_render_value(error)}",
+                )
+            raise
+        if internal_verbose_enabled():
+            internal_trace(
+                "lookup",
+                f"name={name!r} owner={str(frame.frame_id)!r} source={source} "
+                f"value={internal_render_value(result)}",
+            )
+        return result
 
     async def evaluate_definition(self, name: str) -> object:
         """Evaluate and atomically publish one owned definition snapshot.

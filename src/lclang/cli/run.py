@@ -11,11 +11,17 @@ from lclang.cli.commands import Command
 from lclang.cli.context import CliContext
 from lclang.cli.entrance import CliEntrance
 from lclang.cli.help import render_command_help, render_group_help, render_usage_error
-from lclang.cli.logging import LoggerHandle, create_logger
-from lclang.cli.models import CliConfig, CliResult, CliResultStatus
+from lclang.cli.logging import (
+    LoggerHandle,
+    VerboseLoggerHandle,
+    create_logger,
+    create_verbose_logger,
+)
+from lclang.cli.models import CliConfig, CliParams, CliResult, CliResultStatus
 from lclang.cli.parser import help_requested, parse_cli_params
 from lclang.cli.process import ArgvParts, split_argv
 from lclang.cli.routing import RouteAction, RouteFailure, route_command
+from lclang.diagnostics import internal_verbose_scope
 
 
 def write_result(
@@ -68,11 +74,34 @@ async def execute_command(
     :returns: Integer status without leaking ordinary exceptions.
     :raises TypeError: Internally converted if the handler returns a wrong value.
     """
-    from lclang.cli.models import CliParams
-
     if not isinstance(params, CliParams):
         print("error: internal CLI params type mismatch", file=sys.stderr)
         return int(CliResultStatus.EXCEPTION)
+    verbose_handle = create_verbose_logger(str(id(params))) if params.verbose else None
+    try:
+        logger = None if verbose_handle is None else verbose_handle.logger
+        with internal_verbose_scope(logger):
+            return await internal_execute_command(command, params, cli_config, verbose_handle)
+    finally:
+        if verbose_handle is not None:
+            verbose_handle.close()
+
+
+async def internal_execute_command(
+    command: Command,
+    params: CliParams,
+    cli_config: CliConfig,
+    verbose_handle: VerboseLoggerHandle | None,
+) -> int:
+    """Execute one validated invocation while its optional trace scope is active.
+
+    :param command: Selected command declaration.
+    :param params: Validated :class:`CliParams` value.
+    :param cli_config: Effective framework defaults.
+    :param verbose_handle: Optional trace logger awaiting the file handler.
+    :returns: Integer status without leaking ordinary exceptions.
+    :raises TypeError: Internally converted if the handler returns a wrong value.
+    """
     try:
         binding = await build_binding(command, params, cli_config)
     except Exception as error:
@@ -85,6 +114,8 @@ async def execute_command(
             await binding.stack.close()
         print(f"error: {error}", file=sys.stderr)
         return int(CliResultStatus.EXCEPTION)
+    if verbose_handle is not None:
+        verbose_handle.attach(logger_handle.handlers[0])
     context = CliContext(
         params.as_of_date,
         params.dryrun,

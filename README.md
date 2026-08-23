@@ -281,7 +281,12 @@ Frame, as-of date, dry-run flag, and logging context, and returns a deterministi
 
 The framework provides immutable invocation values, nested command groups,
 structured help, full-argument parsing, platform-neutral process entry points,
-and isolated logging. Precedence rises from preset and command defaults through
+isolated logging, and opt-in internal tracing. Pass `--verbose` after a selected
+command to trace expression parsing, value provenance, caching, fallbacks, and
+evaluation to stderr; enabled file logging receives the same records. Trace
+values use bounded representations but are not redacted, so verbose output may
+contain configuration data. The existing `-v/--version` spelling remains the
+version command. Precedence rises from preset and command defaults through
 configuration definitions and command-line overrides to reserved runtime
 values. Built-in commands inventory available values, parse LCL, and evaluate
 LCL using the same routing model.

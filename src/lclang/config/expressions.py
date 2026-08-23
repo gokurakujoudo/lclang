@@ -5,9 +5,15 @@ from pathlib import Path
 
 from lclang.ast import LclAstNode, LclConstant, LclName
 from lclang.config.errors import LclConfigSyntaxError
+from lclang.diagnostics import (
+    internal_render_value,
+    internal_trace,
+    internal_verbose_enabled,
+)
 from lclang.errors import LclSyntaxError
 from lclang.lang.lexer import Token, TokenKind, scan_tokens
 from lclang.lang.parser.pratt import parse_tokens
+from lclang.lang.printer import to_source
 from lclang.source import SourceOrigin, SourcePosition
 
 
@@ -32,14 +38,34 @@ def parse_config_expression(
         tokens = scan_tokens(text, origin=origin, start=start)
         adapted = adapt_magic_tokens(tokens, origin.path)
         parsed = parse_tokens(adapted)
-        return replace_magic_nodes(parsed, origin.path)
-    except LclConfigSyntaxError:
+        result = replace_magic_nodes(parsed, origin.path)
+    except LclConfigSyntaxError as error:
+        if internal_verbose_enabled():
+            internal_trace(
+                "parse",
+                f"origin={str(origin.name)!r} expression={internal_render_value(text)} "
+                f"error={internal_render_value(error)}",
+            )
         raise
     except LclSyntaxError as error:
-        raise LclConfigSyntaxError(
+        converted = LclConfigSyntaxError(
             error.message,
             span=error.span,
-        ) from error
+        )
+        if internal_verbose_enabled():
+            internal_trace(
+                "parse",
+                f"origin={str(origin.name)!r} expression={internal_render_value(text)} "
+                f"error={internal_render_value(converted)}",
+            )
+        raise converted from error
+    if internal_verbose_enabled():
+        internal_trace(
+            "parse",
+            f"origin={str(origin.name)!r} expression={internal_render_value(text)} "
+            f"ast={internal_render_value(result, lambda: to_source(result))}",
+        )
+    return result
 
 
 def adapt_magic_tokens(tokens: list[Token], path: Path | None) -> list[Token]:

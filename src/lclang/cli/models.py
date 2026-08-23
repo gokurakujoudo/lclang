@@ -60,6 +60,7 @@ class CliParams:
     :param dryrun: Handler-visible dryrun signal.
     :param config_file_path: Optional raw configuration path.
     :param overrides: Raw right-biased strings or valueless ``True`` overrides.
+    :param verbose: Whether internal diagnostics are enabled for this invocation.
     """
 
     executable_path: str
@@ -68,6 +69,7 @@ class CliParams:
     dryrun: bool
     config_file_path: str | None
     overrides: Mapping[str, str | bool]
+    verbose: bool = False
 
     def __post_init__(self) -> None:
         """Detach containers and validate scalar fields.
@@ -87,6 +89,8 @@ class CliParams:
             raise TypeError("as-of date must be a date")
         if not isinstance(self.dryrun, bool):
             raise TypeError("dryrun must be Boolean")
+        if not isinstance(self.verbose, bool):
+            raise TypeError("verbose must be Boolean")
         if self.config_file_path is not None and not isinstance(self.config_file_path, str):
             raise TypeError("config path must be text or None")
         if self.config_file_path == "":

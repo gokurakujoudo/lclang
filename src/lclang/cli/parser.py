@@ -24,6 +24,8 @@ DRYRUN_OPTIONS = frozenset({"-wif", "--dryrun"})
 HELP_OPTIONS = frozenset({"-h", "--help"})
 # Version flag spellings.
 VERSION_OPTIONS = frozenset({"-v", "--version"})
+# Verbose diagnostic flag spelling; ``-v`` remains the version alias.
+VERBOSE_OPTIONS = frozenset({"--verbose"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,6 +37,7 @@ class ParsedCommonOptions:
     :param as_of_text: Optional raw compact date.
     :param dryrun: Parsed dryrun flag.
     :param help_requested: Whether help appeared at an option boundary.
+    :param verbose: Whether internal diagnostic output was requested.
     """
 
     config_path: str | None
@@ -42,6 +45,7 @@ class ParsedCommonOptions:
     as_of_text: str | None
     dryrun: bool
     help_requested: bool
+    verbose: bool
 
 
 def usage_error(message: str, index: int, token: str) -> LclCliUsageError:
@@ -66,6 +70,7 @@ def parse_common_options(tokens: Sequence[str]) -> ParsedCommonOptions:
     as_of_text: str | None = None
     dryrun = False
     help_requested = False
+    verbose = False
     overrides: dict[str, str | bool] = {}
     index = 0
     while index < len(tokens):
@@ -78,6 +83,12 @@ def parse_common_options(tokens: Sequence[str]) -> ParsedCommonOptions:
             if dryrun:
                 raise usage_error("duplicate dryrun option", index, token)
             dryrun = True
+            index += 1
+            continue
+        if token in VERBOSE_OPTIONS:
+            if verbose:
+                raise usage_error("duplicate verbose option", index, token)
+            verbose = True
             index += 1
             continue
         if token in ONE_VALUE_OPTIONS:
@@ -114,7 +125,14 @@ def parse_common_options(tokens: Sequence[str]) -> ParsedCommonOptions:
             index += 3
             continue
         raise usage_error("unknown option or argument", index, token)
-    return ParsedCommonOptions(config_path, overrides, as_of_text, dryrun, help_requested)
+    return ParsedCommonOptions(
+        config_path,
+        overrides,
+        as_of_text,
+        dryrun,
+        help_requested,
+        verbose,
+    )
 
 
 def parse_cli_params(
@@ -142,6 +160,7 @@ def parse_cli_params(
         parsed.dryrun,
         parsed.config_path,
         parsed.overrides,
+        parsed.verbose,
     )
 
 
