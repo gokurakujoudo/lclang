@@ -29,8 +29,8 @@ creates a fresh user Frame. Lookup proceeds from the nearest layer through:
 
 `user module -> LCL_IMPORTS -> LCL_RUNTIME -> LCL_BUILTINS -> LCL_ROOT`.
 
-`LCL_ROOT` owns definition-scoped `lhs()` and the reviewed LCL namespaces.
-`LCL_BUILTINS` owns curated ambient-I/O-free Python types/functions, including
+`LCL_ROOT` owns definition-scoped `lhs()`. `LCL_BUILTINS` owns the reviewed
+standard and calendar namespaces plus curated Python types/functions, including
 strict `parse_ymd`/`to_ymd` date conversion and the variadic eager fixed-point
 helper `recursive`; `LCL_RUNTIME` is the empty package default and may be
 replaced with one CLI-aware base per run; `LCL_IMPORTS` is the detached preset
@@ -160,8 +160,8 @@ qualified `FrameDependencyBinding` definitions/value terminals and
 requested `target_name`, and the selected binding or `None`. Module input keeps
 returning the original unqualified `DependencyGraph`.
 
-See the [dependency analysis tutorial](../tutorials/dependency-analysis.md)
-for the complete static-to-runtime methodology and executable examples.
+See the [dependency analysis tutorial](../tutorials/08-dependency-analysis.md)
+for the progressive static-to-runtime workflow and expected results.
 
 ## Limits and close
 
@@ -182,8 +182,9 @@ a waiter does not cancel shared close work.
 
 ## Standard preset and errors
 
-`STANDARD_PRESET` exposes pure-data `iter`, `text`, `data`, and `json`
-namespaces. It has no file, environment, network, subprocess, reflection, or
+`STANDARD_PRESET` independently exposes pure-data `iter`, `text`, `data`, and
+`json` namespaces. Canonical Frames merge them into `LCL_BUILTINS`. The preset
+has no file, environment, network, subprocess, reflection, or
 dynamic-import helpers. Individual helpers validate their input protocols and
 their failures become source-aware structured evaluation failures at the
 interpreter boundary.

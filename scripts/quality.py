@@ -18,7 +18,8 @@ def quality_commands(python: Path) -> tuple[Command, ...]:
     """
     executable = str(python)
     return (
-        (executable, "-m", "pytest"),
+        (executable, "-m", "pytest", "-m", "not docs and not release"),
+        (executable, "-m", "pytest", "-m", "docs or release", "--no-cov"),
         (executable, "-m", "mypy"),
         (executable, "-m", "ruff", "check", "."),
         (executable, "-m", "scripts.check_project"),

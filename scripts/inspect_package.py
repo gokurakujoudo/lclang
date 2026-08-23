@@ -103,7 +103,12 @@ def wheel_member_policy(members: tuple[str, ...], dist_info: str) -> None:
 
     if any(not allowed(name) and PurePosixPath(name).name != "LICENSE" for name in members):
         raise ValueError("wheel contains a repository or build-tree member")
-    required = {"lclang/__init__.py", "lclang/_version.py", "lclang/py.typed"}
+    required = {
+        "lclang/__init__.py",
+        "lclang/_version.py",
+        "lclang/py.typed",
+        "lclang/utils/calendar/__init__.py",
+    }
     required |= {f"{dist_info}/METADATA", f"{dist_info}/WHEEL", f"{dist_info}/RECORD"}
     has_license = any(PurePosixPath(name).name == "LICENSE" for name in members)
     if not required <= set(members) or not has_license:
@@ -159,9 +164,12 @@ def sdist_member_policy(members: tuple[str, ...]) -> None:
         "CHANGELOG.md",
         "LICENSE",
         "README.md",
-        "README_cn.md",
+        "docs/reference/calendar.md",
+        "docs/tutorials/README.md",
+        "docs/tutorials/11-business-day-calendars.md",
         "progress.md",
         "pyproject.toml",
+        "src/lclang/utils/calendar/__init__.py",
         "src/lclang/py.typed",
     }
     for tree in ("docs", "src/lclang", "tests"):

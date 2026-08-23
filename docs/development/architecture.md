@@ -20,6 +20,8 @@ src/lclang/
   config/          logical lines, includes, origins and config diagnostics
   cli/             typed contexts, parsing, routing, runners and built-ins
   workflow/        execution-status values, task/step handles and finalization
+  utils/
+    calendar/      async calendars, mappings, loaders, and manager utilities
 ```
 
 Shared public value objects and errors remain small top-level modules. Package
@@ -46,6 +48,8 @@ tests/
   config/          text, include, origin and diagnostic behaviour
   cli/             argv, routing, stream and exit-code behaviour
   workflow/        status values, aggregation, locking and scoped finalization
+  utils/
+    calendar/      calendar strategies, algebra, mapping, loading, and LCL integration
   support/         reusable factories, fake resources and corpus loaders
   stress/          opt-in scale, concurrency and leak scenarios
 ```

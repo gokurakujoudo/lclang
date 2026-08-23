@@ -1,6 +1,6 @@
-# lclang 1.0.0 feature inventory
+# lclang 1.0.2 feature inventory
 
-Version 1.0.0 is the stable release of `lclang` for Python 3.14 and newer. The
+Version 1.0.2 is the stable release of `lclang` for Python 3.14 and newer. The
 package is pure Python, MIT licensed, fully typed, and has no third-party
 runtime dependencies.
 
@@ -58,6 +58,8 @@ runtime dependencies.
 - Manifest-driven read-only namespaces and immutable standard presets.
 - Reviewed iterable, text, immutable-data, strict JSON, date, and recursion
   helpers without ambient I/O or dynamic-code capabilities.
+- Async three-state business-day calendars with canonical composition, bounded
+  mappings, strict JSON loading, and dependency-aware cache retirement.
 - Nested workflow task and step status trees with deterministic aggregation,
   locking, scoped mutation, context-manager finalization, and failure capture.
 

@@ -7,13 +7,19 @@
 
 ## Tutorials and examples
 
-- [Tutorial index](tutorials/README.md)
-- [Runtime Modules and Frames](tutorials/runtime.md)
-- [LCL examples](tutorials/language.md)
-- [Configuration files](tutorials/configuration.md)
-- [Dependency analysis](tutorials/dependency-analysis.md)
-- [Command-line applications](tutorials/cli.md)
-- [Workflow status](tutorials/workflow.md)
+- [Start here and view the tutorial series](tutorials/README.md)
+- [Expressions and values](tutorials/01-expressions-and-values.md)
+- [Modules and Frames](tutorials/02-modules-and-frames.md)
+- [The LCL language](tutorials/03-language.md)
+- [Configuration files](tutorials/04-configuration-files.md)
+- [Async Python integration](tutorials/05-async-python-integration.md)
+- [Caching and recalculation](tutorials/06-caching-and-recalculation.md)
+- [Errors and inspection](tutorials/07-errors-and-inspection.md)
+- [Dependency analysis](tutorials/08-dependency-analysis.md)
+- [Command-line applications](tutorials/09-command-line-applications.md)
+- [Workflow status](tutorials/10-workflow-status.md)
+- [Business-day calendars](tutorials/11-business-day-calendars.md)
+- [Production patterns](tutorials/12-production-patterns.md)
 
 ## References
 
@@ -27,7 +33,3 @@
 
 - [Local Development Guide](development/README.md)
 - [Architecture and module layout](development/architecture.md)
-
-## Other languages
-
-- [简体中文文档](zh/README.md)
