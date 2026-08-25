@@ -122,7 +122,12 @@ def edges_for_node(
        Static analysis preserves lazy and conditional dependency kinds.
     """
     result: list[FrameDependencyEdge] = []
-    for reference in analyze_dependencies(node):
+    scoped_names = tuple(
+        name
+        for frame in frames[owner_index:]
+        for name in (*frame.module.definitions, *frame.values)
+    )
+    for reference in analyze_dependencies(node, scoped_names=scoped_names):
         target, lookup_path = resolve_frame_binding(
             frames,
             owner_index,

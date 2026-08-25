@@ -24,6 +24,9 @@ runtime dependencies.
   boundary.
 - Immutable Modules, Presets, standard hierarchy, Frame factories, child Frames,
   and controlled host-value overlays.
+- Qualified scoped bindings with lazy Frame proxies across Modules, presets,
+  configuration, CLI overrides, and parent lookup.
+- Unnamed `Frame.evaluate()` expressions with Frame lookup and `lhs()` ownership.
 - Lazy result and failure snapshots, parent lookup, explicit missing-name
   fallbacks, per-name single-flight, circular diagnostics, and cancellation
   isolation.

@@ -8,6 +8,7 @@ from lclang.config.model import ConfigUsing
 from lclang.config.positions import advance_position
 from lclang.errors import LclSyntaxError
 from lclang.lang.lexer import Token, TokenKind, scan_tokens
+from lclang.scopes import validate_qualified_name
 from lclang.source import SourceOrigin
 
 
@@ -91,11 +92,10 @@ def validate_definition_name(name: str, line: LogicalLine, origin: SourceOrigin)
        Keyword classification comes from the core lexer rather than Python.
     """
     try:
-        tokens = significant_tokens(scan_tokens(name, origin=origin, start=line.start))
-    except LclSyntaxError as error:
-        raise LclConfigSyntaxError("invalid config definition name", span=error.span) from error
-    valid = len(tokens) == 2 and tokens[0].kind is TokenKind.IDENTIFIER
-    if not valid or name.startswith("__"):
+        validate_qualified_name(name)
+    except (TypeError, ValueError) as error:
+        raise LclConfigSyntaxError("invalid config definition name", span=line.span) from error
+    if name.startswith("__"):
         raise LclConfigSyntaxError("invalid or reserved config definition name", span=line.span)
 
 

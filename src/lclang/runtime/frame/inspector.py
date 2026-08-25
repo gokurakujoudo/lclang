@@ -12,7 +12,13 @@ from lclang.runtime.frame.inspection import (
     VariableInspectionTree,
 )
 from lclang.runtime.frame.lifecycle import InternalFrameLifecycle
+from lclang.runtime.frame.scoped import (
+    find_scoped_binding,
+    hierarchy_binding_names,
+    local_binding_kind,
+)
 from lclang.runtime.modules import Module
+from lclang.scope_proxy import FrameProxy
 from lclang.types import FrameId, VarName
 
 if TYPE_CHECKING:
@@ -100,6 +106,17 @@ def build_inspection_tree(
             [],
         )
     owner._lifecycle.ensure_open(None)
+    if local_binding_kind(owner, name) == "proxy":
+        return VariableInspectionTree(
+            VarName(name),
+            VariableInspectionStatus.FRAME_PROXY,
+            owner.module.definitions.get(name),
+            path,
+            cast("Frame", owner),
+            FrameProxy(cast("Frame", origin), tuple(name.split("."))),
+            None,
+            [],
+        )
     definition = owner.module.definitions.get(name)
     if definition is None:
         status = (
@@ -123,7 +140,11 @@ def build_inspection_tree(
     if key not in ancestors:
         next_ancestors = ancestors | {key}
         dependency_names = dict.fromkeys(
-            str(reference.name) for reference in analyze_dependencies(definition)
+            str(reference.name)
+            for reference in analyze_dependencies(
+                definition,
+                scoped_names=hierarchy_binding_names(owner),
+            )
         )
         dependencies = [
             build_inspection_tree(owner, dependency_name, next_ancestors)
@@ -156,15 +177,11 @@ def resolve_inspection_owner(
        Definitions and host values share evaluator precedence at every level.
     """
     current: InspectionFrame | None = origin
-    seen: set[int] = set()
     path: list[FrameId] = []
     while current is not None:
-        identity = id(current)
-        if identity in seen:
-            raise ValueError("Frame parent cycle detected")
-        seen.add(identity)
         path.append(current.frame_id)
-        if name in current.module.definitions or name in current.values:
+        owner, _ = find_scoped_binding(current, name)
+        if cast(object, owner) is current:
             return current, path
         current = current.parent
     return None, path

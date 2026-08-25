@@ -8,11 +8,13 @@ from lclang.runtime.frame.inspection import (
     VariableInspectionTree,
 )
 from lclang.runtime.frame.limits import EvaluationLimits
+from lclang.scope_proxy import FrameProxy
 
 __all__ = [
     "EvaluationLimits",
     "Frame",
     "FrameFactory",
+    "FrameProxy",
     "NO_FALLBACK",
     "VariableInspectionStatus",
     "VariableInspectionTree",

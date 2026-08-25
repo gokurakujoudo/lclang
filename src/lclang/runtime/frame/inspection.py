@@ -31,6 +31,8 @@ class VariableInspectionStatus(StrEnum):
     EXTERNAL_PROVIDED = "ExternalProvided"
     # Lookup selected a canonical lclang-provided value.
     NATIVE_PROVIDED = "NativeProvided"
+    # Lookup selected an explicit or inferred scoped Frame proxy.
+    FRAME_PROXY = "FrameProxy"
 
 
 @dataclass(slots=True)
@@ -76,6 +78,7 @@ class VariableInspectionTree:
                 in {
                     VariableInspectionStatus.EXTERNAL_PROVIDED,
                     VariableInspectionStatus.NATIVE_PROVIDED,
+                    VariableInspectionStatus.FRAME_PROXY,
                 }
                 else "<missing> "
             )

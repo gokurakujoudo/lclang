@@ -23,11 +23,13 @@ from lclang.errors import (
 )
 from lclang.lang import evaluate, evaluate_sync, parse_expression, to_source
 from lclang.runtime import (
+    FRAME_PROXY,
     NO_FALLBACK,
     DependencySnapshot,
     EvaluationLimits,
     Frame,
     FrameFactory,
+    FrameProxy,
     Module,
     Preset,
 )
@@ -47,6 +49,8 @@ __all__ = [
     "EvaluationLimits",
     "Frame",
     "FrameFactory",
+    "FrameProxy",
+    "FRAME_PROXY",
     "LanguageVersion",
     "LclAstNode",
     "LclCircularDependencyError",

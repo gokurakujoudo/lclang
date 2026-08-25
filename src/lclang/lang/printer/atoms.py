@@ -11,6 +11,7 @@ from lclang.ast import (
     LclStringText,
 )
 from lclang.lang.printer._types import Render, RenderResult
+from lclang.scopes import FRAME_PROXY
 
 ATOM_PRECEDENCE = 100
 
@@ -45,6 +46,8 @@ def internal_constant(value: object) -> str:
        Boolean checks precede integer checks because ``bool`` is an ``int``
        subclass in Python.
     """
+    if value is FRAME_PROXY:
+        return "FRAME_PROXY"
     if value is None:
         return "None"
     if value is True:

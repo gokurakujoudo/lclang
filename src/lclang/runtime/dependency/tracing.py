@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from lclang.lang.evaluator.context import Resolver
 from lclang.runtime.dependency.model import DependencyEdge, DependencyKind
+from lclang.scope_proxy import FrameProxy
 from lclang.source import SourceSpan
 from lclang.types import VarName
 
@@ -91,5 +92,17 @@ class TracingResolver:
         .. note::
            Recording precedes delegation, so failed lookups remain observable.
         """
+        try:
+            result = await self.parent.resolve(name, span=span)
+        except BaseException:
+            self.trace.record(name, span)
+            raise
+        if isinstance(result, FrameProxy):
+            return result.with_trace(
+                lambda target, target_span: self.trace.record(
+                    VarName(target),
+                    target_span,
+                )
+            )
         self.trace.record(name, span)
-        return await self.parent.resolve(name, span=span)
+        return result

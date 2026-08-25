@@ -20,6 +20,7 @@
 - [Workflow status](tutorials/10-workflow-status.md)
 - [Business-day calendars](tutorials/11-business-day-calendars.md)
 - [Production patterns](tutorials/12-production-patterns.md)
+- [Scoped values and Frame evaluation](tutorials/13-scoped-values-and-frame-evaluation.md)
 
 ## References
 

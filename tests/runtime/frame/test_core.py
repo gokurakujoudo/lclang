@@ -1,6 +1,7 @@
 """Unit tests mirroring :mod:`lclang.runtime.frame.core`."""
 
 import asyncio
+from typing import cast
 
 import pytest
 
@@ -18,6 +19,8 @@ def test_frame_rejects_empty_frame_and_host_binding_names() -> None:
         Frame(module, FrameId(""))
     with pytest.raises(ValueError):
         Frame(module, FrameId("frame:1"), values={"": 1})
+    with pytest.raises(TypeError, match="host binding names must be strings"):
+        Frame(module, values=cast(dict[str, object], {1: 1}))
 
 
 def test_frame_normalizes_optional_and_string_identifiers() -> None:

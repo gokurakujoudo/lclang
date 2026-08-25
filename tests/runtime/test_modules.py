@@ -34,3 +34,20 @@ def test_module_rejects_empty_names(name: ModuleName, definitions: dict[str, obj
 
     with pytest.raises(ValueError):
         Module(name, cast(dict[str, LclAstNode], definitions))
+
+
+def test_scoped_name_validation_rejects_non_string_inputs() -> None:
+    """Central binding and qualified-name validators reject non-text keys."""
+    from typing import cast
+
+    from lclang.ast import LclAstNode
+    from lclang.runtime import Module
+    from lclang.scopes import validate_qualified_name
+
+    with pytest.raises(TypeError, match="binding names must be strings"):
+        Module(
+            ModuleName("app"),
+            cast(dict[str, LclAstNode], {1: parse_expression("1")}),
+        )
+    with pytest.raises(TypeError, match="binding name must be a string"):
+        validate_qualified_name(cast(str, 1))

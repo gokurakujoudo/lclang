@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from typing import cast
+
 from lclang.lang.evaluator.definition_context import lhs
 from lclang.lang.parser import parse_expression
 from lclang.runtime.frame import Frame
 from lclang.runtime.modules import Module
+from lclang.scopes import FRAME_PROXY, FrameProxyMarker
 from lclang.stdlib.builtins import STANDARD_PRESET
 from lclang.stdlib.dates import parse_ymd, to_ymd
 from lclang.stdlib.recursion import recursive
@@ -105,7 +109,10 @@ LCL_IMPORTS = Frame(
 )
 
 
-def define_module(name: str, exprs: dict[str, str]) -> Module:
+def define_module(
+    name: str,
+    exprs: Mapping[str, str | FrameProxyMarker],
+) -> Module:
     """Parse source expressions into one immutable runtime Module.
 
     :param name: Non-empty module name.
@@ -125,9 +132,14 @@ def define_module(name: str, exprs: dict[str, str]) -> Module:
         raise TypeError("module expressions must be a dictionary")
     if any(not isinstance(key, str) for key in exprs):
         raise TypeError("module definition names must be strings")
-    if any(not isinstance(source, str) for source in exprs.values()):
-        raise TypeError("module expressions must be strings")
-    definitions = {key: parse_expression(source) for key, source in exprs.items()}
+    if any(not isinstance(source, str) and source is not FRAME_PROXY for source in exprs.values()):
+        raise TypeError("module expressions must be strings or FRAME_PROXY")
+    definitions = {
+        key: parse_expression(
+            "FRAME_PROXY" if source is FRAME_PROXY else cast(str, source)
+        )
+        for key, source in exprs.items()
+    }
     return Module(ModuleName(name), definitions)
 
 

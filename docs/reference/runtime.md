@@ -38,6 +38,23 @@ layer. User definitions therefore win over presets, which win over runtime
 values. Canonical ancestors are borrowed and closing a user Frame never closes
 them.
 
+Definition and host-value names may be qualified paths such as
+`service.database.port`. The runtime stores the complete spelling as one flat
+binding. Missing prefixes are lazy `FrameProxy` views over the requesting
+Frame; they create no nested Frames or separate caches. `FRAME_PROXY` may be
+used as an optional complete binding value to document a prefix explicitly.
+Real ancestor/descendant binding pairs are rejected eagerly.
+
+Python may use `await frame.get("service.database.port")`, or obtain the root
+proxy and use `await service.database.port`. LCL uses the same dotted spelling.
+References remain fully qualified: `service.total` and `total` are separate.
+
+`await frame.evaluate(expr)` parses and evaluates one unnamed LCL expression
+against an open Frame. The expression itself is not cached or entered into a
+dependency snapshot, although named definitions reached through it retain
+their normal snapshots and flights. `lhs()` returns `"<expr>"` during this
+evaluation and in closures it creates.
+
 The fixed builtin inventory is: value types `bool`, `bytes`, `dict`, `float`,
 `frozenset`, `int`, `list`, `set`, `str`, and `tuple`; functions `abs`, `all`,
 `any`, `bin`, `chr`, `divmod`, `enumerate`, `filter`, `format`, `hex`,
@@ -139,6 +156,9 @@ reflecting the update. Direct lookups and uncached definitions see mixed values;
 already cached definition successes/failures remain snapshots. Call
 `recalculate` explicitly when a definition should observe a new mixed input.
 Module definitions continue to shadow same-name host values.
+
+Mixin validation includes every open descendant that borrows the updated
+Frame. A conflicting update is rejected before any value changes.
 
 `await frame.recalculate(name)` atomically replaces only the named definition's
 snapshot; it never invalidates a dependant. Old values remain readable during

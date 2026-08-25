@@ -6,6 +6,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 
+from lclang.scopes import real_binding_names, validate_binding_names, validate_real_conflicts
+
 
 @dataclass(frozen=True, slots=True)
 class Preset:
@@ -32,6 +34,8 @@ class Preset:
         snapshot = dict(self.values)
         if any(not name for name in snapshot):
             raise ValueError("preset binding name cannot be empty")
+        validate_binding_names(snapshot)
+        validate_real_conflicts(real_binding_names({}, snapshot))
         object.__setattr__(self, "values", MappingProxyType(snapshot))
 
     def overlay(self, other: Preset, *, name: str | None = None) -> Preset:

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Collection
+
 from lclang.ast import (
     LclAssert,
     LclAstNode,
@@ -20,6 +22,7 @@ from lclang.ast import (
     LclWith,
 )
 from lclang.runtime.dependency.model import DependencyKind, DependencyReference
+from lclang.runtime.dependency.scoped import qualify_dependency_references
 
 type Comprehension = (
     LclGenerator | LclListComprehension | LclSetComprehension | LclDictComprehension
@@ -33,10 +36,15 @@ _STRENGTH = {
 }
 
 
-def analyze_dependencies(node: LclAstNode) -> tuple[DependencyReference, ...]:
+def analyze_dependencies(
+    node: LclAstNode,
+    *,
+    scoped_names: Collection[str] = (),
+) -> tuple[DependencyReference, ...]:
     """Return scope-aware free-name occurrences in runtime evaluation order.
 
     :param node: Semantic AST root to inspect without evaluation.
+    :param scoped_names: Known qualified bindings used to join attribute chains.
     :returns: Ordered immutable dependency-reference occurrences.
 
     .. note::
@@ -44,7 +52,7 @@ def analyze_dependencies(node: LclAstNode) -> tuple[DependencyReference, ...]:
     """
     references: list[DependencyReference] = []
     internal_visit(node, DependencyKind.EAGER, frozenset(), references)
-    return tuple(references)
+    return qualify_dependency_references(node, tuple(references), scoped_names)
 
 
 def internal_visit(

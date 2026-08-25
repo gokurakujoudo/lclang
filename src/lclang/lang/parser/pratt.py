@@ -18,6 +18,7 @@ from lclang.lang.parser.logical import parse_logical
 from lclang.lang.parser.primaries import parse_primaries
 from lclang.lang.parser.stream import TokenStream
 from lclang.lang.printer import to_source
+from lclang.scopes import is_frame_proxy
 from lclang.source import SourceOrigin, SourceSpan
 from lclang.version import LCL_V1, LanguageVersion
 
@@ -228,7 +229,14 @@ def parse_tokens(
     """
     if version is not LCL_V1:
         raise ValueError(f"unsupported LCL language version: {version}")
-    return InternalPrattParser(TokenStream(tokens)).parse()
+    node = InternalPrattParser(TokenStream(tokens)).parse()
+    markers = tuple(item for item in node.walk() if is_frame_proxy(item))
+    if markers and not is_frame_proxy(node):
+        raise LclSyntaxError(
+            "FRAME_PROXY must be a complete expression",
+            span=markers[0].span,
+        )
+    return node
 
 
 def internal_merge_span(first: SourceSpan, last: SourceSpan) -> SourceSpan:

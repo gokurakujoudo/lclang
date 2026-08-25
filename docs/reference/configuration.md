@@ -28,8 +28,10 @@ backslash outside literals is the only continuation mechanism; open `()`, `[]`,
 or `{}` never continues a definition by itself. Blank and comment-only lines are
 not valid inside a continuation chain.
 
-Definition names and all LCL binding positions reject names beginning with
-`__`. The metadata name is the sole top-level exception.
+Definition names may be one LCL identifier or a dot-separated qualified path
+of LCL identifiers. Top-level names beginning with `__` remain reserved; the
+metadata name is the sole exception. `A: FRAME_PROXY` optionally declares a
+scoped prefix, while `A.x: expression` infers `A` automatically.
 
 ## File magic and paths
 
@@ -60,6 +62,10 @@ definition wins without moving the name's first-appearance iteration position.
 `Config.history` retains every occurrence. The runtime Module is created after
 complete expansion and contains final winners, so forward references and later
 overrides are independent of declaration order.
+
+Scoped conflicts are checked against final winners. Exact-name replacement and
+sibling leaves are valid, but two real winners such as `A` and `A.x`, or `A.x`
+and `A.x.y`, are rejected before runtime conversion.
 
 ## Python API and lifecycle
 

@@ -25,11 +25,13 @@ from lclang.runtime.frame import (
     EvaluationLimits,
     Frame,
     FrameFactory,
+    FrameProxy,
     VariableInspectionStatus,
     VariableInspectionTree,
 )
 from lclang.runtime.modules import Module
 from lclang.runtime.presets import Preset
+from lclang.scopes import FRAME_PROXY
 
 __all__ = [
     "DependencyEdge",
@@ -46,6 +48,8 @@ __all__ = [
     "FrameDependencyEdge",
     "FrameDependencyGraph",
     "FrameFactory",
+    "FrameProxy",
+    "FRAME_PROXY",
     "Module",
     "NO_FALLBACK",
     "Preset",
