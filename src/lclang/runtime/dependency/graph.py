@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Set
+from collections.abc import Collection, Set
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, overload
 
@@ -107,35 +107,44 @@ class DependencyGraph:
 
 
 @overload
-def build_dependency_graph(source: Module) -> DependencyGraph:  # noqa: D418
-    """Describe the name-only Module overload.
+def build_dependency_graph(  # noqa: D418
+    source: Module,
+    *,
+    scoped_names: Collection[str] | None = None,
+) -> DependencyGraph:
+    """Type the name-only Module graph overload.
 
     :param source: Immutable Module definition snapshot.
-    :returns: Occurrence-preserving unqualified dependency graph.
-
-    .. note::
-       This overload retains the original public Module behavior.
+    :param scoped_names: Optional known qualified bindings.
+    :returns: Occurrence-preserving Module dependency graph.
     """
     ...
 
 
 @overload
-def build_dependency_graph(source: Frame) -> FrameDependencyGraph:  # noqa: D418
-    """Describe the hierarchy-aware Frame overload.
+def build_dependency_graph(  # noqa: D418
+    source: Frame,
+    *,
+    scoped_names: Collection[str] | None = None,
+) -> FrameDependencyGraph:
+    """Type the hierarchy-aware Frame graph overload.
 
     :param source: Child-most Frame to inspect structurally.
-    :returns: Qualified definitions, values, paths, and resolved edges.
-
-    .. note::
-       Type selection changes graph shape but never triggers evaluation.
+    :param scoped_names: Ignored Module-analysis context for signature parity.
+    :returns: Qualified hierarchy dependency graph.
     """
     ...
 
 
-def build_dependency_graph(source: Module | Frame) -> DependencyGraph | FrameDependencyGraph:
+def build_dependency_graph(
+    source: Module | Frame,
+    *,
+    scoped_names: Collection[str] | None = None,
+) -> DependencyGraph | FrameDependencyGraph:
     """Analyze a Module or resolve a complete Frame hierarchy graph.
 
     :param source: Immutable Module or runtime Frame to inspect without evaluation.
+    :param scoped_names: Optional known qualified names for Module analysis.
     :returns: Name-only Module graph or qualified Frame dependency graph.
     :raises TypeError: If *source* is neither a Module nor a Frame.
 
@@ -143,7 +152,7 @@ def build_dependency_graph(source: Module | Frame) -> DependencyGraph | FrameDep
        Frame construction snapshots syntax, value names, and lookup paths only.
     """
     if isinstance(source, Module):
-        return build_module_dependency_graph(source)
+        return build_module_dependency_graph(source, scoped_names=scoped_names)
     from lclang.runtime.frame import Frame
 
     if isinstance(source, Frame):
@@ -153,10 +162,15 @@ def build_dependency_graph(source: Module | Frame) -> DependencyGraph | FrameDep
     raise TypeError("dependency graph source must be a Module or Frame")
 
 
-def build_module_dependency_graph(module: Module) -> DependencyGraph:
+def build_module_dependency_graph(
+    module: Module,
+    *,
+    scoped_names: Collection[str] | None = None,
+) -> DependencyGraph:
     """Analyze every Module definition into one immutable graph.
 
     :param module: Immutable semantic definition snapshot to analyze.
+    :param scoped_names: Optional known qualified names used to join attribute chains.
     :returns: Ordered vertices and one edge per free-name occurrence.
 
     .. note::
@@ -165,7 +179,8 @@ def build_module_dependency_graph(module: Module) -> DependencyGraph:
     definitions = tuple(VarName(name) for name in module.definitions)
     edges: list[DependencyEdge] = []
     for source, node in module.definitions.items():
-        for reference in analyze_dependencies(node):
+        effective_names = tuple(module.definitions) if scoped_names is None else scoped_names
+        for reference in analyze_dependencies(node, scoped_names=effective_names):
             edges.append(
                 DependencyEdge(VarName(source), reference.name, reference.kind, reference.span)
             )

@@ -6,6 +6,7 @@ from typing import cast
 
 import pytest
 
+import lclang
 from lclang.cli import (
     CliConfig,
     CliContext,
@@ -97,6 +98,29 @@ async def test_literal_overrides_are_host_values_beside_lazy_definitions() -> No
         assert expression.status is VariableInspectionStatus.NOT_EVALUATED
         assert await binding.frame.get("expression") == "100x"
         assert await binding.frame.get("cli_params") is params
+    finally:
+        await binding.stack.close()
+
+
+@pytest.mark.asyncio
+async def test_scoped_cli_overrides_share_one_proxy() -> None:
+    """Literal, lazy, and marker overrides compose through qualified lookup."""
+    params = CliParams(
+        "python",
+        ("bound",),
+        date(2026, 8, 9),
+        False,
+        None,
+        {
+            "A": "LCL[FRAME_PROXY]",
+            "A.x": "40",
+            "A.y": "LCL[int(A.x) + 2]",
+        },
+    )
+    binding = await build_binding(bound_command, params, CliConfig())
+    try:
+        assert await binding.frame.get("A.y") == 42
+        assert isinstance(await binding.frame.get("A"), lclang.FrameProxy)
     finally:
         await binding.stack.close()
 

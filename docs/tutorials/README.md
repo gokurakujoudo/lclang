@@ -58,9 +58,11 @@ test in its own file under `tests/tutorials`.
     load named policies from strict JSON.
 12. **[Production patterns](12-production-patterns.md)** -- organize modules, factories, tests, limits, trust
     boundaries, and application ownership.
+13. **[Scoped values and Frame evaluation](13-scoped-values-and-frame-evaluation.md)** -- organize qualified
+    bindings through lazy proxies and run unnamed expressions in an existing Frame.
 
 The sequence is deliberate: lessons 1-4 establish everyday use, lessons 5-8
-make behavior predictable in real applications, and lessons 9-12 apply the same
+make behavior predictable in real applications, and lessons 9-13 apply the same
 model to larger systems. Read the lessons in order or jump to one topic after
 finishing this introduction.
 

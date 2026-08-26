@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from typing import Protocol, cast
 
 from lclang.ast import LclAstNode
+from lclang.runtime.frame.scoped import find_scoped_binding
 from lclang.runtime.modules import Module
 
 
@@ -38,12 +39,8 @@ def find_frame(frame: object, name: str) -> object | None:
     """
     if not name:
         raise ValueError("variable name cannot be empty")
-    candidate = cast(LookupFrame, frame)
-    if name in candidate.module.definitions or name in candidate.values:
-        return frame
-    if candidate.parent is None:
-        return None
-    return find_frame(candidate.parent, name)
+    owner, _ = find_scoped_binding(frame, name)
+    return owner
 
 
 class FrameLookupApi:

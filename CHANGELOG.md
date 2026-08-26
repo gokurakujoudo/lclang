@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 1.0.4 - 2026-08-25
+
+- Add qualified scoped values backed by lazy Frame proxies across Python,
+  configuration files, CLI overrides, inspection, and dependency analysis.
+- Add uncached `Frame.evaluate()` expressions with `lhs()` set to `"<expr>"`.
+
 ## 1.0.3 - 2026-08-23
 
 - Added `--verbose` tracing after CLI leaf commands for top-level expression

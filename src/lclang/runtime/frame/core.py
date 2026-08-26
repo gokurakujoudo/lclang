@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Mapping
 from types import MappingProxyType
+from weakref import WeakSet
 
 from lclang.errors import LclEvaluationError, LclNameError
 from lclang.runtime.frame.closing import FrameClosingApi
@@ -19,8 +20,14 @@ from lclang.runtime.frame.lifecycle import InternalFrameLifecycle
 from lclang.runtime.frame.limits import EvaluationLimits
 from lclang.runtime.frame.lookup import FrameLookupApi
 from lclang.runtime.frame.recalculation import internal_refresh_definition
+from lclang.runtime.frame.scoped import (
+    find_scoped_binding,
+    hierarchy_binding_names,
+    validate_frame_hierarchy,
+)
 from lclang.runtime.frame.values import FrameValuesApi
 from lclang.runtime.modules import Module
+from lclang.scopes import validate_binding_names
 from lclang.types import FrameId
 
 
@@ -81,20 +88,24 @@ class Frame(
         if not effective_id:
             raise ValueError("frame identifier cannot be empty")
         snapshot = {} if values is None else dict(values)
+        if any(not isinstance(name, str) for name in snapshot):
+            raise TypeError("host binding names must be strings")
         if any(not name for name in snapshot):
             raise ValueError("host binding name cannot be empty")
+        validate_binding_names(snapshot)
         self.module = module
         self.frame_id = effective_id
         self._values = snapshot
         self.values: Mapping[str, object] = MappingProxyType(self._values)
         self.parent = parent
+        self._children: WeakSet[Frame] = WeakSet()
         self.limits = EvaluationLimits() if limits is None else limits
         self.native_values = native_values
         self._results: dict[str, object] = {}
         self._failures: dict[str, Exception] = {}
         self._inflight: dict[str, asyncio.Task[object]] = {}
         self._refreshes: dict[str, asyncio.Task[object]] = {}
-        self._dependencies = InternalFrameDependencies(module)
+        self._dependencies = InternalFrameDependencies(module, hierarchy_binding_names(self))
         self._lifecycle = InternalFrameLifecycle(
             self._results,
             self._failures,
@@ -102,6 +113,9 @@ class Frame(
             self._refreshes,
             self._dependencies.clear,
         )
+        validate_frame_hierarchy(self)
+        if parent is not None:
+            parent._children.add(self)
 
     async def recalculate(self, name: str) -> object:
         """Explicitly refresh one owned definition snapshot.
@@ -118,6 +132,9 @@ class Frame(
         self._lifecycle.ensure_open(None)
         if not name:
             raise ValueError("variable name cannot be empty")
+        _, kind = find_scoped_binding(self, name)
+        if kind == "proxy":
+            raise LclEvaluationError(f"Frame proxy cannot be recalculated: {name}")
         if name in self.module.definitions:
             return await internal_refresh_definition(
                 name,

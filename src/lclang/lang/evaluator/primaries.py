@@ -13,6 +13,7 @@ from lclang.ast import (
 )
 from lclang.lang.evaluator._types import EvaluateNode
 from lclang.lang.evaluator.context import Resolver
+from lclang.scope_proxy import FrameProxy
 
 type PrimaryNode = LclAttribute | LclSafeAttribute | LclSubscript | LclSlice
 
@@ -39,6 +40,12 @@ async def internal_evaluate_primary(
         value = await evaluate(node.value, resolver)
         if isinstance(node, LclSafeAttribute) and value is None:
             return None
+        if isinstance(value, FrameProxy):
+            return await value.resolve_attribute(
+                str(node.name),
+                safe=isinstance(node, LclSafeAttribute),
+                span=node.span,
+            )
         return getattr(value, str(node.name))
     if isinstance(node, LclSubscript):
         value = await evaluate(node.value, resolver)

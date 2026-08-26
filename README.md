@@ -131,6 +131,13 @@ result snapshots, dependency observations, and owned asynchronous work. It is
 stateful, belongs to one event loop, and should normally represent one
 independent run.
 
+Scoped values organize larger policies without creating nested Frames. A flat
+binding such as `service.database.port` makes `service` and
+`service.database` lazy proxies over the same requesting Frame. For a quick
+unnamed calculation over that context, use
+`await frame.evaluate("service.database.port * 2")`; unlike `frame.get`, the
+unnamed root is parsed and run on every call.
+
 ```text
 expression source -> immutable Module
 immutable Module + host inputs -> short-lived Frame -> requested results
@@ -330,6 +337,7 @@ and scheduling policy.
 | One expression in synchronous code | `evaluate_sync(source, values)` | lclang owns the temporary event loop |
 | One parsed expression asynchronously | `parse_expression()` then `await evaluate()` | caller supplies resolver values |
 | Related named definitions | `define_module()` and `async with define_frame()` | reuse the Module; close each Frame |
+| One unnamed expression in an existing context | `await frame.evaluate(source)` | Frame supplies lookup; caller owns the uncached result |
 | One value from a config file | `load_config()` then `evaluate_config()` | the temporary Frame is closed for you |
 | Many runs with the same policy | `FrameFactory` or `Config.frame_factory()` | each created Frame is caller-owned |
 | Syntax printing or analysis | `parse_expression()` and analysis APIs | no evaluation state is created |

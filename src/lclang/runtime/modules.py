@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 
 from lclang.ast import LclAstNode
+from lclang.scopes import real_binding_names, validate_binding_names, validate_real_conflicts
 from lclang.types import ModuleName
 
 
@@ -35,4 +36,6 @@ class Module:
         snapshot = dict(self.definitions)
         if any(not name for name in snapshot):
             raise ValueError("definition name cannot be empty")
+        validate_binding_names(snapshot)
+        validate_real_conflicts(real_binding_names(snapshot, {}))
         object.__setattr__(self, "definitions", MappingProxyType(snapshot))

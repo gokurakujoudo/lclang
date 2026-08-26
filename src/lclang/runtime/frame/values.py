@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Protocol, cast
 
+from lclang.runtime.frame.scoped import validate_mixin_tree
+from lclang.scopes import validate_binding_names
 from lclang.source import SourceSpan
 
 
@@ -29,12 +31,15 @@ class LifecycleAccess(Protocol):
 class MutableFrameValues(Protocol):
     """Describe mutable state privately owned by a concrete Frame.
 
+    :param values: Public read-only view of current host bindings.
+
     .. note::
        Public callers continue to receive only the read-only values view.
     """
 
     _values: dict[str, object]
     _lifecycle: LifecycleAccess
+    values: object
 
 
 class FrameValuesApi:
@@ -63,6 +68,10 @@ class FrameValuesApi:
             raise TypeError("Frame mixin names must be strings")
         if any(not name for name in updates):
             raise ValueError("host binding name cannot be empty")
+        validate_binding_names(updates)
         frame = cast(MutableFrameValues, self)
         frame._lifecycle.ensure_open(None)
+        prospective = dict(cast(dict[str, object], frame.values))
+        prospective.update(updates)
+        validate_mixin_tree(frame, prospective)
         frame._values.update(updates)

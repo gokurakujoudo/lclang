@@ -8,6 +8,7 @@ from types import MappingProxyType
 
 from lclang.config.model import ConfigDefinition
 from lclang.runtime import EvaluationLimits, Frame, FrameFactory, Module, Preset
+from lclang.scopes import real_binding_names, validate_real_conflicts
 from lclang.source import SourceOrigin
 from lclang.types import ModuleName
 
@@ -49,6 +50,12 @@ class Config:
             histories.setdefault(name, []).append(definition)
         object.__setattr__(self, "expanded", expanded)
         object.__setattr__(self, "definitions", MappingProxyType(winners))
+        validate_real_conflicts(
+            real_binding_names(
+                {name: item.expression for name, item in winners.items()},
+                {},
+            )
+        )
         history = {name: tuple(items) for name, items in histories.items()}
         object.__setattr__(self, "history", MappingProxyType(history))
 

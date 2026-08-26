@@ -12,10 +12,11 @@ from lclang.diagnostics import (
     internal_verbose_enabled,
 )
 from lclang.errors import LclNameError
-from lclang.lang.evaluator import evaluate
+from lclang.lang.evaluator import evaluate as evaluate_lcl
 from lclang.lang.evaluator.awaitables import resolve_awaitable
 from lclang.lang.evaluator.context import Resolver
 from lclang.lang.evaluator.definition_context import definition_scope
+from lclang.lang.parser import parse_expression
 from lclang.runtime.frame.dependencies import InternalFrameDependencies
 from lclang.runtime.frame.fallback import NO_FALLBACK
 from lclang.runtime.frame.flights import (
@@ -26,7 +27,9 @@ from lclang.runtime.frame.flights import (
 from lclang.runtime.frame.lifecycle import InternalFrameLifecycle
 from lclang.runtime.frame.limits import EvaluationLimits, internal_budget_scope
 from lclang.runtime.frame.lookup import find_frame
+from lclang.runtime.frame.scoped import local_binding_kind
 from lclang.runtime.modules import Module
+from lclang.scope_proxy import FrameProxy
 from lclang.source import SourceSpan
 from lclang.types import FrameId, VarName
 
@@ -99,6 +102,26 @@ class FrameEvaluationApi:
             return fallback
         return await self.get_resolved(name, None)
 
+    async def evaluate(self, expr: str) -> object:
+        """Evaluate one unnamed expression against this open Frame.
+
+        :param expr: Complete LCL source expression.
+        :returns: Fully resolved uncached result.
+        :raises TypeError: If *expr* is not a string.
+        :raises LclClosedFrameError: If Frame closing has begun.
+
+        .. note::
+           Named dependencies retain ordinary Frame caching while the root
+           expression uses ``<expr>`` as its lexical ``lhs()`` owner.
+        """
+        frame = cast(EvaluationFrame, self)
+        frame._lifecycle.ensure_open(None)
+        if not isinstance(expr, str):
+            raise TypeError("Frame expression must be a string")
+        node = parse_expression(expr)
+        with definition_scope("<expr>"), internal_budget_scope(frame.limits):
+            return await evaluate_lcl(node, cast(Resolver, self))
+
     async def resolve(self, name: VarName, *, span: SourceSpan) -> object:
         """Resolve a name for the language evaluator.
 
@@ -138,6 +161,8 @@ class FrameEvaluationApi:
                     f"name={name!r} owner={str(frame.frame_id)!r} source=missing",
                 )
             raise LclNameError(f"unknown variable: {name}", span=span)
+        if local_binding_kind(owner, name) == "proxy":
+            return FrameProxy(cast(object, self), tuple(name.split(".")))  # type: ignore[arg-type]
         if owner is not self:
             return await cast(FrameEvaluationApi, owner).get_resolved(name, span)
         if name in frame._results:
@@ -215,7 +240,7 @@ class FrameEvaluationApi:
         try:
             try:
                 with definition_scope(name), internal_budget_scope(frame.limits):
-                    result = await evaluate(frame.module.definitions[name], resolver)
+                    result = await evaluate_lcl(frame.module.definitions[name], resolver)
             except Exception as error:
                 frame._lifecycle.commit_failure(name, error)
                 frame._dependencies.publish(name, trace)

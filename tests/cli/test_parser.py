@@ -47,6 +47,16 @@ def test_parser_accepts_aliases_last_override_and_dates() -> None:
     assert params.overrides == {"count": "LCL[base + 1]"}
 
 
+def test_parser_accepts_qualified_override_keys() -> None:
+    """Scoped CLI keys retain literal and lazy override spellings."""
+    parsed = parse_common_options(
+        ["-o", "A.B.x", "42", "-o", "A.B.y", "LCL[A.B.x + 1]"]
+    )
+    assert parsed.overrides == {"A.B.x": "42", "A.B.y": "LCL[A.B.x + 1]"}
+    with pytest.raises(LclCliUsageError, match="reserved"):
+        parse_common_options(["-o", "dryrun.value", "1"])
+
+
 def test_override_without_value_is_true_and_never_consumes_an_override_option() -> None:
     """A following override starts a new binding while other tokens remain values."""
     parsed = parse_common_options(

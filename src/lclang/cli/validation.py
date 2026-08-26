@@ -9,6 +9,7 @@ from types import MappingProxyType
 from lclang.ast import LclName
 from lclang.errors import LclSyntaxError
 from lclang.lang import parse_expression
+from lclang.scopes import validate_qualified_name
 
 # Names owned by immutable invocation runtime state.
 RUNTIME_NAMES = frozenset({"as_of_date", "dryrun", "cli_params"})
@@ -57,6 +58,21 @@ def require_lcl_identifier(value: object, field: str) -> str:
     """
     if not is_lcl_identifier(value):
         raise ValueError(f"{field} must be a valid LCL identifier")
+    return str(value)
+
+
+def require_lcl_qualified_name(value: object, field: str) -> str:
+    """Return one validated dot-separated LCL name.
+
+    :param value: Candidate qualified binding name.
+    :param field: Field label used in diagnostics.
+    :returns: Validated text.
+    :raises ValueError: If any path segment is invalid.
+    """
+    try:
+        validate_qualified_name(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError) as error:
+        raise ValueError(f"{field} must contain valid LCL identifiers") from error
     return str(value)
 
 

@@ -154,4 +154,4 @@ The pattern is opinionated on purpose. Applications gain flexibility through
 definitions and controlled inputs, not by bypassing the runtime's ownership,
 inspection, and lifecycle rules.
 
-[Previous: Business-day calendars](11-business-day-calendars.md) | [Return to the series introduction](README.md)
+[Previous: Business-day calendars](11-business-day-calendars.md) | [Next: Scoped values and Frame evaluation](13-scoped-values-and-frame-evaluation.md)

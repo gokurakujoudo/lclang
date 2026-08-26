@@ -153,6 +153,12 @@ and a valueless override is Boolean `True`. Because definitions evaluate in
 their owning Frame, overriding only `target` would not rewrite the already
 config-owned `message` definition's lexical lookup.
 
+Override keys may be qualified, for example
+`--override service.port 9443` or
+`--override service.port "LCL[base_port + 1]"`. The complete key participates
+in the same Frame precedence and scoped validation as configuration and Python
+values. `LCL[FRAME_PROXY]` optionally declares a prefix.
+
 `SUCCESS`, `FAILURE`, and `EXCEPTION` map to exit statuses `0`, `1`, and `2`.
 Help, version, invalid arguments, logging, and the built-in `builtins`,
 `parse_lcl`, and `eval_lcl` commands use the same deterministic routing model.

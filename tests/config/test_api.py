@@ -75,6 +75,32 @@ async def test_loaded_config_builds_independent_runtime_frames(tmp_path: Path) -
 
 
 @pytest.mark.asyncio
+async def test_loaded_config_supports_scopes_markers_and_full_lhs(tmp_path: Path) -> None:
+    """Qualified winners become proxies and retain complete definition owners."""
+    path = tmp_path / "scoped.lclcfg"
+    path.write_text(
+        "A: FRAME_PROXY\nA.x: 40\nA.owner: lhs()\nresult: A.x + 2\n",
+        encoding="utf-8",
+    )
+    config = await load_config(path)
+    frame = config.frame_factory().create()
+    try:
+        assert await frame.get("result") == 42
+        assert await frame.get("A.owner") == "A.owner"
+    finally:
+        await frame.close()
+
+
+@pytest.mark.asyncio
+async def test_loaded_config_rejects_final_scoped_conflicts(tmp_path: Path) -> None:
+    """Final winners cannot contain a real prefix and descendant."""
+    path = tmp_path / "conflict.lclcfg"
+    path.write_text("A: 1\nA.x: 2\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="conflict"):
+        await load_config(path)
+
+
+@pytest.mark.asyncio
 async def test_config_frames_use_lhs_dates_and_static_hierarchy_analysis() -> None:
     """Config runtime defaults expose root/builtins before any graph evaluation."""
     with TemporaryDirectory(prefix="lclang-config-context-", dir=Path.cwd()) as directory:

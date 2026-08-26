@@ -23,6 +23,11 @@ words are reserved: `and`, `or`, `not`, `if`, `else`, `for`, `in`, `is`, `true`,
 `as`. Python-compatible `True`, `False`, and `None` are also accepted.
 Canonical printing uses `True`, `False`, and `None`.
 
+`FRAME_PROXY` is a special constant used only as a complete named binding
+value. It declares that binding as a scoped prefix rather than a real value.
+Nested uses such as `[FRAME_PROXY]` are invalid. Prefix declarations are
+optional when qualified descendants already infer the same proxy.
+
 Names introduced at binding positions cannot begin with `__`. This applies to
 function parameters, comprehension targets, exception aliases, and context
 manager aliases. Ordinary references, attributes, and call keywords are not
@@ -185,6 +190,12 @@ f"user={user.name!r:>12} count={len(items)}"
 Ordinary attribute access uses the host object's `getattr` protocol. Safe
 attribute `?.` returns `None` only when its receiver is exactly `None`; it does
 not suppress a missing attribute or descriptor failure.
+
+When a Frame contains qualified flat bindings, dotted access traverses lazy
+Frame proxies. `A.B.C.x` requests that complete key through the current Frame
+hierarchy. Safe access through an existing proxy returns `None` for a missing
+descendant, so `A?.B?.C?.x ?? default` is valid. A wholly unknown root `A`
+still raises `LclNameError`.
 
 Subscriptions accept one index, a tuple of indices, or a slice. Calls evaluate
 the callable first and arguments left-to-right. `*` expands sync/async iterables;

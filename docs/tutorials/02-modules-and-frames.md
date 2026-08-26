@@ -4,6 +4,13 @@ Modules and Frames are lclang's main design. A Module stores immutable named
 definitions. A Frame gives those definitions concrete meaning for one run by
 supplying inputs, lookup, lazy snapshots, and lifecycle ownership.
 
+Qualified names are the third major organizing concept. A definition such as
+`service.database.port` stays one flat Frame binding while `service` and
+`service.database` appear as lazy proxies over that same Frame. They organize
+policy without hidden child Frames or relative-name rules. See the
+[scoped values tutorial](13-scoped-values-and-frame-evaluation.md) for the
+complete progression and unnamed `frame.evaluate` expressions.
+
 ## What you will learn
 
 - why lclang separates reusable policy from per-run context;

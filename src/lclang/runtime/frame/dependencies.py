@@ -12,6 +12,7 @@ from lclang.runtime.dependency.reconciliation import reconcile_dependency_edges
 from lclang.runtime.dependency.snapshot import DependencySnapshot
 from lclang.runtime.dependency.tracing import DependencyTrace, TracingResolver
 from lclang.runtime.frame.lifecycle import InternalFrameLifecycle
+from lclang.runtime.frame.scoped import find_scoped_binding
 from lclang.runtime.modules import Module
 from lclang.types import VarName
 
@@ -23,12 +24,16 @@ class InternalFrameDependencies:
        Traces are staged separately and published only after evaluation commits.
     """
 
-    def __init__(self, module: Module) -> None:
+    def __init__(self, module: Module, scoped_names: tuple[str, ...] = ()) -> None:
         """Analyze the immutable module and start without runtime traces.
 
         :param module: Definition snapshot owned by the Frame.
+        :param scoped_names: Effective qualified names visible from the Frame.
         """
-        self.graph: DependencyGraph = build_dependency_graph(module)
+        self.graph: DependencyGraph = build_dependency_graph(
+            module,
+            scoped_names=scoped_names,
+        )
         self.traces: dict[str, DependencyTrace] = {}
 
     def stage(
@@ -119,6 +124,9 @@ class InternalDependencySnapshotApi:
         frame._lifecycle.ensure_open(None)
         if not name:
             raise ValueError("variable name cannot be empty")
+        _, kind = find_scoped_binding(frame, name)
+        if kind == "proxy":
+            raise LclEvaluationError(f"Frame proxy has no dependency snapshot: {name}")
         if name in frame.module.definitions:
             return frame._dependencies.snapshot(name)
         if name in frame.values:

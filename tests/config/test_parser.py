@@ -79,6 +79,20 @@ def test_nested_file_magic_requires_a_physical_origin() -> None:
     assert caught.value.span.origin.path is None
 
 
+def test_parse_qualified_definition_and_proxy_marker() -> None:
+    """Config left-hand paths and the standalone marker use core syntax."""
+    import lclang
+
+    document = parse_config("A: FRAME_PROXY\nA.B.x: 42\n")
+    first, second = document.declarations
+    assert isinstance(first, ConfigDefinition)
+    assert isinstance(second, ConfigDefinition)
+    assert str(first.name) == "A"
+    assert isinstance(first.expression, LclConstant)
+    assert first.expression.value is lclang.FRAME_PROXY
+    assert str(second.name) == "A.B.x"
+
+
 @pytest.mark.parametrize(
     ("text", "error"),
     [

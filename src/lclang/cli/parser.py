@@ -9,7 +9,7 @@ from datetime import date
 from lclang.ast import LclAstNode, LclConstant
 from lclang.cli.models import CliParams
 from lclang.cli.process import ArgvParts, split_argv
-from lclang.cli.validation import RUNTIME_NAMES, require_lcl_identifier
+from lclang.cli.validation import RUNTIME_NAMES, require_lcl_qualified_name
 from lclang.errors import LclCliUsageError, LclSyntaxError
 from lclang.lang import parse_expression
 from lclang.stdlib.dates import parse_ymd
@@ -110,10 +110,10 @@ def parse_common_options(tokens: Sequence[str]) -> ParsedCommonOptions:
                 raise usage_error("missing override key", index, token)
             key = tokens[index + 1]
             try:
-                require_lcl_identifier(key, "override key")
+                require_lcl_qualified_name(key, "override key")
             except ValueError as error:
                 raise usage_error(str(error), index + 1, key) from error
-            if key in RUNTIME_NAMES:
+            if key.split(".", 1)[0] in RUNTIME_NAMES:
                 raise usage_error("reserved override key", index + 1, key)
             value_index = index + 2
             if value_index >= len(tokens) or tokens[value_index] in OVERRIDE_OPTIONS:
