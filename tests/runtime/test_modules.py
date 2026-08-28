@@ -18,6 +18,32 @@ def test_module_copies_definitions_into_read_only_snapshot() -> None:
         module.definitions["other"] = parse_expression("1")  # type: ignore[index]
 
 
+def test_module_normalizes_masked_names_and_rejects_alias_collisions() -> None:
+    """Module keys expose ordinary lookup names plus immutable mask metadata."""
+    from lclang.runtime import Module
+
+    module = Module(ModuleName("app"), {"token!": parse_expression("'secret'")})
+    assert tuple(module.definitions) == ("token",)
+    assert module.masked_names == frozenset({"token"})
+    with pytest.raises(ValueError, match="duplicate"):
+        Module(
+            ModuleName("bad"),
+            {"token": parse_expression("1"), "token!": parse_expression("2")},
+        )
+    with pytest.raises(ValueError, match="normalized names"):
+        Module(
+            ModuleName("bad-metadata"),
+            {"token": parse_expression("1")},
+            masked_names=frozenset({"token!"}),
+        )
+    with pytest.raises(ValueError, match="no binding"):
+        Module(
+            ModuleName("missing-metadata"),
+            {"token": parse_expression("1")},
+            masked_names=frozenset({"missing"}),
+        )
+
+
 @pytest.mark.parametrize(
     ("name", "definitions"),
     [

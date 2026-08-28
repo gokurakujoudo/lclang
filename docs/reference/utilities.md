@@ -47,7 +47,7 @@ Python integrations may import `STANDARD_MANIFESTS`, `STANDARD_PRESET`,
 
 - `ExecutionStatus`: the status value used by tasks and steps.
 - `ExecutionTaskType`: task classification.
-- `ExecutionStatusTree`: an immutable view of a task subtree.
+- `ExecutionStatusTree`: an ordered public record of a task subtree.
 - `ExecutionStatusManager`: creates and coordinates nested task cursors.
 - `ExecutionStatusStep`: a scoped step whose description and status may be
   updated atomically.
@@ -55,4 +55,6 @@ Python integrations may import `STANDARD_MANIFESTS`, `STANDARD_PRESET`,
 Task and step context managers finalize successful scopes automatically, record
 failures, and allow exceptions to propagate. Parent aggregation is
 deterministic, subtree operations are locked, and snapshots preserve child
-order.
+order. `FAILURE_COVERED` records an exception handled by an explicit workflow
+context without disguising it as success. See the [workflow reference](workflow.md)
+for task definitions, mappings, execution, static rendering, and CLI conversion.

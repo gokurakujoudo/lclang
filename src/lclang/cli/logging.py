@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from dataclasses import dataclass
 from logging.handlers import MemoryHandler
 from pathlib import Path
 from typing import TextIO, cast
 
-from lclang.cli.models import LogConfig
+from lclang.cli.models import CliParams, LogConfig
 from lclang.runtime import Frame
 
 
@@ -19,11 +20,13 @@ class LoggerHandle:
 
     :param logger: Handler-visible standard-library logger.
     :param handlers: Handlers to detach and close.
+    :param log_path: Absolute enabled file path, or ``None`` for null logging.
     :param closed: Whether cleanup has already occurred.
     """
 
     logger: logging.Logger
     handlers: tuple[logging.Handler, ...]
+    log_path: Path | None = None
     closed: bool = False
 
     def close(self) -> None:
@@ -167,4 +170,70 @@ async def create_logger(frame: Frame, identity: str) -> LoggerHandle:
     logger.propagate = False
     handler = await asyncio.to_thread(build_handler, config)
     logger.addHandler(handler)
-    return LoggerHandle(logger, (handler,))
+    path = Path(handler.baseFilename) if isinstance(handler, logging.FileHandler) else None
+    return LoggerHandle(logger, (handler,), path)
+
+
+def redacted_overrides(params: CliParams, frame: Frame) -> dict[str, str | bool]:
+    """Return invocation overrides with exact-name secrets hidden.
+
+    :param params: Parsed invocation values.
+    :param frame: Effective invocation Frame carrying sticky mask metadata.
+    :returns: Fresh override mapping safe for lclang-owned audit logs.
+    """
+    return {
+        name: "*masked*" if frame.is_masked(name) else value
+        for name, value in params.overrides.items()
+    }
+
+
+def normalized_argv(params: CliParams, frame: Frame) -> list[str]:
+    """Build one deterministic, redacted command-line representation.
+
+    :param params: Parsed invocation values.
+    :param frame: Effective invocation Frame carrying sticky mask metadata.
+    :returns: Canonical argv tokens including effective date and common options.
+    """
+    values = [params.executable_path, params.script_path, *params.command]
+    if params.config_file_path is not None:
+        values.extend(("--config", params.config_file_path))
+    safe_overrides = redacted_overrides(params, frame)
+    for name, value in safe_overrides.items():
+        values.extend(("--override", name))
+        if params.overrides[name] is not True:
+            values.append(str(value))
+    values.extend(("--as-of", params.as_of_date.strftime("%Y%m%d")))
+    if params.dryrun:
+        values.append("--dryrun")
+    if params.verbose:
+        values.append("--verbose")
+    return values
+
+
+def log_execution_start(handle: LoggerHandle, params: CliParams, frame: Frame) -> None:
+    """Write the fixed audit preamble before command or verbose records.
+
+    :param handle: Configured invocation logger owner.
+    :param params: Parsed invocation values.
+    :param frame: Effective invocation Frame carrying sticky mask metadata.
+    :returns: ``None``.
+    """
+    configuration = {
+        "as_of_date": params.as_of_date.isoformat(),
+        "config_file_path": params.config_file_path,
+        "dryrun": params.dryrun,
+        "overrides": redacted_overrides(params, frame),
+        "verbose": params.verbose,
+    }
+    original_level = handle.logger.level
+    handle.logger.setLevel(min(original_level, logging.INFO))
+    try:
+        command = json.dumps(params.command)
+        argv = json.dumps(normalized_argv(params, frame), ensure_ascii=False)
+        values = json.dumps(configuration, ensure_ascii=False, sort_keys=True)
+        handle.logger.info(f"execution.started command={command}")
+        handle.logger.info(f"execution.log_file path={handle.log_path or 'disabled'}")
+        handle.logger.info(f"execution.command_line argv={argv}")
+        handle.logger.info(f"execution.config values={values}")
+    finally:
+        handle.logger.setLevel(original_level)

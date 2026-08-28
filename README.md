@@ -18,7 +18,7 @@ LCL stands for **Lazy Context Language**:
 
 The package includes the expression language, reusable Modules and Frames,
 UTF-8 `.lclcfg` files, dependency analysis, runtime inspection, reviewed
-standard namespaces, a typed command-line framework, workflow status trees,
+standard namespaces, a typed command-line framework, tree workflows and status,
 and a composable business-day calendar system.
 
 ## Why lclang
@@ -173,10 +173,11 @@ LCL is expression-only, Unicode-aware, and intentionally familiar to Python
 users. It supports arithmetic, comparisons, short-circuit Boolean logic,
 conditionals, null coalescing, safe attributes, calls, slices, unpacking,
 collection displays, comprehensions, generators, f-strings, exceptions,
-context managers, and sync or async iteration.
+immutable named records, context managers, and sync or async iteration.
 
 ```lcl
 profile?.display_name ?? "anonymous"
+{name=profile.name, active=true}.name
 [item * 2 for item in values if item > 0]
 f"{service}: {port}"
 (left, right=10) -> left + right
@@ -288,11 +289,18 @@ Frame, as-of date, dry-run flag, and logging context, and returns a deterministi
 
 The framework provides immutable invocation values, nested command groups,
 structured help, full-argument parsing, platform-neutral process entry points,
-isolated logging, and opt-in internal tracing. Pass `--verbose` after a selected
+alphabetized configuration-parameter help, isolated formal file logging, and
+opt-in internal tracing. Enabled logs begin
+with the log path, normalized command line, and masked CLI execution
+configuration. Pass `--verbose` after a selected
 command to trace expression parsing, value provenance, caching, fallbacks, and
 evaluation to stderr; enabled file logging receives the same records. Trace
-values use bounded representations but are not redacted, so verbose output may
-contain configuration data. The existing `-v/--version` spelling remains the
+values use bounded representations. A trailing `!` on a definition or binding
+key, such as `api_token!: load_token()`, keeps the runtime name `api_token` but
+renders its parse, evaluation, lookup, cache, failure, and inspection payloads
+as `*masked*`. The marker is exact-name and sticky across overrides; derived
+keys require their own marker. Application-authored log messages remain the
+handler's responsibility. The existing `-v/--version` spelling remains the
 version command. Precedence rises from preset and command defaults through
 configuration definitions and command-line overrides to reserved runtime
 values. Built-in commands inventory available values, parse LCL, and evaluate
@@ -301,17 +309,25 @@ LCL using the same routing model.
 Dry-run remains an explicit handler decision, so the framework never pretends
 to know whether an application-specific side effect is safe.
 
-### Workflow status
+### Tree workflows and status
 
-`lclang.workflow` records nested task and step outcomes when one Boolean or exit
-code cannot explain a run. Scoped steps finalize success automatically, record
-exception detail without suppressing the exception, and aggregate parent status
-deterministically. Immutable snapshots preserve child order and can be rendered,
-logged, or converted to an application's own wire format.
+`lclang.workflow` defines a validated tree of typed async actions. Plain
+dataclass mappings connect named `TaskVar` values to arguments and explicitly
+publish outputs. Each node can own async context tasks for local resources or
+exception handling, followed by ordered child tasks. Execution is parent-first,
+depth-first against one shared Frame; task-local Frames confine context outputs,
+while mapped action outputs can feed later nodes.
 
-This is useful for import pipelines, release processes, multi-stage commands,
-and any operation where users need to see what succeeded, failed, was skipped,
-or never finished.
+The fixed tree, scope, cleanup, and status rules provide a strong format. Inside
+it, actions remain ordinary async Python and can use application-specific
+services or detailed status steps. `workflow.to_lines()` renders the static tree
+and field flows. `workflow.to_cli()` infers external parameters, help, and
+masking, and `lclang.cli.scan_commands()` discovers commands in a package.
+
+Execution records nested task and step outcomes, including visible covered
+failures, skipped branches, and error origins. Contexts unwind in reverse order,
+and the result retains the final status tree plus every successful action's
+materialized arguments and outputs.
 
 ### Business-day calendars
 
@@ -340,6 +356,7 @@ and scheduling policy.
 | One unnamed expression in an existing context | `await frame.evaluate(source)` | Frame supplies lookup; caller owns the uncached result |
 | One value from a config file | `load_config()` then `evaluate_config()` | the temporary Frame is closed for you |
 | Many runs with the same policy | `FrameFactory` or `Config.frame_factory()` | each created Frame is caller-owned |
+| A typed multi-step operation | `define_workflow()` then `await workflow.execute()` | caller owns the shared execution Frame |
 | Syntax printing or analysis | `parse_expression()` and analysis APIs | no evaluation state is created |
 
 For optional lookup, `await frame.get(name, fallback=value)` returns the

@@ -54,6 +54,8 @@ def test_introduction_publishes_the_complete_progressive_series() -> None:
         "Workflow status",
         "Business-day calendars",
         "Production patterns",
+        "Tree workflows",
+        "Case Study: Energy Settlement Workflow",
     ):
         assert topic in text
     assert "**Expected result**" not in text

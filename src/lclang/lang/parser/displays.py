@@ -19,6 +19,7 @@ from lclang.ast.displays import LclDictEntry
 from lclang.errors import LclSyntaxError
 from lclang.lang.lexer import TokenKind
 from lclang.lang.parser.comprehensions import ComprehensionKind, parse_comprehension
+from lclang.lang.parser.records import parse_record
 from lclang.lang.parser.stream import TokenStream
 from lclang.source import SourceSpan
 
@@ -162,6 +163,11 @@ class InternalDisplayParser:
             if self.stream.peek().kind is TokenKind.KW_FOR:
                 return self.internal_comprehension(entry, ComprehensionKind.DICT)
             return self.internal_dict([entry])
+        if (
+            self.stream.current.kind is TokenKind.IDENTIFIER
+            and self.stream.peek(1).kind is TokenKind.EQUAL
+        ):
+            return parse_record(self.stream, self.opening.span, self.parse_nested)
         first = self.internal_sequence_element()
         if self.stream.match(TokenKind.COLON) is not None:
             value = self.parse_nested()

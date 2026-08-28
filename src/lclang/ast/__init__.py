@@ -21,6 +21,8 @@ from lclang.ast.displays import (
     LclDictUnpack,
     LclKeyValue,
     LclList,
+    LclRecordDisplay,
+    LclRecordField,
     LclSet,
     LclStarred,
 )
@@ -65,6 +67,8 @@ __all__ = [
     "LclParameter",
     "LclPositionalArgument",
     "LclRaise",
+    "LclRecordDisplay",
+    "LclRecordField",
     "LclSafeAttribute",
     "LclSet",
     "LclSetComprehension",

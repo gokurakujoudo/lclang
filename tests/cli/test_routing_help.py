@@ -14,7 +14,13 @@ def make_group() -> CommandGroup:
     :returns: Root command group with one nested command.
     """
 
-    @cli.command(parameter_docs=[ParameterDoc("target", str, True, "Deployment target")])
+    @cli.command(
+        parameter_docs=[
+            ParameterDoc("target", str, True, "Deployment target"),
+            ParameterDoc("Zebra", str, False, "Last alphabetically"),
+            ParameterDoc("alpha", str, False, "First alphabetically"),
+        ]
+    )
     async def deploy_command(context: CliContext) -> CliResult:
         """Deploy configured assets.
 
@@ -39,6 +45,8 @@ def test_nested_route_and_help_scopes_are_exact() -> None:
     command_help = render_command_help("tool.py", route.command, route.path)
     assert "Configuration parameters" in command_help
     assert "target" in command_help
+    assert command_help.index("alpha") < command_help.index("target")
+    assert command_help.index("target") < command_help.index("Zebra")
     assert "-o, --override <key> [<value>]" in command_help
     assert "--verbose" in command_help
     root_help = render_group_help("tool.py", root, (), True)
@@ -90,3 +98,18 @@ def test_help_handles_empty_rows_and_wraps_usage_errors() -> None:
 
     command_help = render_command_help("tool.py", empty_command, ("empty",))
     assert "(none)" in command_help
+
+    @cli.command(
+        parameter_docs=[ParameterDoc("token!", str, False, "Secret token", "secret")]
+    )
+    async def masked_command(context: CliContext) -> CliResult:
+        """Return a command with one masked documented default.
+
+        :param context: Current invocation.
+        :returns: Successful result.
+        """
+        return CliResult.success("")
+
+    masked_help = render_command_help("tool.py", masked_command, ("masked",))
+    assert "default=*masked*" in masked_help
+    assert "secret'" not in masked_help

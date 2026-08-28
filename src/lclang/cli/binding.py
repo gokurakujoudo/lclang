@@ -12,6 +12,7 @@ from lclang.cli.commands import Command
 from lclang.cli.models import CliConfig, CliParams
 from lclang.cli.parser import lazy_override_expression
 from lclang.config import load_config
+from lclang.diagnostics import internal_masked_scope
 from lclang.errors import LclCliUsageError
 from lclang.runtime import Frame, Module
 from lclang.types import ModuleName
@@ -108,9 +109,21 @@ async def build_binding(command: Command, params: CliParams, cli_config: CliConf
     frames: list[Frame] = []
     stack = FrameStack(())
     try:
-        imports = LCL_RUNTIME.derive(Module(IMPORTS_MODULE_NAME, {}), dict(command.preset))
+        imports = LCL_RUNTIME.derive(
+            Module(IMPORTS_MODULE_NAME, {}),
+            dict(command.preset),
+            masked_names=command.masked_names,
+        )
         frames.append(imports)
-        defaults_module = Module(DEFAULTS_MODULE_NAME, default_definitions(command, cli_config))
+        defaults_module = Module(
+            DEFAULTS_MODULE_NAME,
+            default_definitions(command, cli_config),
+            masked_names=frozenset(
+                item.name
+                for item in command.parameter_docs
+                if item.masked and item.default is not None
+            ),
+        )
         defaults = imports.derive(defaults_module)
         frames.append(defaults)
         if params.config_file_path is None:
@@ -125,7 +138,9 @@ async def build_binding(command: Command, params: CliParams, cli_config: CliConf
             if isinstance(value, bool):
                 override_values[name] = value
                 continue
-            expression = lazy_override_expression(value)
+            masked = name in params.masked_names or config.is_masked(name)
+            with internal_masked_scope(masked):
+                expression = lazy_override_expression(value)
             if expression is None:
                 override_values[name] = value
             else:
@@ -137,11 +152,21 @@ async def build_binding(command: Command, params: CliParams, cli_config: CliConf
             "cli_params": params,
         }
         overrides = config.derive(
-            Module(OVERRIDES_MODULE_NAME, override_definitions),
+            Module(
+                OVERRIDES_MODULE_NAME,
+                override_definitions,
+                masked_names=params.masked_names & override_definitions.keys(),
+            ),
             runtime_values,
+            masked_names=params.masked_names,
         )
         frames.append(overrides)
-        runtime = overrides.derive(Module(RUNTIME_MODULE_NAME, {}))
+        runtime = overrides.derive(
+            Module(RUNTIME_MODULE_NAME, {}),
+            masked_names=frozenset(
+                item.name for item in command.parameter_docs if item.masked
+            ),
+        )
         frames.append(runtime)
         stack = FrameStack(tuple(frames))
         missing = [

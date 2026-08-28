@@ -15,6 +15,7 @@ __LCL_VERSION__: 1
 
 # Definitions use a colon.
 base: 2
+api_token!: "secret"
 total: (base + \ # the next physical line continues
   3)
 
@@ -32,6 +33,14 @@ Definition names may be one LCL identifier or a dot-separated qualified path
 of LCL identifiers. Top-level names beginning with `__` remain reserved; the
 metadata name is the sole exception. `A: FRAME_PROXY` optionally declares a
 scoped prefix, while `A.x: expression` infers `A` automatically.
+
+A single trailing `!` marks the exact definition name as masked and is not part
+of that name. For example, `service.password!: expression` is referenced as
+`service.password`. Once a name is marked by any expanded declaration, later
+same-name definitions and runtime overrides remain masked. Masking does not
+propagate to derived definitions; mark those separately when their own values
+must be hidden. Verbose parse and evaluation diagnostics render a masked
+expression, value, result, or failure as `*masked*`.
 
 ## File magic and paths
 
@@ -93,6 +102,11 @@ provenance, `Config.to_module()` creates an immutable Module, and
 `Config.frame_factory()` creates reusable independent-Frame policy. Callers own
 Frames they create and should use them as async context managers;
 `evaluate_config` owns and always closes its temporary Frame.
+
+`Config.masked_names` exposes the immutable exact-name mask policy accumulated
+from expanded declarations. The final value still follows ordinary
+last-definition-wins precedence; the mask flag is sticky across those
+overrides.
 
 Config-created Frames use the canonical lclang hierarchy by default. Definitions
 therefore have the root `lhs()` function (the current definition name), builtin

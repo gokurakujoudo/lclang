@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, cast
 
 from lclang.runtime.modules import Module
@@ -22,11 +23,14 @@ class FrameDerivationApi:
         self,
         module: Module,
         values: dict[str, object] = {},  # noqa: B006
+        *,
+        masked_names: Iterable[str] = (),
     ) -> Frame:
         """Create a fresh child Frame borrowing this Frame as its parent.
 
         :param module: Immutable child definitions and nominal child identifier.
         :param values: Local host bindings copied into the child.
+        :param masked_names: Additional normalized hierarchy names to redact.
         :returns: Independent child Frame whose parent is this Frame.
         :raises TypeError: If *module* is not a Module or *values* is not a dict.
         :raises ValueError: If a local host-binding name is empty.
@@ -48,4 +52,5 @@ class FrameDerivationApi:
             FrameId(str(module.name)),
             values=values,
             parent=cast(Frame, self),
+            masked_names=masked_names,
         )

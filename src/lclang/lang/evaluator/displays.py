@@ -11,6 +11,7 @@ from lclang.ast import (
     LclDictUnpack,
     LclKeyValue,
     LclList,
+    LclRecordDisplay,
     LclSet,
     LclStarred,
     LclTuple,
@@ -18,8 +19,9 @@ from lclang.ast import (
 from lclang.lang.evaluator._types import EvaluateNode
 from lclang.lang.evaluator.context import Resolver
 from lclang.lang.evaluator.iteration import iterate_values
+from lclang.records import LclRecord
 
-type DisplayNode = LclTuple | LclList | LclSet | LclDict
+type DisplayNode = LclTuple | LclList | LclSet | LclDict | LclRecordDisplay
 
 
 async def internal_evaluate_display(
@@ -44,6 +46,11 @@ async def internal_evaluate_display(
         return await internal_sequence(node.elements, resolver, evaluate)
     if isinstance(node, LclSet):
         return set(await internal_sequence(node.elements, resolver, evaluate))
+    if isinstance(node, LclRecordDisplay):
+        fields: dict[str, object] = {}
+        for field in node.fields:
+            fields[str(field.name)] = await evaluate(field.value, resolver)
+        return LclRecord(fields)
     return await internal_dictionary(node, resolver, evaluate)
 
 

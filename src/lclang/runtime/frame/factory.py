@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 
+from lclang.masking import normalize_masked_mapping
 from lclang.runtime.frame.core import Frame
 from lclang.runtime.frame.limits import EvaluationLimits
 from lclang.runtime.modules import Module
@@ -90,8 +91,11 @@ class FrameFactory:
         if parent is not None and not isinstance(parent, Frame):
             raise TypeError("Frame parent must be a Frame")
         bindings = {} if self.preset is None else dict(self.preset.values)
+        masked_names = frozenset() if self.preset is None else self.preset.masked_names
         if values is not None:
-            bindings.update(values)
+            updates, update_masks = normalize_masked_mapping(values)
+            bindings.update(updates)
+            masked_names |= update_masks
         effective_limits = self.limits if limits is None else limits
         effective_parent = self.parent if parent is None else parent
         return Frame(
@@ -100,4 +104,5 @@ class FrameFactory:
             values=bindings,
             parent=effective_parent,
             limits=effective_limits,
+            masked_names=masked_names,
         )

@@ -49,6 +49,31 @@ def test_default_binding_is_lazy_and_closes_idempotently() -> None:
     assert "log_format" in definitions
 
 
+def test_marked_command_defaults_and_presets_reach_effective_frame_policy() -> None:
+    """Every declared CLI binding source retains normalized sticky masking."""
+    @cli.command(
+        parameter_docs=[ParameterDoc("token!", str, True, "secret", "default-secret")],
+        preset={"imported!": "preset-secret"},
+    )
+    async def masked_command(context: CliContext) -> CliResult:
+        """Return an empty result.
+
+        :param context: Current invocation.
+        :returns: Successful result.
+        """
+        return CliResult.success("")
+
+    params = CliParams("python", ("masked",), date.today(), False, None, {})
+    binding = asyncio.run(build_binding(masked_command, params, CliConfig()))
+    try:
+        assert binding.frame.is_masked("token") is True
+        assert binding.frame.is_masked("imported") is True
+        assert asyncio.run(binding.frame.get("token")) == "default-secret"
+        assert asyncio.run(binding.frame.get("imported")) == "preset-secret"
+    finally:
+        asyncio.run(binding.stack.close())
+
+
 def test_missing_required_parameter_is_a_usage_error() -> None:
     """Presence checks do not need to evaluate any configuration value."""
 

@@ -16,6 +16,10 @@ def test_ordinary_operands_are_eager_and_occurrences_remain_distinct() -> None:
         ("right", DependencyKind.EAGER),
         ("left", DependencyKind.EAGER),
     ]
+    assert _summary("{first=left, second=right}") == [
+        ("left", DependencyKind.EAGER),
+        ("right", DependencyKind.EAGER),
+    ]
 
 
 def test_short_circuit_and_conditional_nodes_weaken_only_skipped_paths() -> None:

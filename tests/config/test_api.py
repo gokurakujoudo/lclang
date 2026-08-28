@@ -13,7 +13,7 @@ from lclang.types import FrameId
 @pytest.mark.asyncio
 async def test_using_flattens_cross_file_dependencies_into_one_module() -> None:
     """Using adds definitions, not evaluation or a runtime dependency layer."""
-    with TemporaryDirectory(prefix="lclang-flat-using-", dir=Path.cwd()) as directory:
+    with TemporaryDirectory(prefix="lclang-flat-using-") as directory:
         root = Path(directory)
         used = root / "b.lclcfg"
         entry = root / "a.lclcfg"
@@ -52,6 +52,25 @@ async def test_using_flattens_cross_file_dependencies_into_one_module() -> None:
             assert await frame.get("y") == 400
         finally:
             await frame.close()
+
+
+@pytest.mark.asyncio
+async def test_config_masking_is_sticky_across_expansion_and_overrides(tmp_path: Path) -> None:
+    """Any marked occurrence protects the final exact-name winner."""
+    child = tmp_path / "child.lclcfg"
+    root = tmp_path / "root.lclcfg"
+    child.write_text("token!: 'old-secret'\n", encoding="utf-8")
+    root.write_text('using "child.lclcfg"\ntoken: "new-secret"\n', encoding="utf-8")
+    config = await load_config(root)
+    module = config.to_module()
+    frame = config.frame_factory().create(values={"token": "host-secret"})
+    try:
+        assert config.masked_names == frozenset({"token"})
+        assert module.masked_names == frozenset({"token"})
+        assert frame.is_masked("token") is True
+        assert await frame.get("token") == "new-secret"
+    finally:
+        await frame.close()
 
 
 @pytest.mark.asyncio
@@ -103,7 +122,7 @@ async def test_loaded_config_rejects_final_scoped_conflicts(tmp_path: Path) -> N
 @pytest.mark.asyncio
 async def test_config_frames_use_lhs_dates_and_static_hierarchy_analysis() -> None:
     """Config runtime defaults expose root/builtins before any graph evaluation."""
-    with TemporaryDirectory(prefix="lclang-config-context-", dir=Path.cwd()) as directory:
+    with TemporaryDirectory(prefix="lclang-config-context-") as directory:
         path = Path(directory) / "context.lclcfg"
         path.write_text(
             'k: {"name": lhs()}\n'

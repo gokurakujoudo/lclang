@@ -35,6 +35,26 @@ async def test_shortcuts_use_the_complete_default_hierarchy() -> None:
     assert lclang.to_source(module.definitions["result"]) != expressions["result"]
 
 
+@pytest.mark.asyncio
+async def test_module_definitions_share_record_attributes_with_python() -> None:
+    """Composite record definitions support dependent LCL and Python reads."""
+    module = lclang.define_module(
+        "profile",
+        {
+            "profile": "{name=first_name, active=enabled}",
+            "label": 'f"{profile.name}:{profile.active}"',
+        },
+    )
+    async with lclang.define_frame(
+        module,
+        preset={"first_name": "Ada", "enabled": True},
+    ) as frame:
+        profile = await frame.get("profile")
+        assert isinstance(profile, lclang.LclRecord)
+        assert profile.name == "Ada"
+        assert await frame.get("label") == "Ada:True"
+
+
 def test_builtin_layer_has_a_fixed_ambient_free_inventory() -> None:
     """The standard layer excludes I/O, dynamic code, import, and mutation."""
     expected = {

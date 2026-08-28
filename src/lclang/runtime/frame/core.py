@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from types import MappingProxyType
 from weakref import WeakSet
 
 from lclang.errors import LclEvaluationError, LclNameError
+from lclang.masking import normalize_masked_mapping, normalize_masked_names
 from lclang.runtime.frame.closing import FrameClosingApi
 from lclang.runtime.frame.dependencies import (
     InternalDependencySnapshotApi,
@@ -64,6 +65,7 @@ class Frame(
         parent: Frame | None = None,
         limits: EvaluationLimits | None = None,
         native_values: bool = False,
+        masked_names: Iterable[str] = (),
     ) -> None:
         """Create an empty result cache over immutable inputs.
 
@@ -73,6 +75,7 @@ class Frame(
         :param parent: Optional ancestor used after local definitions and bindings.
         :param limits: Optional resource ceilings, or defaults when omitted.
         :param native_values: Whether local host bindings are canonical lclang values.
+        :param masked_names: Additional normalized local names to redact.
         :returns: ``None`` after independent runtime state is initialized.
         :raises TypeError: If *frame_id* or *native_values* has the wrong type.
         :raises ValueError: If the effective ID or a host binding name is empty.
@@ -87,16 +90,20 @@ class Frame(
         effective_id = FrameId(f"frame-{module.name}") if frame_id is None else FrameId(frame_id)
         if not effective_id:
             raise ValueError("frame identifier cannot be empty")
-        snapshot = {} if values is None else dict(values)
-        if any(not isinstance(name, str) for name in snapshot):
+        raw_values = {} if values is None else values
+        if any(not isinstance(name, str) for name in raw_values):
             raise TypeError("host binding names must be strings")
+        snapshot, value_masks = normalize_masked_mapping(raw_values)
         if any(not name for name in snapshot):
             raise ValueError("host binding name cannot be empty")
         validate_binding_names(snapshot)
+        explicit_masks = normalize_masked_names(masked_names)
+        validate_binding_names(explicit_masks)
         self.module = module
         self.frame_id = effective_id
         self._values = snapshot
         self.values: Mapping[str, object] = MappingProxyType(self._values)
+        self.masked_names = frozenset(module.masked_names | value_masks | explicit_masks)
         self.parent = parent
         self._children: WeakSet[Frame] = WeakSet()
         self.limits = EvaluationLimits() if limits is None else limits

@@ -11,6 +11,7 @@ from lclang.ast import (
     LclKeyValue,
     LclList,
     LclListComprehension,
+    LclRecordDisplay,
     LclSet,
     LclSetComprehension,
     LclStarred,
@@ -41,6 +42,11 @@ def render_collection(node: LclAstNode, render: Render) -> RenderResult | None:
     if isinstance(node, LclDict):
         entries = ", ".join(internal_entry(value, render) for value in node.entries)
         return f"{{{entries}}}", COLLECTION_PRECEDENCE
+    if isinstance(node, LclRecordDisplay):
+        fields = ", ".join(
+            f"{field.name}={render(field.value, 0)}" for field in node.fields
+        )
+        return f"{{{fields}}}", COLLECTION_PRECEDENCE
     if isinstance(node, LclGenerator):
         text = f"({internal_head(node.element, render)}{internal_clauses(node.clauses, render)})"
         return text, COLLECTION_PRECEDENCE

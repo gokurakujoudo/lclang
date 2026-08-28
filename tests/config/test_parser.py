@@ -93,6 +93,18 @@ def test_parse_qualified_definition_and_proxy_marker() -> None:
     assert str(second.name) == "A.B.x"
 
 
+def test_masked_definition_marker_normalizes_exact_qualified_names() -> None:
+    """A trailing bang records policy without becoming part of lookup syntax."""
+    document = parse_config("token!: 'secret'\nservice.password!: token\nplain: token\n")
+    first, second, third = document.declarations
+    assert isinstance(first, ConfigDefinition)
+    assert isinstance(second, ConfigDefinition)
+    assert isinstance(third, ConfigDefinition)
+    assert (str(first.name), first.masked) == ("token", True)
+    assert (str(second.name), second.masked) == ("service.password", True)
+    assert (str(third.name), third.masked) == ("plain", False)
+
+
 @pytest.mark.parametrize(
     ("text", "error"),
     [
@@ -136,6 +148,9 @@ def test_parser_public_validation_and_declaration_rainy_branches(tmp_path: Path)
         "using ''\n",
         "bad-name: 1\n",
         "bad$: 1\n",
+        "value!!: 1\n",
+        "value !: 1\n",
+        "!: 1\n",
         "for: 1\n",
         "empty: # nothing\n",
     ):

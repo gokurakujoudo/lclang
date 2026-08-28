@@ -60,9 +60,13 @@ test in its own file under `tests/tutorials`.
     boundaries, and application ownership.
 13. **[Scoped values and Frame evaluation](13-scoped-values-and-frame-evaluation.md)** -- organize qualified
     bindings through lazy proxies and run unnamed expressions in an existing Frame.
+14. **[Tree workflows](14-tree-workflows.md)** -- connect typed async actions, scoped resources, explicit
+    data flow, status, cleanup, and CLI inference in one inspectable task tree.
+15. **[Case Study: Energy Settlement Workflow](15-energy-settlement-workflow.md)** -- build and exercise a complete
+    configured workflow command with result files, logs, masking, overrides, dry-run, verbose, and errors.
 
 The sequence is deliberate: lessons 1-4 establish everyday use, lessons 5-8
-make behavior predictable in real applications, and lessons 9-13 apply the same
+make behavior predictable in real applications, and lessons 9-15 apply the same
 model to larger systems. Read the lessons in order or jump to one topic after
 finishing this introduction.
 

@@ -7,6 +7,8 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 
+from lclang.masking import MASKED_VALUE
+
 # Maximum characters retained from one rendered value payload.
 VERBOSE_VALUE_LIMIT = 200
 # Marker included within the value limit when a representation is shortened.
@@ -19,6 +21,8 @@ ACTIVE_VERBOSE_LOGGER: ContextVar[logging.Logger | None] = ContextVar(
     "lclang_active_verbose_logger",
     default=None,
 )
+# Task-local switch preventing diagnostic payload rendering.
+ACTIVE_MASKED_VALUE: ContextVar[bool] = ContextVar("lclang_active_masked_value", default=False)
 
 
 def internal_verbose_enabled() -> bool:
@@ -29,13 +33,21 @@ def internal_verbose_enabled() -> bool:
     return ACTIVE_VERBOSE_LOGGER.get() is not None
 
 
-def internal_render_value(value: object, renderer: ValueRenderer | None = None) -> str:
+def internal_render_value(
+    value: object,
+    renderer: ValueRenderer | None = None,
+    *,
+    masked: bool = False,
+) -> str:
     """Render one value without allowing its representation to break tracing.
 
     :param value: Value whose concrete type labels the output.
     :param renderer: Optional canonical payload renderer used instead of ``repr``.
+    :param masked: Whether to return the stable redaction marker directly.
     :returns: One bounded physical line using ``(type) value`` syntax.
     """
+    if masked or ACTIVE_MASKED_VALUE.get():
+        return MASKED_VALUE
     try:
         payload = repr(value) if renderer is None else renderer()
     except BaseException as error:
@@ -73,3 +85,20 @@ def internal_verbose_scope(logger: logging.Logger | None) -> Iterator[None]:
         yield
     finally:
         ACTIVE_VERBOSE_LOGGER.reset(token)
+
+
+@contextmanager
+def internal_masked_scope(masked: bool = True) -> Iterator[None]:
+    """Suppress diagnostic payload rendering within one task-local scope.
+
+    :param masked: Whether payloads should use the stable masked marker.
+    :returns: Context manager iterator restoring prior masking state.
+    """
+    if not masked:
+        yield
+        return
+    token = ACTIVE_MASKED_VALUE.set(True)
+    try:
+        yield
+    finally:
+        ACTIVE_MASKED_VALUE.reset(token)

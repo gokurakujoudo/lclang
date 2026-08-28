@@ -7,6 +7,7 @@ import textwrap
 from collections.abc import Iterable
 
 from lclang.cli.commands import Command, CommandGroup
+from lclang.masking import MASKED_VALUE
 
 # Fixed rendering width independent of terminal state.
 HELP_WIDTH = 100
@@ -90,7 +91,7 @@ def render_command_help(script: str, command: Command, path: tuple[str, ...]) ->
     :param script: Script display basename.
     :param command: Selected leaf command.
     :param path: Full consumed nested command path.
-    :returns: Structured help ending in one newline.
+    :returns: Structured help with A-Z parameter rows, ending in one newline.
     """
     prefix = " ".join((script, *path))
     lines = [f"Usage: {prefix} [options]", ""]
@@ -99,10 +100,14 @@ def render_command_help(script: str, command: Command, path: tuple[str, ...]) ->
         lines.append("")
     lines.append("Configuration parameters:")
     parameter_rows: list[tuple[str, str]] = []
-    for parameter in command.parameter_docs:
+    for parameter in sorted(
+        command.parameter_docs,
+        key=lambda item: (item.name.casefold(), item.name),
+    ):
         type_name = inspect.formatannotation(parameter.value_type)
         required = "required" if parameter.required else "optional"
-        default = "" if parameter.default is None else f", default={parameter.default!r}"
+        default_value = MASKED_VALUE if parameter.masked else repr(parameter.default)
+        default = "" if parameter.default is None else f", default={default_value}"
         detail = f"{type_name}; {required}{default}. {parameter.description}".strip()
         parameter_rows.append((parameter.name, detail))
     lines.extend(format_rows(parameter_rows) or ["  (none)"])

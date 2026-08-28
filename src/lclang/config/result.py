@@ -22,6 +22,7 @@ class Config:
     :param expanded: Chronological definition occurrences after expansion.
     :param definitions: Computed read-only final-winner mapping.
     :param history: Computed read-only chronological history mapping.
+    :param masked_names: Computed immutable sticky exact-name mask policy.
 
     .. note::
        Reassigning an existing dictionary key preserves first-appearance order.
@@ -32,6 +33,7 @@ class Config:
     expanded: tuple[ConfigDefinition, ...]
     definitions: Mapping[str, ConfigDefinition] = field(init=False, repr=False)
     history: Mapping[str, tuple[ConfigDefinition, ...]] = field(init=False, repr=False)
+    masked_names: frozenset[str] = field(init=False)
 
     def __post_init__(self) -> None:
         """Detach occurrences and build stable winners and histories.
@@ -50,6 +52,11 @@ class Config:
             histories.setdefault(name, []).append(definition)
         object.__setattr__(self, "expanded", expanded)
         object.__setattr__(self, "definitions", MappingProxyType(winners))
+        object.__setattr__(
+            self,
+            "masked_names",
+            frozenset(str(item.name) for item in expanded if item.masked),
+        )
         validate_real_conflicts(
             real_binding_names(
                 {name: item.expression for name, item in winners.items()},
@@ -73,6 +80,7 @@ class Config:
         return Module(
             ModuleName(selected),
             {key: definition.expression for key, definition in self.definitions.items()},
+            masked_names=self.masked_names,
         )
 
     def frame_factory(

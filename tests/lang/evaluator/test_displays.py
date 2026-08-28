@@ -6,7 +6,7 @@ from typing import cast
 
 import pytest
 
-from lclang import evaluate
+from lclang import LclRecord, evaluate
 from lclang.ast import LclConstant, LclDict
 from lclang.errors import LclEvaluationError
 from lclang.lang.parser import parse_expression
@@ -29,6 +29,35 @@ async def test_dictionary_entries_expand_and_later_values_win() -> None:
     values = {"base": {"a": 1, "b": 2}}
     result = await evaluate(parse_expression("{'a': 0, **base, 'b': 3}"), values)
     assert result == {"a": 1, "b": 3}
+
+
+@pytest.mark.asyncio
+async def test_record_fields_are_awaited_left_to_right_and_support_attributes() -> None:
+    """Record construction is eager and both nested LCL and Python access work."""
+    events: list[str] = []
+
+    async def mark(name: str, value: object) -> object:
+        events.append(name)
+        return value
+
+    result = await evaluate(
+        parse_expression("{a=mark('a', 1), nested=mark('nested', {value=2})}"),
+        {"mark": mark},
+    )
+
+    assert isinstance(result, LclRecord)
+    assert result.a == 1
+    assert result.nested.value == 2
+    assert events == ["a", "nested"]
+    assert await evaluate(parse_expression("{a=1, nested={value=2}}.nested.value")) == 2
+
+
+@pytest.mark.asyncio
+async def test_record_missing_attribute_uses_existing_safe_access_rules() -> None:
+    """Safe access on a non-null record does not hide a missing field."""
+    with pytest.raises(LclEvaluationError) as caught:
+        await evaluate(parse_expression("{a=1}?.missing"))
+    assert isinstance(caught.value.__cause__, AttributeError)
 
 
 @pytest.mark.asyncio

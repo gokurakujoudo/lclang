@@ -20,6 +20,8 @@ from lclang.lang.printer import to_source
         ("{x for x in xs}", "{x for x in xs}"),
         ("{x:y for x in xs}", "{x: y for x in xs}"),
         ("{**x for x in xs}", "{**x for x in xs}"),
+        ("{a=1,b=value,}", "{a=1, b=value}"),
+        ("{outer={inner=1}}.outer.inner", "{outer={inner=1}}.outer.inner"),
     ],
 )
 def test_collection_source_is_canonical(source: str, canonical: str) -> None:

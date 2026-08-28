@@ -10,11 +10,13 @@ from enum import IntEnum
 from pathlib import Path
 from typing import Self
 
-from lclang.cli.validation import freeze_mapping, normalize_text, require_lcl_identifier
+from lclang.cli.validation import freeze_mapping, normalize_text, require_lcl_qualified_name
+from lclang.masking import normalize_masked_mapping, split_masked_name
 
-# Default percent-style format retaining diagnostic and call-argument fields.
+# Default formal pipe-delimited format retaining diagnostic and call-argument fields.
 DEFAULT_LOG_FORMAT = (
-    "%(asctime)s %(levelname)s %(filename)s:%(lineno)d %(funcName)s %(message)s args=%(args)r"
+    "%(asctime)s | %(levelname)-8s | %(name)s | %(filename)s:%(lineno)d | "
+    "%(funcName)s | %(message)s | args=%(args)r"
 )
 # Required percent fields that custom formats must retain.
 REQUIRED_LOG_FIELDS = ("asctime", "filename", "lineno", "funcName", "message", "args")
@@ -29,6 +31,7 @@ class ParameterDoc:
     :param required: Whether execution requires a binding to exist.
     :param description: Human-readable help text.
     :param default: Literal default, where ``None`` means no default.
+    :param masked: Whether lclang-owned presentation hides this parameter.
     """
 
     name: str
@@ -36,17 +39,22 @@ class ParameterDoc:
     required: bool
     description: str
     default: object = None
+    masked: bool = False
 
     def __post_init__(self) -> None:
         """Validate and normalize declaration metadata.
 
         :returns: ``None``.
         :raises TypeError: If required is not Boolean or description is not text.
-        :raises ValueError: If name is not an LCL identifier.
+        :raises ValueError: If name is not an LCL qualified name.
         """
-        object.__setattr__(self, "name", require_lcl_identifier(self.name, "parameter name"))
+        name, marked = split_masked_name(self.name)
+        object.__setattr__(self, "name", require_lcl_qualified_name(name, "parameter name"))
         if not isinstance(self.required, bool):
             raise TypeError("parameter required must be Boolean")
+        if not isinstance(self.masked, bool):
+            raise TypeError("parameter masked must be Boolean")
+        object.__setattr__(self, "masked", self.masked or marked)
         object.__setattr__(self, "description", normalize_text(self.description, "description"))
 
 
@@ -61,6 +69,8 @@ class CliParams:
     :param config_file_path: Optional raw configuration path.
     :param overrides: Raw right-biased strings or valueless ``True`` overrides.
     :param verbose: Whether internal diagnostics are enabled for this invocation.
+    :param masked_names: Immutable normalized override names to redact.
+    :param script_path: Exact Python script token, or the direct-command fallback.
     """
 
     executable_path: str
@@ -70,6 +80,8 @@ class CliParams:
     config_file_path: str | None
     overrides: Mapping[str, str | bool]
     verbose: bool = False
+    masked_names: frozenset[str] = field(default_factory=frozenset, kw_only=True)
+    script_path: str = field(default="script.py", kw_only=True)
 
     def __post_init__(self) -> None:
         """Detach containers and validate scalar fields.
@@ -82,6 +94,10 @@ class CliParams:
             raise TypeError("executable path must be text")
         if not self.executable_path:
             raise ValueError("executable path cannot be empty")
+        if not isinstance(self.script_path, str):
+            raise TypeError("script path must be text")
+        if not self.script_path:
+            raise ValueError("script path cannot be empty")
         command = tuple(self.command)
         if not command or any(not isinstance(item, str) or not item for item in command):
             raise ValueError("command path must contain non-empty text segments")
@@ -96,10 +112,12 @@ class CliParams:
         if self.config_file_path == "":
             raise ValueError("config path cannot be empty")
         overrides = freeze_mapping(self.overrides, "overrides")
-        if any(not isinstance(value, str) and value is not True for value in overrides.values()):
+        normalized, masked_names = normalize_masked_mapping(overrides, self.masked_names)
+        if any(not isinstance(value, str) and value is not True for value in normalized.values()):
             raise TypeError("override values must be strings or True")
         object.__setattr__(self, "command", command)
-        object.__setattr__(self, "overrides", overrides)
+        object.__setattr__(self, "overrides", freeze_mapping(normalized, "overrides"))
+        object.__setattr__(self, "masked_names", masked_names)
 
 
 class CliResultStatus(IntEnum):
@@ -108,6 +126,7 @@ class CliResultStatus(IntEnum):
     SUCCESS = 0
     FAILURE = 1
     EXCEPTION = 2
+    FAILURE_COVERED = 3
 
 
 @dataclass(frozen=True, slots=True)

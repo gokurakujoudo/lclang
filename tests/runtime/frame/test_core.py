@@ -21,6 +21,10 @@ def test_frame_rejects_empty_frame_and_host_binding_names() -> None:
         Frame(module, FrameId("frame:1"), values={"": 1})
     with pytest.raises(TypeError, match="host binding names must be strings"):
         Frame(module, values=cast(dict[str, object], {1: 1}))
+    overlay = Frame(module, masked_names={"missing"})
+    assert overlay.is_masked("missing") is True
+    with pytest.raises(ValueError, match="cannot be empty"):
+        Frame(module).is_masked("")
 
 
 def test_frame_normalizes_optional_and_string_identifiers() -> None:

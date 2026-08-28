@@ -88,12 +88,9 @@ def validate_binding_names(names: Iterable[str]) -> None:
     """Validate dotted names while retaining legacy flat host keys.
 
     :param names: Binding names to inspect.
-    :raises TypeError: If one name is not text.
     :raises ValueError: If a dotted name is malformed.
     """
     for name in names:
-        if not isinstance(name, str):
-            raise TypeError("binding names must be strings")
         if "." in name:
             validate_qualified_name(name)
 

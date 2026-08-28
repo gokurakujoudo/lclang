@@ -11,6 +11,7 @@ from lclang.cli.models import (
     LogConfig,
     ParameterDoc,
 )
+from lclang.cli.scanning import scan_commands
 
 __all__ = [
     "CliConfig",
@@ -25,4 +26,5 @@ __all__ = [
     "LogConfig",
     "ParameterDoc",
     "cli",
+    "scan_commands",
 ]
