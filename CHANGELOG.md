@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.0.5 - 2026-08-28
+
 - Sort CLI configuration parameters by name in generated help without changing
   their declaration or runtime binding order.
 - Add a formal default CLI log format and a masked four-line execution preamble
