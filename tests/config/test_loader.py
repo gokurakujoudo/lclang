@@ -24,7 +24,7 @@ from tests.config.support import MappingResolver
 @pytest.mark.asyncio
 async def test_nested_using_binds_file_magic_to_each_physical_source() -> None:
     """Every nested definition receives its own canonical physical file path."""
-    with TemporaryDirectory(prefix="lclang-nested-magic-", dir=Path.cwd()) as directory:
+    with TemporaryDirectory(prefix="lclang-nested-magic-") as directory:
         root = Path(directory)
         first = root / "a.lclcfg"
         second = root / "b.lclcfg"

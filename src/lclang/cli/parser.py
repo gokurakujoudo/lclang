@@ -12,6 +12,7 @@ from lclang.cli.process import ArgvParts, split_argv
 from lclang.cli.validation import RUNTIME_NAMES, require_lcl_qualified_name
 from lclang.errors import LclCliUsageError, LclSyntaxError
 from lclang.lang import parse_expression
+from lclang.masking import split_masked_name
 from lclang.stdlib.dates import parse_ymd
 
 # Common options consuming one following token.
@@ -38,6 +39,7 @@ class ParsedCommonOptions:
     :param dryrun: Parsed dryrun flag.
     :param help_requested: Whether help appeared at an option boundary.
     :param verbose: Whether internal diagnostic output was requested.
+    :param masked_names: Immutable normalized override names marked for redaction.
     """
 
     config_path: str | None
@@ -46,6 +48,7 @@ class ParsedCommonOptions:
     dryrun: bool
     help_requested: bool
     verbose: bool
+    masked_names: frozenset[str]
 
 
 def usage_error(message: str, index: int, token: str) -> LclCliUsageError:
@@ -72,6 +75,7 @@ def parse_common_options(tokens: Sequence[str]) -> ParsedCommonOptions:
     help_requested = False
     verbose = False
     overrides: dict[str, str | bool] = {}
+    masked_names: set[str] = set()
     index = 0
     while index < len(tokens):
         token = tokens[index]
@@ -108,13 +112,16 @@ def parse_common_options(tokens: Sequence[str]) -> ParsedCommonOptions:
         if token in OVERRIDE_OPTIONS:
             if index + 1 >= len(tokens):
                 raise usage_error("missing override key", index, token)
-            key = tokens[index + 1]
+            raw_key = tokens[index + 1]
             try:
+                key, masked = split_masked_name(raw_key)
                 require_lcl_qualified_name(key, "override key")
             except ValueError as error:
-                raise usage_error(str(error), index + 1, key) from error
+                raise usage_error(str(error), index + 1, raw_key) from error
             if key.split(".", 1)[0] in RUNTIME_NAMES:
                 raise usage_error("reserved override key", index + 1, key)
+            if masked:
+                masked_names.add(key)
             value_index = index + 2
             if value_index >= len(tokens) or tokens[value_index] in OVERRIDE_OPTIONS:
                 overrides[key] = True
@@ -132,6 +139,7 @@ def parse_common_options(tokens: Sequence[str]) -> ParsedCommonOptions:
         dryrun,
         help_requested,
         verbose,
+        frozenset(masked_names),
     )
 
 
@@ -161,6 +169,8 @@ def parse_cli_params(
         parsed.config_path,
         parsed.overrides,
         parsed.verbose,
+        masked_names=parsed.masked_names,
+        script_path=parts.script_path,
     )
 
 

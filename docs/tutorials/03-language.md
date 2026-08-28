@@ -20,6 +20,7 @@ Every complete expression produces a value or raises a value.
 | Null fallback | `value ?? default` | first non-`None` value |
 | Safe attribute | `profile?.name` | `None` when profile is `None` |
 | Collection | `[a, b]`, `{key: value}` | list or dictionary |
+| Record | `{name=value}` | immutable attribute value |
 | Slice | `items[1:4]` | selected range |
 | Function | `(x, scale=2) -> x * scale` | lexical callable |
 | Comprehension | `[f(x) for x in xs if keep(x)]` | transformed list |
@@ -63,10 +64,11 @@ asserted greetings.
 a real object. `??` selects its right side only when the left result is `None`;
 false, zero, and empty text remain valid values.
 
-## Transform collections with an arrow function
+## Build an immutable record with transformed values
 
 This example filters even values, calls a local arrow function, sorts the
-result through a supplied host function, and returns both details and a total.
+result through a supplied host function, and returns both details and a total
+as named fields.
 
 <!-- lclang-tutorial-exec -->
 ```python
@@ -74,9 +76,9 @@ import lclang
 
 result = lclang.evaluate_sync(
     "{"
-    "'squares': sorted([(value -> value * value)(item) "
+    "squares=sorted([(value -> value * value)(item) "
     "for item in values if item % 2 == 0]), "
-    "'total': sum([(value -> value * value)(item) "
+    "total=sum([(value -> value * value)(item) "
     "for item in values if item % 2 == 0])"
     "}",
     {
@@ -86,12 +88,18 @@ result = lclang.evaluate_sync(
     },
 )
 
-assert result == {"squares": [4, 16], "total": 20}
+assert isinstance(result, lclang.LclRecord)
+assert result.squares == [4, 16]
+assert result.total == 20
+assert lclang.evaluate_sync("{value=total}.value", {"total": result.total}) == 20
 ```
 
 The comprehension rejects `5` and `3` because they are odd. The arrow function
 squares `2` and `4`, `sorted` orders those values as `[4, 16]`, and the second
-comprehension feeds the same values to `sum`, producing `20`.
+comprehension feeds the same values to `sum`, producing `20`. The LCL record
+creates both fields eagerly; Python reads them through `result.squares` and
+`result.total`, while the final assertion demonstrates the same dotted access
+inside LCL.
 
 Arrow functions use `() -> expression`, `name -> expression`, or
 `(parameters) -> expression`. They support defaults, keyword calls, lexical

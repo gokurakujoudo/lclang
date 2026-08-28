@@ -21,6 +21,8 @@ CHAPTERS = (
     ("11-business-day-calendars.md", "Business-day calendars"),
     ("12-production-patterns.md", "Production patterns"),
     ("13-scoped-values-and-frame-evaluation.md", "Scoped values and Frame evaluation"),
+    ("14-tree-workflows.md", "Tree workflows"),
+    ("15-energy-settlement-workflow.md", "Case Study: Energy Settlement Workflow"),
 )
 
 

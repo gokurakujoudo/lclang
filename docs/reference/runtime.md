@@ -5,8 +5,8 @@
 The package root exposes the preferred `define_module`/`define_frame` workflow,
 the canonical `LCL_ROOT`, `LCL_BUILTINS`, `LCL_RUNTIME`, and `LCL_IMPORTS`
 Frames, and the lower-level `Module`, `Frame`, `FrameFactory`, `Preset`,
-`EvaluationLimits`, `DependencySnapshot`, `NO_FALLBACK`, and `STANDARD_PRESET`
-APIs.
+`EvaluationLimits`, `DependencySnapshot`, `LclRecord`, `NO_FALLBACK`, and
+`STANDARD_PRESET` APIs.
 
 Use `lclang.runtime` for advanced static graph construction, topological order,
 dynamic tracing, reconciliation values, and standard runtime types. Use
@@ -20,6 +20,16 @@ one-expression boundary: string source is parsed with `parse_expression` and
 then evaluated on a private event loop. It also accepts an already parsed AST
 for tools that need to reuse syntax. It rejects calls made inside a running
 event loop. Async code should parse explicitly and await `lclang.evaluate`.
+
+`{a=expression, b=expression}` evaluates to `lclang.LclRecord`. LCL and Python
+both read fields with ordinary attributes, such as `record.a`. The public
+`LclRecord(fields)` constructor copies one non-empty mapping whose keys obey the
+same identifier, reserved-word, and `__` restrictions as record syntax.
+Records expose no mapping or subscription protocol. Assignment and deletion
+fail, while nested values retain their original identity and mutability.
+Equality and hashing compare field names and values without declaration order;
+hashing fails normally when a field value is unhashable. `repr` retains
+declaration order, for example `LclRecord(a=1, b=2)`.
 
 ## Preferred definitions and canonical hierarchy
 
@@ -75,7 +85,18 @@ parameter shorthand. Canonical source always parenthesizes the signature.
 ## Explicit Module, Preset, and FrameFactory
 
 `Module` copies a name-to-AST mapping into a read-only snapshot. `Preset` does
-the same for host bindings; `overlay` is shallow and right-biased. A
+the same for host bindings; `overlay` is shallow and right-biased. A single
+trailing `!` on a binding key marks its normalized exact name as masked, so
+`{"token!": value}` creates the runtime name `token`. Modules, Presets, Frames,
+direct resolver mappings, Frame mixins, and CLI binding sources share this
+spelling. Their immutable `masked_names` metadata retains the policy, and
+`frame.is_masked(name)` checks it without evaluating the name. Once marked in
+an effective Frame hierarchy, a same-name override stays masked; unrelated or
+derived names do not inherit the flag. Direct `Frame(..., masked_names=...)` and
+`frame.derive(..., masked_names=...)` calls may also overlay an exact inherited
+name, which lets an application boundary redact a borrowed parent value without
+copying it. Module and Preset trailing-`!` declarations still name bindings in
+their own source. A
 `FrameFactory` retains a Module, optional Preset, and optional default
 `EvaluationLimits`. Each `create` call has fresh cache, task, dependency, and
 lifecycle state. Call-level values and limits override factory policy. Parent
@@ -149,6 +170,10 @@ every reviewed namespace uses `Builtin Namespace: <namespace-name>`.
 Application, preset, and CLI host values remain `ExternalProvided` and retain
 their ordinary typed reprs.
 `tree.to_lines()` returns a markdown-style nested list of those lines.
+For a masked node, `repr(tree)` replaces definition, value, and failure payloads
+with `*masked*`; `to_lines()` also omits that node's descendants. The detached
+tree still exposes its raw fields to trusted Python callers, so masking is
+diagnostic redaction rather than access control.
 
 `frame.mixin(values)` atomically copies a right-biased dictionary into the open
 Frame's host bindings. The existing `frame.values` view remains read-only while

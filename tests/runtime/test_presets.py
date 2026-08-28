@@ -45,6 +45,16 @@ def test_overlay_is_shallow_ordered_and_right_biased() -> None:
     assert left.values["shared"] == "old"
 
 
+def test_preset_masking_survives_right_biased_overlay() -> None:
+    """Replacing a marked value does not implicitly unmask its exact name."""
+    left = Preset("base", {"token!": "old"})
+    right = Preset("local", {"token": "new"})
+    combined = left.overlay(right)
+    assert left.values == {"token": "old"}
+    assert combined.values == {"token": "new"}
+    assert combined.masked_names == frozenset({"token"})
+
+
 def test_overlay_accepts_an_explicit_name_and_validates_inputs() -> None:
     """Callers may publish one durable name for a composed preset."""
     preset = Preset("base", {"value": 1})

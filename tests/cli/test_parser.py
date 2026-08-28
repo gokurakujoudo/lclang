@@ -39,6 +39,7 @@ def test_parser_accepts_aliases_last_override_and_dates() -> None:
     )
     params = parse_cli_params(parts, ("run",), parts.tokens[1:])
     assert params.executable_path == "C:/Python/python.exe"
+    assert params.script_path == "tool.py"
     assert params.command == ("run",)
     assert params.as_of_date == date(2026, 8, 9)
     assert params.dryrun is True
@@ -55,6 +56,15 @@ def test_parser_accepts_qualified_override_keys() -> None:
     assert parsed.overrides == {"A.B.x": "42", "A.B.y": "LCL[A.B.x + 1]"}
     with pytest.raises(LclCliUsageError, match="reserved"):
         parse_common_options(["-o", "dryrun.value", "1"])
+
+
+def test_parser_normalizes_masked_overrides_and_keeps_policy_sticky() -> None:
+    """Repeated marked and plain spellings share one right-biased CLI key."""
+    parsed = parse_common_options(
+        ["-o", "service.token!", "old", "-o", "service.token", "new"]
+    )
+    assert parsed.overrides == {"service.token": "new"}
+    assert parsed.masked_names == frozenset({"service.token"})
 
 
 def test_override_without_value_is_true_and_never_consumes_an_override_option() -> None:

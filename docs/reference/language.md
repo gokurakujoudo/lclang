@@ -29,9 +29,9 @@ Nested uses such as `[FRAME_PROXY]` are invalid. Prefix declarations are
 optional when qualified descendants already infer the same proxy.
 
 Names introduced at binding positions cannot begin with `__`. This applies to
-function parameters, comprehension targets, exception aliases, and context
-manager aliases. Ordinary references, attributes, and call keywords are not
-binding positions. File-backed `.lclcfg` parsing additionally replaces
+record fields, function parameters, comprehension targets, exception aliases,
+and context manager aliases. Ordinary references, attributes, and call
+keywords are not binding positions. File-backed `.lclcfg` parsing additionally replaces
 `__file__` and `__dir__` references with eager path string constants.
 
 During Frame evaluation of a named Module/config definition, the root `lhs()`
@@ -53,9 +53,10 @@ Punctuation and fixed operators are:
 < <= > >= == != =
 ```
 
-Bare `=` is only parameter-default or keyword-argument syntax. It is not an
-assignment expression. `->` is one contiguous token; whitespace may surround
-it but cannot split it. Canonical source places one space on each side.
+Bare `=` is only record-field, parameter-default, or keyword-argument syntax.
+It is not an assignment expression. `->` is one contiguous token; whitespace
+may surround it but cannot split it. Canonical source places one space on each
+side.
 
 ## Grammar
 
@@ -83,6 +84,8 @@ product          ::= unary {("*" | "@" | "/" | "//" | "%") unary}
 unary            ::= ("+" | "-" | "~") unary | power
 power            ::= primary ["**" unary]
 primary          ::= atom {attribute | safe-attribute | subscript | call}
+record-display   ::= "{" record-field {"," record-field} [","] "}"
+record-field     ::= name "=" expression
 ```
 
 A top-level comma constructs a tuple. Parentheses group an expression or make
@@ -191,6 +194,10 @@ Ordinary attribute access uses the host object's `getattr` protocol. Safe
 attribute `?.` returns `None` only when its receiver is exactly `None`; it does
 not suppress a missing attribute or descriptor failure.
 
+Record fields use the same ordinary attribute path. `{name="Ada"}.name`
+therefore returns `"Ada"`; a missing field fails normally, including after
+`?.` on a non-null record.
+
 When a Frame contains qualified flat bindings, dotted access traverses lazy
 Frame proxies. `A.B.C.x` requests that complete key through the current Frame
 hierarchy. Safe access through an existing proxy returns `None` for a missing
@@ -228,6 +235,7 @@ Displays use Python-like delimiters:
 
 - `()` is the empty tuple; `(value,)` is a one-item tuple; `(value)` groups.
 - `[]` is a list; `{}` is an empty dictionary; `{value}` is a set.
+- `{name=value}` is a non-empty immutable record with named attributes.
 - `*iterable` unpacks in tuple/list/set displays.
 - `**mapping` unpacks in dictionary displays.
 - Mixing set and dictionary entries is a syntax error.
@@ -246,6 +254,18 @@ Displays use Python-like delimiters:
 ```lcl
 {**defaults, "enabled": true, **overrides}
 ```
+
+<!-- lcl-valid -->
+```lcl
+{host=service.host, port=service.port, secure=true}.port
+```
+
+Record fields evaluate eagerly from left to right and every child result is
+automatically awaited. Names must be ordinary non-reserved identifiers, cannot
+start with `__`, and cannot repeat. A trailing comma is accepted. Records are
+shallowly immutable: their fields cannot change, but a retained list or other
+mutable host value is not copied or frozen. Record syntax has no empty form,
+unpacking, or comprehension, and cannot mix with dictionary or set entries.
 
 Generator, list, set, and dictionary comprehensions support repeated `for` and
 `if` clauses. Each target is one identifier; destructuring targets are outside
@@ -411,6 +431,16 @@ checked to raise `LclSyntaxError` with a source span.
 <!-- lcl-invalid -->
 ```lcl
 {"set", "key": 2}
+```
+
+<!-- lcl-invalid -->
+```lcl
+{a=1, a=2}
+```
+
+<!-- lcl-invalid -->
+```lcl
+{a=1, "b": 2}
 ```
 
 <!-- lcl-invalid -->

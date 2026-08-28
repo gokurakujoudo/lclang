@@ -17,6 +17,7 @@ class ConfigDefinition:
     :param expression: Parsed semantic LCL expression.
     :param span: Complete physical declaration span.
     :param ordinal: Zero-based declaration position in its document.
+    :param masked: Whether diagnostic renderers must hide this exact value.
     :raises ValueError: If the name is empty or the ordinal is negative.
 
     .. note::
@@ -27,11 +28,13 @@ class ConfigDefinition:
     expression: LclAstNode
     span: SourceSpan
     ordinal: int
+    masked: bool = False
 
     def __post_init__(self) -> None:
         """Validate the definition's scalar invariants.
 
         :returns: ``None``.
+        :raises TypeError: If the masked flag is not Boolean.
         :raises ValueError: If the name is empty or ordinal is negative.
 
         .. note::
@@ -41,6 +44,8 @@ class ConfigDefinition:
             raise ValueError("config definition name cannot be empty")
         if self.ordinal < 0:
             raise ValueError("config declaration ordinal cannot be negative")
+        if not isinstance(self.masked, bool):
+            raise TypeError("config definition masked flag must be Boolean")
 
 
 @dataclass(frozen=True, slots=True)

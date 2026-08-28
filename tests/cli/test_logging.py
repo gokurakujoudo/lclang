@@ -13,7 +13,10 @@ from lclang.cli.logging import (
     build_handler,
     create_logger,
     create_verbose_logger,
+    log_execution_start,
+    normalized_argv,
     numeric_log_level,
+    redacted_overrides,
     resolve_log_config,
 )
 from lclang.diagnostics import internal_trace, internal_verbose_scope
@@ -36,6 +39,8 @@ def test_disabled_and_enabled_loggers_are_isolated_and_close() -> None:
     assert asyncio.run(resolve_log_config(binding.frame)).log_dir is None
     handle = asyncio.run(create_logger(binding.frame, "disabled"))
     assert isinstance(handle.handlers[0], logging.NullHandler)
+    assert handle.log_path is None
+    log_execution_start(handle, params, binding.frame)
     handle.close()
     handle.close()
     asyncio.run(binding.stack.close())
@@ -47,6 +52,35 @@ def test_disabled_and_enabled_loggers_are_isolated_and_close() -> None:
         handler.emit(record)
         handler.close()
         assert "value=2" in (Path(directory) / "lclang.log").read_text(encoding="utf-8")
+
+
+def test_normalized_argv_retains_valueless_and_verbose_options() -> None:
+    """Canonical audit argv omits values for Boolean overrides and optional paths."""
+    params = CliParams(
+        "python",
+        ("logger",),
+        date(2026, 8, 27),
+        False,
+        None,
+        {"enabled": True},
+        True,
+        script_path="tool.py",
+    )
+    binding = asyncio.run(build_binding(logger_command, params, CliConfig()))
+    try:
+        assert redacted_overrides(params, binding.frame) == {"enabled": True}
+        assert normalized_argv(params, binding.frame) == [
+            "python",
+            "tool.py",
+            "logger",
+            "--override",
+            "enabled",
+            "--as-of",
+            "20260827",
+            "--verbose",
+        ]
+    finally:
+        asyncio.run(binding.stack.close())
 
 
 def test_numeric_log_levels_accept_names_and_integers() -> None:

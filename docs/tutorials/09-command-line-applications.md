@@ -15,6 +15,8 @@ handler receives one invocation Frame and returns one process-compatible result.
 
 The root `CommandGroup` describes the application but is not a command-line
 segment. A decorated async handler receives exactly one `CliContext`.
+Configuration parameter rows are rendered in case-insensitive A-Z order, so
+help remains easy to scan even when declarations follow business data flow.
 
 <!-- lclang-tutorial-exec -->
 ```python
@@ -157,7 +159,9 @@ Override keys may be qualified, for example
 `--override service.port 9443` or
 `--override service.port "LCL[base_port + 1]"`. The complete key participates
 in the same Frame precedence and scoped validation as configuration and Python
-values. `LCL[FRAME_PROXY]` optionally declares a prefix.
+values. A `ParameterDoc` may use that same qualified name, so generated help
+and required-value checks describe the exact scoped leaf. `LCL[FRAME_PROXY]`
+optionally declares a prefix.
 
 `SUCCESS`, `FAILURE`, and `EXCEPTION` map to exit statuses `0`, `1`, and `2`.
 Help, version, invalid arguments, logging, and the built-in `builtins`,
@@ -176,8 +180,21 @@ python -m lclang.cli eval_lcl --verbose -o RESULT "LCL[40 + 2]"
 Trace lines go to stderr. When file logging is enabled, the invocation log also
 receives setup records buffered before its effective configuration was known and
 all later trace records. Values use bounded one-line `(type) value`
-representations. They are not redacted, so do not enable verbose tracing where
-configuration values must remain undisclosed.
+representations. Mark a binding name with one trailing `!`, such as
+`api_token!: load_token()` in configuration or `-o api_token! value`, to render
+that exact name's expressions, values, results, and failures as `*masked*`.
+References use `api_token` without the marker. Derived values require their own
+marker, and application-authored log messages remain the handler's
+responsibility.
+
+Enabled invocation logs begin with four audit records: the selected command,
+absolute log path, a normalized command line, and the CLI-owned execution
+configuration (`as_of_date`, `dryrun`, `verbose`, config path, and overrides).
+Override values use `*masked*` whenever their exact binding is masked by the
+command, config, or override marker. This preamble is written before buffered
+verbose traces and does not evaluate command parameters. The default file
+format is a stable pipe-delimited record containing timestamp, severity, logger,
+source location, function, rendered message, and original logging arguments.
 
 `--verbose` has no short spelling because `-v/--version` remains the root
 version operation. Like other common options, verbose belongs after the selected

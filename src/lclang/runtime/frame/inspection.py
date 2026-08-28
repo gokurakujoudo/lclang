@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from lclang.ast import LclAstNode
 from lclang.lang.printer import to_source
+from lclang.masking import MASKED_VALUE
 from lclang.stdlib.namespaces import StdlibNamespace
 from lclang.stdlib.recursion import RecursiveFunction
 from lclang.types import FrameId, VarName
@@ -47,6 +48,7 @@ class VariableInspectionTree:
     :param current_value: Committed result or raw host value when present.
     :param current_exception: Committed failure or missing-name diagnostic.
     :param dependencies: Ordered first-occurrence child names for this parent.
+    :param masked: Whether presentation must redact this node's payload.
 
     .. note::
        Lists are detached so presentation callers may safely modify their copy.
@@ -60,6 +62,7 @@ class VariableInspectionTree:
     current_value: object | None
     current_exception: Exception | None
     dependencies: list[VariableInspectionTree]
+    masked: bool = False
 
     def __repr__(self) -> str:
         """Return a compact non-recursive single-line summary.
@@ -71,6 +74,10 @@ class VariableInspectionTree:
            message so the output remains one physical line.
         """
         path = "/".join(str(frame_id) for frame_id in self.definition_path)
+        if self.masked:
+            return (
+                f"{self.var_name}@{path}: ({self.status.value}) {MASKED_VALUE}"
+            )
         if self.definition is None:
             definition = (
                 ""
@@ -118,6 +125,8 @@ class VariableInspectionTree:
         if not isinstance(prefix, str):
             raise TypeError("inspection prefix must be a string")
         lines = [f"{'  ' * depth}{prefix}{self!r}"]
+        if self.masked:
+            return lines
         for dependency in self.dependencies:
             lines.extend(dependency.to_lines(depth + 1, prefix))
         return lines

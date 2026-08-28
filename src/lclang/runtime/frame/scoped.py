@@ -15,11 +15,13 @@ class ScopedFrame(Protocol):
     :param module: Local semantic definition snapshot.
     :param values: Local host-binding view.
     :param parent: Optional next Frame in lookup order.
+    :param masked_names: Immutable local exact-name mask policy.
     """
 
     module: Module
     values: Mapping[str, object]
     parent: ScopedFrame | None
+    masked_names: frozenset[str]
     _children: object
     _lifecycle: object
 
@@ -60,6 +62,16 @@ def walk_hierarchy(frame: object) -> Iterator[ScopedFrame]:
         seen.add(identity)
         yield current
         current = current.parent
+
+
+def is_name_masked(frame: object, name: str) -> bool:
+    """Report whether any effective hierarchy layer masks one exact name.
+
+    :param frame: Child-most Frame to inspect.
+    :param name: Normalized exact binding name.
+    :returns: Whether the name is marked in any visible layer.
+    """
+    return any(name in current.masked_names for current in walk_hierarchy(frame))
 
 
 def find_scoped_binding(frame: object, name: str) -> tuple[ScopedFrame | None, str | None]:

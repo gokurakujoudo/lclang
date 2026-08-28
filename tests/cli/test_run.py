@@ -1,6 +1,8 @@
 """End-to-end behavioural tests for CLI execution."""
 
 import asyncio
+import json
+import re
 from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -26,7 +28,7 @@ from lclang.cli.run import execute_command, script_label_from_args, write_result
 # Static configuration fixture used by the complete invocation case.
 STATIC_CONFIG = "using \"child.lclcfg\"\nmessage: prefix + suffix\n"
 # Static included configuration fixture used by the complete invocation case.
-STATIC_CHILD = 'prefix: "hello "\nsuffix: "config"\n'
+STATIC_CHILD = 'prefix: "hello "\nsuffix: "config"\ntoken!: "config-secret"\n'
 
 
 def test_complete_run_uses_layers_context_logging_and_cleanup(
@@ -36,7 +38,10 @@ def test_complete_run_uses_layers_context_logging_and_cleanup(
     observed: dict[str, object] = {}
 
     @cli.command(
-        parameter_docs=[ParameterDoc("message", str, True, "Rendered message")],
+        parameter_docs=[
+            ParameterDoc("message", str, True, "Rendered message"),
+            ParameterDoc("token", str, True, "Private audit token", masked=True),
+        ],
         preset={"preset_value": 2},
     )
     async def show_command(context: CliContext) -> CliResult:
@@ -73,6 +78,9 @@ def test_complete_run_uses_layers_context_logging_and_cleanup(
                     "-o",
                     "message",
                     'LCL[prefix + "override"]',
+                    "-o",
+                    "token",
+                    "override-secret",
                     "-a",
                     "20260809",
                     "-wif",
@@ -83,8 +91,50 @@ def test_complete_run_uses_layers_context_logging_and_cleanup(
         assert capsys.readouterr().out == "hello override\n"
         assert observed == {"date": date(2026, 8, 9), "dryrun": True, "message": "hello override"}
         log_text = (root / "logs" / "lclang.log").read_text(encoding="utf-8")
+        lines = log_text.splitlines()
+        assert all(
+            re.match(
+                r"^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} \| INFO +\| "
+                r"lclang\.cli\.\d+ \| \w+\.py:\d+ \| \w+ \| .+ \| args=.*$",
+                line,
+            )
+            for line in lines
+        )
+        messages = [line.split(" | ", 5)[5].rsplit(" | args=", 1)[0] for line in lines]
+        assert messages[0] == 'execution.started command=["show"]'
+        assert messages[1] == f"execution.log_file path={root / 'logs' / 'lclang.log'}"
+        command_line = json.loads(messages[2].removeprefix("execution.command_line argv="))
+        assert command_line == [
+            "python",
+            "tool.py",
+            "show",
+            "--config",
+            str(config_path),
+            "--override",
+            "message",
+            'LCL[prefix + "override"]',
+            "--override",
+            "token",
+            "*masked*",
+            "--as-of",
+            "20260809",
+            "--dryrun",
+        ]
+        execution_config = json.loads(
+            messages[3].removeprefix("execution.config values=")
+        )
+        assert execution_config == {
+            "as_of_date": "2026-08-09",
+            "config_file_path": str(config_path),
+            "dryrun": True,
+            "overrides": {
+                "message": 'LCL[prefix + "override"]',
+                "token": "*masked*",
+            },
+            "verbose": False,
+        }
         assert "message=hello override" in log_text
-        assert "args=" in log_text
+        assert "override-secret" not in "\n".join(messages[:4])
 
 
 def test_help_and_version_short_circuit_execution(capsys: pytest.CaptureFixture[str]) -> None:

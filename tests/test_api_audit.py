@@ -52,6 +52,22 @@ def test_production_declarations_do_not_use_single_underscore_names() -> None:
     assert failures == []
 
 
+def test_temporary_directories_never_use_a_repository_parent() -> None:
+    """Test file I/O uses auto-cleaned system temporary directories only."""
+    failures: list[str] = []
+    for path in sorted((ROOT / "tests").rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == "TemporaryDirectory"
+                and any(keyword.arg == "dir" for keyword in node.keywords)
+            ):
+                failures.append(f"{path.relative_to(ROOT)}:{node.lineno}")
+    assert failures == []
+
+
 def test_public_exports_are_exact_documented_and_typed() -> None:
     """Every curated export exists once and has resolvable constrained hints."""
     for module in PUBLIC_MODULES:

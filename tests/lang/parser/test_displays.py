@@ -7,6 +7,7 @@ from lclang.ast import (
     LclDictUnpack,
     LclKeyValue,
     LclList,
+    LclRecordDisplay,
     LclSet,
     LclStarred,
     LclTuple,
@@ -60,6 +61,15 @@ def test_dict_display_preserves_pair_and_unpack_entries() -> None:
     )
 
 
+def test_record_display_preserves_named_fields_and_trailing_comma() -> None:
+    """An identifier followed by equals selects a non-empty record display."""
+    node = parse_expression("{a=1, b=value,}")
+    assert isinstance(node, LclRecordDisplay)
+    assert tuple(str(field.name) for field in node.fields) == ("a", "b")
+    assert node.span.start.offset == 0
+    assert node.span.end.offset == len("{a=1, b=value,}")
+
+
 @pytest.mark.parametrize(
     "source",
     [
@@ -74,6 +84,14 @@ def test_dict_display_preserves_pair_and_unpack_entries() -> None:
         "{**mapping, *items}",
         "{1, **mapping}",
         "{1::2}",
+        "{a=1, a=2}",
+        "{__a=1}",
+        "{a=1, b}",
+        "{a=1, 'b': 2}",
+        "{a=1, **other}",
+        "{a=1 for a in values}",
+        "{1, a=2}",
+        "{'a': 1, b=2}",
     ],
 )
 def test_invalid_display_reports_syntax_error(source: str) -> None:

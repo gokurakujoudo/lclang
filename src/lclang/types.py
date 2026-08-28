@@ -13,3 +13,6 @@ FrameId = NewType("FrameId", str)
 
 SourceName = NewType("SourceName", str)
 """Human-readable name of an LCL source."""
+
+TaskID = NewType("TaskID", str)
+"""Unique identifier of a workflow task or context task."""

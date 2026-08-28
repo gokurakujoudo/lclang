@@ -17,6 +17,8 @@ def test_model_values_reject_invalid_scalar_and_origin_state() -> None:
         ConfigDefinition(VarName(""), expression, span, 0)
     with pytest.raises(ValueError):
         ConfigDefinition(VarName("value"), expression, span, -1)
+    with pytest.raises(TypeError):
+        ConfigDefinition(VarName("value"), expression, span, 0, 1)  # type: ignore[arg-type]
     with pytest.raises(ValueError):
         ConfigUsing("", span, 0)
     with pytest.raises(ValueError):

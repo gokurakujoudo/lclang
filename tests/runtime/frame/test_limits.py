@@ -47,6 +47,7 @@ def test_each_limit_requires_a_positive_non_boolean_integer(invalid: object) -> 
         ("-----1", EvaluationLimits(max_depth=3), "depth limit"),
         ("1 + 2 + 3", EvaluationLimits(max_steps=4), "step limit"),
         ("[1, 2, 3]", EvaluationLimits(max_collection_items=2), "collection item limit"),
+        ("{a=1, b=2, c=3}", EvaluationLimits(max_collection_items=2), "collection item limit"),
         (
             "[item for item in values]",
             EvaluationLimits(max_collection_items=2),

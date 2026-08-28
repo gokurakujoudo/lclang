@@ -115,6 +115,30 @@ def test_failure_and_pending_children_propagate_without_errors() -> None:
     assert pending.finalize().status is ExecutionStatus.PENDING
 
 
+def test_covered_failure_is_visible_below_failure_and_sticky_on_its_scope() -> None:
+    """Covered work propagates unless a worse outcome exists and remains covered."""
+    covered = ExecutionStatusManager("root")
+    covered.add_step("recovered", "handled", ExecutionStatus.FAILURE_COVERED)
+    covered_tree = covered.finalize()
+    assert covered_tree.status is ExecutionStatus.FAILURE_COVERED
+    assert covered_tree.task_description == (
+        " (sub-task 'recovered' ended with FAILURE_COVERED)"
+    )
+
+    sticky = ExecutionStatusManager(
+        "scope", "handled", status=ExecutionStatus.FAILURE_COVERED
+    )
+    sticky.add_step("original", "unexpected", ExecutionStatus.ERROR)
+    sticky_tree = sticky.finalize()
+    assert sticky_tree.status is ExecutionStatus.FAILURE_COVERED
+    assert sticky_tree.task_description == "handled"
+
+    worse = ExecutionStatusManager("root")
+    worse.add_step("covered", "handled", ExecutionStatus.FAILURE_COVERED)
+    worse.add_step("failed", "rejected", ExecutionStatus.FAILURE)
+    assert worse.finalize().status is ExecutionStatus.FAILURE
+
+
 def test_subtree_locks_do_not_lock_parent_but_ancestor_finalize_locks_all() -> None:
     """Locks apply to the finalized subtree and later expand with its ancestor."""
     manager = ExecutionStatusManager("root")

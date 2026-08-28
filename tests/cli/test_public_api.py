@@ -19,6 +19,7 @@ def test_cli_exports_are_curated_without_expanding_package_root() -> None:
         "LogConfig",
         "ParameterDoc",
         "cli",
+        "scan_commands",
     }
     assert set(cli_api.__all__) == expected
     assert all(hasattr(cli_api, name) for name in expected)

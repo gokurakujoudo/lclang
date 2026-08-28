@@ -18,3 +18,10 @@ def test_ast_families_remain_namespaced() -> None:
     assert isinstance(lclang.parse_expression("1"), LclConstant)
     assert "parse_expression" in lclang.__all__
     assert "to_source" in lclang.__all__
+
+
+def test_root_exports_record_result_type() -> None:
+    """Evaluated records have one stable package-root Python type."""
+    value = lclang.evaluate_sync("{answer=42}")
+    assert isinstance(value, lclang.LclRecord)
+    assert lclang.__all__.count("LclRecord") == 1

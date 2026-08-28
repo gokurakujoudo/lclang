@@ -280,6 +280,23 @@ async def test_inspection_reports_success_and_failure_cache_snapshots() -> None:
     assert calls == 1
 
 
+@pytest.mark.asyncio
+async def test_masked_inspection_keeps_raw_state_but_redacts_rendering() -> None:
+    """Trusted callers retain fields while presentation hides the whole subtree."""
+    masked = Module(
+        ModuleName("masked"),
+        {"token!": parse_expression("source"), "source": parse_expression("'secret'")},
+    )
+    frame = Frame(masked)
+    assert await frame.get("token") == "secret"
+    tree = frame.inspect_variable("token")
+    assert tree.masked is True
+    assert tree.current_value == "secret"
+    assert tree.dependencies[0].var_name == VarName("source")
+    assert repr(tree) == "token@frame-masked: (Cached) *masked*"
+    assert tree.to_lines() == ["- token@frame-masked: (Cached) *masked*"]
+
+
 def test_inspection_repr_and_markdown_lines_are_compact_and_detached() -> None:
     """Presentation is stable, single-line, nested, and independently mutable."""
     frame = Frame(module("render", {"answer": "base + base", "base": "40"}))

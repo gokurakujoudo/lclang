@@ -15,6 +15,8 @@ class ExecutionStatus(StrEnum):
     SUCCESS = "SUCCESS"
     # Work completed with an expected failure.
     FAILURE = "FAILURE"
+    # Work failed but an enclosing context completed its recovery contract.
+    FAILURE_COVERED = "FAILURE_COVERED"
     # Work stopped because of an unexpected error.
     ERROR = "ERROR"
     # Work was intentionally omitted.

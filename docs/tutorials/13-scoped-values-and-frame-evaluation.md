@@ -333,4 +333,4 @@ Frame, so closing the Frame leaves it open for explicit caller cleanup.
 Scoped names never introduce relative lookup: inside `service.url`, `host`
 does not mean `service.host`. Explicit paths keep dependencies unambiguous.
 
-[Previous: Production patterns](12-production-patterns.md) | [Return to the series introduction](README.md)
+[Previous: Production patterns](12-production-patterns.md) | [Next: Tree workflows](14-tree-workflows.md) | [Return to the series introduction](README.md)

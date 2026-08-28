@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- Sort CLI configuration parameters by name in generated help without changing
+  their declaration or runtime binding order.
+- Add a formal default CLI log format and a masked four-line execution preamble
+  covering the selected command, log path, normalized command line, and
+  CLI-owned execution configuration.
+- Add validated tree workflows with typed variable mappings, scoped resource
+  contexts, deterministic execution and cleanup, covered failures, static tree
+  rendering, inferred CLI commands, recursive command discovery, and an
+  executable energy-settlement case-study tutorial.
+- Add non-empty `{name=expression}` record displays that evaluate fields
+  left-to-right into shallowly immutable, attribute-accessible `LclRecord`
+  values shared by LCL and Python.
+- Add trailing-`!` exact-name masking across configuration, Modules, Presets,
+  Frames, resolver mappings, and CLI bindings. Masking survives same-name
+  overrides and renders lclang-owned verbose and inspection payloads as
+  `*masked*` without changing runtime values.
+
 ## 1.0.4 - 2026-08-25
 
 - Add qualified scoped values backed by lazy Frame proxies across Python,

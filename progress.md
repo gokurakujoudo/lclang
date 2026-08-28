@@ -12,8 +12,8 @@ runtime dependencies.
   precedence-aware canonical source rendering.
 - Arithmetic, comparisons, boolean short-circuiting, conditionals, null
   coalescing, safe attributes, calls, subscripts, slices, and unpacking.
-- Tuple, list, set, and dictionary displays; generator, list, set, and dictionary
-  comprehensions; sync and async iteration.
+- Tuple, list, set, dictionary, and immutable named-record displays; generator,
+  list, set, and dictionary comprehensions; sync and async iteration.
 - Arrow functions with defaults, keyword arguments, lexical closures, and
   recursive-program support.
 - Raise, assert, try/except/finally, and sync or async with-expressions.
@@ -24,6 +24,8 @@ runtime dependencies.
   boundary.
 - Immutable Modules, Presets, standard hierarchy, Frame factories, child Frames,
   and controlled host-value overlays.
+- Exact-name trailing-bang masking metadata across binding sources, hierarchy
+  overrides, verbose diagnostics, and inspection rendering.
 - Qualified scoped bindings with lazy Frame proxies across Modules, presets,
   configuration, CLI overrides, and parent lookup.
 - Unnamed `Frame.evaluate()` expressions with Frame lookup and `lhs()` ownership.
@@ -38,7 +40,7 @@ runtime dependencies.
 ## Configuration
 
 - UTF-8 `.lclcfg` documents with version declarations, definitions, comments,
-  multiline expressions, and source origins.
+  multiline expressions, source origins, and sticky masked-key declarations.
 - Asynchronous in-memory and file loading, source-ordered `using` expansion,
   deterministic precedence, caching, concurrency sharing, and cycle detection.
 - Direct conversion from loaded configuration to runtime Module and Frame
@@ -63,19 +65,24 @@ runtime dependencies.
   helpers without ambient I/O or dynamic-code capabilities.
 - Async three-state business-day calendars with canonical composition, bounded
   mappings, strict JSON loading, and dependency-aware cache retirement.
-- Nested workflow task and step status trees with deterministic aggregation,
-  locking, scoped mutation, context-manager finalization, and failure capture.
+- Validated tree workflows with typed dataclass mappings, named variables,
+  task-local context resources, parent-first depth-first execution, explicit
+  publication, reverse cleanup, static rendering, and complete status trees.
+- Nested task and step status management with covered-failure semantics,
+  deterministic aggregation, locking, scoped mutation, and failure capture.
 
 ## Command-line framework
 
 - Immutable invocation values, typed async commands, decorators, nested command
-  groups, full-argument parsing, structured help, and platform-neutral process
-  entry points.
+  groups, full-argument parsing, A-Z configuration-parameter help, and
+  platform-neutral process entry points.
 - Preset/default/config/override Frame layering, boolean overrides, dry-run
-  pass-through, isolated logging, opt-in task-local verbose tracing, and
-  deterministic result/cleanup mapping.
+  pass-through, isolated formal logging with a masked execution preamble,
+  opt-in task-local verbose tracing, and deterministic result/cleanup mapping.
 - Built-in `builtins`, `parse_lcl`, and `eval_lcl` commands for inventory,
   inspection, and evaluation.
+- Workflow commands with inferred external parameters, help and masks, final
+  status logging, plus recursive package command discovery.
 
 ## Distribution quality
 

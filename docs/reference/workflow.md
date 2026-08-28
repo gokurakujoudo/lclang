@@ -1,0 +1,113 @@
+# Tree Workflow API
+
+## Design model
+
+`lclang.workflow` follows the same separation as Modules and Frames. A workflow
+is a strong reusable format: an immutable tree of valid task IDs, typed
+dataclass boundaries, explicit variable flows, ordered contexts, and ordered
+children. `Workflow.execute` supplies flexibility only inside that format:
+actions are ordinary async Python, contexts may own arbitrary dismissible
+resources, and status managers may add run-specific detail.
+
+The definition never owns execution state. One execution borrows a shared
+`Frame`, derives short-lived task Frames, records argument and output values,
+and creates a fresh status tree. Reusing a `Workflow` is therefore analogous to
+reusing a `Module`; each call is analogous to creating a new per-run `Frame`.
+
+## Variables and mappings
+
+Create variables through the subscribed factory:
+
+```python
+import lclang.workflow as wf
+
+source = wf.define_variable[int]("source", "Required source value")
+secret = wf.define_variable[str]("service.token", "Service token", is_masked=True)
+result = wf.define_variable[float]("result")
+```
+
+`TaskVar.quote` is statically typed as the represented value but returns the
+variable marker at runtime. It can therefore occupy a normally typed dataclass
+field in a definition mapping. Argument fields containing a marker are resolved
+from the current task Frame. Other fields retain their literal value, including
+values supplied by dataclass defaults.
+
+Output publication is opt-in. With no output mapping, nothing is published.
+Within a mapping, only fields containing `TaskVar.quote` are copied from the
+returned dataclass into a Frame; other fields are retained in `task_outputs`
+but remain unmapped. Masked variables use the same exact-name redaction model
+as Modules, Presets, configuration, CLI bindings, and Frame mixins.
+
+## Tasks and contexts
+
+An action has the exact async form:
+
+```python
+async def action(
+    context: wf.TaskContext,
+    args: Args,
+    status_mgr: wf.ExecutionStatusManager,
+) -> Outputs:
+    ...
+```
+
+`Args` and `Outputs` are dataclasses with plain annotated fields. lclang checks
+the callable boundary and dataclass shape but deliberately does not impose
+runtime field validation. Application code remains responsible for semantic
+types received from external systems.
+
+Each TaskNode may have ordered context tasks and ordered child tasks. Context
+factories accept the same three arguments and return an async context manager.
+They enter left-to-right before the action and exit right-to-left after all
+children. Their mapped resources enter only the current task Frame. Every task
+Frame is derived directly from the shared execution Frame, so a context resource
+never leaks to another task. Mapped action outputs enter the shared Frame and
+are visible to later parent-first, depth-first tasks.
+
+`FailureCoveringContextTask` is the standard template for recovery contexts.
+Subclasses implement `acquire`, `handle_exception`, and optionally `release`.
+Successful handling and cleanup suppress the ordinary exception and mark the
+context `FAILURE_COVERED`. Covered failures remain visible and still stop later
+siblings; covering means the failure was wrapped up, not that execution can be
+resumed safely.
+
+## Execution and results
+
+`await workflow.execute(context)` returns `WorkflowExecutionResult` with the
+finalized `execution_status`, the borrowed `execution_frame`, and dictionaries
+of successfully materialized action arguments and returned outputs. A key is
+added to `task_args` after argument construction and to `task_outputs` after a
+valid action return. Structural, unreached, and failed stages are absent.
+
+Raised exceptions become `WorkflowException` under the shared Frame name
+`__exception__`. The value retains the ordinary exception and originating
+task or context-task ID. Explicit `FAILURE`, `ERROR`, or `FAILURE_COVERED`
+statuses also stop execution and receive a deterministic synthetic exception.
+All unexecuted declared branches appear as `SKIPPED`.
+
+Severity is `ERROR`, `FAILURE`, `FAILURE_COVERED`, then `PENDING`. Clean work
+retains the existing success/all-skipped aggregation rules. Process-control
+`BaseException` values unwind task contexts and Frames, then propagate.
+
+## Static trees and CLI conversion
+
+`workflow.to_lines()` renders the definition without executing it. Task and
+context lines show IDs, titles, argument flows (`field <- $variable`), output
+flows (`field -> $variable`), literals, defaults, and unmapped fields. Context
+entry lines nest above child tasks and matching exit lines appear below them in
+reverse order.
+
+`workflow.to_cli(name, summary, preset=None)` infers external variables by the
+same scope-aware traversal. A context output is visible only to later contexts
+and the action in its task; an action output is visible globally after that
+action. Variables first read without a visible assignment become required CLI
+parameters. Intermediate variables are omitted and cannot be directly
+overridden. Missing descriptions render as `NO HELP MESSAGE PROVIDED`.
+
+The generated command logs the finalized tree after ordinary action/context
+records and leaves stdout/stderr descriptions empty. Exit codes are success
+`0`, failure `1`, error `2`, and covered failure `3`.
+
+`lclang.cli.scan_commands(module, name, description)` imports a package and its
+submodules deterministically, collects public module-level `Command` objects,
+deduplicates re-exports by identity, and rejects distinct duplicate names.

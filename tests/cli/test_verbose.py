@@ -46,6 +46,9 @@ class FailingAwaitable:
         raise RuntimeError("await failed")
 
 
+MASKED_CONFIG_SOURCE = "token!: 'config-secret'\nRESULT!: token + '-result'\n"
+
+
 def make_verbose_entrance(log_dir: str | None = None) -> CliEntrance:
     """Build a command exercising evaluated, cached, external, native, and fallback values.
 
@@ -159,6 +162,32 @@ def test_verbose_replays_early_records_to_the_configured_file(
     assert "[lclang.parse]" in stderr
     assert "[lclang.parse]" in contents
     assert "source=fallback" in contents
+
+
+def test_verbose_redacts_masked_config_and_override_payloads(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Config parsing and overriding never expose marked literals in either trace sink."""
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        config_path = root / "masked.lclcfg"
+        config_path.write_text(MASKED_CONFIG_SOURCE, encoding="utf-8")
+        entrance = make_verbose_entrance(directory)
+        args = trace_args(
+            "--verbose",
+            "-c",
+            str(config_path),
+            "-o",
+            "token",
+            "override-secret",
+        )
+        assert asyncio.run(entrance.run(args)) == 0
+        stderr = capsys.readouterr().err
+        contents = (root / "lclang.log").read_text(encoding="utf-8")
+    for trace in (stderr, contents):
+        assert "*masked*" in trace
+        assert "config-secret" not in trace
+        assert "override-secret" not in trace
 
 
 def test_verbose_reports_evaluation_failures(

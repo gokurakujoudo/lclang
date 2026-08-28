@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from typing import Protocol, cast
 
 from lclang.ast import LclAstNode
-from lclang.runtime.frame.scoped import find_scoped_binding
+from lclang.runtime.frame.scoped import find_scoped_binding, is_name_masked
 from lclang.runtime.modules import Module
 
 
@@ -61,6 +61,17 @@ class FrameLookupApi:
            Presence inspection never evaluates or caches a definition or value.
         """
         return find_frame(cast(LookupFrame, self), name) is not None
+
+    def is_masked(self, name: str) -> bool:
+        """Report whether the hierarchy marks one exact normalized name.
+
+        :param name: Non-empty binding name to inspect without evaluation.
+        :returns: Whether any effective layer marks *name*.
+        :raises ValueError: If *name* is empty.
+        """
+        if not name:
+            raise ValueError("variable name cannot be empty")
+        return is_name_masked(self, name)
 
     def get_definition(self, name: str) -> LclAstNode | None:
         """Return the selected definition AST without evaluating it.

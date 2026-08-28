@@ -77,3 +77,21 @@ async def test_resolvers_trace_active_values_missing_names_and_await_failures() 
     assert "source=external-provided error=(RuntimeError)" in trace
     assert "source=local-provided value=(str) 'value'" in trace
     assert "source=local-provided error=(RuntimeError)" in trace
+
+
+@pytest.mark.asyncio
+async def test_mapping_resolver_accepts_masked_binding_spelling() -> None:
+    """Direct mappings resolve the normalized name while redacting lookup traces."""
+    output = io.StringIO()
+    logger = logging.Logger("masked-resolver", logging.DEBUG)
+    logger.addHandler(logging.StreamHandler(output))
+    resolver = MappingResolver({"token!": "secret"})
+    with internal_verbose_scope(logger):
+        result = await resolver.resolve(VarName("token"), span=UNKNOWN_SPAN)
+    assert result == "secret"
+    assert "name='token' source=external-provided value=*masked*" in output.getvalue()
+    values: dict[str, object] = {"token!": "secret"}
+    mutable = MappingResolver(values)
+    values["token"] = "collision"
+    with pytest.raises(ValueError, match="duplicate"):
+        await mutable.resolve(VarName("token"), span=UNKNOWN_SPAN)

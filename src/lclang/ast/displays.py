@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from lclang.ast.base import LclAstNode
+from lclang.types import VarName
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,6 +52,60 @@ class LclList(LclAstNode):
            Starred elements remain explicit wrapper nodes.
         """
         return self.elements
+
+
+@dataclass(frozen=True, slots=True)
+class LclRecordField(LclAstNode):
+    """Represent one named record field.
+
+    :param name: Non-empty field name before ``=``.
+    :param value: Expression supplying the retained field value.
+    :raises ValueError: If *name* is empty.
+    """
+
+    name: VarName
+    value: LclAstNode
+
+    def __post_init__(self) -> None:
+        """Reject an empty field name.
+
+        :raises ValueError: If the field name is empty.
+        """
+        if not self.name:
+            raise ValueError("record field name cannot be empty")
+
+    def children(self) -> tuple[LclAstNode, ...]:
+        """Return the field value expression.
+
+        :returns: A one-element value tuple.
+        """
+        return (self.value,)
+
+
+@dataclass(frozen=True, slots=True)
+class LclRecordDisplay(LclAstNode):
+    """Represent a non-empty immutable record display.
+
+    :param fields: Named fields in source declaration order.
+    :raises ValueError: If no field is supplied.
+    """
+
+    fields: tuple[LclRecordField, ...]
+
+    def __post_init__(self) -> None:
+        """Reject an empty record display.
+
+        :raises ValueError: If no field is supplied.
+        """
+        if not self.fields:
+            raise ValueError("record display requires at least one field")
+
+    def children(self) -> tuple[LclAstNode, ...]:
+        """Return fields in declaration order.
+
+        :returns: Immutable source-order field tuple.
+        """
+        return self.fields
 
 
 @dataclass(frozen=True, slots=True)

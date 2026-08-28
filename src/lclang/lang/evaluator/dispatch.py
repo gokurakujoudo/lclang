@@ -25,6 +25,7 @@ from lclang.ast import (
     LclListComprehension,
     LclName,
     LclRaise,
+    LclRecordDisplay,
     LclSafeAttribute,
     LclSet,
     LclSetComprehension,
@@ -175,7 +176,7 @@ async def internal_evaluate_node(node: LclAstNode, resolver: Resolver) -> object
         result = await internal_evaluate_with(node, resolver, internal_evaluate)
     elif isinstance(node, LclJoinedString):
         result = await internal_evaluate_joined(node, resolver, internal_evaluate)
-    elif isinstance(node, (LclTuple, LclList, LclSet, LclDict)):
+    elif isinstance(node, (LclTuple, LclList, LclSet, LclDict, LclRecordDisplay)):
         result = await internal_evaluate_display(node, resolver, internal_evaluate)
     elif isinstance(
         node,
@@ -194,7 +195,9 @@ async def internal_evaluate_node(node: LclAstNode, resolver: Resolver) -> object
         name = type(node).__name__
         raise LclEvaluationError(f"unsupported AST node: {name}", span=node.span)
     resolved = await resolve_awaitable(result)
-    if isinstance(
+    if isinstance(node, LclRecordDisplay):
+        internal_check_collection(len(node.fields), node.span)
+    elif isinstance(
         node,
         (
             LclTuple,

@@ -16,6 +16,7 @@ from lclang.cli.logging import (
     VerboseLoggerHandle,
     create_logger,
     create_verbose_logger,
+    log_execution_start,
 )
 from lclang.cli.models import CliConfig, CliParams, CliResult, CliResultStatus
 from lclang.cli.parser import help_requested, parse_cli_params
@@ -114,6 +115,7 @@ async def internal_execute_command(
             await binding.stack.close()
         print(f"error: {error}", file=sys.stderr)
         return int(CliResultStatus.EXCEPTION)
+    log_execution_start(logger_handle, params, binding.frame)
     if verbose_handle is not None:
         verbose_handle.attach(logger_handle.handlers[0])
     context = CliContext(

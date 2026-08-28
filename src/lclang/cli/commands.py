@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import inspect
 from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import get_type_hints
 
 from lclang.cli.context import CliContext
@@ -16,6 +16,7 @@ from lclang.cli.validation import (
     require_command_segment,
     require_lcl_identifier,
 )
+from lclang.masking import normalize_masked_mapping
 
 CommandHandler = Callable[[CliContext], Awaitable[CliResult]]
 
@@ -72,6 +73,7 @@ class Command:
     :param parameter_docs: Ordered configuration parameter declarations.
     :param preset: Immutable shallow host-binding preset.
     :param handler: Exactly typed async Python handler.
+    :param masked_names: Immutable normalized preset names to redact.
     """
 
     name: str
@@ -79,6 +81,7 @@ class Command:
     parameter_docs: Sequence[ParameterDoc]
     preset: Mapping[str, object]
     handler: CommandHandler
+    masked_names: frozenset[str] = field(default_factory=frozenset, kw_only=True)
 
     def __post_init__(self) -> None:
         """Detach declaration inputs and reject ambiguous metadata.
@@ -97,14 +100,19 @@ class Command:
         if set(names) & DECLARATION_RESERVED_NAMES:
             raise ValueError("command parameter name is reserved")
         preset = freeze_mapping(self.preset, "command preset")
-        for preset_name in preset:
+        normalized_preset, masked_names = normalize_masked_mapping(
+            preset,
+            self.masked_names,
+        )
+        for preset_name in normalized_preset:
             require_lcl_identifier(preset_name, "preset name")
-        if set(preset) & DECLARATION_RESERVED_NAMES:
+        if set(normalized_preset) & DECLARATION_RESERVED_NAMES:
             raise ValueError("command preset name is reserved")
         object.__setattr__(self, "name", name)
         object.__setattr__(self, "summary", normalize_text(self.summary, "command summary"))
         object.__setattr__(self, "parameter_docs", docs)
-        object.__setattr__(self, "preset", preset)
+        object.__setattr__(self, "preset", freeze_mapping(normalized_preset, "command preset"))
+        object.__setattr__(self, "masked_names", masked_names)
         object.__setattr__(self, "handler", validate_handler(self.handler))
 
     async def run(self, args: Sequence[str] | None = None) -> int:

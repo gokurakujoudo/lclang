@@ -22,6 +22,7 @@ from lclang.errors import (
     LclSyntaxError,
 )
 from lclang.lang import evaluate, evaluate_sync, parse_expression, to_source
+from lclang.records import LclRecord
 from lclang.runtime import (
     FRAME_PROXY,
     NO_FALLBACK,
@@ -62,6 +63,7 @@ __all__ = [
     "LclError",
     "LclEvaluationError",
     "LclNameError",
+    "LclRecord",
     "LclName",
     "LclSyntaxError",
     "LclTuple",

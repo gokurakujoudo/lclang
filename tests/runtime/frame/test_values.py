@@ -24,6 +24,21 @@ async def test_mixin_detaches_values_and_updates_direct_lookup() -> None:
 
 
 @pytest.mark.asyncio
+async def test_marked_frame_values_and_mixins_normalize_and_stay_masked() -> None:
+    """Host markers are removed from lookup names and survive later updates."""
+    frame = lclang.define_frame(preset={"token!": "first"})
+    assert await frame.get("token") == "first"
+    assert frame.is_masked("token") is True
+    frame.mixin({"token": "second", "other!": "third"})
+    assert await frame.get("token") == "second"
+    assert await frame.get("other") == "third"
+    assert frame.masked_names == frozenset({"other"})
+    assert frame.is_masked("token") is True
+    with pytest.raises(ValueError, match="duplicate"):
+        frame.mixin({"same": 1, "same!": 2})
+
+
+@pytest.mark.asyncio
 async def test_mixin_preserves_cached_snapshots_until_recalculation() -> None:
     """Composite: mixed inputs affect direct reads and explicit refresh only."""
     frame = lclang.define_frame(

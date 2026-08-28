@@ -15,6 +15,7 @@ from lclang.runtime.frame.lifecycle import InternalFrameLifecycle
 from lclang.runtime.frame.scoped import (
     find_scoped_binding,
     hierarchy_binding_names,
+    is_name_masked,
     local_binding_kind,
 )
 from lclang.runtime.modules import Module
@@ -94,6 +95,7 @@ def build_inspection_tree(
        Ancestors are path-local so duplicate variables on sibling branches expand.
     """
     owner, path = resolve_inspection_owner(origin, name)
+    masked = is_name_masked(origin, name)
     if owner is None:
         return VariableInspectionTree(
             VarName(name),
@@ -104,6 +106,7 @@ def build_inspection_tree(
             None,
             LclNameError(f"unknown variable: {name}"),
             [],
+            masked,
         )
     owner._lifecycle.ensure_open(None)
     if local_binding_kind(owner, name) == "proxy":
@@ -116,6 +119,7 @@ def build_inspection_tree(
             FrameProxy(cast("Frame", origin), tuple(name.split("."))),
             None,
             [],
+            masked,
         )
     definition = owner.module.definitions.get(name)
     if definition is None:
@@ -133,6 +137,7 @@ def build_inspection_tree(
             owner.values[name],
             None,
             [],
+            masked,
         )
     status, value, error = inspect_cache(owner, name)
     key = (id(owner), name)
@@ -159,6 +164,7 @@ def build_inspection_tree(
         value,
         error,
         dependencies,
+        masked,
     )
 
 

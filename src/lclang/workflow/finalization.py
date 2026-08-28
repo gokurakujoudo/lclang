@@ -68,6 +68,8 @@ def aggregate_children(node: ExecutionStatusTree) -> None:
     :param node: Composite node whose direct children are finalized.
     :returns: ``None``.
     """
+    if node.status is ExecutionStatus.FAILURE_COVERED:
+        return
     errors = [child for child in node.sub_tasks if child.status is ExecutionStatus.ERROR]
     if node.status is ExecutionStatus.ERROR:
         return
@@ -81,6 +83,15 @@ def aggregate_children(node: ExecutionStatusTree) -> None:
     if failures:
         node.status = ExecutionStatus.FAILURE
         append_child_issue(node, failures[0])
+        return
+    covered = [
+        child
+        for child in node.sub_tasks
+        if child.status is ExecutionStatus.FAILURE_COVERED
+    ]
+    if covered:
+        node.status = ExecutionStatus.FAILURE_COVERED
+        append_child_issue(node, covered[0])
         return
     if any(child.status is ExecutionStatus.PENDING for child in node.sub_tasks):
         node.status = ExecutionStatus.PENDING

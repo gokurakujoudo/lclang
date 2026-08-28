@@ -7,6 +7,7 @@ from collections.abc import Mapping
 from typing import Protocol, cast
 
 from lclang.diagnostics import (
+    internal_masked_scope,
     internal_render_value,
     internal_trace,
     internal_verbose_enabled,
@@ -27,7 +28,7 @@ from lclang.runtime.frame.flights import (
 from lclang.runtime.frame.lifecycle import InternalFrameLifecycle
 from lclang.runtime.frame.limits import EvaluationLimits, internal_budget_scope
 from lclang.runtime.frame.lookup import find_frame
-from lclang.runtime.frame.scoped import local_binding_kind
+from lclang.runtime.frame.scoped import is_name_masked, local_binding_kind
 from lclang.runtime.modules import Module
 from lclang.scope_proxy import FrameProxy
 from lclang.source import SourceSpan
@@ -171,15 +172,19 @@ class FrameEvaluationApi:
                 internal_trace(
                     "lookup",
                     f"name={name!r} owner={str(frame.frame_id)!r} source=cached "
-                    f"value={internal_render_value(result)}",
+                    f"value={internal_render_value(result, masked=is_name_masked(frame, name))}",
                 )
             return result
         if name in frame._failures:
             if internal_verbose_enabled():
+                rendered_error = internal_render_value(
+                    frame._failures[name],
+                    masked=is_name_masked(frame, name),
+                )
                 internal_trace(
                     "lookup",
                     f"name={name!r} owner={str(frame.frame_id)!r} source=cached-failure "
-                    f"error={internal_render_value(frame._failures[name])}",
+                    f"error={rendered_error}",
                 )
             raise frame._failures[name]
         if name in frame.module.definitions:
@@ -195,14 +200,14 @@ class FrameEvaluationApi:
                     internal_trace(
                         "lookup",
                         f"name={name!r} owner={str(frame.frame_id)!r} source={source} "
-                        f"error={internal_render_value(error)}",
+                        f"error={internal_render_value(error, masked=is_name_masked(frame, name))}",
                     )
                 raise
             if internal_verbose_enabled():
                 internal_trace(
                     "lookup",
                     f"name={name!r} owner={str(frame.frame_id)!r} source={source} "
-                    f"value={internal_render_value(result)}",
+                    f"value={internal_render_value(result, masked=is_name_masked(frame, name))}",
                 )
             return result
         source = "native-provided" if frame.native_values else "external-provided"
@@ -213,14 +218,14 @@ class FrameEvaluationApi:
                 internal_trace(
                     "lookup",
                     f"name={name!r} owner={str(frame.frame_id)!r} source={source} "
-                    f"error={internal_render_value(error)}",
+                    f"error={internal_render_value(error, masked=is_name_masked(frame, name))}",
                 )
             raise
         if internal_verbose_enabled():
             internal_trace(
                 "lookup",
                 f"name={name!r} owner={str(frame.frame_id)!r} source={source} "
-                f"value={internal_render_value(result)}",
+                f"value={internal_render_value(result, masked=is_name_masked(frame, name))}",
             )
         return result
 
@@ -239,7 +244,11 @@ class FrameEvaluationApi:
         trace, resolver = frame._dependencies.stage(name, cast(Resolver, self))
         try:
             try:
-                with definition_scope(name), internal_budget_scope(frame.limits):
+                with (
+                    definition_scope(name),
+                    internal_budget_scope(frame.limits),
+                    internal_masked_scope(is_name_masked(frame, name)),
+                ):
                     result = await evaluate_lcl(frame.module.definitions[name], resolver)
             except Exception as error:
                 frame._lifecycle.commit_failure(name, error)

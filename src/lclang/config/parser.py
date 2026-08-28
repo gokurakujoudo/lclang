@@ -15,6 +15,8 @@ from lclang.config.expressions import parse_config_expression
 from lclang.config.lines import LogicalLine, scan_logical_lines
 from lclang.config.model import ConfigDeclaration, ConfigDefinition, ConfigDocument
 from lclang.config.positions import advance_position
+from lclang.diagnostics import internal_masked_scope
+from lclang.masking import split_masked_name
 from lclang.source import SourceOrigin
 from lclang.types import SourceName, VarName
 
@@ -106,14 +108,19 @@ def parse_definition(
     colon = first_line.find(":", leading)
     if colon < 0:
         raise LclConfigSyntaxError("definition requires colon", span=line.span)
-    name = first_line[leading:colon].strip(" \t\f")
+    raw_name = first_line[leading:colon].strip(" \t\f")
+    try:
+        name, masked = split_masked_name(raw_name)
+    except (TypeError, ValueError) as error:
+        raise LclConfigSyntaxError("invalid config definition name", span=line.span) from error
     validate_definition_name(name, line, origin)
     expression_text = line.text[colon + 1 :]
     if not expression_text.strip():
         raise LclConfigSyntaxError("definition requires an expression", span=line.span)
     start = advance_position(line.start, line.text[: colon + 1])
-    expression = parse_config_expression(expression_text, origin=origin, start=start)
-    return ConfigDefinition(VarName(name), expression, line.span, ordinal)
+    with internal_masked_scope(masked):
+        expression = parse_config_expression(expression_text, origin=origin, start=start)
+    return ConfigDefinition(VarName(name), expression, line.span, ordinal, masked)
 
 
 def normalize_source_path(source_path: str | Path | None) -> Path | None:

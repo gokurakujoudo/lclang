@@ -167,6 +167,7 @@ def sdist_member_policy(members: tuple[str, ...]) -> None:
         "docs/reference/calendar.md",
         "docs/tutorials/README.md",
         "docs/tutorials/11-business-day-calendars.md",
+        "docs/tutorials/15-energy-settlement-workflow.md",
         "progress.md",
         "pyproject.toml",
         "src/lclang/utils/calendar/__init__.py",

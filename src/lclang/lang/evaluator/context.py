@@ -13,6 +13,7 @@ from lclang.diagnostics import (
 )
 from lclang.errors import LclNameError
 from lclang.lang.evaluator.awaitables import resolve_awaitable
+from lclang.masking import normalize_masked_mapping
 from lclang.source import SourceSpan
 from lclang.types import VarName
 
@@ -50,6 +51,15 @@ class MappingResolver:
 
     values: Mapping[str, object]
 
+    def __post_init__(self) -> None:
+        """Validate current key spellings without copying the borrowed mapping.
+
+        :returns: ``None`` after marked aliases are proven unambiguous.
+        :raises TypeError: If a binding name is not text.
+        :raises ValueError: If normalized names collide or markers are malformed.
+        """
+        normalize_masked_mapping(self.values)
+
     async def resolve(self, name: VarName, *, span: SourceSpan) -> object:
         """Return a mapped value or raise a source-aware name error.
 
@@ -57,12 +67,18 @@ class MappingResolver:
         :param span: Source range attached to a missing-name error.
         :returns: Current mapped value, which may itself be awaitable.
         :raises LclNameError: If *name* is absent from the mapping.
+        :raises ValueError: If live mapping mutation creates a marked alias collision.
 
         .. note::
            Membership follows the supplied mapping's ordinary string-key rules.
         """
         try:
-            selected = self.values[str(name)]
+            plain = str(name)
+            marked = f"{plain}!"
+            if plain in self.values and marked in self.values:
+                raise ValueError(f"duplicate normalized binding name: {plain}")
+            masked = marked in self.values
+            selected = self.values[marked if masked else plain]
         except KeyError:
             if internal_verbose_enabled():
                 internal_trace("lookup", f"name={str(name)!r} source=missing")
@@ -75,13 +91,13 @@ class MappingResolver:
             internal_trace(
                 "lookup",
                 f"name={str(name)!r} source=external-provided "
-                f"error={internal_render_value(error)}",
+                f"error={internal_render_value(error, masked=masked)}",
             )
             raise
         internal_trace(
             "lookup",
             f"name={str(name)!r} source=external-provided "
-            f"value={internal_render_value(result)}",
+            f"value={internal_render_value(result, masked=masked)}",
         )
         return result
 
