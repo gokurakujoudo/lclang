@@ -8,6 +8,7 @@ from contextlib import suppress
 
 from lclang.cli.binding import CliBinding, build_binding
 from lclang.cli.commands import Command
+from lclang.cli.console_logging import FILE_ONLY_ATTRIBUTE, attach_console_handlers
 from lclang.cli.context import CliContext
 from lclang.cli.entrance import CliEntrance
 from lclang.cli.help import render_command_help, render_group_help, render_usage_error
@@ -43,11 +44,19 @@ def write_result(
     if result.result_status is CliResultStatus.SUCCESS:
         print(result.description, file=sys.stdout)
         if log_result:
-            logger_handle.logger.info("%s", result.description)
+            logger_handle.logger.info(
+                "%s",
+                result.description,
+                extra={FILE_ONLY_ATTRIBUTE: True},
+            )
     else:
         print(result.description, file=sys.stderr)
         if log_result:
-            logger_handle.logger.error("%s", result.description)
+            logger_handle.logger.error(
+                "%s",
+                result.description,
+                extra={FILE_ONLY_ATTRIBUTE: True},
+            )
 
 
 async def close_after_control_flow(binding: CliBinding, logger_handle: LoggerHandle) -> None:
@@ -115,7 +124,13 @@ async def internal_execute_command(
             await binding.stack.close()
         print(f"error: {error}", file=sys.stderr)
         return int(CliResultStatus.EXCEPTION)
-    log_execution_start(logger_handle, params, binding.frame)
+    log_execution_start(
+        logger_handle,
+        params,
+        binding.frame,
+        binding.execution_config_names,
+    )
+    attach_console_handlers(logger_handle, params.verbose)
     if verbose_handle is not None:
         verbose_handle.attach(logger_handle.handlers[0])
     context = CliContext(

@@ -6,6 +6,7 @@ from typing import Any, cast
 import pytest
 
 from lclang.cli import (
+    RUNTIME_DRYRUN_KEY,
     CliContext,
     CliResult,
     CliResultStatus,
@@ -100,7 +101,7 @@ async def valid_handler(context: CliContext) -> CliResult:
             lambda: Command(
                 "run",
                 "x",
-                [ParameterDoc("dryrun", str, False, "")],
+                [ParameterDoc(RUNTIME_DRYRUN_KEY, str, False, "")],
                 {},
                 valid_handler,
             ),
@@ -108,7 +109,7 @@ async def valid_handler(context: CliContext) -> CliResult:
         ),
         (lambda: InvalidCommand("run", "x", [object()], {}, valid_handler), "ParameterDoc"),
         (lambda: Command("run", "x", (), {"bad-key": 1}, valid_handler), "identifier"),
-        (lambda: Command("run", "x", (), {"log_dir": 1}, valid_handler), "reserved"),
+        (lambda: Command("run", "x", (), {"logger": 1}, valid_handler), "reserved"),
         (lambda: CommandGroup("Bad", "x", ()), "lowercase"),
         (lambda: CommandGroup("_hidden", "x", ()), "snake_case"),
         (lambda: InvalidCommandGroup("root", "x", [object()]), "commands or groups"),

@@ -47,10 +47,22 @@ def test_parameter_and_log_contracts_reject_invalid_values() -> None:
     """Names and logging formats are validated before an invocation."""
     assert ParameterDoc("count", list[int], True, "item count").default is None
     assert ParameterDoc("meter.start", float, True, "Opening meter reading").name == "meter.start"
+    without_args = (
+        "%(asctime)s %(levelname)s %(filename)s:%(lineno)d "
+        "%(funcName)s %(message)s"
+    )
+    assert LogConfig(log_format=without_args).log_format == without_args
     with pytest.raises(ValueError, match="identifier"):
         ParameterDoc("bad-key", str, False, "bad")
     with pytest.raises(ValueError, match="log format"):
         LogConfig(log_format="%(message)s")
+    with pytest.raises(ValueError, match="log format"):
+        LogConfig(
+            log_format=(
+                "%(asctime)s %(filename)s:%(lineno)d %(funcName)s "
+                "%(message)s %(args)r"
+            )
+        )
 
 
 def test_parameter_defaults_and_direct_params_accept_mask_markers() -> None:
@@ -86,6 +98,18 @@ def test_parameter_defaults_and_direct_params_accept_mask_markers() -> None:
         (
             lambda: InvalidCliParams(
                 "python", ["run"], date.today(), False, None, {}, script_path=""
+            ),
+            ValueError,
+        ),
+        (
+            lambda: InvalidCliParams(
+                "python",
+                ["run"],
+                date.today(),
+                False,
+                None,
+                {},
+                raw_argv=("python", ""),
             ),
             ValueError,
         ),

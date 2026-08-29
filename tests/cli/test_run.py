@@ -88,53 +88,47 @@ def test_complete_run_uses_layers_context_logging_and_cleanup(
             )
         )
         assert status == 0
-        assert capsys.readouterr().out == "hello override\n"
+        output_lines = capsys.readouterr().out.splitlines()
+        assert len(output_lines) == 2
+        assert re.match(
+            r"^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} \| INFO +\| "
+            r"lclang\.cli\.\d+ \| test_run\.py:\d+ \| show_command \| "
+            r"message=hello override$",
+            output_lines[0],
+        )
+        assert output_lines[1] == "hello override"
         assert observed == {"date": date(2026, 8, 9), "dryrun": True, "message": "hello override"}
         log_text = (root / "logs" / "lclang.log").read_text(encoding="utf-8")
-        lines = log_text.splitlines()
-        assert all(
-            re.match(
-                r"^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} \| INFO +\| "
-                r"lclang\.cli\.\d+ \| \w+\.py:\d+ \| \w+ \| .+ \| args=.*$",
-                line,
-            )
-            for line in lines
-        )
-        messages = [line.split(" | ", 5)[5].rsplit(" | args=", 1)[0] for line in lines]
-        assert messages[0] == 'execution.started command=["show"]'
-        assert messages[1] == f"execution.log_file path={root / 'logs' / 'lclang.log'}"
-        command_line = json.loads(messages[2].removeprefix("execution.command_line argv="))
+        assert f"execution log file path: {root / 'logs' / 'lclang.log'}" in log_text
+        assert "execution started:\n" in log_text
+        assert "==                      show                     ==" in log_text
+        match = re.search(r"execution command line: (\[.*\])", log_text)
+        assert match is not None
+        command_line = json.loads(match.group(1))
         assert command_line == [
             "python",
             "tool.py",
             "show",
-            "--config",
+            "-c",
             str(config_path),
-            "--override",
+            "-o",
             "message",
             'LCL[prefix + "override"]',
-            "--override",
+            "-o",
             "token",
             "*masked*",
-            "--as-of",
+            "-a",
             "20260809",
-            "--dryrun",
+            "-wif",
         ]
-        execution_config = json.loads(
-            messages[3].removeprefix("execution.config values=")
-        )
-        assert execution_config == {
-            "as_of_date": "2026-08-09",
-            "config_file_path": str(config_path),
-            "dryrun": True,
-            "overrides": {
-                "message": 'LCL[prefix + "override"]',
-                "token": "*masked*",
-            },
-            "verbose": False,
-        }
+        assert "execution config:\n" in log_text
+        assert "    message: prefix + 'override'" in log_text
+        assert "    prefix : 'hello '" in log_text
+        assert "    suffix : 'config'" in log_text
+        assert "    token  : (str) *masked*" in log_text
         assert "message=hello override" in log_text
-        assert "override-secret" not in "\n".join(messages[:4])
+        assert "override-secret" not in log_text
+        assert " | args=" not in log_text
 
 
 def test_help_and_version_short_circuit_execution(capsys: pytest.CaptureFixture[str]) -> None:
@@ -204,6 +198,55 @@ def test_result_statuses_map_to_output_and_exit(
     captured = capsys.readouterr()
     assert captured.out == expected_out
     assert captured.err == expected_err
+
+
+def test_application_info_and_verbose_debug_logs_print_to_stdout(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Console logging is independent from the configured file threshold."""
+    @cli.command(name="logged")
+    async def logged_handler(context: CliContext) -> CliResult:
+        """Write one record at each terminal-visible level.
+
+        :param context: Current invocation.
+        :returns: Empty successful result.
+        """
+        context.logger.debug("debug message")
+        context.logger.info("info message")
+        context.logger.warning("warning message")
+        context.logger.error("error message")
+        return CliResult.success("")
+
+    with TemporaryDirectory() as directory:
+        for log_dir in (None, directory):
+            entrance = CliEntrance(
+                CommandGroup("root", "Logging", [logged_handler]),
+                cli_config=CliConfig(LogConfig(log_dir=log_dir, log_level="ERROR")),
+            )
+            assert asyncio.run(entrance.run(["python", "tool.py", "logged"])) == 0
+            captured = capsys.readouterr()
+            assert " | INFO     | " in captured.out
+            assert " | WARNING  | " in captured.out
+            assert " | info message" in captured.out
+            assert " | warning message" in captured.out
+            assert " | ERROR    | " in captured.err
+            assert " | error message" in captured.err
+
+            assert asyncio.run(
+                entrance.run(["python", "tool.py", "logged", "--verbose"])
+            ) == 0
+            captured = capsys.readouterr()
+            assert " | DEBUG    | " in captured.out
+            assert " | debug message" in captured.out
+            assert " | info message" in captured.out
+            assert " | warning message" in captured.out
+            assert "[lclang." in captured.err
+            assert " | error message" in captured.err
+        file_log = (Path(directory) / "lclang.log").read_text(encoding="utf-8")
+        assert "error message" in file_log
+        assert "debug message" not in file_log
+        assert "info message" not in file_log
+        assert "warning message" not in file_log
 
 
 def test_handler_exception_wrong_result_and_setup_failures_return_two(
@@ -320,7 +363,7 @@ def test_logger_cleanup_output_and_internal_route_failures_are_converted(
                 "tool.py",
                 "result",
                 "-o",
-                "log_format",
+                "logger.log_format",
                 "bad",
             ]
         )

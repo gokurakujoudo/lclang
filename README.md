@@ -229,6 +229,12 @@ Loading is asynchronous, UTF-8, bounded by configurable limits, cycle-aware,
 and concurrency-sharing. It performs no globbing, environment expansion,
 network access, or evaluation while files are being composed.
 
+For readable configuration, keep definitions from one scope on consecutive
+rows, separate functional or scope groups with a blank line, and describe rows
+or groups with `#` comments. Qualified leaves infer their prefixes, so explicit
+`FRAME_PROXY` declarations remain supported but are not recommended for an
+ordinary file layout.
+
 ### Dependency analysis and runtime inspection
 
 lclang can explain calculated configuration instead of treating it as a black
@@ -290,10 +296,21 @@ Frame, as-of date, dry-run flag, and logging context, and returns a deterministi
 The framework provides immutable invocation values, nested command groups,
 structured help, full-argument parsing, platform-neutral process entry points,
 alphabetized configuration-parameter help, isolated formal file logging, and
-opt-in internal tracing. Enabled logs begin
-with the log path, normalized command line, and masked CLI execution
-configuration. Pass `--verbose` after a selected
-command to trace expression parsing, value provenance, caching, fallbacks, and
+opt-in internal tracing. Logger settings use scoped configuration names such as
+`logger.log_dir`. Non-error application records print to stdout, application
+errors print to stderr, and `--verbose` adds `DEBUG` records to stdout,
+independently of file logging. File and terminal application records share the
+configured structured format, including time, level, source location,
+function, and message; the default no longer appends logging argument tuples.
+Logger expressions can use the reserved values `__as_of_date__`, `__dryrun__`,
+`__verbose__`, `__ymd__`, `__execution_timestamp__`, and `__command__`; public
+Python constants provide every runtime key, including `__cli_params__`. Enabled
+file logs begin
+with four readable audit records: their bound path, a centered multi-line
+execution banner, exact JSON argv with masked override redaction, and sorted,
+aligned winning configuration. The configuration audit renders lazy LCL source
+without evaluating expressions or warming caches. Pass `--verbose` after a
+selected command to trace expression parsing, value provenance, caching, fallbacks, and
 evaluation to stderr; enabled file logging receives the same records. Trace
 values use bounded representations. A trailing `!` on a definition or binding
 key, such as `api_token!: load_token()`, keeps the runtime name `api_token` but
@@ -327,7 +344,12 @@ masking, and `lclang.cli.scan_commands()` discovers commands in a package.
 Execution records nested task and step outcomes, including visible covered
 failures, skipped branches, and error origins. Contexts unwind in reverse order,
 and the result retains the final status tree plus every successful action's
-materialized arguments and outputs.
+materialized arguments and outputs. CLI workflows log start, traceback-bearing
+error, and finalized completion records using dot-connected task branches;
+`__task_id_branch__` exposes the owning branch inside task Frames. Verbose runs
+add aligned typed argument/output mappings. The final status tree is one
+severity-aware multi-line record, followed by an optional configured lunch
+choice on success or `no lunch!` on non-success.
 
 ### Business-day calendars
 

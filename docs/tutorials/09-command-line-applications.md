@@ -161,11 +161,52 @@ Override keys may be qualified, for example
 in the same Frame precedence and scoped validation as configuration and Python
 values. A `ParameterDoc` may use that same qualified name, so generated help
 and required-value checks describe the exact scoped leaf. `LCL[FRAME_PROXY]`
-optionally declares a prefix.
+remains valid low-level syntax for explicitly declaring a prefix, but ordinary
+configuration should omit it because qualified leaves infer their prefixes.
 
 `SUCCESS`, `FAILURE`, and `EXCEPTION` map to exit statuses `0`, `1`, and `2`.
 Help, version, invalid arguments, logging, and the built-in `builtins`,
 `parse_lcl`, and `eval_lcl` commands use the same deterministic routing model.
+
+Logger configuration occupies the `logger` scope. A configuration file can set
+`logger.log_dir`, `logger.log_file_name`, `logger.log_level`, and
+`logger.log_format`; command parameters remain separate from these framework
+settings. Calls to `context.logger.info(...)` print their rendered messages to
+stdout. Calls to `context.logger.debug(...)` do the same only when `--verbose`
+is present, while `context.logger.error(...)` always prints to stderr. Console
+logging remains active when file logging is disabled, and the configured file
+level never changes console visibility. File and console application handlers
+use the same `logger.log_format`. A custom format must retain the timestamp,
+level, filename, line number, function, and message fields used by the default
+structured format. `%(args)s` is neither present nor required. When a file is
+enabled, its first record reports the bound path immediately after the handler
+is installed; the remaining audit preamble then records the centered execution
+banner, exact raw command line, and masked winning configuration.
+
+Every invocation injects seven reserved values before logger configuration is
+evaluated. `__as_of_date__` is the Python `date`, `__dryrun__` and
+`__verbose__` are Booleans, `__ymd__` is the as-of date in `YYYYMMDD` form,
+`__execution_timestamp__` is the local execution time in `YYYYMMDDHHmmss`
+form, `__command__` is the selected leaf command name, and `__cli_params__` is
+the immutable `CliParams`. Their public Python key constants avoid repeating
+these strings in integrations. Configuration can use the names directly to
+choose behavior and deterministic log filenames:
+
+```python
+from lclang.cli import (
+    RUNTIME_AS_OF_DATE_KEY,
+    RUNTIME_CLI_PARAMS_KEY,
+    RUNTIME_COMMAND_KEY,
+    RUNTIME_DRYRUN_KEY,
+    RUNTIME_EXECUTION_TIMESTAMP_KEY,
+    RUNTIME_VERBOSE_KEY,
+    RUNTIME_YMD_KEY,
+)
+```
+
+```lclcfg
+logger.log_file_name: f"{__command__}-{__ymd__}-{__execution_timestamp__}.log"
+```
 
 ## Trace parsing and evaluation
 
@@ -177,9 +218,9 @@ stdout:
 python -m lclang.cli eval_lcl --verbose -o RESULT "LCL[40 + 2]"
 ```
 
-Trace lines go to stderr. When file logging is enabled, the invocation log also
-receives setup records buffered before its effective configuration was known and
-all later trace records. Values use bounded one-line `(type) value`
+Internal trace lines go to stderr. When file logging is enabled, the invocation
+log also receives setup records buffered before its effective configuration was
+known and all later trace records. Values use bounded one-line `(type) value`
 representations. Mark a binding name with one trailing `!`, such as
 `api_token!: load_token()` in configuration or `-o api_token! value`, to render
 that exact name's expressions, values, results, and failures as `*masked*`.
@@ -187,14 +228,22 @@ References use `api_token` without the marker. Derived values require their own
 marker, and application-authored log messages remain the handler's
 responsibility.
 
-Enabled invocation logs begin with four audit records: the selected command,
-absolute log path, a normalized command line, and the CLI-owned execution
-configuration (`as_of_date`, `dryrun`, `verbose`, config path, and overrides).
-Override values use `*masked*` whenever their exact binding is masked by the
-command, config, or override marker. This preamble is written before buffered
-verbose traces and does not evaluate command parameters. The default file
-format is a stable pipe-delimited record containing timestamp, severity, logger,
-source location, function, rendered message, and original logging arguments.
+Enabled invocation logs begin with four audit records in order: the absolute
+log path; one multi-line 51-character execution banner; the raw argv as JSON;
+and one multi-line, sorted, aligned execution configuration. Normal parsing
+preserves exact token order and option spellings. Masked override payloads use
+`*masked*`; manually created `CliParams` without raw argv fall back to a
+reconstructed sequence.
+
+Execution-config rows are the union of declared command parameters and final
+configuration-file definitions. Missing optional parameters and unrelated
+runtime defaults are omitted, while configured logger variables remain visible.
+Each row shows only the winning binding: canonical LCL source for a definition,
+or a bounded typed representation for a direct Python or CLI value. Masked
+definitions show only `*masked*`; masked direct values retain their type. This
+inspection is lazy, so it neither evaluates expressions nor populates Frame
+caches. The default file format is a stable pipe-delimited record containing
+timestamp, severity, logger, source location, function, and rendered message.
 
 `--verbose` has no short spelling because `-v/--version` remains the root
 version operation. Like other common options, verbose belongs after the selected

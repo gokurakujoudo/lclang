@@ -13,13 +13,20 @@ from typing import Self
 from lclang.cli.validation import freeze_mapping, normalize_text, require_lcl_qualified_name
 from lclang.masking import normalize_masked_mapping, split_masked_name
 
-# Default formal pipe-delimited format retaining diagnostic and call-argument fields.
+# Default formal pipe-delimited format retaining diagnostic fields.
 DEFAULT_LOG_FORMAT = (
     "%(asctime)s | %(levelname)-8s | %(name)s | %(filename)s:%(lineno)d | "
-    "%(funcName)s | %(message)s | args=%(args)r"
+    "%(funcName)s | %(message)s"
 )
 # Required percent fields that custom formats must retain.
-REQUIRED_LOG_FIELDS = ("asctime", "filename", "lineno", "funcName", "message", "args")
+REQUIRED_LOG_FIELDS = (
+    "asctime",
+    "levelname",
+    "filename",
+    "lineno",
+    "funcName",
+    "message",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +78,7 @@ class CliParams:
     :param verbose: Whether internal diagnostics are enabled for this invocation.
     :param masked_names: Immutable normalized override names to redact.
     :param script_path: Exact Python script token, or the direct-command fallback.
+    :param raw_argv: Optional exact full invocation tokens before parsing.
     """
 
     executable_path: str
@@ -82,6 +90,7 @@ class CliParams:
     verbose: bool = False
     masked_names: frozenset[str] = field(default_factory=frozenset, kw_only=True)
     script_path: str = field(default="script.py", kw_only=True)
+    raw_argv: Sequence[str] | None = field(default=None, kw_only=True)
 
     def __post_init__(self) -> None:
         """Detach containers and validate scalar fields.
@@ -98,6 +107,11 @@ class CliParams:
             raise TypeError("script path must be text")
         if not self.script_path:
             raise ValueError("script path cannot be empty")
+        raw_argv = None if self.raw_argv is None else tuple(self.raw_argv)
+        if raw_argv is not None and any(
+            not isinstance(item, str) or not item for item in raw_argv
+        ):
+            raise ValueError("raw argv tokens must be non-empty text")
         command = tuple(self.command)
         if not command or any(not isinstance(item, str) or not item for item in command):
             raise ValueError("command path must contain non-empty text segments")
@@ -118,6 +132,7 @@ class CliParams:
         object.__setattr__(self, "command", command)
         object.__setattr__(self, "overrides", freeze_mapping(normalized, "overrides"))
         object.__setattr__(self, "masked_names", masked_names)
+        object.__setattr__(self, "raw_argv", raw_argv)
 
 
 class CliResultStatus(IntEnum):

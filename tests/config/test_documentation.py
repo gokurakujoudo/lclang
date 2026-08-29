@@ -20,8 +20,13 @@ def test_english_reference_covers_the_configuration_contract() -> None:
         "ConfigLoadLimits",
         "ConfigLoader",
         "evaluate_config",
+        "Recommended layout",
+        "# scope:",
+        "not grammar restrictions",
     ):
         assert term in english
+
+    assert "not recommended for ordinary configuration layout" in english
 
 
 def test_documented_file_grammar_example_parses() -> None:
