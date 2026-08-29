@@ -2,13 +2,31 @@
 
 import asyncio
 import logging
+import re
 from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pytest
+
 import lclang
-from lclang.cli import CliConfig, CliContext, CliParams, CliResult, CliResultStatus, LogConfig, cli
+from lclang.cli import (
+    RUNTIME_AS_OF_DATE_KEY,
+    RUNTIME_COMMAND_KEY,
+    RUNTIME_DRYRUN_KEY,
+    RUNTIME_EXECUTION_TIMESTAMP_KEY,
+    RUNTIME_VERBOSE_KEY,
+    RUNTIME_YMD_KEY,
+    CliConfig,
+    CliContext,
+    CliParams,
+    CliResult,
+    CliResultStatus,
+    LogConfig,
+    cli,
+)
 from lclang.cli.binding import build_binding
+from lclang.cli.console_logging import attach_console_handlers
 from lclang.cli.logging import (
     build_handler,
     create_logger,
@@ -20,6 +38,22 @@ from lclang.cli.logging import (
     resolve_log_config,
 )
 from lclang.diagnostics import internal_trace, internal_verbose_scope
+
+# Static configuration source proving logger fields resolve beneath one scope.
+SCOPED_LOG_CONFIG_SOURCE = (
+    'logger.log_file_name: f"{'
+    + RUNTIME_COMMAND_KEY
+    + '}-{'
+    + RUNTIME_YMD_KEY
+    + '}-{'
+    + RUNTIME_EXECUTION_TIMESTAMP_KEY
+    + '}.log"\n'
+    + 'logger.log_level: "DEBUG" if '
+    + RUNTIME_VERBOSE_KEY
+    + " and "
+    + RUNTIME_DRYRUN_KEY
+    + ' else "INFO"\n'
+)
 
 
 @cli.command()
@@ -52,6 +86,87 @@ def test_disabled_and_enabled_loggers_are_isolated_and_close() -> None:
         handler.emit(record)
         handler.close()
         assert "value=2" in (Path(directory) / "lclang.log").read_text(encoding="utf-8")
+
+
+def test_console_and_file_handlers_share_the_configured_format(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Stdout, stderr, and the enabled file render records identically."""
+    with TemporaryDirectory() as directory:
+        module = lclang.define_module("shared-log-format", {})
+        frame = lclang.define_frame(
+            module,
+            preset={
+                "logger.log_dir": directory,
+                "logger.log_file_name": "shared.log",
+                "logger.log_level": "DEBUG",
+                "logger.log_format": (
+                    "%(asctime)s|%(levelname)s|%(filename)s:%(lineno)d|"
+                    "%(funcName)s|%(message)s|%(args)r"
+                ),
+            },
+        )
+
+        async def exercise() -> None:
+            """Emit records through one shared invocation logger."""
+            handle = await create_logger(frame, "shared")
+            try:
+                attach_console_handlers(handle, False)
+                handle.logger.info("visible=%s", "stdout")
+                handle.logger.error("visible=%s", "stderr")
+            finally:
+                handle.close()
+                await frame.close()
+
+        asyncio.run(exercise())
+        captured = capsys.readouterr()
+        file_lines = (Path(directory) / "shared.log").read_text(
+            encoding="utf-8"
+        ).splitlines()
+        assert captured.out.splitlines() == [file_lines[0]]
+        assert captured.err.splitlines() == [file_lines[1]]
+
+
+def test_scoped_logger_config_overrides_framework_defaults() -> None:
+    """Configuration logger leaves replace matching scoped defaults."""
+    with TemporaryDirectory() as directory:
+        config_path = Path(directory) / "logger.lclcfg"
+        config_path.write_text(SCOPED_LOG_CONFIG_SOURCE, encoding="utf-8")
+        params = CliParams(
+            "python",
+            ("logger",),
+            date(2026, 8, 27),
+            True,
+            str(config_path),
+            {},
+            True,
+        )
+
+        async def exercise() -> None:
+            """Resolve scoped logger configuration in one event loop."""
+            binding = await build_binding(
+                logger_command,
+                params,
+                CliConfig(LogConfig(log_dir=directory)),
+            )
+            try:
+                timestamp = await binding.frame.get(RUNTIME_EXECUTION_TIMESTAMP_KEY)
+                assert isinstance(timestamp, str)
+                assert re.fullmatch(r"\d{14}", timestamp)
+                assert await binding.frame.get(RUNTIME_YMD_KEY) == "20260827"
+                assert await binding.frame.get(RUNTIME_COMMAND_KEY) == "logger"
+                assert await binding.frame.get(RUNTIME_AS_OF_DATE_KEY) == date(2026, 8, 27)
+                assert await binding.frame.get(RUNTIME_DRYRUN_KEY) is True
+                assert await binding.frame.get(RUNTIME_VERBOSE_KEY) is True
+                assert await resolve_log_config(binding.frame) == LogConfig(
+                    log_dir=directory,
+                    log_file_name=f"logger-20260827-{timestamp}.log",
+                    log_level="DEBUG",
+                )
+            finally:
+                await binding.stack.close()
+
+        asyncio.run(exercise())
 
 
 def test_normalized_argv_retains_valueless_and_verbose_options() -> None:
@@ -120,11 +235,11 @@ def test_multiple_invocation_loggers_do_not_mutate_root_or_leak_handlers() -> No
         frame = lclang.define_frame(
             module,
             preset={
-                "log_dir": directory,
-                "log_file_name": "audit.log",
-                "log_level": "INFO",
-                "log_format": (
-                    "%(asctime)s %(filename)s:%(lineno)d %(funcName)s "
+                "logger.log_dir": directory,
+                "logger.log_file_name": "audit.log",
+                "logger.log_level": "INFO",
+                "logger.log_format": (
+                    "%(asctime)s %(levelname)s %(filename)s:%(lineno)d %(funcName)s "
                     "%(message)s args=%(args)r"
                 ),
             },

@@ -224,7 +224,16 @@ flexibility.
 
 The CLI boundary preserves the same model. `workflow.to_cli(...)` exposes only
 variables used before their first assignment, infers help and masking from
-their declarations, and prints the final status tree after ordinary log lines.
+their declarations, and logs every reached task/context lifecycle around
+ordinary action records. Each task Frame exposes its owner path as
+`__task_id_branch__`; context log branches append their context ID. Errors retain
+their traceback and still receive a completion record. Verbose mode adds typed,
+aligned argument and output mappings.
+
+The CLI prints the complete final status tree as one severity-aware multi-line
+record. A valid configured `lunch.options` list adds a random option after a
+successful workflow or `no lunch!` after a non-success; unusable lunch settings
+are simply omitted.
 Use `lclang.cli.scan_commands(...)` when a package publishes several commands.
 
 ## Where to go next

@@ -13,6 +13,7 @@ from lclang.workflow.context import (
     WorkflowExecutionContext,
 )
 from lclang.workflow.definitions import TaskNode
+from lclang.workflow.logging import log_mapping, log_task_error
 from lclang.workflow.manager import ExecutionStatusManager
 from lclang.workflow.mappings import mapped_outputs, materialize_args
 from lclang.workflow.models import ExecutionStatus
@@ -70,7 +71,7 @@ def task_context_for(
 def record_exception(
     state: WorkflowRunState,
     manager: ExecutionStatusManager,
-    task_id: TaskID,
+    branch: tuple[TaskID, ...],
     error: Exception,
     *,
     preserve_status: bool = False,
@@ -79,33 +80,35 @@ def record_exception(
 
     :param state: Current execution state.
     :param manager: Status manager owning the failure.
-    :param task_id: Originating task or context-task ID.
+    :param branch: Root-to-originating-task identifier path.
     :param error: Original or synthetic exception.
     :param preserve_status: Whether an explicit status remains authoritative.
     """
     if not preserve_status:
         manager.update(ExecutionStatus.ERROR, str(error))
-    state.context.logger.error("workflow task %s failed: %s", task_id, error)
-    state.context.frame.mixin({"__exception__": WorkflowException(error, task_id)})
+    log_task_error(state.context, branch, manager.current.status, error)
+    state.context.frame.mixin(
+        {"__exception__": WorkflowException(error, branch[-1])}
+    )
 
 
 def raise_for_status(
     state: WorkflowRunState,
     manager: ExecutionStatusManager,
-    task_id: TaskID,
+    branch: tuple[TaskID, ...],
 ) -> None:
     """Raise and record a synthetic exception for a stopping status.
 
     :param state: Current execution state.
     :param manager: Manager whose current status is inspected.
-    :param task_id: Owning task identifier.
+    :param branch: Root-to-owning-task identifier path.
     :raises WorkflowStatusStop: If the current status stops traversal.
     """
     status = manager.current.status
     if status not in STOP_STATUSES:
         return
-    error = WorkflowStatusStop(f"task '{task_id}' ended with {status.value}")
-    record_exception(state, manager, task_id, error, preserve_status=True)
+    error = WorkflowStatusStop(f"task '{branch[-1]}' ended with {status.value}")
+    record_exception(state, manager, branch, error, preserve_status=True)
     raise error
 
 
@@ -157,14 +160,19 @@ async def execute_action_and_children(
             missing_mapping = RuntimeError(
                 "validated action is missing its argument mapping"
             )
-            record_exception(state, manager, task.task_id, missing_mapping)
+            record_exception(state, manager, stack, missing_mapping)
             raise missing_mapping
-        args = await materialize_args(task.args_mapping, context.frame)
+        try:
+            args = await materialize_args(task.args_mapping, context.frame)
+        except Exception as error:
+            record_exception(state, manager, stack, error)
+            raise
         state.task_args[task.task_id] = args
+        log_mapping(state.context, stack, task.args_mapping, args, output=False)
         try:
             output = await task.task_action(context, args, manager)
         except Exception as error:
-            record_exception(state, manager, task.task_id, error)
+            record_exception(state, manager, stack, error)
             raise
         return_type = get_type_hints(task.task_action).get("return")
         if (
@@ -175,7 +183,7 @@ async def execute_action_and_children(
             wrong_output = TypeError(
                 "workflow action must return its annotated dataclass"
             )
-            record_exception(state, manager, task.task_id, wrong_output)
+            record_exception(state, manager, stack, wrong_output)
             raise wrong_output
         state.task_outputs[task.task_id] = output
         try:
@@ -183,9 +191,9 @@ async def execute_action_and_children(
             if published:
                 state.context.frame.mixin(published)
         except Exception as error:
-            record_exception(state, manager, task.task_id, error)
+            record_exception(state, manager, stack, error)
             raise
-        raise_for_status(state, manager, task.task_id)
+        raise_for_status(state, manager, stack)
     for index, child in enumerate(task.children):
         from lclang.workflow.runner import execute_task
 

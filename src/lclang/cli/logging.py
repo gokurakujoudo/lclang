@@ -3,15 +3,51 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from dataclasses import dataclass
 from logging.handlers import MemoryHandler
 from pathlib import Path
 from typing import TextIO, cast
 
+from lclang.cli.audit import (
+    AUDIT_RECORD_ATTRIBUTE,
+    emit_execution_start,
+    normalized_argv,
+    redacted_overrides,
+)
 from lclang.cli.models import CliParams, LogConfig
 from lclang.runtime import Frame
+
+# Compatibility exports retained for existing CLI logging callers.
+__all__ = [
+    "AUDIT_RECORD_ATTRIBUTE",
+    "normalized_argv",
+    "redacted_overrides",
+]
+
+
+@dataclass(frozen=True, slots=True)
+class InvocationLevelFilter:
+    """Apply the configured level only to one invocation logger.
+
+    :param logger_name: Application logger governed by the file threshold.
+    :param level: Minimum application record level written to the file.
+    """
+
+    logger_name: str
+    level: int
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Keep audit and verbose records while filtering application records.
+
+        :param record: Candidate file logging record.
+        :returns: Whether the configured file handler should emit it.
+        """
+        return (
+            getattr(record, AUDIT_RECORD_ATTRIBUTE, False)
+            or record.name != self.logger_name
+            or record.levelno >= self.level
+        )
 
 
 @dataclass(slots=True)
@@ -121,10 +157,10 @@ async def resolve_log_config(frame: Frame) -> LogConfig:
     :raises Exception: If evaluation or validation fails.
     """
     return LogConfig(
-        log_dir=cast(str | None, await frame.get("log_dir")),
-        log_file_name=cast(str, await frame.get("log_file_name")),
-        log_level=cast(str | int, await frame.get("log_level")),
-        log_format=cast(str, await frame.get("log_format")),
+        log_dir=cast(str | None, await frame.get("logger.log_dir")),
+        log_file_name=cast(str, await frame.get("logger.log_file_name")),
+        log_level=cast(str | int, await frame.get("logger.log_level")),
+        log_format=cast(str, await frame.get("logger.log_format")),
     )
 
 
@@ -166,74 +202,33 @@ async def create_logger(frame: Frame, identity: str) -> LoggerHandle:
     :raises Exception: If effective values fail evaluation or validation.
     """
     config = await resolve_log_config(frame)
-    logger = logging.Logger(f"lclang.cli.{identity}", numeric_log_level(config.log_level))
+    level = numeric_log_level(config.log_level)
+    logger = logging.Logger(f"lclang.cli.{identity}", level)
     logger.propagate = False
     handler = await asyncio.to_thread(build_handler, config)
+    handler.addFilter(InvocationLevelFilter(logger.name, level))
     logger.addHandler(handler)
     path = Path(handler.baseFilename) if isinstance(handler, logging.FileHandler) else None
     return LoggerHandle(logger, (handler,), path)
 
 
-def redacted_overrides(params: CliParams, frame: Frame) -> dict[str, str | bool]:
-    """Return invocation overrides with exact-name secrets hidden.
-
-    :param params: Parsed invocation values.
-    :param frame: Effective invocation Frame carrying sticky mask metadata.
-    :returns: Fresh override mapping safe for lclang-owned audit logs.
-    """
-    return {
-        name: "*masked*" if frame.is_masked(name) else value
-        for name, value in params.overrides.items()
-    }
-
-
-def normalized_argv(params: CliParams, frame: Frame) -> list[str]:
-    """Build one deterministic, redacted command-line representation.
-
-    :param params: Parsed invocation values.
-    :param frame: Effective invocation Frame carrying sticky mask metadata.
-    :returns: Canonical argv tokens including effective date and common options.
-    """
-    values = [params.executable_path, params.script_path, *params.command]
-    if params.config_file_path is not None:
-        values.extend(("--config", params.config_file_path))
-    safe_overrides = redacted_overrides(params, frame)
-    for name, value in safe_overrides.items():
-        values.extend(("--override", name))
-        if params.overrides[name] is not True:
-            values.append(str(value))
-    values.extend(("--as-of", params.as_of_date.strftime("%Y%m%d")))
-    if params.dryrun:
-        values.append("--dryrun")
-    if params.verbose:
-        values.append("--verbose")
-    return values
-
-
-def log_execution_start(handle: LoggerHandle, params: CliParams, frame: Frame) -> None:
+def log_execution_start(
+    handle: LoggerHandle,
+    params: CliParams,
+    frame: Frame,
+    names: tuple[str, ...] = (),
+) -> None:
     """Write the fixed audit preamble before command or verbose records.
 
     :param handle: Configured invocation logger owner.
     :param params: Parsed invocation values.
     :param frame: Effective invocation Frame carrying sticky mask metadata.
+    :param names: Command and file configuration names to render.
     :returns: ``None``.
     """
-    configuration = {
-        "as_of_date": params.as_of_date.isoformat(),
-        "config_file_path": params.config_file_path,
-        "dryrun": params.dryrun,
-        "overrides": redacted_overrides(params, frame),
-        "verbose": params.verbose,
-    }
     original_level = handle.logger.level
     handle.logger.setLevel(min(original_level, logging.INFO))
     try:
-        command = json.dumps(params.command)
-        argv = json.dumps(normalized_argv(params, frame), ensure_ascii=False)
-        values = json.dumps(configuration, ensure_ascii=False, sort_keys=True)
-        handle.logger.info(f"execution.started command={command}")
-        handle.logger.info(f"execution.log_file path={handle.log_path or 'disabled'}")
-        handle.logger.info(f"execution.command_line argv={argv}")
-        handle.logger.info(f"execution.config values={values}")
+        emit_execution_start(handle.logger, handle.log_path, params, frame, names)
     finally:
         handle.logger.setLevel(original_level)

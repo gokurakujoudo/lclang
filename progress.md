@@ -77,12 +77,18 @@ runtime dependencies.
   groups, full-argument parsing, A-Z configuration-parameter help, and
   platform-neutral process entry points.
 - Preset/default/config/override Frame layering, boolean overrides, dry-run
-  pass-through, isolated formal logging with a masked execution preamble,
-  opt-in task-local verbose tracing, and deterministic result/cleanup mapping.
+  pass-through, scoped logger configuration with invocation date, timestamp,
+  command, parameters, as-of date, dry-run, and verbose runtime values exposed
+  only through reserved double-underscore keys and shared constants, split
+  stdout/stderr logging with one shared
+  structured format, isolated formal files beginning with a four-record lazy
+  winner audit using exact redacted argv, opt-in task-local verbose tracing, and
+  deterministic result/cleanup mapping.
 - Built-in `builtins`, `parse_lcl`, and `eval_lcl` commands for inventory,
   inspection, and evaluation.
-- Workflow commands with inferred external parameters, help and masks, final
-  status logging, plus recursive package command discovery.
+- Workflow commands with inferred external parameters, help and masks,
+  dot-branch lifecycle and verbose typed mapping logs, one-record final status
+  trees, optional configured lunch selection, and recursive package discovery.
 
 ## Distribution quality
 

@@ -8,6 +8,8 @@ import pytest
 
 import lclang
 from lclang.cli import (
+    RUNTIME_AS_OF_DATE_KEY,
+    RUNTIME_CLI_PARAMS_KEY,
     CliConfig,
     CliContext,
     CliParams,
@@ -41,12 +43,15 @@ def test_default_binding_is_lazy_and_closes_idempotently() -> None:
     params = CliParams("python", ("bound",), date(2026, 8, 9), False, None, {})
     binding = asyncio.run(build_binding(bound_command, params, CliConfig()))
     assert asyncio.run(binding.frame.get("required_value")) == "default"
-    assert asyncio.run(binding.frame.get("as_of_date")) == date(2026, 8, 9)
+    assert asyncio.run(binding.frame.get(RUNTIME_AS_OF_DATE_KEY)) == date(2026, 8, 9)
+    assert binding.frame.has("as_of_date") is False
+    assert binding.frame.has("dryrun") is False
     asyncio.run(binding.stack.close())
     asyncio.run(binding.stack.close())
     definitions = default_definitions(bound_command, CliConfig())
     assert "optional_value" not in definitions
-    assert "log_format" in definitions
+    assert "logger.log_format" in definitions
+    assert "log_format" not in definitions
 
 
 def test_marked_command_defaults_and_presets_reach_effective_frame_policy() -> None:
@@ -122,7 +127,8 @@ async def test_literal_overrides_are_host_values_beside_lazy_definitions() -> No
         assert malformed.current_value == "LCL[bad +]"
         assert expression.status is VariableInspectionStatus.NOT_EVALUATED
         assert await binding.frame.get("expression") == "100x"
-        assert await binding.frame.get("cli_params") is params
+        assert await binding.frame.get(RUNTIME_CLI_PARAMS_KEY) is params
+        assert binding.frame.has("cli_params") is False
     finally:
         await binding.stack.close()
 

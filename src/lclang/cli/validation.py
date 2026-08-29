@@ -7,16 +7,23 @@ from collections.abc import Mapping
 from types import MappingProxyType
 
 from lclang.ast import LclName
+from lclang.cli.runtime_keys import CLI_RUNTIME_KEYS
 from lclang.errors import LclSyntaxError
 from lclang.lang import parse_expression
 from lclang.scopes import validate_qualified_name
 
-# Names owned by immutable invocation runtime state.
-RUNTIME_NAMES = frozenset({"as_of_date", "dryrun", "cli_params"})
-# Names used to resolve effective logger configuration.
-LOG_NAMES = frozenset({"log_dir", "log_file_name", "log_level", "log_format"})
+# Scoped names used to resolve effective logger configuration.
+LOG_NAMES = frozenset(
+    {
+        "logger",
+        "logger.log_dir",
+        "logger.log_file_name",
+        "logger.log_level",
+        "logger.log_format",
+    }
+)
 # Names unavailable to command parameter declarations and presets.
-DECLARATION_RESERVED_NAMES = RUNTIME_NAMES | LOG_NAMES
+DECLARATION_RESERVED_NAMES = CLI_RUNTIME_KEYS | LOG_NAMES
 # Complete grammar for literal command and command-group segments.
 COMMAND_SEGMENT_PATTERN = re.compile(r"[a-z][a-z0-9_]*\Z")
 

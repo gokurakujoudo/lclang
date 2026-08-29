@@ -9,7 +9,8 @@ from datetime import date
 from lclang.ast import LclAstNode, LclConstant
 from lclang.cli.models import CliParams
 from lclang.cli.process import ArgvParts, split_argv
-from lclang.cli.validation import RUNTIME_NAMES, require_lcl_qualified_name
+from lclang.cli.runtime_keys import CLI_RUNTIME_KEYS
+from lclang.cli.validation import require_lcl_qualified_name
 from lclang.errors import LclCliUsageError, LclSyntaxError
 from lclang.lang import parse_expression
 from lclang.masking import split_masked_name
@@ -118,7 +119,7 @@ def parse_common_options(tokens: Sequence[str]) -> ParsedCommonOptions:
                 require_lcl_qualified_name(key, "override key")
             except ValueError as error:
                 raise usage_error(str(error), index + 1, raw_key) from error
-            if key.split(".", 1)[0] in RUNTIME_NAMES:
+            if key.split(".", 1)[0] in CLI_RUNTIME_KEYS:
                 raise usage_error("reserved override key", index + 1, key)
             if masked:
                 masked_names.add(key)
@@ -171,6 +172,7 @@ def parse_cli_params(
         parsed.verbose,
         masked_names=parsed.masked_names,
         script_path=parts.script_path,
+        raw_argv=(parts.executable_path, parts.script_path, *parts.tokens),
     )
 
 

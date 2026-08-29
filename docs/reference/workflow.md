@@ -64,6 +64,10 @@ Frame is derived directly from the shared execution Frame, so a context resource
 never leaks to another task. Mapped action outputs enter the shared Frame and
 are visible to later parent-first, depth-first tasks.
 
+Each derived task-node Frame contains `__task_id_branch__`, the dot-connected
+root-to-node ID path. A context-task lifecycle log appends its own ID, but its
+shared task Frame continues to expose the owning task-node branch.
+
 `FailureCoveringContextTask` is the standard template for recovery contexts.
 Subclasses implement `acquire`, `handle_exception`, and optionally `release`.
 Successful handling and cleanup suppress the ordinary exception and mark the
@@ -104,9 +108,25 @@ action. Variables first read without a visible assignment become required CLI
 parameters. Intermediate variables are omitted and cannot be directly
 overridden. Missing descriptions render as `NO HELP MESSAGE PROVIDED`.
 
-The generated command logs the finalized tree after ordinary action/context
-records and leaves stdout/stderr descriptions empty. Exit codes are success
-`0`, failure `1`, error `2`, and covered failure `3`.
+The generated command logs lifecycle records around every reached task and
+context task. `task start` is INFO and appends ` (dryrun)` in dry-run mode. An
+exception produces one `task error` record with the original traceback, then
+finalization still produces `task complete`. Branches use the injected
+dot-connected path. Completion severity follows the task status.
+
+Verbose mode adds one aligned, sorted `args mapping` DEBUG record after
+materialization and one `outputs mapping` record after completion when an output
+exists. Runtime types remain visible for masked values. Sources and targets are
+labelled as LCL variables, defaults, literals, or unused outputs.
+
+The finalized workflow tree is one severity-aware multi-line record headed
+`workflow complete: [command.path] STATUS:` and includes the existing tree root.
+Exit codes are success `0`, failure `1`, error `2`, and covered failure `3`.
+
+After that record, a configuration binding named `lunch.options` may supply a
+non-empty `list[str]`. Success chooses and logs one random option; any non-success
+logs `no lunch!`. Missing, empty, masked, malformed, or failing lunch bindings
+are ignored without changing the workflow result.
 
 `lclang.cli.scan_commands(module, name, description)` imports a package and its
 submodules deterministically, collects public module-level `Command` objects,

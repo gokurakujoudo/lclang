@@ -30,10 +30,11 @@ retain the workflow definition and point the configuration at durable paths.
 
 ## Start with the configuration contract
 
-The settlement policy uses scoped names so related values remain recognizable.
-`FRAME_PROXY` declares each prefix; it does not store a business value itself.
-The writer credential has a trailing `!`, so lclang-owned diagnostics mask its
-definition, value, and failures without changing the runtime name.
+The settlement policy groups scoped names on consecutive rows and separates
+functional sections with blank lines. Qualified leaves infer their prefixes,
+so no `FRAME_PROXY` declarations are needed. The writer credential has a
+trailing `!`, so lclang-owned diagnostics mask its definition, value, and
+failures without changing the runtime name.
 
 <!-- lclang-tutorial-exec -->
 ```python
@@ -50,22 +51,27 @@ async def main() -> None:
         root = Path(directory)
         config_path = root / "settlement.lclcfg"
         config_path.write_text(
-            "paths: FRAME_PROXY\n"
-            f"paths.output_dir: {json.dumps(str(root / 'results'))}\n"
-            'paths.output_name: "settlement.txt"\n'
-            "meter: FRAME_PROXY\n"
-            "meter.start: 1000.0\n"
-            "meter.end: 1250.0\n"
-            "tariff: FRAME_PROXY\n"
-            "tariff.unit_rate: 0.18\n"
-            "tariff.tax_rate: 0.08\n"
-            "customer: FRAME_PROXY\n"
-            'customer.name: "North Harbor Cold Storage"\n'
-            "secrets: FRAME_PROXY\n"
-            'secrets.account_token!: "warehouse-writer-token"\n'
-            f"log_dir: {json.dumps(str(root))}\n"
-            'log_file_name: "settlement.log"\n'
-            'log_level: "INFO"\n',
+            "# scope: report paths\n"
+            f"paths.output_dir: {json.dumps(str(root / 'results'))} # Output directory\n"
+            'paths.output_name: "settlement.txt" # Output filename\n'
+            "\n"
+            "# scope: meter readings\n"
+            "meter.start: 1000.0 # Opening cumulative kWh\n"
+            "meter.end: 1250.0 # Closing cumulative kWh\n"
+            "\n"
+            "# scope: tariff policy\n"
+            "tariff.unit_rate: 0.18 # USD per kWh\n"
+            "tariff.tax_rate: 0.08 # Tax decimal\n"
+            "\n"
+            "# Customer and credential\n"
+            'customer.name: "North Harbor Cold Storage" # Report customer\n'
+            'secrets.account_token!: "warehouse-writer-token" # Writer token\n'
+            "\n"
+            "# CLI logging and lunch\n"
+            f"logger.log_dir: {json.dumps(str(root))} # Formal log directory\n"
+            'logger.log_file_name: "settlement.log" # Formal log filename\n'
+            'logger.log_level: "INFO" # Application threshold\n'
+            'lunch.options: ["noodles"] # Successful-run lunch choice\n',
             encoding="utf-8",
         )
 
@@ -86,8 +92,8 @@ asyncio.run(main())
 
 The scoped names are still exact names. `tariff.unit_rate` does not use relative
 lookup, and a CLI override must use that complete spelling. The log settings are
-ordinary configuration definitions consumed by the CLI framework before it
-creates the invocation logger.
+scoped beneath `logger` and consumed by the CLI framework before it creates the
+invocation logger.
 
 ## Build the complete settlement command
 
@@ -372,22 +378,27 @@ application = CliEntrance(
 
 def config_source(root: Path) -> str:
     return (
-        "paths: FRAME_PROXY\n"
-        f"paths.output_dir: {json.dumps(str(root / 'results'))}\n"
-        'paths.output_name: "settlement.txt"\n'
-        "meter: FRAME_PROXY\n"
-        "meter.start: 1000.0\n"
-        "meter.end: 1250.0\n"
-        "tariff: FRAME_PROXY\n"
-        "tariff.unit_rate: 0.18\n"
-        "tariff.tax_rate: 0.08\n"
-        "customer: FRAME_PROXY\n"
-        'customer.name: "North Harbor Cold Storage"\n'
-        "secrets: FRAME_PROXY\n"
-        'secrets.account_token!: "warehouse-writer-token"\n'
-        f"log_dir: {json.dumps(str(root))}\n"
-        'log_file_name: "settlement.log"\n'
-        'log_level: "INFO"\n'
+        "# scope: report paths\n"
+        f"paths.output_dir: {json.dumps(str(root / 'results'))} # Output directory\n"
+        'paths.output_name: "settlement.txt" # Output filename\n'
+        "\n"
+        "# scope: meter readings\n"
+        "meter.start: 1000.0 # Opening cumulative kWh\n"
+        "meter.end: 1250.0 # Closing cumulative kWh\n"
+        "\n"
+        "# scope: tariff policy\n"
+        "tariff.unit_rate: 0.18 # USD per kWh\n"
+        "tariff.tax_rate: 0.08 # Tax decimal\n"
+        "\n"
+        "# Customer and credential\n"
+        'customer.name: "North Harbor Cold Storage" # Report customer\n'
+        'secrets.account_token!: "warehouse-writer-token" # Writer token\n'
+        "\n"
+        "# CLI logging and lunch\n"
+        f"logger.log_dir: {json.dumps(str(root))} # Formal log directory\n"
+        'logger.log_file_name: "settlement.log" # Formal log filename\n'
+        'logger.log_level: "INFO" # Application threshold\n'
+        'lunch.options: ["noodles"] # Successful-run lunch choice\n'
     )
 
 
@@ -457,7 +468,9 @@ Options:
             "tariff.unit_rate",
             "LCL[0.20]",
         )
-        assert (sunny_status, sunny_stdout, sunny_stderr) == (0, "", "")
+        assert (sunny_status, sunny_stderr) == (0, "")
+        assert "validated usage=250.00 kWh" in sunny_stdout
+        assert "[SUCCESS] Energy settlement workflow" in sunny_stdout
         result_path = result_dir / "settlement.txt"
         assert result_path.read_text(encoding="utf-8") == (
             "Warehouse energy settlement\n"
@@ -472,6 +485,8 @@ Options:
         assert "calculated subtotal=50.00 USD" in sunny_log
         assert "calculated tax=4.00 USD total=54.00 USD" in sunny_log
         assert "[SUCCESS] Energy settlement workflow" in sunny_log
+        assert "lunch option: noodles" in sunny_stdout
+        assert "lunch option: noodles" in sunny_log
 
         # Rainy: an invalid scoped override fails the first task and logs the error.
         rainy_status, rainy_stdout, rainy_stderr = await invoke(
@@ -483,13 +498,20 @@ Options:
             "paths.output_name",
             "rainy.txt",
         )
-        assert (rainy_status, rainy_stdout, rainy_stderr) == (2, "", "")
+        assert rainy_status == 2
+        assert "[SKIPPED] calculate_subtotal" in rainy_stderr
+        assert "task error: [settlement.calculate_usage] ERROR" in rainy_stderr
+        assert "ValueError: end reading 900.0" in rainy_stderr
+        assert "[ERROR] Energy settlement workflow" in rainy_stderr
+        assert "lunch option: no lunch!" in rainy_stdout
         assert not (result_dir / "rainy.txt").exists()
         rainy_log = log_path.read_text(encoding="utf-8")
         assert "end reading 900.0 must exceed start reading 1000.0" in rainy_log
-        assert "workflow task calculate_usage failed" in rainy_log
+        assert "task error: [settlement.calculate_usage] ERROR" in rainy_log
+        assert "task complete: [settlement.calculate_usage] ERROR" in rainy_log
         assert "[ERROR] Energy settlement workflow" in rainy_log
         assert "[SKIPPED] calculate_subtotal" in rainy_log
+        assert "lunch option: no lunch!" in rainy_log
 
         # Dry-run follows every calculation but substitutes an in-memory file.
         dry_status, dry_stdout, dry_stderr = await invoke(
@@ -499,7 +521,9 @@ Options:
             "preview.txt",
             "--dryrun",
         )
-        assert (dry_status, dry_stdout, dry_stderr) == (0, "", "")
+        assert (dry_status, dry_stderr) == (0, "")
+        assert "DRY RUN would create settlement report" in dry_stdout
+        assert "DRY RUN rendered settlement report" in dry_stdout
         assert not (result_dir / "preview.txt").exists()
         dry_log = log_path.read_text(encoding="utf-8")
         assert "DRY RUN would create settlement report" in dry_log
@@ -514,7 +538,8 @@ Options:
             "paths.output_name",
             "verbose.txt",
         )
-        assert (verbose_status, verbose_stdout) == (0, "")
+        assert verbose_status == 0
+        assert "validated usage=250.00 kWh" in verbose_stdout
         assert (result_dir / "verbose.txt").is_file()
         assert "[lclang.parse]" in verbose_stderr
         assert "[lclang.evaluate]" in verbose_stderr
@@ -555,21 +580,25 @@ python settlement.py settle --config settlement.lclcfg --verbose
 
 ## Read the sunny log
 
-The default log format adds timestamps, source locations, and argument tuples,
-so those prefixes vary. The meaningful message sequence contains lines like:
+The default log format adds timestamps and source locations, so those prefixes
+vary. The meaningful message sequence contains lines like:
 
 ```text
 validated usage=250.00 kWh
+task complete: [settlement.calculate_usage] SUCCESS
 calculated subtotal=50.00 USD
 calculated tax=4.00 USD total=54.00 USD
 opened settlement report .../results/settlement.txt
 wrote settlement report for North Harbor Cold Storage
 closed settlement report .../results/settlement.txt
+workflow complete: [settle] SUCCESS:
 [SUCCESS] Energy settlement workflow
 └─ [SUCCESS] settlement: Settle one meter period
+lunch option: noodles
 ```
 
-Ordinary application logs appear before the final tree. Each task's
+Ordinary `INFO` application logs appear on stdout and in the configured file
+before the final tree. Each task's
 `add_step(...)` scope also appears under that task, which makes the final tree a
 useful audit outline without forcing every calculation into the log message
 format.
@@ -578,21 +607,88 @@ format.
 
 The rainy override makes the closing reading lower than the opening reading.
 The first task raises `ValueError`; the CLI process still closes its Frames and
-logger, returns exit status `2`, and appends evidence like:
+logger, returns exit status `2`, prints the error records to stderr, and appends
+the same evidence to the configured file:
 
 ```text
-workflow task calculate_usage failed: end reading 900.0 must exceed start reading 1000.0
+task error: [settlement.calculate_usage] ERROR
+Traceback (most recent call last):
+...
+ValueError: end reading 900.0 must exceed start reading 1000.0
+task complete: [settlement.calculate_usage] ERROR
+workflow complete: [settle] ERROR:
 [ERROR] Energy settlement workflow: ...
    └─ [ERROR] settlement: ...
       ├─ [ERROR] calculate_usage: ...
       ├─ [SKIPPED] calculate_subtotal: Price energy usage
       ├─ [SKIPPED] calculate_tax: Apply settlement tax
       └─ [SKIPPED] write_report: Write finance settlement
+lunch option: no lunch!
 ```
 
 No rainy result file is created because execution stops before the file context
 is entered. This is the practical value of acquiring the file only around the
 task that needs it.
+
+## Understand the CLI log
+
+Every configured log file begins with four audit records in a fixed order. The
+second and fourth records are each one multi-line log record:
+
+```text
+execution log file path: <temp>/settlement.log
+execution started:
+===================================================
+==                     settle                    ==
+==             As-of Date: 2026-08-27            ==
+==                Dryrun Mode: OFF               ==
+==                Verbose Mode: ON               ==
+===================================================
+execution command line: ["python", "settlement.py", "settle", "--config", "<temp>/settlement.lclcfg", "--override", "paths.output_name", "verbose.txt", "--as-of", "20260827", "--verbose"]
+execution config:
+    customer.name         : 'North Harbor Cold Storage'
+    logger.log_file_name  : 'settlement.log'
+    paths.output_name     : (str) 'verbose.txt'
+    secrets.account_token : *masked*
+    tariff.unit_rate      : 0.18
+    ...
+```
+
+The command-line JSON preserves the actual token order and spellings. Masked
+override payloads are replaced by `*masked*`. The configuration rows show only
+the winning definitions or direct bindings, sorted and aligned. LCL expressions
+are printed as canonical source without evaluation, so this audit cannot warm a
+cache or trigger an expression merely by logging it.
+
+Each task and context task then contributes lifecycle records. Its dot-connected
+branch starts at the workflow root task; the owning task Frame exposes the same
+branch as `__task_id_branch__`. A context record appends its own ID, as in
+`settlement.write_report.open_report`, while the shared context Frame still
+reports `settlement.write_report`.
+
+```text
+task start: [settlement.write_report] Write finance settlement
+task start: [settlement.write_report.open_report] Own the settlement output file
+task complete: [settlement.write_report.open_report] SUCCESS
+task complete: [settlement.write_report] SUCCESS
+```
+
+With `--verbose`, DEBUG records appear after arguments are materialized and
+after an output exists. Fields are sorted, arrows align, defaults and literals
+are labelled, and masks retain the runtime type:
+
+```text
+args mapping: [settlement.calculate_usage] ReadingArgs
+    end   <- [meter.end]: (float) 1250.0
+    start <- [meter.start]: (float) 1000.0
+outputs mapping: [settlement.calculate_usage] NumberOutput
+    value -> [usage]: (float) 250.0
+```
+
+The final status tree is one severity-aware multi-line record, including its
+root. A successful workflow optionally chooses from a valid non-empty
+`lunch.options` list. A non-successful workflow says `no lunch!`; missing,
+empty, masked, malformed, or failing lunch configuration produces no record.
 
 ## Understand dry-run and verbose behavior
 
@@ -608,10 +704,11 @@ discarded dry-run settlement report .../results/preview.txt
 
 All calculations and status steps still run, but `preview.txt` never exists.
 
-`--verbose` adds lclang's parsing, binding provenance, evaluation, and caching
-records to stderr and the configured log. The secret definition and value are
-rendered as `*masked*`. Application-authored messages remain the application's
-responsibility, which is why none of the actions logs `account_token`.
+`--verbose` adds application `DEBUG` records to stdout and lclang's parsing,
+binding provenance, evaluation, and caching records to stderr and the
+configured log. The secret definition and value are rendered as `*masked*`.
+Application-authored messages remain the application's responsibility, which
+is why none of the actions logs `account_token`.
 
 For this run, these selected verbose messages appear exactly in this order on
 stderr and in the formal file log:
@@ -627,15 +724,19 @@ stderr and in the formal file log:
 ```
 
 The file itself uses the formal shape below. Angle-bracketed fields are the only
-run-dependent substitutions; the message bodies and empty audit `args` tuples
-are exact. The four audit records are physically first for each invocation,
-even in verbose mode.
+run-dependent substitutions. The four audit records are physically first for
+each invocation, even in verbose mode, and the first record identifies the file
+immediately after its handler is bound. Continuation lines belong to the same
+logging record as their header.
 
 ```text
-<timestamp> | INFO     | lclang.cli.<logger-id> | logging.py:<line> | log_execution_start | execution.started command=["settle"] | args=()
-<timestamp> | INFO     | lclang.cli.<logger-id> | logging.py:<line> | log_execution_start | execution.log_file path=<temp>/settlement.log | args=()
-<timestamp> | INFO     | lclang.cli.<logger-id> | logging.py:<line> | log_execution_start | execution.command_line argv=["python", "settlement.py", "settle", "--config", "<temp>/settlement.lclcfg", "--override", "paths.output_name", "verbose.txt", "--as-of", "20260827", "--verbose"] | args=()
-<timestamp> | INFO     | lclang.cli.<logger-id> | logging.py:<line> | log_execution_start | execution.config values={"as_of_date": "2026-08-27", "config_file_path": "<temp>/settlement.lclcfg", "dryrun": false, "overrides": {"paths.output_name": "verbose.txt"}, "verbose": true} | args=()
+<timestamp> | INFO     | lclang.cli.<logger-id> | audit.py:<line> | emit_execution_start | execution log file path: <temp>/settlement.log
+<timestamp> | INFO     | lclang.cli.<logger-id> | audit.py:<line> | emit_execution_start | execution started:
+===================================================
+...
+<timestamp> | INFO     | lclang.cli.<logger-id> | audit.py:<line> | emit_execution_start | execution command line: ["python", "settlement.py", "settle", ...]
+<timestamp> | INFO     | lclang.cli.<logger-id> | audit.py:<line> | emit_execution_start | execution config:
+    ...
 ```
 
 ## Why help is part of the contract

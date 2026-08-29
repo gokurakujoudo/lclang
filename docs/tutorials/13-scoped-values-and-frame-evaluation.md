@@ -8,7 +8,7 @@ without adding a Module definition or cache entry.
 ## What you will learn
 
 - how qualified keys infer lazy Frame proxies;
-- when an explicit `FRAME_PROXY` placeholder helps readers;
+- why qualified leaves normally make `FRAME_PROXY` unnecessary;
 - how scoped lookup, safe access, parent lookup, and caching interact;
 - how Python and LCL use the same qualified paths;
 - when to use `frame.evaluate` instead of `frame.get`.
@@ -51,8 +51,10 @@ is cached under `service.url`; the proxy owns no independent state.
 
 ## Declare intent and use safe fallback
 
-`FRAME_PROXY` is optional metadata. It is useful when a module promises a
-scope even when one optional descendant may be absent.
+Qualified leaves infer their prefixes. `FRAME_PROXY` is optional low-level
+metadata for a Python Module that must promise a scope even when an optional
+descendant may be absent; it is not recommended as ordinary configuration-file
+layout.
 
 <!-- lclang-tutorial-exec -->
 ```python
@@ -206,10 +208,12 @@ async def main() -> None:
     with TemporaryDirectory(prefix="lclang-scopes-tutorial-") as directory:
         path = Path(directory) / "services.lclcfg"
         path.write_text(
-            "service: FRAME_PROXY\n"
-            "service.port: 8000\n"
-            "service.owner: lhs()\n"
-            "database.pool: 4\n",
+            "# scope: service endpoint\n"
+            "service.port: 8000 # Listener port\n"
+            "service.owner: lhs() # Full winning key\n"
+            "\n"
+            "# scope: database capacity\n"
+            "database.pool: 4 # Connection count\n",
             encoding="utf-8",
         )
         application = CliEntrance(
@@ -237,8 +241,8 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-The config marker declares intent while its descendants remain real lazy
-definitions. `lhs()` records the full winning key `service.owner`. The CLI
+The qualified leaves infer both prefixes while the standalone comments explain
+their purpose. `lhs()` records the full winning key `service.owner`. The CLI
 literal wins only for `service.port`; `database.pool` falls back to the config
 Frame. The handler's unnamed expression reads both scopes without creating a
 new definition, and the application closes all invocation Frames.
@@ -246,17 +250,18 @@ new definition, and the application closes all invocation Frames.
 The equivalent source is:
 
 ```lclcfg
-service: FRAME_PROXY
-service.host: "api.example.com"
-service.port: 8443
-service.url: f"https://{service.host}:{service.port}"
-service.owner: lhs()
+# scope: service endpoint
+service.host: "api.example.com" # Deployment DNS name
+service.port: 8443 # TLS listener
+service.url: f"https://{service.host}:{service.port}" # Complete URL
+service.owner: lhs() # Full definition key
 ```
 
 `service.owner` returns its complete key. CLI applications use the same model:
 `-o service.port 9443` supplies a literal scoped override,
 `-o service.port "LCL[base_port + 1]"` supplies a lazy definition, and
-`-o service LCL[FRAME_PROXY]` declares a placeholder.
+`-o service LCL[FRAME_PROXY]` still declares an explicit placeholder for APIs
+that need one, but normal CLI configuration should supply qualified leaves.
 
 Real values cannot overlap structurally. `service` and `service.port` cannot
 both be real, nor can `service.port` and `service.port.value`. Exact overrides

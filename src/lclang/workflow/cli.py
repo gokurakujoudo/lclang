@@ -2,19 +2,20 @@
 
 from __future__ import annotations
 
-import logging
-
 from lclang.cli import CliContext, CliResult, CliResultStatus, Command, ParameterDoc
 from lclang.errors import LclCliUsageError
 from lclang.masking import normalize_masked_mapping
+from lclang.workflow.cli_logging import log_lunch_option, log_status_tree, status_lines
 from lclang.workflow.context import WorkflowExecutionContext
 from lclang.workflow.definitions import TaskNode, Workflow
 from lclang.workflow.mappings import mapping_variables
-from lclang.workflow.models import ExecutionStatus, ExecutionStatusTree
+from lclang.workflow.models import ExecutionStatus
 from lclang.workflow.variables import TaskVar
 
 # Stable help used when an external variable omits its description.
 NO_HELP_MESSAGE = "NO HELP MESSAGE PROVIDED"
+# Compatibility exports for final workflow CLI rendering helpers.
+__all__ = ["cli_status", "log_status_tree", "status_lines", "workflow_command"]
 
 
 def external_variables(workflow: Workflow) -> tuple[TaskVar[object], ...]:
@@ -52,51 +53,6 @@ def external_variables(workflow: Workflow) -> tuple[TaskVar[object], ...]:
 
     visit(workflow.root_task)
     return tuple(external.values())
-
-
-def status_lines(tree: ExecutionStatusTree) -> list[str]:
-    """Render one finalized execution status tree.
-
-    :param tree: Root status node.
-    :returns: Deterministic tree-shaped status lines.
-    """
-    detail = f": {tree.task_description}" if tree.task_description else ""
-    lines = [f"[{tree.status.value}] {tree.task_name}{detail}"]
-
-    def visit(node: ExecutionStatusTree, prefix: str, last: bool) -> None:
-        """Append one status node recursively.
-
-        :param node: Current status node.
-        :param prefix: Existing ancestor indentation.
-        :param last: Whether this node is the final sibling.
-        """
-        connector = "└─ " if last else "├─ "
-        description = f": {node.task_description}" if node.task_description else ""
-        lines.append(
-            f"{prefix}{connector}[{node.status.value}] {node.task_name}{description}"
-        )
-        child_prefix = prefix + ("   " if last else "│  ")
-        for index, child in enumerate(node.sub_tasks):
-            visit(child, child_prefix, index == len(node.sub_tasks) - 1)
-
-    for index, child in enumerate(tree.sub_tasks):
-        visit(child, "", index == len(tree.sub_tasks) - 1)
-    return lines
-
-
-def log_status_tree(logger: logging.Logger, tree: ExecutionStatusTree) -> None:
-    """Log a finalized tree using severity-aware line levels.
-
-    :param logger: Command logger receiving the tree at execution end.
-    :param tree: Finalized status tree.
-    """
-    for line in status_lines(tree):
-        if "[ERROR]" in line:
-            logger.error("%s", line)
-        elif "[FAILURE]" in line or "[FAILURE_COVERED]" in line:
-            logger.warning("%s", line)
-        else:
-            logger.info("%s", line)
 
 
 def cli_status(status: ExecutionStatus) -> CliResultStatus:
@@ -169,7 +125,13 @@ def workflow_command(
                 context.frame,
             )
         )
-        log_status_tree(context.logger, result.execution_status)
+        workflow_id = ".".join(context.raw_params.command)
+        log_status_tree(context.logger, result.execution_status, workflow_id)
+        await log_lunch_option(
+            context.logger,
+            context.frame,
+            result.execution_status.status,
+        )
         return CliResult(cli_status(result.execution_status.status), "")
 
     return Command(

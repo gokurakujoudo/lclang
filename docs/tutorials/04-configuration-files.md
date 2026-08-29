@@ -9,6 +9,7 @@ never evaluates a definition.
 - the version, definition, comment, and continuation syntax;
 - how `using` expands files in source order;
 - how later definitions win while complete history remains available;
+- how to group and comment configuration definitions for readers;
 - when to use `evaluate_config` or a reusable Frame factory.
 
 ## Parse in-memory text
@@ -44,6 +45,27 @@ the only physical-line continuation marker. Open brackets alone do not continue
 a definition. Version metadata may appear only as the first meaningful
 declaration.
 
+## Lay out definitions for readers
+
+Keep qualified names from one scope together without blank lines, then use a
+blank line before the next scope or functional group. Put a short inline `#`
+comment on definitions that need explanation and a standalone `# Section` or
+`# scope: <description>` line above each group. Qualified leaves infer their
+prefixes, so ordinary files should omit `scope: FRAME_PROXY`.
+
+```lclcfg
+# scope: service endpoint
+service.host: "api.example.com" # Deployment DNS name
+service.port: 8443 # TLS listener
+
+# Retry policy
+retry.count: 3 # Maximum attempts
+retry.delay: 0.5 # Seconds between attempts
+```
+
+`FRAME_PROXY` remains valid when an API deliberately needs an explicit
+placeholder, but it adds no value to the usual file layout above.
+
 ## Compose files and evaluate final winners
 
 The next example writes an isolated two-file configuration. `using` inserts the
@@ -63,18 +85,22 @@ async def main() -> None:
     with TemporaryDirectory(prefix="lclang-config-tutorial-") as directory:
         root = Path(directory)
         (root / "shared.lclcfg").write_text(
-            "discount_rate: 0.05\n"
-            "shipping: 8\n"
-            "currency: 'USD'\n",
+            "# Shared pricing\n"
+            "discount_rate: 0.05 # Base discount\n"
+            "shipping: 8 # Flat shipping charge\n"
+            "currency: 'USD' # Display currency\n",
             encoding="utf-8",
         )
         application = root / "application.lclcfg"
         application.write_text(
-            'using "shared.lclcfg"\n'
-            "discount_rate: 0.10\n"
-            "subtotal: unit_price * quantity\n"
-            "total: subtotal * (1 - discount_rate) + shipping\n"
-            'label: f"{currency} {total:.2f}"\n',
+            "# Shared definitions\n"
+            'using "shared.lclcfg" # Expand at this source position\n'
+            "discount_rate: 0.10 # Application discount\n"
+            "\n"
+            "# Calculated totals\n"
+            "subtotal: unit_price * quantity # Before discount\n"
+            "total: subtotal * (1 - discount_rate) + shipping # Final charge\n"
+            'label: f"{currency} {total:.2f}" # Display text\n',
             encoding="utf-8",
         )
 

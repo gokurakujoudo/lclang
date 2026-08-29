@@ -5,12 +5,22 @@ from __future__ import annotations
 import asyncio
 from contextlib import suppress
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from lclang.api import LCL_RUNTIME
 from lclang.ast import LclAstNode, LclConstant
 from lclang.cli.commands import Command
 from lclang.cli.models import CliConfig, CliParams
 from lclang.cli.parser import lazy_override_expression
+from lclang.cli.runtime_keys import (
+    RUNTIME_AS_OF_DATE_KEY,
+    RUNTIME_CLI_PARAMS_KEY,
+    RUNTIME_COMMAND_KEY,
+    RUNTIME_DRYRUN_KEY,
+    RUNTIME_EXECUTION_TIMESTAMP_KEY,
+    RUNTIME_VERBOSE_KEY,
+    RUNTIME_YMD_KEY,
+)
 from lclang.config import load_config
 from lclang.diagnostics import internal_masked_scope
 from lclang.errors import LclCliUsageError
@@ -27,6 +37,10 @@ EMPTY_CONFIG_MODULE_NAME = ModuleName("empty_config")
 OVERRIDES_MODULE_NAME = ModuleName("cli_overrides")
 # Module label for the handler-visible runtime layer.
 RUNTIME_MODULE_NAME = ModuleName("cli_runtime")
+# Compact as-of date format exposed to CLI configuration.
+YMD_FORMAT = "%Y%m%d"
+# Compact local execution timestamp format exposed to CLI configuration.
+EXECUTION_TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
 
 
 @dataclass(slots=True)
@@ -66,10 +80,12 @@ class CliBinding:
 
     :param frame: Handler-visible top runtime Frame.
     :param stack: Owner for every invocation-created Frame.
+    :param execution_config_names: Command and file names rendered by the audit.
     """
 
     frame: Frame
     stack: FrameStack
+    execution_config_names: tuple[str, ...]
 
 
 def default_definitions(command: Command, cli_config: CliConfig) -> dict[str, LclAstNode]:
@@ -81,10 +97,10 @@ def default_definitions(command: Command, cli_config: CliConfig) -> dict[str, Lc
     """
     log_config = cli_config.log_config
     definitions: dict[str, LclAstNode] = {
-        "log_dir": LclConstant(value=log_config.log_dir),
-        "log_file_name": LclConstant(value=log_config.log_file_name),
-        "log_level": LclConstant(value=log_config.log_level),
-        "log_format": LclConstant(value=log_config.log_format),
+        "logger.log_dir": LclConstant(value=log_config.log_dir),
+        "logger.log_file_name": LclConstant(value=log_config.log_file_name),
+        "logger.log_level": LclConstant(value=log_config.log_level),
+        "logger.log_format": LclConstant(value=log_config.log_format),
     }
     definitions.update(
         {
@@ -108,6 +124,17 @@ async def build_binding(command: Command, params: CliParams, cli_config: CliConf
     """
     frames: list[Frame] = []
     stack = FrameStack(())
+    execution_values: dict[str, object] = {
+        RUNTIME_AS_OF_DATE_KEY: params.as_of_date,
+        RUNTIME_CLI_PARAMS_KEY: params,
+        RUNTIME_DRYRUN_KEY: params.dryrun,
+        RUNTIME_VERBOSE_KEY: params.verbose,
+        RUNTIME_YMD_KEY: params.as_of_date.strftime(YMD_FORMAT),
+        RUNTIME_EXECUTION_TIMESTAMP_KEY: datetime.now(UTC)
+        .astimezone()
+        .strftime(EXECUTION_TIMESTAMP_FORMAT),
+        RUNTIME_COMMAND_KEY: command.name,
+    }
     try:
         imports = LCL_RUNTIME.derive(
             Module(IMPORTS_MODULE_NAME, {}),
@@ -130,7 +157,7 @@ async def build_binding(command: Command, params: CliParams, cli_config: CliConf
             config_module = Module(EMPTY_CONFIG_MODULE_NAME, {})
         else:
             config_module = (await load_config(params.config_file_path)).to_module()
-        config = defaults.derive(config_module)
+        config = defaults.derive(config_module, execution_values)
         frames.append(config)
         override_definitions: dict[str, LclAstNode] = {}
         override_values: dict[str, object] = {}
@@ -147,9 +174,7 @@ async def build_binding(command: Command, params: CliParams, cli_config: CliConf
                 override_definitions[name] = expression
         runtime_values: dict[str, object] = {
             **override_values,
-            "as_of_date": params.as_of_date,
-            "dryrun": params.dryrun,
-            "cli_params": params,
+            **execution_values,
         }
         overrides = config.derive(
             Module(
@@ -176,7 +201,11 @@ async def build_binding(command: Command, params: CliParams, cli_config: CliConf
         ]
         if missing:
             raise LclCliUsageError("missing required parameter: " + ", ".join(missing))
-        return CliBinding(runtime, stack)
+        audit_names = {
+            *(item.name for item in command.parameter_docs),
+            *config_module.definitions,
+        }
+        return CliBinding(runtime, stack, tuple(sorted(audit_names)))
     except BaseException:
         if not stack.frames:
             stack = FrameStack(tuple(frames))

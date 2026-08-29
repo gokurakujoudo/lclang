@@ -49,6 +49,7 @@ async def local_value_context(
 @pytest.mark.asyncio
 async def test_to_cli_infers_external_values_and_logs_tree_last(
     caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Only first-use externals reach help and status follows normal logs."""
     source = wf.define_variable[int]("source", is_masked=True)
@@ -114,17 +115,23 @@ async def test_to_cli_infers_external_values_and_logs_tree_last(
         ("source", "NO HELP MESSAGE PROVIDED", True)
     ]
     logger = logging.getLogger("workflow-cli-test")
-    params = CliParams("python", ("run",), date(2026, 8, 27), False, None, {})
-    async with lclang.define_frame(preset={"source": 5}) as frame:
+    params = CliParams("python", ("admin", "run"), date(2026, 8, 27), False, None, {})
+    monkeypatch.setattr(
+        "lclang.workflow.cli_logging.random.choice", lambda values: values[0]
+    )
+    async with lclang.define_frame(
+        preset={"source": 5, "lunch.options": ["noodles"]}
+    ) as frame:
         context = CliContext(date(2026, 8, 27), False, frame, logger, params)
         with caplog.at_level(logging.INFO, logger=logger.name):
             result = await command.handler(context)
 
     assert result.result_status is CliResultStatus.SUCCESS
     messages = [record.getMessage() for record in caplog.records]
-    assert messages[0] == "normal action log"
-    assert messages[1].startswith("[SUCCESS] CLI workflow")
-    assert messages[-1].startswith("   └─ [SUCCESS] child")
+    assert "normal action log" in messages
+    assert messages[-2].startswith("workflow complete: [admin.run] SUCCESS:\n")
+    assert "   └─ [SUCCESS] child" in messages[-2]
+    assert messages[-1] == "lunch option: noodles"
 
 
 def test_failure_covered_cli_status_has_distinct_exit_code() -> None:
@@ -171,17 +178,115 @@ def test_cli_status_rendering_uses_details_connectors_and_severity(
     ]
     logger = logging.getLogger("workflow-cli-levels")
     with caplog.at_level(logging.INFO, logger=logger.name):
-        log_status_tree(logger, tree)
-    assert [record.levelno for record in caplog.records] == [
-        logging.ERROR,
-        logging.WARNING,
-        logging.WARNING,
-        logging.INFO,
-    ]
+        log_status_tree(logger, tree, "admin.run")
+    assert [record.levelno for record in caplog.records] == [logging.ERROR]
+    assert caplog.records[0].getMessage() == (
+        "workflow complete: [admin.run] ERROR:\n"
+        "[ERROR] workflow: stopped\n"
+        "├─ [FAILURE] expected: rejected\n"
+        "└─ [FAILURE_COVERED] covered\n"
+        "   └─ [SUCCESS] cleanup"
+    )
     assert cli_status(wf.ExecutionStatus.FAILURE_COVERED) is CliResultStatus.FAILURE_COVERED
     assert cli_status(wf.ExecutionStatus.FAILURE) is CliResultStatus.FAILURE
     assert cli_status(wf.ExecutionStatus.ERROR) is CliResultStatus.EXCEPTION
     assert cli_status(wf.ExecutionStatus.SKIPPED) is CliResultStatus.SUCCESS
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "options, masked, failure, expected",
+    [
+        (["rice"], False, True, "lunch option: no lunch!"),
+        ([], False, False, None),
+        ("rice", False, False, None),
+        ([1], False, False, None),
+        (["secret"], True, False, None),
+    ],
+)
+async def test_lunch_options_are_optional_and_never_change_status(
+    options: object,
+    masked: bool,
+    failure: bool,
+    expected: str | None,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Only valid visible non-empty lists add a post-tree lunch record."""
+    source = wf.define_variable[int]("source")
+
+    async def action(
+        context: wf.TaskContext,
+        args: ValueArgs,
+        status_mgr: wf.ExecutionStatusManager,
+    ) -> ValueOutputs:
+        del context
+        if failure:
+            status_mgr.update(wf.ExecutionStatus.FAILURE, "rejected")
+        return ValueOutputs(args.value)
+
+    task = wf.define_task(
+        "root",
+        "Root",
+        task_action=action,
+        args_mapping=ValueArgs(source.quote),
+    )
+    command = wf.define_workflow("Lunch", task).to_cli("run", "Run")
+    key = "lunch.options!" if masked else "lunch.options"
+    logger = logging.getLogger(f"workflow-lunch-{masked}-{failure}-{type(options).__name__}")
+    params = CliParams("python", ("run",), date(2026, 8, 29), False, None, {})
+    async with lclang.define_frame(preset={"source": 1, key: options}) as frame:
+        context = CliContext(date(2026, 8, 29), False, frame, logger, params)
+        with caplog.at_level(logging.INFO, logger=logger.name):
+            result = await command.handler(context)
+
+    assert result.result_status is (
+        CliResultStatus.FAILURE if failure else CliResultStatus.SUCCESS
+    )
+    lunch = [
+        record.getMessage()
+        for record in caplog.records
+        if record.getMessage().startswith("lunch option:")
+    ]
+    assert lunch == ([] if expected is None else [expected])
+
+
+@pytest.mark.asyncio
+async def test_failing_lunch_expression_is_ignored(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Lunch evaluation errors never replace a successful workflow result."""
+    source = wf.define_variable[int]("source")
+
+    async def action(
+        context: wf.TaskContext,
+        args: ValueArgs,
+        status_mgr: wf.ExecutionStatusManager,
+    ) -> ValueOutputs:
+        del context, status_mgr
+        return ValueOutputs(args.value)
+
+    task = wf.define_task(
+        "root",
+        "Root",
+        task_action=action,
+        args_mapping=ValueArgs(source.quote),
+    )
+    command = wf.define_workflow("Lunch", task).to_cli("run", "Run")
+    module = lclang.Module(
+        lclang.ModuleName("lunch-test"),
+        {"lunch.options": lclang.parse_expression("missing_name")},
+    )
+    logger = logging.getLogger("workflow-lunch-evaluation-error")
+    params = CliParams("python", ("run",), date(2026, 8, 29), False, None, {})
+    async with lclang.define_frame(module, preset={"source": 1}) as frame:
+        context = CliContext(date(2026, 8, 29), False, frame, logger, params)
+        with caplog.at_level(logging.INFO, logger=logger.name):
+            result = await command.handler(context)
+
+    assert result.result_status is CliResultStatus.SUCCESS
+    assert not any(
+        record.getMessage().startswith("lunch option:") for record in caplog.records
+    )
 
 
 @pytest.mark.asyncio

@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+## 1.0.6 - 2026-08-29
+
+- Scope CLI logger configuration beneath `logger`, print application `INFO`
+  records to stdout, and include application `DEBUG` records there in verbose
+  mode without changing the configured file threshold.
+- Route application error logs to stderr even without file logging, and inject
+  `__ymd__`, `__execution_timestamp__`, and `__command__` strings for use by
+  logger configuration expressions.
+- Use the configured structured log format for both file and terminal
+  application records, require its level field, and make the bound log path the
+  first file record.
+- Refine the CLI audit into four readable records with a centered execution
+  banner, exact redacted JSON argv, and sorted lazy winning configuration; stop
+  appending logging argument tuples to the default format.
+- Add workflow task/context lifecycle and typed verbose mapping records,
+  dot-connected task Frame branches, traceback-bearing errors, one-record final
+  trees, and optional `lunch.options` outcomes.
+- Recommend grouped commented `.lclcfg` definitions with inferred scoped
+  prefixes while retaining explicit `FRAME_PROXY` syntax for compatibility.
+- Centralize CLI runtime variable keys and expose typed `__as_of_date__`,
+  `__dryrun__`, and `__verbose__` bindings alongside the existing audit values;
+  remove duplicate `as_of_date` and `dryrun` bindings and rename `cli_params`
+  to `__cli_params__`.
+
 ## 1.0.5 - 2026-08-28
 
 - Sort CLI configuration parameters by name in generated help without changing

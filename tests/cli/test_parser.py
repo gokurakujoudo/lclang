@@ -13,6 +13,7 @@ from lclang.cli.parser import (
     parse_common_options,
     split_argv,
 )
+from lclang.cli.runtime_keys import RUNTIME_DRYRUN_KEY, RUNTIME_VERBOSE_KEY
 from lclang.errors import LclCliUsageError
 
 
@@ -46,6 +47,11 @@ def test_parser_accepts_aliases_last_override_and_dates() -> None:
     assert params.verbose is True
     assert params.config_file_path == "settings.lclcfg"
     assert params.overrides == {"count": "LCL[base + 1]"}
+    assert params.raw_argv == (
+        parts.executable_path,
+        parts.script_path,
+        *parts.tokens,
+    )
 
 
 def test_parser_accepts_qualified_override_keys() -> None:
@@ -54,8 +60,11 @@ def test_parser_accepts_qualified_override_keys() -> None:
         ["-o", "A.B.x", "42", "-o", "A.B.y", "LCL[A.B.x + 1]"]
     )
     assert parsed.overrides == {"A.B.x": "42", "A.B.y": "LCL[A.B.x + 1]"}
+    assert parse_common_options(["-o", "dryrun", "value"]).overrides == {
+        "dryrun": "value"
+    }
     with pytest.raises(LclCliUsageError, match="reserved"):
-        parse_common_options(["-o", "dryrun.value", "1"])
+        parse_common_options(["-o", f"{RUNTIME_DRYRUN_KEY}.value", "1"])
 
 
 def test_parser_normalizes_masked_overrides_and_keeps_policy_sticky() -> None:
@@ -101,7 +110,10 @@ def test_override_without_value_is_true_and_never_consumes_an_override_option() 
     [
         (["python", "tool", "run"], ".py"),
         (["python", "tool.py", "run", "-a", "20260230"], "date"),
-        (["python", "tool.py", "run", "-o", "dryrun", "yes"], "reserved"),
+        (
+            ["python", "tool.py", "run", "-o", RUNTIME_VERBOSE_KEY, "yes"],
+            "reserved",
+        ),
         (["python", "tool.py", "run", "--unknown"], "unknown"),
     ],
 )

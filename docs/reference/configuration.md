@@ -31,8 +31,10 @@ not valid inside a continuation chain.
 
 Definition names may be one LCL identifier or a dot-separated qualified path
 of LCL identifiers. Top-level names beginning with `__` remain reserved; the
-metadata name is the sole exception. `A: FRAME_PROXY` optionally declares a
-scoped prefix, while `A.x: expression` infers `A` automatically.
+metadata name is the sole exception. `A: FRAME_PROXY` remains valid optional
+metadata for a scoped prefix, while `A.x: expression` infers `A` automatically.
+It is not recommended for ordinary configuration layout; prefer inference and
+omit the placeholder.
 
 A single trailing `!` marks the exact definition name as masked and is not part
 of that name. For example, `service.password!: expression` is referenced as
@@ -41,6 +43,28 @@ same-name definitions and runtime overrides remain masked. Masking does not
 propagate to derived definitions; mark those separately when their own values
 must be hidden. Verbose parse and evaluation diagnostics render a masked
 expression, value, result, or failure as `*masked*`.
+
+## Recommended layout
+
+Keep definitions from the same scope on consecutive rows without blank lines.
+Separate different scopes or functional groups with one blank line. Use an
+inline `#` comment to explain an individual definition and a standalone comment
+line to name each section. A `# scope: <description>` line communicates the
+purpose of qualified leaves without creating a `FRAME_PROXY` declaration.
+
+```lclcfg
+# scope: service endpoint
+service.host: "api.example.com" # DNS name selected by deployment policy
+service.port: 8443 # TLS listener
+
+# Pricing
+pricing.rate: 0.18 # Contract rate per unit
+pricing.tax: 0.08 # Tax rate as a decimal
+```
+
+These rules are readability recommendations, not grammar restrictions. Blank
+lines, comments, and explicit `FRAME_PROXY` declarations retain their existing
+meaning.
 
 ## File magic and paths
 
