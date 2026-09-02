@@ -23,6 +23,7 @@ CHAPTERS = (
     ("13-scoped-values-and-frame-evaluation.md", "Scoped values and Frame evaluation"),
     ("14-tree-workflows.md", "Tree workflows"),
     ("15-energy-settlement-workflow.md", "Case Study: Energy Settlement Workflow"),
+    ("16-python-utilities.md", "Python utilities for downstream applications"),
 )
 
 

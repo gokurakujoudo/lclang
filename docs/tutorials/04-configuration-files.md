@@ -8,6 +8,7 @@ never evaluates a definition.
 
 - the version, definition, comment, and continuation syntax;
 - how `using` expands files in source order;
+- how an f-string `using` target selects a file from prior values or `env`;
 - how later definitions win while complete history remains available;
 - how to group and comment configuration definitions for readers;
 - when to use `evaluate_config` or a reusable Frame factory.
@@ -132,6 +133,125 @@ shipping gives `98`, which `label` formats as `USD 98.00`.
 Expansion is recursive and deterministic. Relative targets resolve from the
 importing file, not the process working directory. Direct and indirect cycles
 raise structured configuration errors.
+
+## Select a file from earlier LCL values
+
+A `using` target may be an LCL f-string. Its fields can evaluate definitions
+that appeared earlier in source order, including definitions derived from
+other earlier values.
+
+<!-- lclang-tutorial-exec -->
+```python
+import asyncio
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from lclang.config import evaluate_config, load_config
+
+
+async def main() -> None:
+    with TemporaryDirectory(prefix="lclang-dynamic-using-") as directory:
+        root = Path(directory)
+        profiles = root / "profiles"
+        profiles.mkdir()
+        (profiles / "production.lclcfg").write_text(
+            'endpoint: "https://api.example.com"\n',
+            encoding="utf-8",
+        )
+        (profiles / "development.lclcfg").write_text(
+            'endpoint: "http://localhost:8000"\n',
+            encoding="utf-8",
+        )
+        application = root / "application.lclcfg"
+        application.write_text(
+            'region: "eu"\n'
+            'profile: "production" if region == "eu" else "development"\n'
+            'using f"profiles/{profile}.lclcfg"\n'
+            'summary: f"{profile}: {endpoint}"\n',
+            encoding="utf-8",
+        )
+
+        config = await load_config(application)
+        assert await evaluate_config(config, "summary") == (
+            "production: https://api.example.com"
+        )
+
+
+asyncio.run(main())
+```
+
+The loader evaluates `profile` only to select `production.lclcfg`. That work
+uses a temporary Frame and does not warm the final configuration's runtime
+cache. `endpoint` is inserted at the `using` line, and the later `summary`
+definition resolves it normally when requested.
+
+This lookup is deliberately position-sensitive. Moving `profile` below the
+`using` line would make the target fail with `LclConfigUsingError`, even though
+ordinary final configuration definitions may refer forward.
+
+## Select a file from the live environment
+
+The canonical `env` utility is also available to a dynamic target. Null
+coalescing supplies a deterministic fallback, while a loader override can
+select a different file without changing `os.environ`.
+
+<!-- lclang-tutorial-exec -->
+```python
+import asyncio
+import os
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
+
+from lclang.config import evaluate_config, load_config
+
+
+async def main() -> None:
+    with TemporaryDirectory(prefix="lclang-env-using-") as directory:
+        root = Path(directory)
+        for profile in ("local", "blue", "green"):
+            (root / f"{profile}.lclcfg").write_text(
+                f'selected: "{profile}"\n',
+                encoding="utf-8",
+            )
+        application = root / "application.lclcfg"
+        application.write_text(
+            'using f"{env.LCLANG_TUTORIAL_PROFILE ?? \'local\'}.lclcfg"\n',
+            encoding="utf-8",
+        )
+
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("LCLANG_TUTORIAL_PROFILE", None)
+            local = await load_config(application)
+            assert await evaluate_config(local, "selected") == "local"
+
+            with patch.dict(
+                os.environ,
+                {"LCLANG_TUTORIAL_PROFILE": "blue"},
+            ):
+                blue = await load_config(application)
+                assert await evaluate_config(blue, "selected") == "blue"
+
+                green = await load_config(
+                    application,
+                    overrides={"env.LCLANG_TUTORIAL_PROFILE": "green"},
+                )
+                assert await evaluate_config(green, "selected") == "green"
+                assert os.environ["LCLANG_TUTORIAL_PROFILE"] == "blue"
+
+
+asyncio.run(main())
+```
+
+With no process value, `??` chooses `local.lclcfg`. The live value then chooses
+`blue.lclcfg`. Finally, the call-level scoped override wins only for loading
+and selects `green.lclcfg`; the process environment remains `blue`. Overrides
+may also be parsed LCL AST values when the selection itself should stay lazy.
+
+Each dynamic target sees prior expanded definitions, call-level overrides, and
+canonical builtins. It cannot see later declarations, command defaults, or CLI
+runtime-only values. The evaluated result must be non-empty text ending exactly
+in `.lclcfg`.
 
 ## Share one loaded policy across several runs
 

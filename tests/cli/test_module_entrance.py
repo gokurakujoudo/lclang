@@ -171,6 +171,84 @@ def test_eval_lcl_returns_string_values_and_maps_usage_and_evaluation_errors(
     assert "division by zero" in capsys.readouterr().err
 
 
+def test_force_strictly_parses_only_marked_result_overrides(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Exact valueless FORCE reports marked RESULT syntax with a source underline."""
+    valid = [
+        *MODULE_ARGV,
+        "eval_lcl",
+        "-o",
+        "RESULT",
+        "LCL[1 + 2]",
+        "-o",
+        "FORCE",
+    ]
+    assert asyncio.run(LCLANG_CLI_ENTRANCE.run(valid)) == 0
+    assert capsys.readouterr().out == "3\n"
+
+    literal = [*valid]
+    literal[5] = "1 + 2"
+    assert asyncio.run(LCLANG_CLI_ENTRANCE.run(literal)) == 0
+    assert capsys.readouterr().out == "1 + 2\n"
+
+    malformed = [*valid]
+    malformed[5] = "LCL[1 +]"
+    assert asyncio.run(LCLANG_CLI_ENTRANCE.run(malformed)) == 2
+    error = capsys.readouterr().err
+    assert "[LCL1001]" in error
+    assert "RESULT=LCL[1 +]" in error
+    assert "^" in error
+
+    empty = [*valid]
+    empty[5] = "LCL[]"
+    assert asyncio.run(LCLANG_CLI_ENTRANCE.run(empty)) == 2
+    assert "RESULT=LCL[]" in capsys.readouterr().err
+
+    assigned_force = [*malformed, "false"]
+    assert asyncio.run(LCLANG_CLI_ENTRANCE.run(assigned_force)) == 0
+    assert capsys.readouterr().out == "LCL[1 +]\n"
+
+    valueless_result = [*MODULE_ARGV, "eval_lcl", "-o", "RESULT", "-o", "FORCE"]
+    assert asyncio.run(LCLANG_CLI_ENTRANCE.run(valueless_result)) == 0
+    assert capsys.readouterr().out == "True\n"
+
+
+def test_force_redacts_masked_result_and_ignores_other_markers(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Strict diagnostics hide masked RESULT text and remain RESULT-scoped."""
+    masked_value = "LCL[secret +]"
+    masked = [
+        *MODULE_ARGV,
+        "eval_lcl",
+        "-o",
+        "RESULT!",
+        masked_value,
+        "-o",
+        "FORCE",
+    ]
+    assert asyncio.run(LCLANG_CLI_ENTRANCE.run(masked)) == 2
+    error = capsys.readouterr().err
+    assert "RESULT=<masked>" in error
+    assert masked_value not in error
+
+    other = [
+        *MODULE_ARGV,
+        "eval_lcl",
+        "-o",
+        "broken",
+        "LCL[1 +]",
+        "-o",
+        "RESULT",
+        "LCL[broken]",
+        "-o",
+        "FORCE",
+    ]
+    assert asyncio.run(LCLANG_CLI_ENTRANCE.run(other)) == 0
+    assert capsys.readouterr().out == "LCL[1 +]\n"
+
+
 def test_parse_lcl_eval_flag_renders_success_and_failure_cache_trees(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -180,6 +258,7 @@ def test_parse_lcl_eval_flag_renders_success_and_failure_cache_trees(
     ) == 0
     eval_help = capsys.readouterr().out
     assert "EVAL" in eval_help
+    assert "FORCE" in eval_help
     assert "default=False" in eval_help
 
     success_status = asyncio.run(

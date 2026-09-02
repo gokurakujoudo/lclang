@@ -24,9 +24,17 @@ EVAL_PARAMETER = ParameterDoc(
     "Evaluate RESULT before rendering its inspection tree",
     False,
 )
+# Optional strict parsing switch shared by expression-oriented commands.
+FORCE_PARAMETER = ParameterDoc(
+    "FORCE",
+    bool,
+    False,
+    "Require marked RESULT text to contain valid LCL",
+    False,
+)
 
 
-@cli.command(parameter_docs=(RESULT_PARAMETER, EVAL_PARAMETER))
+@cli.command(parameter_docs=(RESULT_PARAMETER, EVAL_PARAMETER, FORCE_PARAMETER))
 async def parse_lcl_command(context: CliContext) -> CliResult:
     """Render the dependency tree for RESULT, optionally after evaluation.
 
@@ -43,7 +51,7 @@ async def parse_lcl_command(context: CliContext) -> CliResult:
     return CliResult.success("\n".join(tree.to_lines()))
 
 
-@cli.command(parameter_docs=(RESULT_PARAMETER,))
+@cli.command(parameter_docs=(RESULT_PARAMETER, FORCE_PARAMETER))
 async def eval_lcl_command(context: CliContext) -> CliResult:
     """Evaluate RESULT and render its string representation.
 

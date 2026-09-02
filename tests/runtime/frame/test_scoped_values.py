@@ -1,9 +1,29 @@
 """Behavioural contracts for qualified Frame values and proxies."""
 
+from dataclasses import dataclass, field
+from typing import ClassVar
+
 import pytest
 
 import lclang
 from lclang.runtime import VariableInspectionStatus
+
+
+@dataclass(frozen=True, slots=True)
+class Endpoint:
+    """Materialized scoped endpoint used by proxy utility tests."""
+
+    host: str
+    port: int = 443
+    tags: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True, slots=True)
+class EndpointGroup:
+    """Retain a nested scoped proxy while ignoring class-only state."""
+
+    endpoint: object
+    label: ClassVar[str] = "group"
 
 
 @pytest.mark.asyncio
@@ -34,6 +54,93 @@ async def test_scoped_definitions_infer_lazy_python_proxies() -> None:
         assert await frame.get("A.B.x") == 21
         assert calls == 1
         assert frame.has("A.B")
+
+
+@pytest.mark.asyncio
+async def test_proxy_index_names_and_records_share_scoped_lookup() -> None:
+    """Indexed children materialize sorted override-aware dataclass records."""
+    parent = lclang.define_frame(
+        lclang.define_module(
+            "endpoints",
+            {
+                "endpoints.green.host": '"green.example"',
+                "endpoints.blue.host": '"blue.example"',
+                "endpoints.blue.port": "8443",
+            },
+        )
+    )
+    child = parent.derive(
+        lclang.define_module(
+            "endpoint-overrides",
+            {
+                "endpoints.blue.port": "9443",
+                "endpoints.canary.host": '"canary.example"',
+            },
+        )
+    )
+    try:
+        endpoints = await child.get("endpoints")
+        assert isinstance(endpoints, lclang.FrameProxy)
+        assert await endpoints.field_names() == ["blue", "canary", "green"]
+        assert isinstance(endpoints["blue"], lclang.FrameProxy)
+        assert await endpoints["blue"].port == 9443
+        assert await child.evaluate('endpoints["blue"].port') == 9443
+        records = [
+            await endpoints[name].as_record(Endpoint)
+            for name in await endpoints.field_names()
+        ]
+        assert records == [
+            Endpoint("blue.example", 9443),
+            Endpoint("canary.example"),
+            Endpoint("green.example"),
+        ]
+        with pytest.raises(AttributeError, match="endpoints.missing"):
+            endpoints["missing"]
+        with pytest.raises(TypeError):
+            endpoints[1]  # type: ignore[index]
+    finally:
+        await child.close()
+        await parent.close()
+
+
+@pytest.mark.asyncio
+async def test_proxy_record_validation_defaults_and_failures() -> None:
+    """Record conversion preserves None/defaults and reports invalid inputs."""
+    frame = lclang.define_frame(
+        lclang.define_module(
+            "records",
+            {
+                "complete.host": "None",
+                "complete.endpoint.host": "'nested.example'",
+                "broken.host": "1 / 0",
+                "missing.port": "80",
+            },
+        )
+    )
+    try:
+        complete = await frame.get("complete")
+        assert isinstance(complete, lclang.FrameProxy)
+        assert await complete.get("absent", "fallback") == "fallback"
+        with pytest.raises(TypeError):
+            await complete.get(1)  # type: ignore[arg-type]
+        assert await complete.as_record(Endpoint) == Endpoint(None)  # type: ignore[arg-type]
+        assert (await complete.as_record(Endpoint)).tags == []
+        group = await complete.as_record(EndpointGroup)
+        nested = group.endpoint
+        assert isinstance(nested, lclang.FrameProxy)
+        assert await nested.host == "nested.example"
+        with pytest.raises(TypeError, match="dataclass"):
+            await complete.as_record(dict)
+        with pytest.raises(TypeError, match="host"):
+            missing = await frame.get("missing")
+            assert isinstance(missing, lclang.FrameProxy)
+            await missing.as_record(Endpoint)
+        with pytest.raises(lclang.LclEvaluationError, match="division by zero"):
+            broken = await frame.get("broken")
+            assert isinstance(broken, lclang.FrameProxy)
+            await broken.as_record(Endpoint)
+    finally:
+        await frame.close()
 
 
 @pytest.mark.asyncio

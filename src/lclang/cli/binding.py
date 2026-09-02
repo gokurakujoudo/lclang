@@ -11,7 +11,7 @@ from lclang.api import LCL_RUNTIME
 from lclang.ast import LclAstNode, LclConstant
 from lclang.cli.commands import Command
 from lclang.cli.models import CliConfig, CliParams
-from lclang.cli.parser import lazy_override_expression
+from lclang.cli.overrides import partition_overrides, require_forced_result
 from lclang.cli.runtime_keys import (
     RUNTIME_AS_OF_DATE_KEY,
     RUNTIME_CLI_PARAMS_KEY,
@@ -22,7 +22,6 @@ from lclang.cli.runtime_keys import (
     RUNTIME_YMD_KEY,
 )
 from lclang.config import load_config
-from lclang.diagnostics import internal_masked_scope
 from lclang.errors import LclCliUsageError
 from lclang.runtime import Frame, Module
 from lclang.types import ModuleName
@@ -136,6 +135,8 @@ async def build_binding(command: Command, params: CliParams, cli_config: CliConf
         RUNTIME_COMMAND_KEY: command.name,
     }
     try:
+        preliminary_definitions, preliminary_values = partition_overrides(params)
+        using_overrides = {**preliminary_values, **preliminary_definitions}
         imports = LCL_RUNTIME.derive(
             Module(IMPORTS_MODULE_NAME, {}),
             dict(command.preset),
@@ -156,22 +157,21 @@ async def build_binding(command: Command, params: CliParams, cli_config: CliConf
         if params.config_file_path is None:
             config_module = Module(EMPTY_CONFIG_MODULE_NAME, {})
         else:
-            config_module = (await load_config(params.config_file_path)).to_module()
+            config_module = (
+                await load_config(
+                    params.config_file_path,
+                    overrides=using_overrides,
+                )
+            ).to_module()
         config = defaults.derive(config_module, execution_values)
         frames.append(config)
-        override_definitions: dict[str, LclAstNode] = {}
-        override_values: dict[str, object] = {}
-        for name, value in params.overrides.items():
-            if isinstance(value, bool):
-                override_values[name] = value
-                continue
-            masked = name in params.masked_names or config.is_masked(name)
-            with internal_masked_scope(masked):
-                expression = lazy_override_expression(value)
-            if expression is None:
-                override_values[name] = value
-            else:
-                override_definitions[name] = expression
+        strict_result = command.name in {"parse_lcl", "eval_lcl"} and (
+            params.overrides.get("FORCE") is True
+        )
+        if strict_result:
+            require_forced_result(params, preliminary_definitions, config)
+        override_definitions = preliminary_definitions
+        override_values = preliminary_values
         runtime_values: dict[str, object] = {
             **override_values,
             **execution_values,

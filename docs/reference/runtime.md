@@ -56,8 +56,23 @@ used as an optional complete binding value to document a prefix explicitly.
 Real ancestor/descendant binding pairs are rejected eagerly.
 
 Python may use `await frame.get("service.database.port")`, or obtain the root
-proxy and use `await service.database.port`. LCL uses the same dotted spelling.
-References remain fully qualified: `service.total` and `total` are separate.
+proxy and use `await service.database.port`. String indexing is identical, so
+`await service["database"].port` in Python and `service["database"].port` in LCL
+retain the same lookup, tracing, caching, and errors. A non-string proxy index
+raises `TypeError`; a missing attribute or index raises the same
+`AttributeError`. References remain fully qualified: `service.total` and
+`total` are separate.
+
+`await proxy.get(name, default=None)` performs direct-child lookup and returns
+the default only when that child is absent. `await proxy.field_names()` returns
+the sorted, unique immediate effective child identifiers across the Frame
+hierarchy, including inferred prefixes but excluding the proxy marker.
+`await proxy.as_record(DataclassType)` resolves present initializer fields in
+declaration order and constructs a detached dataclass instance. Absent fields
+are omitted so dataclass defaults and default factories apply; extra children,
+non-initializer fields, `ClassVar`, and `InitVar` do not participate. The type
+must be a dataclass, missing required constructor values fail normally, and
+child evaluation errors propagate.
 
 `await frame.evaluate(expr)` parses and evaluates one unnamed LCL expression
 against an open Frame. The expression itself is not cached or entered into a
@@ -65,7 +80,15 @@ dependency snapshot, although named definitions reached through it retain
 their normal snapshots and flights. `lhs()` returns `"<expr>"` during this
 evaluation and in closures it creates.
 
-The fixed builtin inventory is: value types `bool`, `bytes`, `dict`, `float`,
+The fixed builtin inventory also includes the distinct `env` environment utility. `env.NAME`
+reads the live process environment and returns `None` when absent;
+`env.get("non-identifier", default)` supports arbitrary environment names.
+Scoped definitions and values named `env.NAME` win, including explicit `None`,
+without mutating `os.environ`. `env.NAME ?? default` is the ordinary LCL
+fallback form, and `env.field_names()` includes valid current environment names
+plus effective scoped overrides.
+
+The remaining fixed builtin inventory is: value types `bool`, `bytes`, `dict`, `float`,
 `frozenset`, `int`, `list`, `set`, `str`, and `tuple`; functions `abs`, `all`,
 `any`, `bin`, `chr`, `divmod`, `enumerate`, `filter`, `format`, `hex`,
 `isinstance`, `len`, `map`, `max`, `min`, `oct`, `ord`, `parse_ymd`, `pow`,

@@ -6,7 +6,13 @@ from collections.abc import Iterator, Mapping
 from typing import Protocol, cast
 
 from lclang.runtime.modules import Module
-from lclang.scopes import is_frame_proxy, real_binding_names, validate_real_conflicts
+from lclang.scopes import (
+    ScopedProxyFactory,
+    is_frame_proxy,
+    real_binding_names,
+    scoped_proxy_factory,
+    validate_real_conflicts,
+)
 
 
 class ScopedFrame(Protocol):
@@ -31,13 +37,17 @@ def local_binding_kind(frame: object, name: str) -> str | None:
 
     :param frame: Frame whose local mappings are inspected.
     :param name: Complete candidate name.
-    :returns: ``real``, ``proxy``, or ``None``.
+    :returns: ``real``, ``proxy``, ``factory``, or ``None``.
     """
     scoped = cast(ScopedFrame, frame)
     if name in scoped.module.definitions:
-        return "proxy" if is_frame_proxy(scoped.module.definitions[name]) else "real"
+        definition_value = scoped.module.definitions[name]
+        return "proxy" if is_frame_proxy(definition_value) else "real"
     if name in scoped.values:
-        return "proxy" if is_frame_proxy(scoped.values[name]) else "real"
+        host_value = scoped.values[name]
+        if scoped_proxy_factory(host_value) is not None:
+            return "factory"
+        return "proxy" if is_frame_proxy(host_value) else "real"
     prefix = f"{name}."
     if any(key.startswith(prefix) for key in scoped.module.definitions):
         return "proxy"
@@ -81,11 +91,27 @@ def find_scoped_binding(frame: object, name: str) -> tuple[ScopedFrame | None, s
     :param name: Complete flat or prefix name.
     :returns: Selected owner and binding kind.
     """
+    inferred: ScopedFrame | None = None
     for current in walk_hierarchy(frame):
         kind = local_binding_kind(current, name)
+        if kind == "proxy":
+            if inferred is None:
+                inferred = current
+            continue
         if kind is not None:
             return current, kind
-    return None, None
+    return (inferred, "proxy") if inferred is not None else (None, None)
+
+
+def find_scoped_factory(frame: object, name: str) -> ScopedProxyFactory | None:
+    """Return the selected factory for one exact scoped utility binding.
+
+    :param frame: Owner selected by :func:`find_scoped_binding`.
+    :param name: Complete exact utility binding name.
+    :returns: Scoped factory or ``None``.
+    """
+    scoped = cast(ScopedFrame, frame)
+    return cast(ScopedProxyFactory, scoped.values[name])
 
 
 def hierarchy_real_names(

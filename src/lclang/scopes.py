@@ -52,6 +52,14 @@ class FrameProxyMarker:
 FRAME_PROXY = FrameProxyMarker()
 
 
+class ScopedProxyValue:
+    """Mark a caller-bound scoped value with custom attribute resolution."""
+
+
+class ScopedProxyFactory:
+    """Mark a utility that creates caller-bound scoped values."""
+
+
 def is_frame_proxy(value: object) -> bool:
     """Report whether a value is the public proxy declaration singleton.
 
@@ -63,6 +71,15 @@ def is_frame_proxy(value: object) -> bool:
     return value is FRAME_PROXY or (
         isinstance(value, LclConstant) and value.value is FRAME_PROXY
     )
+
+
+def scoped_proxy_factory(value: object) -> ScopedProxyFactory | None:
+    """Return a scoped utility factory carried by a host or constant value.
+
+    :param value: Candidate semantic or host value.
+    :returns: Factory instance, or ``None`` for an ordinary value.
+    """
+    return value if isinstance(value, ScopedProxyFactory) else None
 
 
 def validate_qualified_name(name: str) -> tuple[str, ...]:
@@ -105,11 +122,17 @@ def real_binding_names(
     :param values: Local host values.
     :returns: Real names in stable definition-then-value order.
     """
-    result = [name for name, node in definitions.items() if not is_frame_proxy(node)]
+    result = [
+        name
+        for name, node in definitions.items()
+        if not is_frame_proxy(node) and scoped_proxy_factory(node) is None
+    ]
     result.extend(
         name
         for name, value in values.items()
-        if name not in definitions and not is_frame_proxy(value)
+        if name not in definitions
+        and not is_frame_proxy(value)
+        and scoped_proxy_factory(value) is None
     )
     return tuple(result)
 

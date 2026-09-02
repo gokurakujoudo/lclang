@@ -8,7 +8,6 @@ from lclang.cli.models import (
     CliParams,
     CliResult,
     CliResultStatus,
-    LogConfig,
     ParameterDoc,
 )
 from lclang.cli.runtime_keys import (
@@ -21,6 +20,7 @@ from lclang.cli.runtime_keys import (
     RUNTIME_YMD_KEY,
 )
 from lclang.cli.scanning import scan_commands
+from lclang.utils.logging import LogConfig
 
 __all__ = [
     "CliConfig",

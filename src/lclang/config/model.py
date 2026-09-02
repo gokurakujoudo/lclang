@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from lclang.ast import LclAstNode
+from lclang.ast import LclAstNode, LclJoinedString
 from lclang.source import SourceOrigin, SourceSpan
 from lclang.types import VarName
 
@@ -50,18 +50,18 @@ class ConfigDefinition:
 
 @dataclass(frozen=True, slots=True)
 class ConfigUsing:
-    """Represent one quoted source-expansion declaration.
+    """Represent one literal or dynamic source-expansion declaration.
 
-    :param target: Decoded non-empty path target.
+    :param target: Decoded literal path or semantic f-string expression.
     :param span: Complete physical declaration span.
     :param ordinal: Zero-based declaration position in its document.
     :raises ValueError: If the target is empty or the ordinal is negative.
 
     .. note::
-       The decoded target remains unresolved until expansion.
+       Dynamic targets remain unevaluated until their source-order expansion.
     """
 
-    target: str
+    target: str | LclJoinedString
     span: SourceSpan
     ordinal: int
 
@@ -69,13 +69,17 @@ class ConfigUsing:
         """Validate the using declaration's scalar invariants.
 
         :returns: ``None``.
+        :raises TypeError: If the target is neither text nor an LCL f-string.
         :raises ValueError: If the target is empty or ordinal is negative.
 
         .. note::
            Suffix validation belongs to the declaration parser.
         """
-        if not self.target:
-            raise ValueError("config using target cannot be empty")
+        if isinstance(self.target, str):
+            if not self.target:
+                raise ValueError("config using target cannot be empty")
+        elif not isinstance(self.target, LclJoinedString):
+            raise TypeError("config using target must be text or an LCL f-string")
         if self.ordinal < 0:
             raise ValueError("config declaration ordinal cannot be negative")
 

@@ -28,6 +28,9 @@ runtime dependencies.
   overrides, verbose diagnostics, and inspection rendering.
 - Qualified scoped bindings with lazy Frame proxies across Modules, presets,
   configuration, CLI overrides, and parent lookup.
+- Equivalent proxy attribute/index access, alphabetical child discovery,
+  direct-child fallback, and dataclass materialization.
+- Canonical live environment lookup with non-mutating scoped overrides.
 - Unnamed `Frame.evaluate()` expressions with Frame lookup and `lhs()` ownership.
 - Lazy result and failure snapshots, parent lookup, explicit missing-name
   fallbacks, per-name single-flight, circular diagnostics, and cancellation
@@ -43,6 +46,8 @@ runtime dependencies.
   multiline expressions, source origins, and sticky masked-key declarations.
 - Asynchronous in-memory and file loading, source-ordered `using` expansion,
   deterministic precedence, caching, concurrency sharing, and cycle detection.
+- Position-sensitive f-string `using` targets evaluated from prior definitions,
+  call or CLI overrides, and canonical builtins in disposable Frames.
 - Direct conversion from loaded configuration to runtime Module and Frame
   values.
 
@@ -63,6 +68,8 @@ runtime dependencies.
 - Manifest-driven read-only namespaces and immutable standard presets.
 - Reviewed iterable, text, immutable-data, strict JSON, date, and recursion
   helpers without ambient I/O or dynamic-code capabilities.
+- Standalone validated logging configuration, isolated logger ownership, and a
+  live Python environment utility.
 - Async three-state business-day calendars with canonical composition, bounded
   mappings, strict JSON loading, and dependency-aware cache retirement.
 - Validated tree workflows with typed dataclass mappings, named variables,
@@ -85,7 +92,7 @@ runtime dependencies.
   winner audit using exact redacted argv, opt-in task-local verbose tracing, and
   deterministic result/cleanup mapping.
 - Built-in `builtins`, `parse_lcl`, and `eval_lcl` commands for inventory,
-  inspection, and evaluation.
+  inspection, evaluation, and optional strict marked-RESULT parsing.
 - Workflow commands with inferred external parameters, help and masks,
   dot-branch lifecycle and verbose typed mapping logs, one-record final status
   trees, optional configured lunch selection, and recursive package discovery.

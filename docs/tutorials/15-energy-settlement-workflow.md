@@ -778,4 +778,4 @@ Options:
   -h, --help                      Show this command help.
 ```
 
-[Previous: Tree workflows](14-tree-workflows.md) | [Return to the series introduction](README.md)
+[Previous: Tree workflows](14-tree-workflows.md) | [Next: Python utilities for downstream applications](16-python-utilities.md) | [Return to the series introduction](README.md)

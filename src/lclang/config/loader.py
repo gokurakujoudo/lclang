@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -23,6 +24,7 @@ from lclang.config.sources import (
     canonical_config_path,
     resolve_using_path,
 )
+from lclang.config.using import evaluate_using_target, snapshot_using_overrides
 from lclang.errors import LclConfigError
 from lclang.source import SourceOrigin
 from lclang.types import SourceName
@@ -52,10 +54,16 @@ class ConfigLoader:
     characters: int = 0
     declarations: int = 0
 
-    async def load(self, path: str | Path) -> Config:
+    async def load(
+        self,
+        path: str | Path,
+        *,
+        overrides: Mapping[str, object] | None = None,
+    ) -> Config:
         """Load and recursively expand one root configuration path.
 
         :param path: Root `.lclcfg` path.
+        :param overrides: Call-level literal or semantic using-target overrides.
         :returns: Immutable fully expanded configuration snapshot.
         :raises LclConfigError: If retrieval, parsing, expansion, or limits fail.
         :raises LclConfigLifecycleError: If reused across event loops.
@@ -64,8 +72,10 @@ class ConfigLoader:
            Each call expands cached documents again at every using placement.
         """
         self.ensure_loop()
+        selected_overrides = snapshot_using_overrides(overrides)
         root = await self.source_for(canonical_config_path(path), None)
-        expanded = await self.expand(root, (), 1)
+        expanded: list[ConfigDefinition] = []
+        await self.expand(root, (), 1, expanded, selected_overrides)
         return Config(root.document.version, root.document.origin, tuple(expanded))
 
     def ensure_loop(self) -> None:
@@ -163,13 +173,17 @@ class ConfigLoader:
         loaded: LoadedConfigSource,
         stack: tuple[str, ...],
         depth: int,
-    ) -> list[ConfigDefinition]:
+        output: list[ConfigDefinition],
+        overrides: Mapping[str, object],
+    ) -> None:
         """Expand a parsed document at one source-order placement.
 
         :param loaded: Resolved and parsed document to expand.
         :param stack: Ordered active resolver identities.
         :param depth: One-based expansion depth including the root.
-        :returns: Chronological definition occurrences.
+        :param output: Call-local chronological definitions accumulated in place.
+        :param overrides: Call-level using-target overrides.
+        :returns: ``None`` after appending chronological definitions.
         :raises LclConfigCycleError: If the identity is already active.
         :raises LclConfigLimitError: If depth exceeds policy.
 
@@ -184,13 +198,12 @@ class ConfigLoader:
             cycle = (*stack[start:], identity)
             raise LclConfigCycleError("config using cycle: " + " -> ".join(cycle))
         active = (*stack, identity)
-        output: list[ConfigDefinition] = []
         for declaration in loaded.document.declarations:
             if isinstance(declaration, ConfigDefinition):
                 output.append(declaration)
                 continue
             assert isinstance(declaration, ConfigUsing)
-            target = resolve_using_path(declaration.target, loaded.source)
+            target_text = await evaluate_using_target(declaration, output, overrides)
+            target = resolve_using_path(target_text, loaded.source)
             child = await self.source_for(target, loaded.source)
-            output.extend(await self.expand(child, active, depth + 1))
-        return output
+            await self.expand(child, active, depth + 1, output, overrides)

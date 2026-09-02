@@ -10,14 +10,18 @@ from lclang.ast import LclConstant
 from lclang.config import (
     ConfigLoader,
     ConfigLoadLimits,
+    ConfigUsing,
     LclConfigCycleError,
     LclConfigLimitError,
     LclConfigUsingError,
     ResolvedConfigSource,
     load_config,
+    parse_config,
 )
 from lclang.config.errors import LclConfigSyntaxError
 from lclang.config.sources import LoadedConfigSource
+from lclang.config.using import evaluate_using_target, snapshot_using_overrides
+from lclang.lang import parse_expression
 from tests.config.support import MappingResolver
 
 
@@ -75,6 +79,122 @@ async def test_nested_using_expands_in_place_with_history_and_magic(tmp_path: Pa
     assert isinstance(config.definitions["origin"].expression, LclConstant)
     assert config.definitions["origin"].expression.value == str(child.resolve())
     assert config.definitions["value"] is config.history["value"][-1]
+
+
+@pytest.mark.asyncio
+async def test_dynamic_using_observes_prior_winners_and_typed_overrides(
+    tmp_path: Path,
+) -> None:
+    """Each f-string target gets fresh source-order state beneath overrides."""
+    root = (tmp_path / "root.lclcfg").resolve()
+    first = (tmp_path / "first.lclcfg").resolve()
+    second = (tmp_path / "second.lclcfg").resolve()
+    override = (tmp_path / "base-override.lclcfg").resolve()
+    texts = {
+        root: (
+            'base: "base"\n'
+            'part: "first"\n'
+            'using f"{part}.lclcfg"\n'
+            'part: "second"\n'
+            'using f"{part}.lclcfg"\n'
+        ),
+        first: 'selected: "first"\n',
+        second: 'selected: "second"\n',
+        override: 'selected: "override"\n',
+    }
+    ordinary = await ConfigLoader(MappingResolver(texts)).load(root)
+    selected = [item.expression for item in ordinary.history["selected"]]
+    assert all(isinstance(item, LclConstant) for item in selected)
+    assert [item.value for item in selected if isinstance(item, LclConstant)] == [
+        "first",
+        "second",
+    ]
+
+    overridden = await ConfigLoader(MappingResolver(texts)).load(
+        root,
+        overrides={"part": parse_expression("base + '-override'")},
+    )
+    assert len(overridden.history["selected"]) == 2
+    winner = overridden.definitions["selected"].expression
+    assert isinstance(winner, LclConstant)
+    assert winner.value == "override"
+
+
+@pytest.mark.asyncio
+async def test_dynamic_using_supports_env_and_reports_position_failures(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Environment targets work while unavailable or invalid results stay structured."""
+    root = (tmp_path / "root.lclcfg").resolve()
+    child = (tmp_path / "chosen.lclcfg").resolve()
+    override_child = (tmp_path / "override.lclcfg").resolve()
+    monkeypatch.setenv("LCLANG_USING_PART", "chosen")
+    resolver = MappingResolver(
+        {
+            root: 'using f"{env.LCLANG_USING_PART}.lclcfg"\n',
+            child: "value: 42\n",
+            override_child: "value: 84\n",
+        }
+    )
+    config = await ConfigLoader(resolver).load(root)
+    value = config.definitions["value"].expression
+    assert isinstance(value, LclConstant)
+    assert value.value == 42
+
+    overridden = await ConfigLoader(resolver).load(
+        root,
+        overrides={"env.LCLANG_USING_PART": "override"},
+    )
+    overridden_value = overridden.definitions["value"].expression
+    assert isinstance(overridden_value, LclConstant)
+    assert overridden_value.value == 84
+
+    for source, message in (
+        ('using f"{later}.lclcfg"\nlater: "chosen"\n', "unknown variable"),
+        ('using f"{\'\'}"\n', "non-empty"),
+        ('using f"{\'chosen.txt\'}"\n', ".lclcfg"),
+    ):
+        with pytest.raises(LclConfigUsingError, match=message) as caught:
+            await ConfigLoader(MappingResolver({root: source})).load(root)
+        assert caught.value.span is not None
+        assert caught.value.span.start.line == 1
+
+
+@pytest.mark.asyncio
+async def test_dynamic_using_validates_overrides_masks_and_evaluated_type(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Loader override validation and defensive target checks remain structured."""
+    with pytest.raises(TypeError, match="mapping"):
+        snapshot_using_overrides(1)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="names"):
+        snapshot_using_overrides({1: "value"})  # type: ignore[dict-item]
+
+    root = (tmp_path / "root.lclcfg").resolve()
+    child = (tmp_path / "chosen.lclcfg").resolve()
+    resolver = MappingResolver(
+        {
+            root: 'part!: "chosen"\nusing f"{part}.lclcfg"\n',
+            child: "value: 42\n",
+        }
+    )
+    loaded = await ConfigLoader(resolver).load(
+        root,
+        overrides={"part!": parse_expression("'chosen'")},
+    )
+    assert "value" in loaded.definitions
+
+    declaration = parse_config('using f"chosen.lclcfg"\n').declarations[0]
+    assert isinstance(declaration, ConfigUsing)
+
+    async def wrong_result(*args: object) -> object:
+        return 1
+
+    monkeypatch.setattr("lclang.config.using.evaluate_target_expression", wrong_result)
+    with pytest.raises(LclConfigUsingError, match="non-empty text"):
+        await evaluate_using_target(declaration, (), {})
 
 
 @pytest.mark.asyncio
