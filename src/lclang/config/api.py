@@ -19,12 +19,14 @@ async def load_config(
     *,
     resolver: ConfigSourceResolver | None = None,
     limits: ConfigLoadLimits | None = None,
+    overrides: Mapping[str, object] | None = None,
 ) -> Config:
     """Load and recursively expand one `.lclcfg` root.
 
     :param path: Root configuration path.
     :param resolver: Optional host-controlled resolver; filesystem is default.
     :param limits: Optional resource ceilings.
+    :param overrides: Literal or semantic values overriding dynamic using context.
     :returns: Immutable expanded configuration snapshot.
     :raises Exception: If retrieval, parsing, expansion, or limits fail.
 
@@ -33,7 +35,10 @@ async def load_config(
     """
     selected_resolver = FileConfigResolver() if resolver is None else resolver
     selected_limits = ConfigLoadLimits() if limits is None else limits
-    return await ConfigLoader(selected_resolver, selected_limits).load(path)
+    return await ConfigLoader(selected_resolver, selected_limits).load(
+        path,
+        overrides=overrides,
+    )
 
 
 async def evaluate_config(

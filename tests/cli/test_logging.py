@@ -88,6 +88,16 @@ def test_disabled_and_enabled_loggers_are_isolated_and_close() -> None:
         assert "value=2" in (Path(directory) / "lclang.log").read_text(encoding="utf-8")
 
 
+@pytest.mark.asyncio
+async def test_logger_scope_must_remain_a_proxy() -> None:
+    """A real logger binding cannot be materialized as structured configuration."""
+    async with lclang.define_frame(
+        lclang.define_module("invalid-logger", {"logger": "1"})
+    ) as frame:
+        with pytest.raises(TypeError, match="FrameProxy"):
+            await resolve_log_config(frame)
+
+
 def test_console_and_file_handlers_share_the_configured_format(
     capsys: pytest.CaptureFixture[str],
 ) -> None:

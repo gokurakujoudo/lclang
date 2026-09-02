@@ -41,6 +41,23 @@ Python integrations may import `STANDARD_MANIFESTS`, `STANDARD_PRESET`,
 `assemble_stdlib`, `collect`, `first`, `join`, `lines`, `lookup`, `merge`,
 `json_encode`, `json_decode`, and `recursive` from `lclang.stdlib`.
 
+## Environment and logging utilities
+
+`from lclang.utils import env` returns the singleton live `Environment` view.
+`env.NAME` and `env.get(name, default=None)` consult `os.environ` at each call;
+missing names return the default and reads never snapshot or mutate the process
+environment. The canonical LCL `env` utility adds scoped Frame overrides on top
+of this view.
+
+The same module exports `DEFAULT_LOG_FORMAT`, `LogConfig`, `LoggerHandle`, and
+`async create_logger(config, name)`. `LogConfig` validates a disabled or file
+logging policy without touching the filesystem. `create_logger` creates an
+isolated, non-propagating standard-library logger and returns its owned handle;
+`LoggerHandle.close()` detaches and closes handlers idempotently. This surface
+does not require an lclang CLI application. `lclang.cli.LogConfig` remains a
+compatible export, and the CLI materializes its scoped `logger` proxy with
+`as_record(LogConfig)` before delegating file handler creation to this utility.
+
 ## Workflow status
 
 `lclang.workflow` exports:

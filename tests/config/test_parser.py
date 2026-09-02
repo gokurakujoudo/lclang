@@ -49,6 +49,22 @@ def test_parse_colon_definitions_comments_continuation_and_duplicates(tmp_path: 
     assert using.target == "child.lclcfg"
 
 
+def test_using_accepts_only_literal_and_semantic_fstring_targets() -> None:
+    """Dynamic using syntax retains its parsed source-aware f-string AST."""
+    document = parse_config('using f"parts/{name}.lclcfg"\n')
+    using = document.declarations[0]
+    assert isinstance(using, ConfigUsing)
+    assert isinstance(using.target, LclJoinedString)
+
+    for text in (
+        "using name\n",
+        "using 1\n",
+        'using "parts/" + name + ".lclcfg"\n',
+    ):
+        with pytest.raises(LclConfigSyntaxError, match="string"):
+            parse_config(text)
+
+
 def test_file_magic_becomes_eager_constants_with_physical_origin(tmp_path: Path) -> None:
     """Magic identifiers disappear from the runtime AST while retaining their spans."""
     path = (tmp_path / "magic.lclcfg").resolve()
@@ -115,7 +131,6 @@ def test_masked_definition_marker_normalizes_exact_qualified_names() -> None:
         ("value: 1\n__LCL_VERSION__: 1\n", LclConfigVersionError),
         ("__LCL_VERSION__: 2\nvalue: 1\n", LclConfigVersionError),
         ("__private: 1\n", LclConfigSyntaxError),
-        ("using f'child.lclcfg'\n", LclConfigSyntaxError),
         ("using 'child.txt'\n", LclConfigSyntaxError),
     ],
 )

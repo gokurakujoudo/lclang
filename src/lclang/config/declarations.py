@@ -2,7 +2,9 @@
 
 from pathlib import Path
 
+from lclang.ast import LclConstant, LclJoinedString
 from lclang.config.errors import LclConfigSyntaxError, LclConfigVersionError
+from lclang.config.expressions import parse_config_expression
 from lclang.config.lines import LogicalLine
 from lclang.config.model import ConfigUsing
 from lclang.config.positions import advance_position
@@ -49,7 +51,7 @@ def parse_using(
     ordinal: int,
     origin: SourceOrigin,
 ) -> ConfigUsing:
-    """Parse one quoted using declaration.
+    """Parse one literal or semantic f-string using declaration.
 
     :param line: Logical declaration text and span.
     :param leading: Horizontal indentation before `using`.
@@ -65,18 +67,20 @@ def parse_using(
         raise LclConfigSyntaxError("using declaration cannot continue", span=line.span)
     target_text = line.text[leading + 5 :]
     start = advance_position(line.start, line.text[: leading + 5])
-    try:
-        tokens = significant_tokens(scan_tokens(target_text, origin=origin, start=start))
-    except LclSyntaxError as error:
-        raise LclConfigSyntaxError(error.message, span=error.span) from error
-    if len(tokens) != 2 or tokens[0].kind is not TokenKind.STRING:
-        raise LclConfigSyntaxError("using requires exactly one quoted string", span=line.span)
-    target = tokens[0].value
-    if not isinstance(target, str) or not target:
-        raise LclConfigSyntaxError("using target must be non-empty text", span=tokens[0].span)
-    if Path(target).suffix != ".lclcfg":
-        raise LclConfigSyntaxError("using target must end in .lclcfg", span=tokens[0].span)
-    return ConfigUsing(target, line.span, ordinal)
+    expression = parse_config_expression(target_text, origin=origin, start=start)
+    if isinstance(expression, LclConstant) and isinstance(expression.value, str):
+        target = expression.value
+        if not target:
+            raise LclConfigSyntaxError("using target must be non-empty text", span=expression.span)
+        if Path(target).suffix != ".lclcfg":
+            raise LclConfigSyntaxError("using target must end in .lclcfg", span=expression.span)
+        return ConfigUsing(target, line.span, ordinal)
+    if isinstance(expression, LclJoinedString):
+        return ConfigUsing(expression, line.span, ordinal)
+    raise LclConfigSyntaxError(
+        "using requires exactly one string literal or f-string",
+        span=expression.span,
+    )
 
 
 def validate_definition_name(name: str, line: LogicalLine, origin: SourceOrigin) -> None:

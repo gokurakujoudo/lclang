@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, fields, is_dataclass
 from typing import Any, Protocol
 
 from lclang.errors import LclNameError
+from lclang.scopes import ScopedProxyValue
 from lclang.source import SourceSpan
 
 
@@ -24,7 +25,7 @@ class ProxyFrame(Protocol):
 
 
 @dataclass(frozen=True, slots=True)
-class FrameProxy:
+class FrameProxy(ScopedProxyValue):
     """Expose qualified children through one requesting Frame.
 
     :param frame: Frame where every terminal lookup begins.
@@ -61,6 +62,71 @@ class FrameProxy:
         if kind == "proxy":
             return FrameProxy(self.frame, (*self.path, name))
         return self.frame.get_resolved(full, None)
+
+    def __getitem__(self, name: str) -> Any:
+        """Return the same child selected by attribute access.
+
+        :param name: Direct child identifier.
+        :returns: Nested proxy or coroutine resolving a real leaf.
+        :raises TypeError: If *name* is not text.
+        :raises AttributeError: If the qualified child is absent.
+        """
+        if not isinstance(name, str):
+            raise TypeError("FrameProxy index must be text")
+        return getattr(self, name)
+
+    async def get(self, name: str, default: object = None) -> object:
+        """Resolve one direct child or return a default when it is absent.
+
+        :param name: Direct child name.
+        :param default: Value returned unchanged when the child is absent.
+        :returns: Nested proxy, resolved terminal value, or *default*.
+        :raises TypeError: If *name* is not text.
+        """
+        from lclang.runtime.frame.scoped import find_scoped_binding
+
+        if not isinstance(name, str):
+            raise TypeError("FrameProxy child name must be text")
+        full = ".".join((*self.path, name))
+        owner, kind = find_scoped_binding(self.frame, full)
+        if owner is None:
+            return default
+        if kind == "proxy":
+            return FrameProxy(self.frame, (*self.path, name), self.trace)
+        return await self.frame.get_resolved(full, None)
+
+    async def field_names(self) -> list[str]:
+        """Return alphabetically sorted identifiers for direct proxy children.
+
+        :returns: Effective direct child names across the Frame hierarchy.
+        """
+        from lclang.runtime.frame.scoped import hierarchy_binding_names
+
+        prefix = ".".join(self.path) + "."
+        names = {
+            name[len(prefix) :].split(".", 1)[0]
+            for name in hierarchy_binding_names(self.frame)
+            if name.startswith(prefix) and len(name) > len(prefix)
+        }
+        return sorted(names)
+
+    async def as_record[T](self, cls: type[T]) -> T:
+        """Materialize direct children into one dataclass instance.
+
+        :param cls: Dataclass type used as the record template.
+        :returns: New dataclass instance containing present child values.
+        :raises TypeError: If *cls* is not a dataclass type or required fields
+           remain absent.
+        :raises Exception: If resolving a present child fails.
+        """
+        if not isinstance(cls, type) or not is_dataclass(cls):
+            raise TypeError("FrameProxy record type must be a dataclass")
+        available = set(await self.field_names())
+        values: dict[str, object] = {}
+        for item in fields(cls):
+            if item.init and item.name in available:
+                values[item.name] = await self.get(item.name)
+        return cls(**values)
 
     async def resolve_attribute(
         self,

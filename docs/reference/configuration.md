@@ -19,8 +19,9 @@ api_token!: "secret"
 total: (base + \ # the next physical line continues
   3)
 
-# The target is one quoted path string.
+# The target is a quoted path or semantic f-string.
 using "parts/common.lclcfg"
+using f"parts/{profile}.lclcfg"
 ```
 
 Blank lines and full-line comments are ignored. A trailing `#` comment is valid
@@ -81,7 +82,9 @@ any number of `..` components. The optional filesystem `allowed_root` policy can
 reject the resulting path after normalization.
 
 Files decode as UTF-8; a BOM is accepted only at byte zero. Loading performs no
-globbing, environment expansion, network access, or expression evaluation.
+globbing or network access. A `using` target may be a literal string or an LCL
+f-string and must evaluate to non-empty text ending in `.lclcfg`; other target
+expression forms are rejected.
 
 ## Expansion and precedence
 
@@ -89,6 +92,16 @@ globbing, environment expansion, network access, or expression evaluation.
 definitions are inserted at the declaration position. Every occurrence expands,
 even when retrieval and parsing use a cached immutable snapshot. Direct and
 indirect cycles are errors.
+
+A dynamic `using` f-string sees only expanded definitions occurring before its
+declaration, call-supplied loader overrides at higher precedence, and canonical
+builtins such as live `env`. Unresolved forward names, evaluation failures,
+non-string results, empty targets, and invalid suffixes become source-spanned
+`LclConfigUsingError` failures. Each target uses a fresh temporary Frame that is
+always closed and discarded; target evaluation never seeds final runtime
+caches. Complete expansion still computes final winners independently, so a
+later declaration may change the eventual runtime value without retroactively
+changing a target already selected.
 
 Duplicate names are valid in one or many files. The last chronological
 definition wins without moving the name's first-appearance iteration position.
@@ -106,9 +119,12 @@ and `A.x.y`, are rejected before runtime conversion.
 parses one unresolved document and performs no I/O. Supplying `source_path`
 enables file magic without reading that path.
 
-`await load_config(path, resolver=None, limits=None)` uses `FileConfigResolver`
-by default. Embedders may provide an async `ConfigSourceResolver`; returned
-sources remain path-backed so relative targets and magic stay deterministic.
+`await load_config(path, resolver=None, limits=None, overrides=None)` uses
+`FileConfigResolver` by default. Embedders may provide an async
+`ConfigSourceResolver`; returned sources remain path-backed so relative targets
+and magic stay deterministic. `ConfigLoader.load` accepts the same `overrides`
+mapping. LCL AST values are lazy definitions during dynamic target evaluation;
+all other values are literals.
 
 ```python
 from pathlib import Path

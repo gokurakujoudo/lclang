@@ -2,31 +2,15 @@
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from enum import IntEnum
-from pathlib import Path
 from typing import Self
 
 from lclang.cli.validation import freeze_mapping, normalize_text, require_lcl_qualified_name
 from lclang.masking import normalize_masked_mapping, split_masked_name
-
-# Default formal pipe-delimited format retaining diagnostic fields.
-DEFAULT_LOG_FORMAT = (
-    "%(asctime)s | %(levelname)-8s | %(name)s | %(filename)s:%(lineno)d | "
-    "%(funcName)s | %(message)s"
-)
-# Required percent fields that custom formats must retain.
-REQUIRED_LOG_FIELDS = (
-    "asctime",
-    "levelname",
-    "filename",
-    "lineno",
-    "funcName",
-    "message",
-)
+from lclang.utils.logging import LogConfig
 
 
 @dataclass(frozen=True, slots=True)
@@ -185,47 +169,6 @@ class CliResult:
             raise TypeError("result status must be CliResultStatus")
         if not isinstance(self.description, str):
             raise TypeError("result description must be text")
-
-
-@dataclass(frozen=True, slots=True)
-class LogConfig:
-    """Define effective file logging defaults.
-
-    :param log_dir: Directory for the log file, or ``None`` to disable output.
-    :param log_file_name: Leaf log filename.
-    :param log_level: Standard integer level or case-insensitive level name.
-    :param log_format: Percent-style logging format with required fields.
-    """
-
-    log_dir: str | None = None
-    log_file_name: str = "lclang.log"
-    log_level: str | int = "INFO"
-    log_format: str = DEFAULT_LOG_FORMAT
-
-    def __post_init__(self) -> None:
-        """Validate logging values without touching the filesystem.
-
-        :returns: ``None``.
-        :raises TypeError: If a field has an unsupported type.
-        :raises ValueError: If a path, level, or format is invalid.
-        """
-        if self.log_dir is not None and not isinstance(self.log_dir, str):
-            raise TypeError("log directory must be text or None")
-        if self.log_dir == "":
-            raise ValueError("log directory cannot be empty")
-        if not isinstance(self.log_file_name, str):
-            raise TypeError("log filename must be text")
-        if not self.log_file_name or Path(self.log_file_name).name != self.log_file_name:
-            raise ValueError("log filename must be a non-empty leaf name")
-        if isinstance(self.log_level, str):
-            if self.log_level.upper() not in logging.getLevelNamesMapping():
-                raise ValueError("unknown log level")
-        elif not isinstance(self.log_level, int):
-            raise TypeError("log level must be text or integer")
-        if not isinstance(self.log_format, str):
-            raise TypeError("log format must be text")
-        if any(f"%({name})" not in self.log_format for name in REQUIRED_LOG_FIELDS):
-            raise ValueError("log format must contain every required diagnostic field")
 
 
 @dataclass(frozen=True, slots=True)

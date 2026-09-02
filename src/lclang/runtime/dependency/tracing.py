@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any, cast
 
 from lclang.lang.evaluator.context import Resolver
 from lclang.runtime.dependency.model import DependencyEdge, DependencyKind
-from lclang.scope_proxy import FrameProxy
+from lclang.scopes import ScopedProxyValue
 from lclang.source import SourceSpan
 from lclang.types import VarName
 
@@ -97,8 +98,8 @@ class TracingResolver:
         except BaseException:
             self.trace.record(name, span)
             raise
-        if isinstance(result, FrameProxy):
-            return result.with_trace(
+        if isinstance(result, ScopedProxyValue):
+            return cast(Any, result).with_trace(
                 lambda target, target_span: self.trace.record(
                     VarName(target),
                     target_span,

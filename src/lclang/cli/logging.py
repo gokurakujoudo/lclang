@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from dataclasses import dataclass
 from logging.handlers import MemoryHandler
-from pathlib import Path
 from typing import TextIO, cast
 
 from lclang.cli.audit import (
@@ -15,14 +13,32 @@ from lclang.cli.audit import (
     normalized_argv,
     redacted_overrides,
 )
-from lclang.cli.models import CliParams, LogConfig
+from lclang.cli.models import CliParams
 from lclang.runtime import Frame
+from lclang.scope_proxy import FrameProxy
+from lclang.utils.logging import (
+    LogConfig,
+    LoggerHandle,
+    build_handler,
+    numeric_log_level,
+)
+from lclang.utils.logging import (
+    create_logger as create_configured_logger,
+)
 
 # Compatibility exports retained for existing CLI logging callers.
 __all__ = [
     "AUDIT_RECORD_ATTRIBUTE",
+    "LogConfig",
+    "LoggerHandle",
+    "build_handler",
+    "create_logger",
+    "create_verbose_logger",
+    "log_execution_start",
     "normalized_argv",
+    "numeric_log_level",
     "redacted_overrides",
+    "resolve_log_config",
 ]
 
 
@@ -48,34 +64,6 @@ class InvocationLevelFilter:
             or record.name != self.logger_name
             or record.levelno >= self.level
         )
-
-
-@dataclass(slots=True)
-class LoggerHandle:
-    """Own one isolated command logger and its handlers.
-
-    :param logger: Handler-visible standard-library logger.
-    :param handlers: Handlers to detach and close.
-    :param log_path: Absolute enabled file path, or ``None`` for null logging.
-    :param closed: Whether cleanup has already occurred.
-    """
-
-    logger: logging.Logger
-    handlers: tuple[logging.Handler, ...]
-    log_path: Path | None = None
-    closed: bool = False
-
-    def close(self) -> None:
-        """Detach and close every owned handler once.
-
-        :returns: ``None``.
-        """
-        if self.closed:
-            return
-        self.closed = True
-        for handler in self.handlers:
-            self.logger.removeHandler(handler)
-            handler.close()
 
 
 @dataclass(slots=True)
@@ -154,42 +142,13 @@ async def resolve_log_config(frame: Frame) -> LogConfig:
 
     :param frame: Top invocation Frame.
     :returns: Validated effective log configuration.
+    :raises TypeError: If the logger binding is not a Frame proxy.
     :raises Exception: If evaluation or validation fails.
     """
-    return LogConfig(
-        log_dir=cast(str | None, await frame.get("logger.log_dir")),
-        log_file_name=cast(str, await frame.get("logger.log_file_name")),
-        log_level=cast(str | int, await frame.get("logger.log_level")),
-        log_format=cast(str, await frame.get("logger.log_format")),
-    )
-
-
-def numeric_log_level(value: str | int) -> int:
-    """Convert a validated level value into its numeric representation.
-
-    :param value: Standard level name or integer.
-    :returns: Numeric logging level.
-    """
-    if isinstance(value, int):
-        return value
-    return logging.getLevelNamesMapping()[value.upper()]
-
-
-def build_handler(config: LogConfig) -> logging.Handler:
-    """Create one configured handler using blocking filesystem APIs.
-
-    :param config: Validated effective log configuration.
-    :returns: New null or UTF-8 file handler.
-    :raises OSError: If an enabled directory or file cannot be created.
-    """
-    if config.log_dir is None:
-        handler: logging.Handler = logging.NullHandler()
-    else:
-        directory = Path(config.log_dir)
-        directory.mkdir(parents=True, exist_ok=True)
-        handler = logging.FileHandler(directory / config.log_file_name, encoding="utf-8")
-    handler.setFormatter(logging.Formatter(config.log_format))
-    return handler
+    proxy = await frame.get("logger")
+    if not isinstance(proxy, FrameProxy):
+        raise TypeError("logger configuration must be a FrameProxy")
+    return await proxy.as_record(LogConfig)
 
 
 async def create_logger(frame: Frame, identity: str) -> LoggerHandle:
@@ -202,14 +161,10 @@ async def create_logger(frame: Frame, identity: str) -> LoggerHandle:
     :raises Exception: If effective values fail evaluation or validation.
     """
     config = await resolve_log_config(frame)
+    handle = await create_configured_logger(config, f"lclang.cli.{identity}")
     level = numeric_log_level(config.log_level)
-    logger = logging.Logger(f"lclang.cli.{identity}", level)
-    logger.propagate = False
-    handler = await asyncio.to_thread(build_handler, config)
-    handler.addFilter(InvocationLevelFilter(logger.name, level))
-    logger.addHandler(handler)
-    path = Path(handler.baseFilename) if isinstance(handler, logging.FileHandler) else None
-    return LoggerHandle(logger, (handler,), path)
+    handle.handlers[0].addFilter(InvocationLevelFilter(handle.logger.name, level))
+    return handle
 
 
 def log_execution_start(

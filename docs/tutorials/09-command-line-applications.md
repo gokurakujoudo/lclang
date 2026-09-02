@@ -167,6 +167,17 @@ configuration should omit it because qualified leaves infer their prefixes.
 `SUCCESS`, `FAILURE`, and `EXCEPTION` map to exit statuses `0`, `1`, and `2`.
 Help, version, invalid arguments, logging, and the built-in `builtins`,
 `parse_lcl`, and `eval_lcl` commands use the same deterministic routing model.
+Both expression commands document an optional `FORCE` Boolean override. Exact
+valueless `-o FORCE` requires an exact `RESULT=LCL[...]` value to contain valid
+LCL; syntax failures return status `2` with the structured parse error, complete
+RESULT token, and an underline at the failing span. Unwrapped RESULT values,
+non-RESULT overrides, and assigned FORCE values retain permissive literal
+fallback. A masked `RESULT!` redacts the diagnostic excerpt.
+
+CLI overrides are also available while a configuration loader evaluates a
+dynamic `using f"..."` target. The same override is reused in the final Frame,
+so it can select a file from the prior source context and remain the runtime
+winner.
 
 Logger configuration occupies the `logger` scope. A configuration file can set
 `logger.log_dir`, `logger.log_file_name`, `logger.log_level`, and
@@ -182,6 +193,9 @@ structured format. `%(args)s` is neither present nor required. When a file is
 enabled, its first record reports the bound path immediately after the handler
 is installed; the remaining audit preamble then records the centered execution
 banner, exact raw command line, and masked winning configuration.
+Applications that only need the same file-logging policy can instead import
+`LogConfig` and `create_logger` from `lclang.utils`; this standalone utility
+does not require CLI routing.
 
 Every invocation injects seven reserved values before logger configuration is
 evaluated. `__as_of_date__` is the Python `date`, `__dryrun__` and

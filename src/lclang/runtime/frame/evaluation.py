@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Mapping
-from typing import Protocol, cast
+from typing import Any, Protocol, cast
 
 from lclang.diagnostics import (
     internal_masked_scope,
@@ -28,7 +28,11 @@ from lclang.runtime.frame.flights import (
 from lclang.runtime.frame.lifecycle import InternalFrameLifecycle
 from lclang.runtime.frame.limits import EvaluationLimits, internal_budget_scope
 from lclang.runtime.frame.lookup import find_frame
-from lclang.runtime.frame.scoped import is_name_masked, local_binding_kind
+from lclang.runtime.frame.scoped import (
+    find_scoped_binding,
+    find_scoped_factory,
+    is_name_masked,
+)
 from lclang.runtime.modules import Module
 from lclang.scope_proxy import FrameProxy
 from lclang.source import SourceSpan
@@ -162,8 +166,12 @@ class FrameEvaluationApi:
                     f"name={name!r} owner={str(frame.frame_id)!r} source=missing",
                 )
             raise LclNameError(f"unknown variable: {name}", span=span)
-        if local_binding_kind(owner, name) == "proxy":
+        scoped_owner, binding_kind = find_scoped_binding(self, name)
+        if binding_kind == "proxy":
             return FrameProxy(cast(object, self), tuple(name.split(".")))  # type: ignore[arg-type]
+        if binding_kind == "factory" and scoped_owner is not None:
+            factory = find_scoped_factory(scoped_owner, name)
+            return cast(Any, factory).bind(self, tuple(name.split(".")))
         if owner is not self:
             return await cast(FrameEvaluationApi, owner).get_resolved(name, span)
         if name in frame._results:

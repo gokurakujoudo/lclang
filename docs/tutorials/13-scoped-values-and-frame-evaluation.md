@@ -11,6 +11,7 @@ without adding a Module definition or cache entry.
 - why qualified leaves normally make `FRAME_PROXY` unnecessary;
 - how scoped lookup, safe access, parent lookup, and caching interact;
 - how Python and LCL use the same qualified paths;
+- how to discover proxy children and materialize dataclass records;
 - when to use `frame.evaluate` instead of `frame.get`.
 
 ## Define and read one scope
@@ -329,11 +330,89 @@ failure snapshot. `broken` is still a named definition, so its own failure uses
 normal named caching. The resource returned by `make()` is never stored in the
 Frame, so closing the Frame leaves it open for explicit caller cleanup.
 
+## Build an override-friendly list of records
+
+A scope can represent a collection without storing one aggregate list. Each
+item stays independently overrideable, while Python can materialize a typed,
+detached view when it needs one.
+
+<!-- lclang-tutorial-exec -->
+```python
+import asyncio
+from dataclasses import dataclass
+
+import lclang
+
+
+@dataclass
+class Endpoint:
+    name: str
+    host: str
+    port: int = 443
+
+
+async def main() -> None:
+    parent = lclang.define_frame(
+        lclang.define_module(
+            "endpoint-defaults",
+            {
+                "endpoints.blue.name": '"blue"',
+                "endpoints.blue.host": '"blue.example.com"',
+                "endpoints.blue.port": "8443",
+                "endpoints.green.name": '"green"',
+                "endpoints.green.host": '"green.example.com"',
+            },
+        )
+    )
+    child = parent.derive(
+        lclang.define_module(
+            "deployment-overrides",
+            {
+                "endpoints.green.host": '"new-green.example.com"',
+                "endpoints.canary.name": '"canary"',
+                "endpoints.canary.host": '"canary.example.com"',
+            },
+        )
+    )
+    try:
+        endpoints = await child.get("endpoints")
+        names = await endpoints.field_names()
+        assert names == ["blue", "canary", "green"]
+        records = [await endpoints[name].as_record(Endpoint) for name in names]
+        assert records == [
+            Endpoint("blue", "blue.example.com", 8443),
+            Endpoint("canary", "canary.example.com"),
+            Endpoint("green", "new-green.example.com"),
+        ]
+        assert await child.evaluate('endpoints["blue"].port') == 8443
+    finally:
+        await child.close()
+        await parent.close()
+
+
+asyncio.run(main())
+```
+
+`field_names()` inspects only the immediate effective children, deduplicates
+names across both Frame layers, and sorts them alphabetically. Indexing a proxy
+with a string follows exactly the same lookup path as attribute access, which
+is why the LCL expression and `endpoints["blue"]` reach the same cached leaf.
+`as_record(Endpoint)` resolves only declared initializer fields: the missing
+ports use the dataclass default, while unrelated scoped fields would be ignored.
+
+Each `Endpoint` is a detached result, not a new owner or cache. Lookup,
+dependency tracing, lifecycle ownership, caching, and override precedence all
+remain in the shared child/parent Frame hierarchy. Keeping each endpoint as
+flat qualified bindings lets an override replace one field or add one endpoint
+without copying or replacing an aggregate collection.
+
 ## Choose the right boundary
 
 - Use `evaluate` or `evaluate_sync` for one standalone expression and mapping.
 - Use `frame.evaluate` for an unnamed expression over an existing context.
 - Use `frame.get` for a named definition whose outcome should be cached.
+- Use `FrameProxy.field_names()` and indexed `as_record()` calls for a dynamic,
+  independently overrideable collection of typed results.
 
 Scoped names never introduce relative lookup: inside `service.url`, `host`
 does not mean `service.host`. Explicit paths keep dependencies unambiguous.

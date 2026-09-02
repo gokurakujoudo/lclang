@@ -55,8 +55,8 @@ async def test_module_definitions_share_record_attributes_with_python() -> None:
         assert await frame.get("label") == "Ada:True"
 
 
-def test_builtin_layer_has_a_fixed_ambient_free_inventory() -> None:
-    """The standard layer excludes I/O, dynamic code, import, and mutation."""
+def test_builtin_layer_has_a_fixed_reviewed_inventory() -> None:
+    """The standard layer exposes only reviewed utilities and pure operations."""
     expected = {
         "abs",
         "all",
@@ -68,6 +68,7 @@ def test_builtin_layer_has_a_fixed_ambient_free_inventory() -> None:
         "dict",
         "divmod",
         "enumerate",
+        "env",
         "filter",
         "float",
         "format",

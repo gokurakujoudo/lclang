@@ -21,6 +21,7 @@ from lclang.utils.calendar.loading import (
     use_calendar_manager,
     use_file_system_hardcoded_calendar_loader,
 )
+from lclang.utils.environment import env
 
 # Curated ordinary Python value types and ambient-I/O-free functions.
 LCL_BUILTIN_VALUES: dict[str, object] = {
@@ -35,6 +36,7 @@ LCL_BUILTIN_VALUES: dict[str, object] = {
     "dict": dict,
     "divmod": divmod,
     "enumerate": enumerate,
+    "env": env,
     "filter": filter,
     "float": float,
     "format": format,

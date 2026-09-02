@@ -20,6 +20,7 @@ BUILTIN_DESCRIPTIONS: Mapping[str, str] = MappingProxyType(
         "dict": "Create a dictionary.",
         "divmod": "Return a quotient and remainder pair.",
         "enumerate": "Pair items with consecutive indexes.",
+        "env": "Read live process environment variables with scoped overrides.",
         "filter": "Keep items accepted by a predicate.",
         "float": "Convert a value to a floating-point number.",
         "format": "Format a value with a format specification.",

@@ -23,14 +23,15 @@
 - [Scoped values and Frame evaluation](tutorials/13-scoped-values-and-frame-evaluation.md)
 - [Tree workflows](tutorials/14-tree-workflows.md)
 - [Case Study: Energy Settlement Workflow](tutorials/15-energy-settlement-workflow.md)
+- [Python utilities for downstream applications](tutorials/16-python-utilities.md)
 
 ## References
 
 - [Reference index](reference/README.md)
 - [LCL V1 language specification](reference/language.md), including immutable records
-- [Runtime API](reference/runtime.md)
+- [Runtime API](reference/runtime.md), including Frame proxy discovery and records
 - [Configuration format and API](reference/configuration.md)
-- [Standard and workflow utilities](reference/utilities.md)
+- [Environment, logging, standard, and workflow utilities](reference/utilities.md)
 - [Tree workflow API](reference/workflow.md)
 
 ## Local development

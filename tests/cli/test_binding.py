@@ -1,7 +1,10 @@
 """Behavioural tests for layered CLI Frame construction and ownership."""
 
 import asyncio
+import os
 from datetime import date
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import cast
 
 import pytest
@@ -21,6 +24,7 @@ from lclang.cli import (
 from lclang.cli.binding import FrameStack, build_binding, default_definitions
 from lclang.errors import LclCliUsageError
 from lclang.runtime import Frame, VariableInspectionStatus
+from lclang.utils.environment import BoundEnvironment
 
 
 @cli.command(
@@ -152,6 +156,63 @@ async def test_scoped_cli_overrides_share_one_proxy() -> None:
     try:
         assert await binding.frame.get("A.y") == 42
         assert isinstance(await binding.frame.get("A"), lclang.FrameProxy)
+    finally:
+        await binding.stack.close()
+
+
+@pytest.mark.asyncio
+async def test_cli_overrides_select_dynamic_using_targets() -> None:
+    """The same lazy CLI override selects a source and wins in the final Frame."""
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        config_path = root / "root.lclcfg"
+        config_path.write_text(
+            'choice: "blue"\nusing f"{choice}.lclcfg"\n',
+            encoding="utf-8",
+        )
+        (root / "blue.lclcfg").write_text(
+            'required_value: "blue"\n', encoding="utf-8"
+        )
+        (root / "green.lclcfg").write_text(
+            'required_value: "green"\n', encoding="utf-8"
+        )
+        params = CliParams(
+            "python",
+            ("bound",),
+            date(2026, 8, 9),
+            False,
+            str(config_path),
+            {"choice": "LCL['green']"},
+        )
+        binding = await build_binding(bound_command, params, CliConfig())
+        try:
+            assert await binding.frame.get("choice") == "green"
+            assert await binding.frame.get("required_value") == "green"
+        finally:
+            await binding.stack.close()
+
+
+@pytest.mark.asyncio
+async def test_cli_environment_override_does_not_mutate_process_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A lazy explicit None wins over a live environment value only in the Frame."""
+    name = "LCLANG_CLI_ENV_TEST"
+    monkeypatch.setenv(name, "system")
+    params = CliParams(
+        "python",
+        ("bound",),
+        date(2026, 8, 9),
+        False,
+        None,
+        {f"env.{name}": "LCL[None]"},
+    )
+    binding = await build_binding(bound_command, params, CliConfig())
+    try:
+        environment = await binding.frame.get("env")
+        assert isinstance(environment, BoundEnvironment)
+        assert await environment.get(name, "fallback") is None
+        assert os.environ[name] == "system"
     finally:
         await binding.stack.close()
 

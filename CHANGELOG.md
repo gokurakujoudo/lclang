@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+## 1.0.7 - 2026-09-02
+
+- Add Frame proxy string indexing, sorted immediate child discovery,
+  direct-child fallback, and dataclass materialization for independently
+  overrideable scoped collections.
+- Expose live environment variables through Python and canonical LCL `env`,
+  while allowing scoped config, preset, mixin, and CLI overrides without
+  mutating the process environment.
+- Support position-sensitive f-string `using` targets evaluated from prior
+  expanded definitions, explicit loader or CLI overrides, and canonical
+  builtins in disposable Frames.
+- Export standalone logging configuration and logger lifecycle utilities while
+  retaining the CLI compatibility surface and scoped logger behavior.
+- Add exact valueless `-o FORCE` to built-in parse/eval commands for strict
+  marked RESULT syntax with source-aligned, masking-aware status-2 diagnostics.
+- Extend the scoped-values tutorial with an executable nested-proxy dataclass
+  list built from independently overrideable endpoint fields.
+- Expand the configuration tutorial with executable value- and environment-
+  selected f-string `using` targets, and add a downstream Python utilities
+  tutorial covering environment, logging, standard helpers, and calendars.
+
 ## 1.0.6 - 2026-08-29
 
 - Scope CLI logger configuration beneath `logger`, print application `INFO`

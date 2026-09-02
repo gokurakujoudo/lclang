@@ -138,6 +138,12 @@ unnamed calculation over that context, use
 `await frame.evaluate("service.database.port * 2")`; unlike `frame.get`, the
 unnamed root is parsed and run on every call.
 
+Proxy attribute and string-index access are equivalent. Immediate children are
+available through `await proxy.field_names()`, and
+`await proxy[name].as_record(DataclassType)` materializes a detached typed view
+while every field retains the shared Frame's lookup, caching, tracing, and
+override behavior.
+
 ```text
 expression source -> immutable Module
 immutable Module + host inputs -> short-lived Frame -> requested results
@@ -207,6 +213,10 @@ The application supplies `environment`; the file owns the stable relationship
 between it and the final address. Definitions can refer forward or backward.
 `using` declarations expand other `.lclcfg` files in source order, later
 definitions win, and complete history remains available for diagnostics.
+Targets may be literal paths or position-sensitive LCL f-strings. A dynamic
+target sees definitions already expanded above it, explicit loader or CLI
+overrides, and canonical builtins such as `env`; its temporary evaluation cache
+is discarded before final runtime winners are built.
 
 ```python
 from pathlib import Path
@@ -226,8 +236,8 @@ async def address_for(environment: str) -> str:
 ```
 
 Loading is asynchronous, UTF-8, bounded by configurable limits, cycle-aware,
-and concurrency-sharing. It performs no globbing, environment expansion,
-network access, or evaluation while files are being composed.
+and concurrency-sharing. It performs no globbing or network access. Only
+dynamic `using` f-strings evaluate during composition.
 
 For readable configuration, keep definitions from one scope on consecutive
 rows, separate functional or scope groups with a blank line, and describe rows
@@ -281,9 +291,12 @@ namespaces assembled from reviewed manifests:
 - `json.encode` and `json.decode` provide strict JSON conversion.
 - `parse_ymd` and `to_ymd` convert strict calendar-date integers.
 - `recursive` builds eager fixed-point functions for recursive LCL programs.
+- `env.NAME` reads a live process environment value, with scoped overrides and
+  `env.get(name, default)` for arbitrary names.
 
-They provide no ambient filesystem, process, network, dynamic import,
-reflection, or mutation capability.
+Apart from the explicit read-only `env` utility, they provide no ambient
+filesystem, process, network, dynamic import, reflection, or mutation
+capability.
 
 ### Command-line applications
 
@@ -321,7 +334,15 @@ handler's responsibility. The existing `-v/--version` spelling remains the
 version command. Precedence rises from preset and command defaults through
 configuration definitions and command-line overrides to reserved runtime
 values. Built-in commands inventory available values, parse LCL, and evaluate
-LCL using the same routing model.
+LCL using the same routing model. Exact valueless `-o FORCE` makes a marked
+`RESULT=LCL[...]` parse strictly and reports a source-aligned status-2 syntax
+diagnostic; ordinary and non-RESULT override parsing remains permissive.
+
+Standalone applications can import `DEFAULT_LOG_FORMAT`, `LogConfig`,
+`LoggerHandle`, and async `create_logger` from `lclang.utils` without adopting
+the CLI framework. The same module exports the live Python `env` singleton.
+The [Python utilities tutorial](docs/tutorials/16-python-utilities.md) shows
+these APIs together with reviewed standard helpers and calendars.
 
 Dry-run remains an explicit handler decision, so the framework never pretends
 to know whether an application-specific side effect is safe.

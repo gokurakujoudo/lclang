@@ -15,6 +15,7 @@ from lclang.runtime import (
     VariableInspectionStatus,
     VariableInspectionTree,
 )
+from lclang.scopes import ScopedProxyFactory
 from lclang.stdlib import StdlibNamespace
 from lclang.types import FrameId, ModuleName, VarName
 
@@ -129,7 +130,12 @@ def test_canonical_values_use_uniform_builtin_representations() -> None:
     assert "0x" not in rendered
 
     for name, value in LCL_BUILTIN_VALUES.items():
-        kind = "Namespace" if isinstance(value, StdlibNamespace) else "Function"
+        if isinstance(value, StdlibNamespace):
+            kind = "Namespace"
+        elif isinstance(value, ScopedProxyFactory):
+            kind = "Utility"
+        else:
+            kind = "Function"
         assert repr(LCL_BUILTINS.inspect_variable(name)).endswith(
             f"(NativeProvided) Builtin {kind}: {name}"
         )

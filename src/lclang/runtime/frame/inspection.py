@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from lclang.ast import LclAstNode
 from lclang.lang.printer import to_source
 from lclang.masking import MASKED_VALUE
+from lclang.scopes import ScopedProxyFactory
 from lclang.stdlib.namespaces import StdlibNamespace
 from lclang.stdlib.recursion import RecursiveFunction
 from lclang.types import FrameId, VarName
@@ -158,6 +159,8 @@ def native_value_payload(name: str, value: object) -> str:
     """
     if isinstance(value, StdlibNamespace):
         return f"Builtin Namespace: {value.namespace}"
+    if isinstance(value, ScopedProxyFactory):
+        return f"Builtin Utility: {name}"
     if callable(value):
         return f"Builtin Function: {name}"
     return f"{type(value).__name__}: {compact_repr(value)}"
