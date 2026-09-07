@@ -20,7 +20,7 @@ from lclang.errors import LclSyntaxError
 from lclang.lang.lexer import TokenKind
 from lclang.lang.parser.bindings import validate_binding_name
 from lclang.lang.parser.stream import TokenStream
-from lclang.source import SourceSpan
+from lclang.source import SourceSpan, merge_source_spans
 from lclang.types import VarName
 
 
@@ -31,12 +31,16 @@ class ComprehensionKind(StrEnum):
        Values are internal diagnostic labels rather than language spellings.
     """
 
+    # Unitless comprehension kinds and closing tokens follow display syntax; separate entries
+    # select the result container and matching terminator.
     GENERATOR = "generator"
     LIST = "list"
     SET = "set"
     DICT = "dict"
 
 
+# Unitless comprehension kinds and closing tokens follow display syntax; separate entries select
+# the result container and matching terminator.
 _CLOSING = {
     ComprehensionKind.GENERATOR: TokenKind.RPAREN,
     ComprehensionKind.LIST: TokenKind.RBRACKET,
@@ -81,11 +85,11 @@ def parse_comprehension(
                 target,
                 iterable,
                 tuple(conditions),
-                span=internal_merge_span(for_token.span, final.span),
+                span=merge_source_spans(for_token.span, final.span),
             )
         )
     closing = stream.expect(_CLOSING[kind], "expected closing comprehension delimiter")
-    span = internal_merge_span(opening, closing.span)
+    span = merge_source_spans(opening, closing.span)
     clause_tuple = tuple(clauses)
     if kind is ComprehensionKind.GENERATOR:
         return LclGenerator(head, clause_tuple, span=span)
@@ -96,17 +100,3 @@ def parse_comprehension(
     if not isinstance(head, (LclKeyValue, LclDictUnpack)):
         raise LclSyntaxError("invalid dictionary comprehension head", span=head.span)
     return LclDictComprehension(head, clause_tuple, span=span)
-
-
-def internal_merge_span(first: SourceSpan, last: SourceSpan) -> SourceSpan:
-    """Join the opening and final spans of one comprehension construct.
-
-    :param first: Span at the beginning of the parsed construct.
-    :param last: Span at its final consumed token.
-    :returns: Half-open span from *first* start through *last* end.
-
-    .. note::
-       The origin comes from *first*; the range intentionally includes all
-       source text between the two boundary spans.
-    """
-    return SourceSpan(first.origin, first.start, last.end)

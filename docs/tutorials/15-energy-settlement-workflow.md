@@ -36,7 +36,7 @@ so no `FRAME_PROXY` declarations are needed. The writer credential has a
 trailing `!`, so lclang-owned diagnostics mask its definition, value, and
 failures without changing the runtime name.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 import json
@@ -114,7 +114,7 @@ Notice the keyword form used for every dataclass value, such as
 which workflow variable feeds which Python field without remembering field
 order. The same form is used when actions return outputs.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 import io

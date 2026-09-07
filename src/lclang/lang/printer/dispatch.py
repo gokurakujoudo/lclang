@@ -14,6 +14,8 @@ from lclang.lang.printer.primaries import render_primary
 
 type FamilyRenderer = Callable[[LclAstNode, Callable[[LclAstNode, int], str]], RenderResult | None]
 
+# Unitless renderer order follows disjoint AST families; the tuple selects the first renderer
+# accepting the expression.
 _RENDERERS: tuple[FamilyRenderer, ...] = (
     render_atom,
     render_expression,

@@ -27,6 +27,10 @@ from lclang.runtime import Frame, Module
 from lclang.types import ModuleName
 
 # Module label for the call-specific preset/import layer.
+# Unitless layer identifiers below follow the CLI precedence contract and keep diagnostics
+# distinguishable. Date formats use strftime directives: YYYYMMDD has day precision;
+# YYYYMMDDhhmmss has local second precision. Compact numeric formats are stable configuration
+# inputs and filename components.
 IMPORTS_MODULE_NAME = ModuleName("LCL_IMPORTS")
 # Module label for command and logger defaults.
 DEFAULTS_MODULE_NAME = ModuleName("command_defaults")

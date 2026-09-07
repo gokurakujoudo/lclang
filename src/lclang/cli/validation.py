@@ -13,6 +13,9 @@ from lclang.lang import parse_expression
 from lclang.scopes import validate_qualified_name
 
 # Scoped names used to resolve effective logger configuration.
+# Unitless names and the command-segment expression below implement the public CLI grammar.
+# Logger and runtime keys are protected from declaration collisions; lowercase snake_case
+# segments keep routing unambiguous.
 LOG_NAMES = frozenset(
     {
         "logger",

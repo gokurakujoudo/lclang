@@ -10,6 +10,9 @@ class ExecutionStatus(StrEnum):
     """Classify the current execution outcome of one workflow node."""
 
     # Work has not started.
+    # Unitless status and node-kind labels below are public workflow serialization and display
+    # values. Distinct spellings preserve pending, running, terminal and covered outcomes and
+    # distinguish task ownership from detail steps.
     PENDING = "PENDING"
     # Work completed successfully.
     SUCCESS = "SUCCESS"

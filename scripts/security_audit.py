@@ -1,4 +1,4 @@
-"""Audit production source for capabilities outside the trusted-input boundary."""
+"""Check static implementation constraints, not hostile-code sandbox safety."""
 
 from __future__ import annotations
 
@@ -63,7 +63,7 @@ def audit_package(root: Path) -> tuple[str, ...]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Run the production capability audit.
+    """Run the static production architecture and capability checks.
 
     :param argv: Optional command-line arguments.
     :returns: Zero when no forbidden capability is present.

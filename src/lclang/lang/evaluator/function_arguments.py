@@ -9,6 +9,8 @@ from lclang.lang.evaluator._types import EvaluateNode
 from lclang.lang.evaluator.context import Resolver
 
 # Sentinel distinguishing a missing parameter default from an explicit value.
+# Unitless sentinel identity distinguishes an omitted argument from explicit None or any host
+# value. A dedicated object implements exact parameter-default semantics.
 MISSING_PARAMETER = object()
 
 

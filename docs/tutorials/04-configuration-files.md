@@ -2,7 +2,8 @@
 
 A `.lclcfg` file moves trusted definitions out of Python while keeping them
 parsed, source-aware, and convertible to the same Module/Frame runtime. Loading
-never evaluates a definition.
+evaluates only the preceding definitions needed to select dynamic `using` targets.
+Those evaluations run in temporary Frames and do not seed final runtime caches.
 
 ## What you will learn
 
@@ -18,7 +19,7 @@ never evaluates a definition.
 Use `parse_config` when another system already owns the text. It performs no
 file access and leaves `using` declarations unresolved.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 from lclang.config import parse_config
 
@@ -73,7 +74,7 @@ The next example writes an isolated two-file configuration. `using` inserts the
 shared definitions at its exact position. The later `discount_rate` overrides
 the shared value without losing its history.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 from pathlib import Path
@@ -140,7 +141,7 @@ A `using` target may be an LCL f-string. Its fields can evaluate definitions
 that appeared earlier in source order, including definitions derived from
 other earlier values.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 from pathlib import Path
@@ -195,7 +196,7 @@ The canonical `env` utility is also available to a dynamic target. Null
 coalescing supplies a deterministic fallback, while a loader override can
 select a different file without changing `os.environ`.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 import os
@@ -259,7 +260,7 @@ Use `evaluate_config` for one result. Use `config.frame_factory()` when several
 lookups in one run should share snapshots or when many runs share the same
 loaded configuration.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 from pathlib import Path
@@ -305,4 +306,4 @@ File-backed AST nodes retain their physical source spans. `__file__` and
 `ConfigLoadLimits` and an allowed-root resolver policy when the application
 needs bounded, controlled loading.
 
-[Previous: The LCL language](03-language.md) | [Next: Async Python integration](05-async-python-integration.md)
+[Previous: The LCL language](03-language.md) | [Next: Async Python integration](05-async-python-integration.md) | [Return to the series introduction](README.md)

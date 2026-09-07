@@ -9,11 +9,12 @@ from collections.abc import Iterable
 from lclang.cli.commands import Command, CommandGroup
 from lclang.masking import MASKED_VALUE
 
-# Fixed rendering width independent of terminal state.
+# Characters per line; the CLI layout contract fixes 100 for deterministic help
+# across terminal sizes while leaving useful room for parameter descriptions.
 HELP_WIDTH = 100
-# Indentation for aligned help detail rows.
+# Spaces; the help layout uses two to separate detail rows from section labels.
 ROW_INDENT = 2
-# Minimum gap between row labels and descriptions.
+# Spaces; the help layout uses two to keep adjacent aligned columns distinguishable.
 ROW_GAP = 2
 
 

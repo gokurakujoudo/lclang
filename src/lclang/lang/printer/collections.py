@@ -20,6 +20,8 @@ from lclang.ast import (
 from lclang.ast.comprehensions import LclComprehensionClause
 from lclang.lang.printer._types import Render, RenderResult
 
+# Unitless precedence 100 matches delimited displays in the parser; delimiters make additional
+# parentheses unnecessary.
 COLLECTION_PRECEDENCE = 100
 
 

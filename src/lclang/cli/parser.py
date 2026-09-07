@@ -17,6 +17,9 @@ from lclang.masking import split_masked_name
 from lclang.stdlib.dates import parse_ymd
 
 # Common options consuming one following token.
+# Unitless option spellings below are the public CLI grammar. Explicit aliases preserve existing
+# short and long forms and let parsing distinguish valueless switches from options consuming
+# arguments.
 ONE_VALUE_OPTIONS = frozenset({"-c", "--config", "-a", "--as-of"})
 # Override options consuming a key and an optional non-override value.
 OVERRIDE_OPTIONS = frozenset({"-o", "--override"})
@@ -228,6 +231,8 @@ def override_expression(value: str) -> LclAstNode:
     return LclConstant(value=value)
 
 
+# Unitless public export names come from this module's supported API; the explicit list keeps
+# implementation helpers out of wildcard imports.
 __all__ = [
     "ArgvParts",
     "help_requested",

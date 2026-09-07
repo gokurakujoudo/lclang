@@ -9,7 +9,7 @@ from lclang.errors import LclSyntaxError
 from lclang.lang.lexer import TokenKind
 from lclang.lang.parser.bindings import validate_binding_name
 from lclang.lang.parser.stream import TokenStream
-from lclang.source import SourceSpan
+from lclang.source import merge_source_spans
 from lclang.types import VarName
 
 
@@ -98,7 +98,7 @@ class InternalControlFormParser:
                     exception,
                     name,
                     handler_body,
-                    span=internal_merge_span(marker.span, handler_body.span),
+                    span=merge_source_spans(marker.span, handler_body.span),
                 )
             )
         finally_body = None
@@ -112,7 +112,7 @@ class InternalControlFormParser:
             body,
             tuple(handlers),
             finally_body,
-            span=internal_merge_span(opening.span, final.span),
+            span=merge_source_spans(opening.span, final.span),
         )
 
     def internal_with(self) -> LclWith:
@@ -144,14 +144,14 @@ class InternalControlFormParser:
                 LclWithItem(
                     context,
                     target,
-                    span=internal_merge_span(context.span, end),
+                    span=merge_source_spans(context.span, end),
                 )
             )
             if self.stream.match(TokenKind.COMMA) is None:
                 break
         self.stream.expect(TokenKind.COLON, "with form requires body colon")
         body = self.parse_complete()
-        return LclWith(tuple(items), body, span=internal_merge_span(opening.span, body.span))
+        return LclWith(tuple(items), body, span=merge_source_spans(opening.span, body.span))
 
 
 def parse_control_form(
@@ -175,17 +175,3 @@ def parse_control_form(
         parse_complete,
         parse_nonconditional,
     ).parse()
-
-
-def internal_merge_span(first: SourceSpan, last: SourceSpan) -> SourceSpan:
-    """Join the boundary spans of one control-form node.
-
-    :param first: Span at the beginning of the construct.
-    :param last: Span at its final consumed expression or token.
-    :returns: Half-open span from *first* start through *last* end.
-
-    .. note::
-       The source origin is inherited from *first*, and intervening syntax is
-       covered by the resulting range.
-    """
-    return SourceSpan(first.origin, first.start, last.end)

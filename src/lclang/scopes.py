@@ -5,6 +5,9 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 
 # LCL words that cannot be used as reference identifiers.
+# Unitless reserved names and the proxy sentinel implement the scoped-binding contract. The
+# reserved spellings protect framework metadata; one identity marker distinguishes proxy intent
+# from ordinary values.
 LCL_RESERVED_NAMES = frozenset(
     {
         "and",

@@ -9,6 +9,8 @@ from typing import TextIO
 from lclang.cli.logging import LoggerHandle
 
 # LogRecord attribute marking records intended only for the configured file sink.
+# Unitless LogRecord attribute names come from the CLI routing convention. The explicit flag
+# suppresses file-only audit records on terminal handlers without changing logger ownership.
 FILE_ONLY_ATTRIBUTE = "lclang_file_only"
 
 

@@ -14,6 +14,8 @@ from lclang.ast import (
 from lclang.ast.operators import BinaryOperator, BooleanOperator, UnaryOperator
 from lclang.lang.printer._types import Render, RenderResult
 
+# Unitless operator ranks match Pratt binding powers; matching ranks preserve meaning when
+# adding parentheses.
 _BINARY_PRECEDENCE = {
     BinaryOperator.BIT_OR: 50,
     BinaryOperator.BIT_XOR: 55,

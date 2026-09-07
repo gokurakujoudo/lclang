@@ -15,8 +15,10 @@ from lclang.ast import (
 from lclang.ast.operators import BooleanOperator, ComparisonOperator, UnaryOperator
 from lclang.lang.lexer import TokenKind
 from lclang.lang.parser.stream import TokenStream
-from lclang.source import SourceSpan
+from lclang.source import merge_source_spans
 
+# Unitless comparison mappings follow the language grammar; explicit tokens distinguish single-
+# token comparisons from compound operators.
 _SINGLE_COMPARISONS = {
     TokenKind.LESS: ComparisonOperator.LESS,
     TokenKind.LESS_EQUAL: ComparisonOperator.LESS_EQUAL,
@@ -91,7 +93,7 @@ class InternalLogicalParser:
             when_true,
             condition,
             when_false,
-            span=internal_merge_span(when_true.span, when_false.span),
+            span=merge_source_spans(when_true.span, when_false.span),
         )
 
     def internal_coalesce(self) -> LclAstNode:
@@ -108,7 +110,7 @@ class InternalLogicalParser:
         if self.stream.match(TokenKind.DOUBLE_QUESTION) is None:
             return left
         right = self.internal_coalesce()
-        return LclCoalesce(left, right, span=internal_merge_span(left.span, right.span))
+        return LclCoalesce(left, right, span=merge_source_spans(left.span, right.span))
 
     def internal_or(self) -> LclAstNode:
         """Parse the Boolean ``or`` layer.
@@ -157,7 +159,7 @@ class InternalLogicalParser:
         return LclBoolean(
             operator,
             tuple(values),
-            span=internal_merge_span(values[0].span, values[-1].span),
+            span=merge_source_spans(values[0].span, values[-1].span),
         )
 
     def internal_not(self) -> LclAstNode:
@@ -176,7 +178,7 @@ class InternalLogicalParser:
         return LclUnary(
             UnaryOperator.NOT,
             operand,
-            span=internal_merge_span(marker.span, operand.span),
+            span=merge_source_spans(marker.span, operand.span),
         )
 
     def internal_comparison(self) -> LclAstNode:
@@ -201,7 +203,7 @@ class InternalLogicalParser:
             left,
             tuple(operators),
             tuple(comparators),
-            span=internal_merge_span(left.span, comparators[-1].span),
+            span=merge_source_spans(left.span, comparators[-1].span),
         )
 
     def internal_comparison_operator(self) -> ComparisonOperator | None:
@@ -252,17 +254,3 @@ def parse_logical(
         parse_arithmetic,
         allow_conditional=allow_conditional,
     ).parse()
-
-
-def internal_merge_span(first: SourceSpan, last: SourceSpan) -> SourceSpan:
-    """Join the boundary spans of one logical expression.
-
-    :param first: Span at the first operand or unary marker.
-    :param last: Span at the final operand or branch.
-    :returns: Half-open span from *first* start through *last* end.
-
-    .. note::
-       The source origin is inherited from *first*, and all intervening logical
-       operators are included in the resulting range.
-    """
-    return SourceSpan(first.origin, first.start, last.end)

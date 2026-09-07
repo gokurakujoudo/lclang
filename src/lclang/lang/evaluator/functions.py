@@ -20,6 +20,8 @@ from lclang.lang.printer import to_source
 from lclang.source import SourceSpan
 
 # Active closure identities used for same-task recursion rejection.
+# Unitless context key names identify active LCL calls within a task. An empty initial path
+# avoids shared global recursion state; entries retain structured recursive-call diagnostics.
 _ACTIVE_FUNCTIONS: ContextVar[frozenset[int]] = ContextVar(
     "lclang_active_functions",
     default=frozenset(),

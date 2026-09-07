@@ -122,6 +122,8 @@ class CliParams:
 class CliResultStatus(IntEnum):
     """Map handler outcomes directly to process-compatible integer statuses."""
 
+    # Unitless result codes are the public CLI status contract; distinct values distinguish
+    # successful, failed, exceptional and covered execution.
     SUCCESS = 0
     FAILURE = 1
     EXCEPTION = 2

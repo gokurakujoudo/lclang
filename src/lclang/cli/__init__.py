@@ -22,6 +22,8 @@ from lclang.cli.runtime_keys import (
 from lclang.cli.scanning import scan_commands
 from lclang.utils.logging import LogConfig
 
+# Unitless public export names come from this module's supported API; the explicit list keeps
+# implementation helpers out of wildcard imports.
 __all__ = [
     "CliConfig",
     "CliContext",

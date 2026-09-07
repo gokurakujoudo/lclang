@@ -10,6 +10,9 @@ from lclang.cli.entrance import CliEntrance
 from lclang.cli.models import CliResult, ParameterDoc
 
 # Shared required output binding documented by both built-in commands.
+# Unitless parameter names, command groups and entrance objects below define the built-in CLI
+# contract. RESULT, EVAL and FORCE preserve exact routing and override spellings; the shared
+# immutable entrance keeps module execution consistent with embedded commands.
 RESULT_PARAMETER = ParameterDoc(
     "RESULT",
     object,

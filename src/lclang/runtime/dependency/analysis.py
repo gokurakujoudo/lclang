@@ -28,6 +28,8 @@ type Comprehension = (
     LclGenerator | LclListComprehension | LclSetComprehension | LclDictComprehension
 )
 
+# Unitless strength ranks come from dependency evaluation timing; ordering retains the strongest
+# observation for repeated edges.
 _STRENGTH = {
     DependencyKind.EAGER: 0,
     DependencyKind.CONDITIONAL: 1,

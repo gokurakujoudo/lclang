@@ -50,5 +50,8 @@ class SelfCalendar(BDCalendar):
 
 
 # Singleton placeholder for an operation's eventual source calendar.
+# Unitless singleton identity marks an unapplied mapping, following the calendar mapping
+# contract. A distinct SELF_CALENDAR object postpones binding without confusing a real input
+# calendar with an omitted one.
 SELF_CALENDAR = SelfCalendar(CalendarID("SELF_CALENDAR"))
 

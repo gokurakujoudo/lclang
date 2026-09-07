@@ -19,32 +19,66 @@ Run the complete project gate:
 venv\Scripts\python -m scripts.quality
 ```
 
-The gate runs pytest with 100% branch coverage, strict mypy, Ruff, production
-source-size and docstring policy, and whitespace checks. A focused test can be
-run directly:
+The gate fails fast in this order: Git whitespace, Ruff, production source
+policies, static architecture and capability constraints, strict mypy,
+documentation checks without coverage, then all behavioral tests with 100%
+production branch coverage. Source smoke, property and stress tests run by
+default. A focused test can be run directly:
+
+The CLI source smoke combines configuration inclusion, expression overrides,
+derived evaluation, logging through `logger.log_dir`, and resource closure. It
+uses static configuration fixtures and a separate `TemporaryDirectory`.
 
 ```console
 venv\Scripts\python -m pytest tests/lang/parser/test_forms.py -q --no-cov
 ```
 
-Additional release tools are available when needed:
+Architecture checks, optional performance measurements and explicit builds:
 
 ```console
 venv\Scripts\python -m scripts.security_audit
 venv\Scripts\python -m scripts.performance_baseline
-venv\Scripts\python -m scripts.release_candidate --output dist
+venv\Scripts\python -m scripts.build_package --output dist
 ```
 
 ## Change workflow
 
-For a behavior change, update the relevant reference, add a practical failing
-test, implement the smallest correct behavior, refactor, and run focused and
-complete checks. Bugs require a reproducing test before the fix. Keep public
-claims in the READMEs, changelog, and feature inventory synchronized.
+For a bug, update the relevant reference and prove a reproducing test fails
+before fixing it. New features may use exploratory implementation, but acceptance
+requires documentation and behavioral tests. Keep public claims in the root
+README, changelog and feature inventory synchronized.
+
+Before refactoring, run the existing tests. Change production code and pass those
+tests before moving or consolidating tests; then verify the new organization.
+Run affected checks while editing and the complete gate after each independent
+code refactor and at final delivery. Pure prose changes need appropriate document
+structure and link checks; changed examples must execute their exact source.
+Tutorial structure changes run all documentation tests, without a mandatory
+chapter/series/full-gate repetition.
+
+Production files have a hard limit of 200 code-bearing physical lines, excluding
+imports, declaration/attribute docstrings, pure comments and blanks. Standalone
+strings outside documentation positions still count. Names must describe their behavior;
+ordinary underscore-prefixed functions and classes are forbidden. Every production
+function, including nested helpers, documents parameters, results and escaping
+intentional exceptions in English rST. Constants need associated explanations of
+units (or non-applicability), source, purpose and rationale; groups may share an
+explanation. These policies apply to `src/lclang`; scripts and tests still run
+through Ruff and mypy.
+
+Static architecture scans enforce implementation constraints; they do not prove
+that trusted configuration is a hostile-code sandbox. Builds are explicit local
+operations or tag-pipeline jobs after verification. Distribution archives contain
+only downstream code, typing data, build metadata, the license and root README.
 
 Tests mirror production subsystem ownership. Reusable fixtures belong in
 dedicated support modules. Mock external connectivity and isolate file I/O in a
 per-test temporary directory.
+
+If permissions block a test or tool, stop the affected operation and request the
+required permission. Do not move temporary files, change temporary-directory
+environment variables, weaken isolation, skip checks or substitute another path
+solely to bypass that failure without authorization. Continue independent work.
 
 See [Architecture and module layout](architecture.md) for package boundaries and
 dependency direction.

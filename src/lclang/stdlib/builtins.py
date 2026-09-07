@@ -9,6 +9,9 @@ from lclang.stdlib.manifest import StdlibEntry, StdlibManifest
 from lclang.stdlib.namespaces import assemble_stdlib
 from lclang.stdlib.text import join, lines
 
+# Unitless manifest and preset objects below come from the curated standard-library inventory.
+# Explicit assembly preserves reviewed exports and read-only bindings rather than discovering
+# arbitrary Python members.
 STANDARD_MANIFESTS = (
     StdlibManifest(
         "iter",

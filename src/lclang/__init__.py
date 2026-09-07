@@ -39,6 +39,8 @@ from lclang.stdlib import STANDARD_PRESET
 from lclang.types import FrameId, ModuleName, SourceName, VarName
 from lclang.version import LCL_V1, LanguageVersion
 
+# Unitless public export names come from this module's supported API; the explicit list keeps
+# implementation helpers out of wildcard imports.
 __all__ = [
     "LCL_BUILTINS",
     "LCL_IMPORTS",

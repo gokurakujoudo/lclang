@@ -1,0 +1,1 @@
+"""Calendar factories behavior contracts."""

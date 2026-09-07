@@ -20,6 +20,9 @@ class FrameBindingKind(StrEnum):
     """
 
     # Binding backed by one immutable expression AST.
+    # Unitless binding-kind labels come from Frame graph semantics. Separate definition and
+    # host-value categories preserve lookup precedence and allow graph consumers to distinguish
+    # executable syntax from supplied values.
     DEFINITION = "definition"
     # Binding backed by one opaque host-supplied value.
     VALUE = "value"

@@ -5,13 +5,16 @@ from lclang.utils.calendar.builtins.all_weekdays import (
     ALL_WEEKDAYS,
     AllWeekdaysBDCalendar,
 )
-from lclang.utils.calendar.builtins.begin_month import (
+from lclang.utils.calendar.builtins.period_boundaries import (
     BEGIN_OF_MONTHS,
+    BEGIN_OF_YEARS,
+    END_OF_MONTHS,
+    END_OF_YEARS,
     BeginOfMonthCalendar,
+    BeginOfYearCalendar,
+    EndOfMonthCalendar,
+    EndOfYearCalendar,
 )
-from lclang.utils.calendar.builtins.begin_year import BEGIN_OF_YEARS, BeginOfYearCalendar
-from lclang.utils.calendar.builtins.end_month import END_OF_MONTHS, EndOfMonthCalendar
-from lclang.utils.calendar.builtins.end_year import END_OF_YEARS, EndOfYearCalendar
 from lclang.utils.calendar.builtins.registry import BUILTIN_CALENDARS
 from lclang.utils.calendar.builtins.weekday import (
     FRIDAYS,
@@ -24,6 +27,8 @@ from lclang.utils.calendar.builtins.weekday import (
     WeekdayBDCalendar,
 )
 
+# Unitless public export names come from this module's supported API; the explicit list keeps
+# implementation helpers out of wildcard imports.
 __all__ = [
     "ALL_DAYS",
     "ALL_WEEKDAYS",

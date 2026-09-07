@@ -14,8 +14,8 @@ It also exposes these functions:
 `pow`, `range`, `recursive`, `repr`, `reversed`, `round`, `slice`, `sorted`,
 `sum`, `to_ymd`, and `zip`.
 
-`parse_ymd` converts strict `YYYYMMDD` integers to dates and `to_ymd` performs
-the reverse conversion. `recursive(builder)` returns an eager fixed-point
+`parse_ymd` converts strict eight-character `YYYYMMDD` strings to dates;
+`to_ymd` returns that string format. Integer inputs are rejected. `recursive(builder)` returns an eager fixed-point
 function suitable for recursive LCL programs.
 
 ## Standard namespaces
@@ -28,8 +28,10 @@ manifests. Canonical Frames merge those bindings into `LCL_BUILTINS`:
 - `data.lookup` and `data.merge` work with immutable mapping snapshots.
 - `json.encode` and `json.decode` provide strict JSON conversion.
 
-These helpers do not provide ambient filesystem, process, network, dynamic
-import, reflection, or mutation capabilities.
+The `iter`, `text`, `data` and `json` helpers perform only their documented
+operations. The separately exposed `env` utility reads the live process
+environment. Calendar file loading can access the filesystem when explicitly
+configured by the application. These capabilities follow the trusted-code model.
 
 Canonical Frames also expose the reviewed `calendars` namespace and explicit
 calendar-manager construction helpers. Filesystem access remains opt-in through
@@ -75,3 +77,15 @@ deterministic, subtree operations are locked, and snapshots preserve child
 order. `FAILURE_COVERED` records an exception handled by an explicit workflow
 context without disguising it as success. See the [workflow reference](workflow.md)
 for task definitions, mappings, execution, static rendering, and CLI conversion.
+
+## Safe representations
+
+`lclang.utils.safe_repr(value, *, max_length=200, renderer=None, masked=False)`
+returns one physical line without a type prefix or task-local masking state.
+It uses `repr` or the supplied `renderer(value)`, escapes CR and LF, and converts
+renderer exceptions (including `BaseException`) or non-string results to
+`<repr failed: ExceptionType>`. The length budget includes `...<truncated>`;
+small budgets retain its prefix, zero returns empty text, and `None` disables
+truncation. A negative budget raises `ValueError`; non-integers, including bool,
+raise `TypeError`. With `masked=True`, the result is `*masked*` and no renderer
+runs; the masking marker is independent of the validated budget.

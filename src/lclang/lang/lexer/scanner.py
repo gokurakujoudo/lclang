@@ -5,11 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from lclang.errors import LclSyntaxError
+from lclang.lang.lexer.characters import ASCII_DIGITS
 from lclang.lang.lexer.literals import InternalLiteralScanError, scan_literal
 from lclang.lang.lexer.tokens import Token, TokenKind
 from lclang.source import SourceOrigin, SourcePosition, SourceSpan
 from lclang.types import SourceName
 
+# Unitless token tables follow the language grammar; longest-token recognition and explicit
+# starters disambiguate operators and literals.
 _KEYWORDS = {kind.value: kind for kind in TokenKind if kind.name.startswith("KW_")}
 _KEYWORDS.update(
     {
@@ -18,6 +21,8 @@ _KEYWORDS.update(
         "None": TokenKind.KW_NONE,
     }
 )
+# Unitless token tables follow the language grammar; longest-token recognition and explicit
+# starters disambiguate operators and literals.
 _DOUBLE_TOKENS = {
     "**": TokenKind.DOUBLE_STAR,
     "//": TokenKind.DOUBLE_SLASH,
@@ -31,14 +36,17 @@ _DOUBLE_TOKENS = {
     "??": TokenKind.DOUBLE_QUESTION,
     "->": TokenKind.ARROW,
 }
+# Unitless token tables follow the language grammar; longest-token recognition and explicit
+# starters disambiguate operators and literals.
 _SINGLE_TOKENS = {
     kind.value: kind
     for kind in TokenKind
     if len(kind.value) == 1 and not kind.name.startswith("KW_")
 }
+# Unitless token tables follow the language grammar; longest-token recognition and explicit
+# starters disambiguate operators and literals.
 _STRING_OR_NUMBER_START = frozenset("'\"")
 # ASCII digits accepted at the start of numeric symbols.
-_ASCII_DIGITS = frozenset("0123456789")
 
 
 @dataclass(slots=True)
@@ -145,7 +153,7 @@ class InternalScanner:
             self.internal_emit(_SINGLE_TOKENS[character], character, start)
             return
         self.internal_advance()
-        is_literal = character in _ASCII_DIGITS or character in _STRING_OR_NUMBER_START
+        is_literal = character in ASCII_DIGITS or character in _STRING_OR_NUMBER_START
         category = "literal" if is_literal else "character"
         raise LclSyntaxError(
             f"unsupported {category} {character!r}",

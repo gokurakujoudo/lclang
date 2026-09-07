@@ -19,7 +19,7 @@ Import `env` from `lclang.utils`. Attribute access is convenient for valid
 Python and LCL identifiers; `get` also accepts names containing punctuation.
 Every access consults `os.environ` at that moment.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import os
 from unittest.mock import patch
@@ -48,7 +48,7 @@ the same live fallback without mutating the process environment.
 `LoggerHandle` owns its handlers, so close it when the application component is
 finished.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 from pathlib import Path
@@ -94,7 +94,7 @@ The functions behind LCL's `iter`, `text`, `data`, and `json` namespaces are
 also direct exports from `lclang.stdlib`. The iterable and join helpers accept
 synchronous or asynchronous iteration.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -135,7 +135,7 @@ Calendars live under `lclang.utils.calendar` and do not depend on parsing LCL.
 This example turns a weekend report date into the next weekday and then moves
 one further business day.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 from datetime import date
@@ -159,6 +159,26 @@ The first mapping adjusts Saturday to Monday. The chained shift begins from
 that mapped value and reaches Tuesday. For calendar algebra, sparse policies,
 strict JSON loading, and managed caches, continue with the
 [business-day calendar chapter](11-business-day-calendars.md).
+
+## Render an untrusted representation safely
+
+Use `safe_repr` when a value's display code must not break a diagnostic. Masking
+skips rendering entirely, and a canonical renderer can choose the displayed form.
+
+<!-- lclang-doc-exec -->
+```python
+from lclang.utils import safe_repr
+
+assert safe_repr(42) == "42"
+assert safe_repr("private", masked=True) == "*masked*"
+assert safe_repr("line", renderer=lambda value: "a\n" + value) == "a\\nline"
+assert len(safe_repr("x" * 300)) == 200
+assert safe_repr("x" * 300, max_length=None) == repr("x" * 300)
+```
+
+The default limit counts characters after line-break escaping and includes the
+truncation marker. `None` preserves the full escaped representation. A failed
+renderer produces a stable failure description; the helper adds no type label.
 
 ## Choose the narrowest public surface
 

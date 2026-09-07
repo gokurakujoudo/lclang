@@ -57,7 +57,7 @@ python -m pip install lclang
 Define a reusable Module once. Create a fresh Frame for one calculation, supply
 the values owned by the application, and ask only for the outputs you need.
 
-<!-- lclang-readme-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -100,7 +100,7 @@ from the requested result.
 
 For a single expression in synchronous code, use the smaller boundary:
 
-<!-- lclang-readme-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import lclang
 
@@ -289,7 +289,7 @@ namespaces assembled from reviewed manifests:
 - `text.join` and `text.lines` provide deterministic text operations.
 - `data.lookup` and `data.merge` work with immutable mapping snapshots.
 - `json.encode` and `json.decode` provide strict JSON conversion.
-- `parse_ymd` and `to_ymd` convert strict calendar-date integers.
+- `parse_ymd` and `to_ymd` convert dates to and from strict `YYYYMMDD` strings.
 - `recursive` builds eager fixed-point functions for recursive LCL programs.
 - `env.NAME` reads a live process environment value, with scoped overrides and
   `env.get(name, default)` for arbitrary names.
@@ -300,52 +300,16 @@ capability.
 
 ### Command-line applications
 
-`lclang.cli` is a typed async framework for Python scripts whose parameters may
-come from declared defaults, `.lclcfg` files, and command-line overrides. A
-decorated command handler receives one `CliContext`, including its invocation
-Frame, as-of date, dry-run flag, and logging context, and returns a deterministic
-`CliResult`.
+`lclang.cli` combines typed async commands, nested groups, configuration and
+overrides, structured help, isolated logging and explicit dry-run policy.
+Handlers receive a `CliContext` and return a `CliResult`.
+See the [CLI reference](https://jihulab.com/midnightprotocol/lclang/-/blob/main/docs/reference/cli.md)
+and [CLI tutorial](https://jihulab.com/midnightprotocol/lclang/-/blob/main/docs/tutorials/09-command-line-applications.md).
 
-The framework provides immutable invocation values, nested command groups,
-structured help, full-argument parsing, platform-neutral process entry points,
-alphabetized configuration-parameter help, isolated formal file logging, and
-opt-in internal tracing. Logger settings use scoped configuration names such as
-`logger.log_dir`. Non-error application records print to stdout, application
-errors print to stderr, and `--verbose` adds `DEBUG` records to stdout,
-independently of file logging. File and terminal application records share the
-configured structured format, including time, level, source location,
-function, and message; the default no longer appends logging argument tuples.
-Logger expressions can use the reserved values `__as_of_date__`, `__dryrun__`,
-`__verbose__`, `__ymd__`, `__execution_timestamp__`, and `__command__`; public
-Python constants provide every runtime key, including `__cli_params__`. Enabled
-file logs begin
-with four readable audit records: their bound path, a centered multi-line
-execution banner, exact JSON argv with masked override redaction, and sorted,
-aligned winning configuration. The configuration audit renders lazy LCL source
-without evaluating expressions or warming caches. Pass `--verbose` after a
-selected command to trace expression parsing, value provenance, caching, fallbacks, and
-evaluation to stderr; enabled file logging receives the same records. Trace
-values use bounded representations. A trailing `!` on a definition or binding
-key, such as `api_token!: load_token()`, keeps the runtime name `api_token` but
-renders its parse, evaluation, lookup, cache, failure, and inspection payloads
-as `*masked*`. The marker is exact-name and sticky across overrides; derived
-keys require their own marker. Application-authored log messages remain the
-handler's responsibility. The existing `-v/--version` spelling remains the
-version command. Precedence rises from preset and command defaults through
-configuration definitions and command-line overrides to reserved runtime
-values. Built-in commands inventory available values, parse LCL, and evaluate
-LCL using the same routing model. Exact valueless `-o FORCE` makes a marked
-`RESULT=LCL[...]` parse strictly and reports a source-aligned status-2 syntax
-diagnostic; ordinary and non-RESULT override parsing remains permissive.
-
-Standalone applications can import `DEFAULT_LOG_FORMAT`, `LogConfig`,
-`LoggerHandle`, and async `create_logger` from `lclang.utils` without adopting
-the CLI framework. The same module exports the live Python `env` singleton.
-The [Python utilities tutorial](docs/tutorials/16-python-utilities.md) shows
-these APIs together with reviewed standard helpers and calendars.
-
-Dry-run remains an explicit handler decision, so the framework never pretends
-to know whether an application-specific side effect is safe.
+Standalone applications can use `env`, `LogConfig`, `create_logger` and
+`safe_repr` from `lclang.utils`; the
+[Python utilities tutorial](https://jihulab.com/midnightprotocol/lclang/-/blob/main/docs/tutorials/16-python-utilities.md)
+shows these APIs without requiring CLI or LCL evaluation.
 
 ### Tree workflows and status
 
@@ -369,8 +333,7 @@ materialized arguments and outputs. CLI workflows log start, traceback-bearing
 error, and finalized completion records using dot-connected task branches;
 `__task_id_branch__` exposes the owning branch inside task Frames. Verbose runs
 add aligned typed argument/output mappings. The final status tree is one
-severity-aware multi-line record, followed by an optional configured lunch
-choice on success or `no lunch!` on non-success.
+severity-aware multi-line record.
 
 ### Business-day calendars
 
@@ -442,15 +405,15 @@ clearer as a normal function than as configuration policy.
 - 100% branch coverage enforced by the project quality gate.
 - Parser differential and property tests, concurrency and dependency stress
   tests, lifecycle leak checks, and executable documentation.
-- Reproducible source distribution and platform-independent wheel validation.
+- Source integration smoke and default full stress tests.
 
 ## Trust and security
 
-lclang is a trusted configuration language, not a hostile-code sandbox. Its own
-standard values deliberately omit ambient filesystem, process, network,
-dynamic-code, and reflection powers. However, expressions can use the values
-and callables supplied by the host application, so those inputs determine the
-authority available during evaluation.
+lclang is a trusted configuration language, not a hostile-code sandbox.
+`env` reads the process environment; explicitly configured calendar loaders
+read files. Host-provided objects and callables retain their ordinary Python
+capabilities. Developer command discovery imports the application's trusted
+Python modules. These choices determine the authority available during use.
 
 Treat LCL source, `.lclcfg` files, host objects, and host callables as trusted
 application configuration. Keep the Python boundary narrow and use loading and

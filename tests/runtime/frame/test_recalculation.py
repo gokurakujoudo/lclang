@@ -1,4 +1,4 @@
-"""Unit tests mirroring :mod:`lclang.runtime.frame.recalculation`."""
+"""Unit tests mirroring :mod:`lclang.runtime.frame.evaluation_flights`."""
 
 import asyncio
 

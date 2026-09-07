@@ -16,7 +16,7 @@ definition owners, and dependency structure available through public values.
 Parsing fails before a Frame exists. Evaluation failures retain the nested
 definition route and the original host exception as their cause.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -71,7 +71,7 @@ language failures.
 Inspection performs lookup and static dependency traversal but never calls,
 awaits, caches, or publishes dynamic traces.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -131,4 +131,4 @@ branches remains visible in each branch.
 This order respects lclang's design: observation should not accidentally cause
 the work being diagnosed.
 
-[Previous: Caching and recalculation](06-caching-and-recalculation.md) | [Next: Dependency analysis](08-dependency-analysis.md)
+[Previous: Caching and recalculation](06-caching-and-recalculation.md) | [Next: Dependency analysis](08-dependency-analysis.md) | [Return to the series introduction](README.md)

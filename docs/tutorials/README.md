@@ -130,7 +130,7 @@ was correct.
 For a small synchronous calculation, `evaluate_sync` is the shortest useful
 entry point.
 
-<!-- lclang-intro-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import lclang
 
@@ -160,7 +160,7 @@ Suppose a deployment tool needs a URL and timeout for several environments.
 The relationships are stable, while `service` and `environment` change for
 each run.
 
-<!-- lclang-intro-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -226,7 +226,7 @@ expensive work. This pricing policy converts a subtotal only for non-USD
 orders. lclang automatically awaits an async host function when the selected
 branch calls it.
 
-<!-- lclang-intro-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -357,7 +357,9 @@ is true, `discount` becomes ten percent of that subtotal. `total` subtracts
 `10` from `100`, and the f-string combines the customer, currency, and
 two-decimal value into the asserted `Ada: USD 90.00` message.
 
-`load_config` reads and parses without evaluating definitions. The immutable
+This example uses no dynamic `using` target, so `load_config` does not evaluate
+its definitions. Dynamic targets can evaluate earlier definitions in temporary
+Frames to choose an included file. The immutable
 result keeps source provenance for diagnostics and can be reused.
 `evaluate_config` is convenient when you need one result: it creates and closes
 a temporary Frame even when evaluation fails. When one run needs several

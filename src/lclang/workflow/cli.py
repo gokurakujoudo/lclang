@@ -13,6 +13,8 @@ from lclang.workflow.models import ExecutionStatus
 from lclang.workflow.variables import TaskVar
 
 # Stable help used when an external variable omits its description.
+# Unitless fallback prose below is the existing workflow help contract. Its explicit wording
+# exposes an absent description rather than inventing documentation for inferred parameters.
 NO_HELP_MESSAGE = "NO HELP MESSAGE PROVIDED"
 # Compatibility exports for final workflow CLI rendering helpers.
 __all__ = ["cli_status", "log_status_tree", "status_lines", "workflow_command"]

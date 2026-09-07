@@ -13,6 +13,8 @@ from lclang.ast import (
 from lclang.lang.printer._types import Render, RenderResult
 from lclang.scopes import FRAME_PROXY
 
+# Unitless precedence 100 matches atomic expressions in the parser; the highest rank avoids
+# unnecessary parentheses.
 ATOM_PRECEDENCE = 100
 
 

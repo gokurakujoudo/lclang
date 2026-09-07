@@ -21,7 +21,7 @@ from lclang.lang.lexer import TokenKind
 from lclang.lang.parser.comprehensions import ComprehensionKind, parse_comprehension
 from lclang.lang.parser.records import parse_record
 from lclang.lang.parser.stream import TokenStream
-from lclang.source import SourceSpan
+from lclang.source import SourceSpan, merge_source_spans
 
 
 class InternalDisplayParser:
@@ -141,7 +141,7 @@ class InternalDisplayParser:
                 )
             return self.parse_nested()
         value = self.parse_nested()
-        return LclStarred(value, span=internal_merge_span(marker.span, value.span))
+        return LclStarred(value, span=merge_source_spans(marker.span, value.span))
 
     def internal_braces(self) -> LclAstNode:
         """Parse a dictionary, set, or corresponding comprehension.
@@ -159,7 +159,7 @@ class InternalDisplayParser:
         if self.stream.current.kind is TokenKind.DOUBLE_STAR:
             marker = self.stream.advance()
             value = self.parse_nested()
-            entry = LclDictUnpack(value, span=internal_merge_span(marker.span, value.span))
+            entry = LclDictUnpack(value, span=merge_source_spans(marker.span, value.span))
             if self.stream.peek().kind is TokenKind.KW_FOR:
                 return self.internal_comprehension(entry, ComprehensionKind.DICT)
             return self.internal_dict([entry])
@@ -171,7 +171,7 @@ class InternalDisplayParser:
         first = self.internal_sequence_element()
         if self.stream.match(TokenKind.COLON) is not None:
             value = self.parse_nested()
-            entry = LclKeyValue(first, value, span=internal_merge_span(first.span, value.span))
+            entry = LclKeyValue(first, value, span=merge_source_spans(first.span, value.span))
             if self.stream.current.kind is TokenKind.KW_FOR:
                 return self.internal_comprehension(entry, ComprehensionKind.DICT)
             return self.internal_dict([entry])
@@ -201,7 +201,7 @@ class InternalDisplayParser:
             if marker is not None:
                 value = self.parse_nested()
                 entries.append(
-                    LclDictUnpack(value, span=internal_merge_span(marker.span, value.span))
+                    LclDictUnpack(value, span=merge_source_spans(marker.span, value.span))
                 )
                 continue
             if self.stream.current.kind is TokenKind.STAR:
@@ -212,7 +212,7 @@ class InternalDisplayParser:
             key = self.parse_nested()
             self.stream.expect(TokenKind.COLON, "expected colon after dictionary key")
             value = self.parse_nested()
-            entries.append(LclKeyValue(key, value, span=internal_merge_span(key.span, value.span)))
+            entries.append(LclKeyValue(key, value, span=merge_source_spans(key.span, value.span)))
         closing = self.stream.expect(TokenKind.RBRACE, "expected closing dictionary brace")
         return LclDict(tuple(entries), span=self.internal_container_span(closing.span))
 
@@ -257,7 +257,7 @@ class InternalDisplayParser:
            The opening span is shared by all display-family parsers so source
            diagnostics cover the same complete construct.
         """
-        return internal_merge_span(self.opening.span, closing)
+        return merge_source_spans(self.opening.span, closing)
 
     def internal_comprehension(
         self,
@@ -303,17 +303,3 @@ def parse_display(
        Comprehension clauses are parsed after display boundaries are identified.
     """
     return InternalDisplayParser(stream, parse_nested, parse_nonconditional).parse()
-
-
-def internal_merge_span(first: SourceSpan, last: SourceSpan) -> SourceSpan:
-    """Join the boundary spans of one display expression.
-
-    :param first: Span at the start of the display or entry.
-    :param last: Span at its final consumed expression or delimiter.
-    :returns: Half-open span from *first* start through *last* end.
-
-    .. note::
-       The source origin is inherited from *first*, and intervening delimiters
-       or entries are included in the resulting range.
-    """
-    return SourceSpan(first.origin, first.start, last.end)

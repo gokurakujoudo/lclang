@@ -16,7 +16,7 @@ Host values may be immediate or awaitable, and host callables may return either.
 The host owns the exchange-rate provider. LCL owns the policy that decides
 whether to call it and how to use its result.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -77,7 +77,7 @@ code; host implementations remain responsible for their own I/O policy.
 LCL `with` is an expression. It prefers an async context-manager protocol when
 available, binds the entered value, evaluates the body, and awaits cleanup.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -143,4 +143,4 @@ settles its in-flight definition tasks and closes cached result resources that
 provide `close` or `aclose`. Host values supplied directly are borrowed and are
 not automatically closed.
 
-[Previous: Configuration files](04-configuration-files.md) | [Next: Caching and recalculation](06-caching-and-recalculation.md)
+[Previous: Configuration files](04-configuration-files.md) | [Next: Caching and recalculation](06-caching-and-recalculation.md) | [Return to the series introduction](README.md)

@@ -95,12 +95,14 @@ runtime dependencies.
   inspection, evaluation, and optional strict marked-RESULT parsing.
 - Workflow commands with inferred external parameters, help and masks,
   dot-branch lifecycle and verbose typed mapping logs, one-record final status
-  trees, optional configured lunch selection, and recursive package discovery.
+  trees and recursive package discovery.
 
-## Distribution quality
+## Source quality
 
 - Strict type checking, linting, 100% branch coverage, parser differential and
   property tests, concurrency and dependency stress tests, leak checks, and
   executable documentation.
-- Reproducible source distribution and platform-independent wheel checks,
-  clean-environment installation, metadata validation, and import smoke tests.
+- Source CLI smoke, default full stress execution, and minimal downstream sdist
+  contents. Explicit builds follow source verification; tag jobs feed manual publishing.
+- Public `lclang.utils.safe_repr` protects single-line value rendering, masking,
+  canonical renderers and exact truncation budgets.

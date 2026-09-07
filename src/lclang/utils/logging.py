@@ -8,6 +8,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 # Default pipe-delimited format retaining diagnostic fields.
+# Unitless format and field names below follow Python logging percent-style syntax. The project
+# format retains time, severity, source and message; mandatory fields preserve useful
+# diagnostics in caller-supplied layouts.
 DEFAULT_LOG_FORMAT = (
     "%(asctime)s | %(levelname)-8s | %(name)s | %(filename)s:%(lineno)d | "
     "%(funcName)s | %(message)s"

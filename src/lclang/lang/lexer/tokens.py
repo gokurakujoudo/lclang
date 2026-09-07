@@ -15,6 +15,8 @@ class TokenKind(StrEnum):
        Enum values are diagnostic labels and exact fixed-token spellings.
     """
 
+    # Unitless token labels follow the lexer grammar; distinct names separate literal, keyword,
+    # punctuation and stream-boundary tokens.
     IDENTIFIER = "identifier"
     INTEGER = "integer"
     FLOAT = "float"
@@ -72,6 +74,8 @@ class TokenKind(StrEnum):
     QUESTION_DOT = "?."
     DOUBLE_QUESTION = "??"
     ARROW = "->"  # Function signature separator.
+    # Unitless token labels follow the lexer grammar; distinct names separate literal, keyword,
+    # punctuation and stream-boundary tokens.
     NEWLINE = "newline"
     EOF = "end of input"
 

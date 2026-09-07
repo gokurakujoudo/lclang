@@ -4,6 +4,7 @@ An LCL `Module` stores named expressions without evaluating them. A `Frame`
 supplies host values and evaluates definitions lazily, resolving references to
 other definitions as needed.
 
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -33,6 +34,7 @@ Frame and releases its owned tasks and resources.
 
 For one expression in synchronous code:
 
+<!-- lclang-doc-exec -->
 ```python
 import lclang
 
@@ -41,6 +43,7 @@ assert lclang.evaluate_sync("(value -> value * 2)(21)") == 42
 
 Async code can parse once and evaluate with an explicit resolver:
 
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 

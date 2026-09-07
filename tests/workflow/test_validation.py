@@ -11,7 +11,8 @@ import pytest
 
 import lclang
 import lclang.workflow as wf
-from lclang.workflow.mappings import mapped_outputs, materialize_args, safe_mapping_repr
+from lclang.utils import safe_repr
+from lclang.workflow.mappings import mapped_outputs, materialize_args
 
 
 @dataclass
@@ -216,9 +217,9 @@ async def test_mapping_edges_are_explicit_safe_and_bounded() -> None:
             """
             raise RuntimeError("no repr")
 
-    assert safe_mapping_repr(BrokenRepr()) == "<repr failed: RuntimeError>"
-    assert safe_mapping_repr("a\nb") == "'a\\nb'"
-    assert safe_mapping_repr("x" * 300).endswith("...<truncated>")
+    assert safe_repr(BrokenRepr()) == "<repr failed: RuntimeError>"
+    assert safe_repr("a\nb") == "'a\\nb'"
+    assert safe_repr("x" * 300).endswith("...<truncated>")
 
 
 def test_rendering_handles_plain_siblings_and_nested_contexts() -> None:

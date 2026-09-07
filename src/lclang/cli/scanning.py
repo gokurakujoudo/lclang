@@ -16,7 +16,7 @@ def scan_commands(
 ) -> CommandGroup:
     """Import a module tree and flatten its public commands into one group.
 
-    :param module: Root module or package to inspect.
+    :param module: Developer-owned trusted Python module or package to import and inspect.
     :param name: Resulting command-group name.
     :param description: Human-readable group description.
     :returns: Deterministically ordered command group.

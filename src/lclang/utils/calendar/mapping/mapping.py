@@ -10,10 +10,12 @@ from lclang.utils.calendar.errors import (
     UnappliedCalendarOperationException,
 )
 from lclang.utils.calendar.mapping.base import BDCalendarMapOperation
+from lclang.utils.calendar.mapping.business_day_adjustment import (
+    ThisOrNextMapOperation,
+    ThisOrPrevMapOperation,
+)
 from lclang.utils.calendar.mapping.sentinel import SELF_CALENDAR
 from lclang.utils.calendar.mapping.shift import ShiftNDaysMapOperation
-from lclang.utils.calendar.mapping.this_or_next import ThisOrNextMapOperation
-from lclang.utils.calendar.mapping.this_or_prev import ThisOrPrevMapOperation
 from lclang.utils.calendar.types import CalendarID
 
 

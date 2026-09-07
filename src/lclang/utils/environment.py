@@ -112,7 +112,7 @@ class BoundEnvironment(ScopedProxyValue):
         :returns: Scoped value, nested proxy, live text, or *default*.
         :raises TypeError: If *name* is not text.
         """
-        from lclang.runtime.frame.scoped import find_scoped_binding
+        from lclang.runtime.frame.binding_lookup import find_scoped_binding
         from lclang.scope_proxy import FrameProxy
 
         if not isinstance(name, str):
@@ -130,7 +130,7 @@ class BoundEnvironment(ScopedProxyValue):
 
         :returns: Alphabetically sorted unique valid LCL identifiers.
         """
-        from lclang.runtime.frame.scoped import hierarchy_binding_names
+        from lclang.runtime.frame.binding_lookup import hierarchy_binding_names
 
         prefix = ".".join(self.path) + "."
         names = {
@@ -155,7 +155,7 @@ class BoundEnvironment(ScopedProxyValue):
         :param span: Complete attribute source span.
         :returns: Utility method, override, nested proxy, live text, or ``None``.
         """
-        from lclang.runtime.frame.scoped import find_scoped_binding
+        from lclang.runtime.frame.binding_lookup import find_scoped_binding
         from lclang.scope_proxy import FrameProxy
 
         if name == "get":

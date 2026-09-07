@@ -8,6 +8,8 @@ from lclang.utils.calendar.loading.filesystem import (
 )
 from lclang.utils.calendar.loading.manager import BDCalendarManager, use_calendar_manager
 
+# Unitless public export names come from this module's supported API; the explicit list keeps
+# implementation helpers out of wildcard imports.
 __all__ = [
     "BDCalendarLoader",
     "BDCalendarManager",

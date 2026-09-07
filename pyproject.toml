@@ -26,9 +26,9 @@ Issues = "https://jihulab.com/midnightprotocol/lclang/-/work_items"
 Source = "https://jihulab.com/midnightprotocol/lclang"
 
 [dependency-groups]
+build = ["hatchling==1.31.0"]
 dev = [
-  "build==1.5.0",
-  "hatchling==1.31.0",
+  { include-group = "build" },
   "hypothesis==6.165.0",
   "mypy==2.3.0",
   "pytest==9.1.1",
@@ -54,7 +54,6 @@ pythonpath = ["src"]
 testpaths = ["tests"]
 markers = [
   "docs: documentation structure and executable-example checks",
-  "release: artifact, clean-install, portability, and release-candidate checks",
 ]
 
 [tool.coverage.run]
@@ -87,16 +86,7 @@ ignore = ["D203", "D213"]
 "tests/**" = ["D102"]
 
 [tool.hatch.build.targets.sdist]
-include = [
-  "/AGENTS.md",
-  "/CHANGELOG.md",
-  "/LICENSE",
-  "/README.md",
-  "/docs",
-  "/progress.md",
-  "/src/lclang",
-  "/tests",
-]
+include = ["/src/lclang", "/pyproject.toml", "/LICENSE", "/README.md"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lclang"]

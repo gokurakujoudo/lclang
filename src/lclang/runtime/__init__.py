@@ -33,6 +33,8 @@ from lclang.runtime.modules import Module
 from lclang.runtime.presets import Preset
 from lclang.scopes import FRAME_PROXY
 
+# Unitless public export names come from this module's supported API; the explicit list keeps
+# implementation helpers out of wildcard imports.
 __all__ = [
     "DependencyEdge",
     "DependencyGraph",

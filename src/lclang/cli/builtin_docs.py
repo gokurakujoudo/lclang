@@ -8,6 +8,9 @@ from lclang.stdlib import STANDARD_MANIFESTS
 from lclang.utils.calendar.lcl import CALENDARS_NAMESPACE
 
 # Stable descriptions for values in the canonical builtin Frame.
+# Unitless help descriptions below describe the reviewed public builtin inventory. These
+# authored summaries supply deterministic help text where raw Python docstrings would expose
+# inconsistent or overly broad contracts.
 BUILTIN_DESCRIPTIONS: Mapping[str, str] = MappingProxyType(
     {
         "abs": "Return the absolute value.",

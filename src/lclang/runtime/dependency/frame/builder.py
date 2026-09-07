@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from lclang.runtime.frame.frame import Frame
+
+from typing import TYPE_CHECKING
+
 from lclang.ast import LclAstNode
 from lclang.runtime.dependency.analysis import analyze_dependencies
 from lclang.runtime.dependency.frame.model import (
@@ -13,7 +18,6 @@ from lclang.runtime.dependency.frame.model import (
     FrameDependencyGraph,
 )
 from lclang.runtime.dependency.frame.resolution import (
-    GraphFrame,
     collect_frames,
     resolve_frame_binding,
 )
@@ -65,7 +69,7 @@ def build_frame_dependency_graph(frame: Frame) -> FrameDependencyGraph:
 
 
 def build_frame_edges(
-    frames: tuple[GraphFrame, ...],
+    frames: tuple[Frame, ...],
     definitions: list[FrameDependencyBinding],
     definition_map: dict[tuple[int, str], FrameDependencyBinding],
     value_map: dict[tuple[int, str], FrameDependencyBinding],
@@ -101,7 +105,7 @@ def build_frame_edges(
 
 
 def edges_for_node(
-    frames: tuple[GraphFrame, ...],
+    frames: tuple[Frame, ...],
     owner_index: int,
     source: FrameDependencyBinding,
     node: LclAstNode,

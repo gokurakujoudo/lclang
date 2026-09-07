@@ -5,13 +5,13 @@ from __future__ import annotations
 import inspect
 from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
+from types import MappingProxyType
 from typing import get_type_hints
 
 from lclang.cli.context import CliContext
 from lclang.cli.models import CliResult, ParameterDoc
 from lclang.cli.validation import (
     DECLARATION_RESERVED_NAMES,
-    freeze_mapping,
     normalize_text,
     require_command_segment,
     require_lcl_identifier,
@@ -99,9 +99,10 @@ class Command:
             raise ValueError("duplicate command parameter name")
         if set(names) & DECLARATION_RESERVED_NAMES:
             raise ValueError("command parameter name is reserved")
-        preset = freeze_mapping(self.preset, "command preset")
+        if not isinstance(self.preset, Mapping):
+            raise TypeError("command preset must be a mapping")
         normalized_preset, masked_names = normalize_masked_mapping(
-            preset,
+            self.preset,
             self.masked_names,
         )
         for preset_name in normalized_preset:
@@ -111,7 +112,7 @@ class Command:
         object.__setattr__(self, "name", name)
         object.__setattr__(self, "summary", normalize_text(self.summary, "command summary"))
         object.__setattr__(self, "parameter_docs", docs)
-        object.__setattr__(self, "preset", freeze_mapping(normalized_preset, "command preset"))
+        object.__setattr__(self, "preset", MappingProxyType(normalized_preset))
         object.__setattr__(self, "masked_names", masked_names)
         object.__setattr__(self, "handler", validate_handler(self.handler))
 
@@ -178,7 +179,7 @@ class CliFacade:
         :returns: Decorator that validates and snapshots one handler.
         """
         docs = tuple(parameter_docs)
-        values = {} if preset is None else dict(preset)
+        values = {} if preset is None else preset
 
         def decorate(handler: CommandHandler) -> Command:
             """Convert one exactly typed handler into a command.
@@ -186,13 +187,12 @@ class CliFacade:
             :param handler: Async handler to validate and retain.
             :returns: Immutable declared command.
             """
-            selected_handler = validate_handler(handler)
-            default_name = handler.__name__
+            default_name = getattr(handler, "__name__", "command")
             if default_name.endswith("_command"):
                 default_name = default_name[: -len("_command")]
             selected_name = default_name if name is None else name
             selected_summary = handler_summary(handler) if summary is None else summary
-            return Command(selected_name, selected_summary, docs, values, selected_handler)
+            return Command(selected_name, selected_summary, docs, values, handler)
 
         return decorate
 

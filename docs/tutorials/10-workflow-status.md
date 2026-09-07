@@ -16,7 +16,7 @@ failed as expected, or stopped with an error.
 Descriptions explain intent; statuses explain outcome. Explicitly skipped work
 can sit beside successful work without making the whole task skipped.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 from lclang.workflow import ExecutionStatus, ExecutionStatusManager
 
@@ -58,7 +58,7 @@ mutation.
 An exception changes the scoped node to `ERROR`, uses the exception text as its
 description, finalizes it, and then propagates the same exception.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 from lclang.workflow import ExecutionStatus, ExecutionStatusManager
 
@@ -100,4 +100,4 @@ The returned tree contains ordinary typed fields. Applications may render it,
 log it, or convert it to their own wire schema; lclang deliberately defines the
 status semantics without forcing one presentation format.
 
-[Previous: Command-line applications](09-command-line-applications.md) | [Next: Business-day calendars](11-business-day-calendars.md)
+[Previous: Command-line applications](09-command-line-applications.md) | [Next: Business-day calendars](11-business-day-calendars.md) | [Return to the series introduction](README.md)

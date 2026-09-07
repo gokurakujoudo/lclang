@@ -17,6 +17,8 @@ from lclang.ast import (
 )
 from lclang.lang.printer._types import Render, RenderResult
 
+# Unitless precedence 90 matches primary expressions in the parser; the rank keeps calls,
+# attributes and subscripts bound together.
 PRIMARY_PRECEDENCE = 90
 
 

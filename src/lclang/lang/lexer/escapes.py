@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import unicodedata
 
+from lclang.lang.lexer.characters import character_at
+
+# Unitless escape mappings follow the supported Python-style literal grammar; exact replacements
+# decode only recognized short escapes.
 _SIMPLE_ESCAPES = {
     "\\": "\\",
     "'": "'",
@@ -91,7 +95,7 @@ def internal_decode_escape(content: str, cursor: int, *, bytes_mode: bool) -> tu
     if marker in _SIMPLE_ESCAPES:
         return _SIMPLE_ESCAPES[marker], cursor + 1
     if marker in "\r\n":
-        is_crlf = marker == "\r" and internal_peek(content, cursor + 1) == "\n"
+        is_crlf = marker == "\r" and character_at(content, cursor + 1) == "\n"
         return "", cursor + (2 if is_crlf else 1)
     if marker in "01234567":
         end = cursor + 1
@@ -147,7 +151,7 @@ def internal_named_escape(content: str, marker_at: int) -> tuple[str, int]:
        Name resolution delegates to :mod:`unicodedata` and therefore follows
        the Unicode database bundled with the running Python version.
     """
-    if internal_peek(content, marker_at + 1) != "{":
+    if character_at(content, marker_at + 1) != "{":
         raise EscapeDecodeError("invalid named Unicode escape", marker_at + 1)
     end = content.find("}", marker_at + 2)
     if end < 0:
@@ -173,17 +177,3 @@ def internal_encode_bytes(value: str) -> bytes:
         return value.encode("latin-1")
     except UnicodeEncodeError as error:
         raise EscapeDecodeError("non-byte character in bytes literal", error.end) from error
-
-
-def internal_peek(text: str, offset: int) -> str:
-    """Read one character or return an empty sentinel at the boundary.
-
-    :param text: Content being inspected.
-    :param offset: Candidate zero-based character offset.
-    :returns: Character at *offset*, or ``""`` when it is past the end.
-
-    .. note::
-       The sentinel lets escape recognizers inspect optional delimiters
-       without raising ``IndexError``.
-    """
-    return text[offset] if offset < len(text) else ""

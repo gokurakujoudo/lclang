@@ -79,6 +79,10 @@ class SourceSpan:
             raise ValueError("source span end cannot precede its start")
 
 
+# Defaults below are internal source-less sentinels, not measured positions in an input.
+# <unknown> names that origin; line and column use one-based units and offset uses zero-based
+# Unicode code points. The empty range at (1, 1, 0) provides the earliest valid location without
+# inventing source text.
 UNKNOWN_ORIGIN = SourceOrigin(name=SourceName("<unknown>"))
 """Origin used when a node was not produced from concrete source text."""
 
@@ -91,3 +95,14 @@ UNKNOWN_SPAN = SourceSpan(
     end=UNKNOWN_POSITION,
 )
 """Empty span used as the immutable default for source-less values."""
+
+
+def merge_source_spans(first: SourceSpan, last: SourceSpan) -> SourceSpan:
+    """Cover an ordered pair of spans from the same parsed source.
+
+    :param first: First consumed span, supplying the shared origin and start.
+    :param last: Final consumed span, supplying the exclusive end.
+    :returns: Span covering both endpoints and intervening source text.
+    :raises ValueError: If the final end precedes the initial start.
+    """
+    return SourceSpan(first.origin, first.start, last.end)

@@ -12,11 +12,12 @@ from lclang.diagnostics import internal_render_value
 from lclang.lang.printer import to_source
 from lclang.masking import MASKED_VALUE, split_masked_name
 from lclang.runtime import Frame
-from lclang.runtime.frame.scoped import find_scoped_binding
+from lclang.runtime.frame.binding_lookup import find_scoped_binding
 
-# Fixed width of the execution-start banner.
+# Characters; the existing execution-banner layout fixes 51 for compact centered
+# headings independent of the terminal width.
 EXECUTION_BANNER_WIDTH = 51
-# Interior width between the two-character banner borders.
+# Characters; subtract both two-character borders from the chosen banner width.
 EXECUTION_BANNER_INTERIOR = EXECUTION_BANNER_WIDTH - 4
 # LogRecord attribute marking mandatory CLI audit preamble records.
 AUDIT_RECORD_ATTRIBUTE = "lclang_audit_record"

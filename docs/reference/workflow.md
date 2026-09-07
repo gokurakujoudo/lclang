@@ -123,11 +123,6 @@ The finalized workflow tree is one severity-aware multi-line record headed
 `workflow complete: [command.path] STATUS:` and includes the existing tree root.
 Exit codes are success `0`, failure `1`, error `2`, and covered failure `3`.
 
-After that record, a configuration binding named `lunch.options` may supply a
-non-empty `list[str]`. Success chooses and logs one random option; any non-success
-logs `no lunch!`. Missing, empty, masked, malformed, or failing lunch bindings
-are ignored without changing the workflow result.
-
 `lclang.cli.scan_commands(module, name, description)` imports a package and its
 submodules deterministically, collects public module-level `Command` objects,
 deduplicates re-exports by identity, and rejects distinct duplicate names.

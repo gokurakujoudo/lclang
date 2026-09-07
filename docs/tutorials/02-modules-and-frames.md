@@ -44,7 +44,7 @@ definitions --parse once--> Module --combine with inputs--> Frame --get--> value
 Definitions may refer forward or backward. Asking for `label` makes the Frame
 follow only the names required to calculate it.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -105,7 +105,7 @@ A child Frame searches its local definitions and values, then its parent. A
 definition always evaluates in the Frame that owns it. This prevents a child
 from silently changing the meaning of a parent-owned policy.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -171,4 +171,4 @@ These rules create a stable skeleton. Within it, definitions may be simple
 arithmetic, rich collection transformations, async service decisions, date
 policy, or application-specific functions.
 
-[Previous: Expressions and values](01-expressions-and-values.md) | [Next: The LCL language](03-language.md)
+[Previous: Expressions and values](01-expressions-and-values.md) | [Next: The LCL language](03-language.md) | [Return to the series introduction](README.md)

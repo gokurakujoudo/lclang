@@ -6,6 +6,7 @@ from dataclasses import fields, is_dataclass, replace
 from typing import Any, cast
 
 from lclang.runtime import Frame
+from lclang.utils.representation import safe_repr
 from lclang.workflow.variables import TaskVar
 
 
@@ -95,19 +96,5 @@ def mapping_text(mapping: object | None, output: bool) -> str:
         elif output:
             parts.append(f"{item.name} -> <unmapped>")
         else:
-            parts.append(f"{item.name} <- {safe_mapping_repr(value)}")
+            parts.append(f"{item.name} <- {safe_repr(value)}")
     return f"{type(mapping).__name__}{{{', '.join(parts)}}}"
-
-
-def safe_mapping_repr(value: object) -> str:
-    """Return one bounded physical-line representation.
-
-    :param value: Literal/default mapping value.
-    :returns: Safe representation without newlines or object-address failures.
-    """
-    try:
-        rendered = repr(value)
-    except BaseException as error:
-        rendered = f"<repr failed: {type(error).__name__}>"
-    rendered = rendered.replace("\r", "\\r").replace("\n", "\\n")
-    return rendered if len(rendered) <= 200 else rendered[:185] + "...<truncated>"

@@ -80,6 +80,8 @@ from lclang.utils.calendar.transformations import (
 from lclang.utils.calendar.types import CalendarID, DayType
 from lclang.utils.calendar.year_batch import YearBatchBDCalendar
 
+# Unitless public export names come from this module's supported API; the explicit list keeps
+# implementation helpers out of wildcard imports.
 __all__ = [
     "ALL_DAYS",
     "ALL_WEEKDAYS",

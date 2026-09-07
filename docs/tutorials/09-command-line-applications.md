@@ -18,7 +18,7 @@ segment. A decorated async handler receives exactly one `CliContext`.
 Configuration parameter rows are rendered in case-insensitive A-Z order, so
 help remains easy to scan even when declarations follow business data flow.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 import io
@@ -76,7 +76,7 @@ The next command loads derived text from a temporary config, overrides one
 dependency, and asks the handler to describe rather than perform its side
 effect.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 import io
@@ -264,4 +264,4 @@ version operation. Like other common options, verbose belongs after the selected
 command. An override still treats its optional next token literally, including
 `--verbose`; place the verbose flag before a valueless override.
 
-[Previous: Dependency analysis](08-dependency-analysis.md) | [Next: Workflow status](10-workflow-status.md)
+[Previous: Dependency analysis](08-dependency-analysis.md) | [Next: Workflow status](10-workflow-status.md) | [Return to the series introduction](README.md)

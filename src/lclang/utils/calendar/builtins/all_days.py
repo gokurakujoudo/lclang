@@ -21,5 +21,7 @@ class AllDaysBDCalendar(FunctionalBDCalendar):
 
 
 # Singleton calendar that accepts every Gregorian date.
+# Unitless singleton ID follows the builtin calendar registry. One shared ALL_DAYS object
+# represents the total business-day identity and keeps equality, repr and identity stable.
 ALL_DAYS = AllDaysBDCalendar(CalendarID("ALL_DAYS"))
 
