@@ -130,6 +130,7 @@ gunicorn service:app --workers 4 --worker-class logging_worker.LoggingWorker --a
 <!-- lclang-gunicorn-exec -->
 ```python
 import os
+import signal
 
 from uvicorn_worker import UvicornWorker
 
@@ -137,6 +138,10 @@ from lclang.logger import LoggerHandlerConfig, use_logger_handler
 
 
 class LoggingWorker(UvicornWorker):
+    def init_signals(self):
+        super().init_signals()
+        signal.signal(signal.SIGTERM, self.handle_exit)
+
     async def _serve(self):
         config = LoggerHandlerConfig(
             file={"service": {"directory": os.environ.get("LOGGER_DIRECTORY", "./logs")}}
@@ -149,6 +154,11 @@ The subclass enters the scope inside the worker's asynchronous service method,
 after fork and worker initialization. The master never starts a logger writer;
 Gunicorn's own handlers remain its responsibility. `LOGGER_DIRECTORY` optionally
 selects the file directory. Every worker gets independent permanent paths.
+Keep Gunicorn's graceful SIGTERM handler installed before entering Uvicorn.
+Uvicorn restores the previous handler and replays SIGTERM after server shutdown;
+the worker handler marks it no longer alive and returns so the outer logging
+scope can drain and close. Leaving SIGTERM at its default action terminates the
+process before that cleanup and can leave buffered log files with only a header.
 The adapter depends on `uvicorn-worker`'s `_serve` hook; integration tests target
 `uvicorn-worker==0.4.0` and `uvicorn==0.52.4`. Recheck this hook when upgrading
 the server adapter ([worker source](https://github.com/Kludex/uvicorn-worker),

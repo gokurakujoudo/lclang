@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Preserve Gunicorn's graceful SIGTERM handler in the documented Uvicorn worker
+  so replayed shutdown signals allow queued logs to drain and files to close.
+
 ## 1.0.8 - 2026-09-08
 
 - Add `lclang.logger` process scopes, deferred writer-thread formatting, named
