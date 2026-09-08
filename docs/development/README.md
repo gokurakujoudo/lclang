@@ -26,7 +26,7 @@ production branch coverage. Source smoke, property and stress tests run by
 default. A focused test can be run directly:
 
 The CLI source smoke combines configuration inclusion, expression overrides,
-derived evaluation, logging through `logger.log_dir`, and resource closure. It
+derived evaluation, logging through `logger.file.app.directory`, and resource closure. It
 uses static configuration fixtures and a separate `TemporaryDirectory`.
 
 ```console

@@ -68,8 +68,9 @@ runtime dependencies.
 - Manifest-driven read-only namespaces and immutable standard presets.
 - Reviewed iterable, text, immutable-data, strict JSON, date, and recursion
   helpers without ambient I/O or dynamic-code capabilities.
-- Standalone validated logging configuration, isolated logger ownership, and a
-  live Python environment utility.
+- Process-scoped queue logging with named sinks, template defaults, UTC time/size
+  rotation, permanent linked segments, diagnostics and reversible stdlib takeover;
+  a live Python environment utility.
 - Async three-state business-day calendars with canonical composition, bounded
   mappings, strict JSON loading, and dependency-aware cache retirement.
 - Validated tree workflows with typed dataclass mappings, named variables,
@@ -86,11 +87,10 @@ runtime dependencies.
 - Preset/default/config/override Frame layering, boolean overrides, dry-run
   pass-through, scoped logger configuration with invocation date, timestamp,
   command, parameters, as-of date, dry-run, and verbose runtime values exposed
-  only through reserved double-underscore keys and shared constants, split
-  stdout/stderr logging with one shared
-  structured format, isolated formal files beginning with a four-record lazy
-  winner audit using exact redacted argv, opt-in task-local verbose tracing, and
-  deterministic result/cleanup mapping.
+  only through reserved double-underscore keys and shared constants. Named
+  logger configuration shares LCL/CLI override precedence; enabled flags inherit
+  only when absent. One writer handles stderr and files, redacted argv and lazy
+  audits, runtime verbose tracing, and complete output drain.
 - Built-in `builtins`, `parse_lcl`, and `eval_lcl` commands for inventory,
   inspection, evaluation, and optional strict marked-RESULT parsing.
 - Workflow commands with inferred external parameters, help and masks,

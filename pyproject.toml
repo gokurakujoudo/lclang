@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lclang"
-version = "1.0.7"
+version = "1.0.8"
 description = "A typed, async-first configuration expression language"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -27,8 +27,14 @@ Source = "https://jihulab.com/midnightprotocol/lclang"
 
 [dependency-groups]
 build = ["hatchling==1.31.0"]
+integration = [
+  "fastapi==0.141.1",
+  "uvicorn==0.52.4",
+  "uvicorn-worker==0.4.0; sys_platform != 'win32'",
+]
 dev = [
   { include-group = "build" },
+  { include-group = "integration" },
   "hypothesis==6.165.0",
   "mypy==2.3.0",
   "pytest==9.1.1",

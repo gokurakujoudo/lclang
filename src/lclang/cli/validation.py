@@ -16,15 +16,7 @@ from lclang.scopes import validate_qualified_name
 # Unitless names and the command-segment expression below implement the public CLI grammar.
 # Logger and runtime keys are protected from declaration collisions; lowercase snake_case
 # segments keep routing unambiguous.
-LOG_NAMES = frozenset(
-    {
-        "logger",
-        "logger.log_dir",
-        "logger.log_file_name",
-        "logger.log_level",
-        "logger.log_format",
-    }
-)
+LOG_NAMES = frozenset({"logger"})
 # Names unavailable to command parameter declarations and presets.
 DECLARATION_RESERVED_NAMES = CLI_RUNTIME_KEYS | LOG_NAMES
 # Complete grammar for literal command and command-group segments.

@@ -54,7 +54,7 @@ def test_default_binding_is_lazy_and_closes_idempotently() -> None:
     asyncio.run(binding.stack.close())
     definitions = default_definitions(bound_command, CliConfig())
     assert "optional_value" not in definitions
-    assert "logger.log_format" in definitions
+    assert "logger.format" in definitions
     assert "log_format" not in definitions
 
 

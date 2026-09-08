@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING
 
+from lclang.logger.logger import Logger
 from lclang.runtime import Frame
 from lclang.types import TaskID
 from lclang.workflow.manager import ExecutionStatusManager
@@ -44,7 +45,7 @@ class WorkflowExecutionContext:
     is_dryrun: bool
     as_of_date: date
     verbose_mode: bool
-    logger: logging.Logger
+    logger: logging.Logger | Logger
     frame: Frame
 
 
@@ -64,7 +65,7 @@ class TaskContext:
     is_dryrun: bool
     as_of_date: date
     verbose_mode: bool
-    logger: logging.Logger
+    logger: logging.Logger | Logger
     frame: Frame
     task_node: TaskNode
     task_id_stack: list[TaskID]

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 1.0.8 - 2026-09-08
+
+- Add `lclang.logger` process scopes, deferred writer-thread formatting, named
+  sinks, immutable metrics, reversible stdlib takeover and warnings capture.
+- Add permanent successor-linked file segments with independent UTC time and
+  size rotation, failure isolation and cancellation-resilient draining.
+- Unify CLI/Workflow logging through `logger.console`, `logger.file.<sink>` and
+  `logger.file.default`, with LCL/CLI field precedence and explicit enabled
+  overrides. Diagnostics use stderr; verbose affects enabled sinks only.
+- Replace standalone logger handles with scoped ownership; update executable
+  tutorials, source integration tests and server integration examples.
 - Replace artifact installation smoke with a source CLI integration test;
   correct the logging override to `logger.log_dir` and retain resource cleanup.
 - Remove archive audits, rebuild comparisons and installation validation.

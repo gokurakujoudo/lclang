@@ -18,6 +18,7 @@ src/lclang/
     dependency/    static/dynamic analytics and qualified Frame graphs
   stdlib/          reviewed manifests, namespaces and async helpers
   config/          logical lines, includes, origins and config diagnostics
+  logger/          process scope, queue writer, named sinks and permanent rotation
   cli/             typed contexts, parsing, routing, runners and built-ins
   workflow/        immutable task trees, execution, mappings, CLI and status
   utils/
@@ -49,6 +50,7 @@ tests/
     dependency/    static/dynamic and qualified graph behaviour
   stdlib/          manifest and async-helper behaviour
   config/          text, include, origin and diagnostic behaviour
+  logger/          configuration, ownership, output, timers and failure isolation
   cli/             argv, routing, stream and exit-code behaviour
   workflow/        definitions, execution, mappings, rendering and status
   utils/

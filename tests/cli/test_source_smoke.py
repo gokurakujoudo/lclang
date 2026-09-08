@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 import pytest
 
 from lclang.cli import CliContext, CliEntrance, CliResult, CliResultStatus, CommandGroup, cli
+from lclang.logger.logger import Logger
 from lclang.runtime import Frame
 
 # Fixed configuration fixtures exercise inclusion and derived overrides together.
@@ -19,7 +20,7 @@ ENTRY_SOURCE = 'using "shared.lclcfg"\nbase: 41\nanswer: base + 1\n'
 async def test_source_cli_configuration_logging_and_cleanup() -> None:
     """A real source invocation evaluates overrides, writes logs and closes owners."""
     frames: list[Frame] = []
-    loggers: list[logging.Logger] = []
+    loggers: list[logging.Logger | Logger] = []
 
     @cli.command()
     async def check_command(context: CliContext) -> CliResult:
@@ -51,12 +52,16 @@ async def test_source_cli_configuration_logging_and_cleanup() -> None:
                     "LCL[base + 2]",
                     "-wif",
                     "-o",
-                    "logger.log_dir",
+                    "logger.file.app.directory",
                     str(logs),
                 ]
             )
             == 0
         )
-        assert "source-answer=43" in (logs / "lclang.log").read_text(encoding="utf-8")
+        assert "source-answer=43" in next(logs.glob("*.log")).read_text(encoding="utf-8")
         assert frames and all(frame.closed for frame in frames)
-        assert loggers and all(not logger.handlers for logger in loggers)
+        assert loggers
+        for logger in loggers:
+            assert isinstance(logger, Logger)
+            with pytest.raises(RuntimeError):
+                logger.info("after close")

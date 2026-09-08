@@ -1,0 +1,16 @@
+{
+  "python": "3.14.2",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "command": "python -m scripts.logger_benchmark --records 1000 --threads 1 10 100",
+  "results": [
+    {"mode": "console", "threads": 1, "records": 1000, "call_p50_us": 11.9, "call_p95_us": 13.0, "call_p99_us": 15.9, "producer_records_per_second": 80156.46542050081},
+    {"mode": "console", "threads": 10, "records": 10000, "call_p50_us": 12.0, "call_p95_us": 13.3, "call_p99_us": 24.5, "producer_records_per_second": 73869.75580136127},
+    {"mode": "console", "threads": 100, "records": 100000, "call_p50_us": 12.0, "call_p95_us": 13.3, "call_p99_us": 25.2, "producer_records_per_second": 75428.2798874942},
+    {"mode": "file", "threads": 1, "records": 1000, "call_p50_us": 12.2, "call_p95_us": 12.9, "call_p99_us": 24.5, "producer_records_per_second": 43240.625432406254},
+    {"mode": "file", "threads": 10, "records": 10000, "call_p50_us": 12.0, "call_p95_us": 12.6, "call_p99_us": 24.7, "producer_records_per_second": 42781.462450068684},
+    {"mode": "file", "threads": 100, "records": 100000, "call_p50_us": 1894.35, "call_p95_us": 3699.4, "call_p99_us": 4983.6, "producer_records_per_second": 28440.03479808898},
+    {"mode": "both", "threads": 1, "records": 1000, "call_p50_us": 12.3, "call_p95_us": 12.7, "call_p99_us": 17.3, "producer_records_per_second": 78934.69732490311},
+    {"mode": "both", "threads": 10, "records": 10000, "call_p50_us": 12.0, "call_p95_us": 12.6, "call_p99_us": 24.8, "producer_records_per_second": 75865.51169011669},
+    {"mode": "both", "threads": 100, "records": 100000, "call_p50_us": 12.0, "call_p95_us": 12.9, "call_p99_us": 24.6, "producer_records_per_second": 73411.91491529696}
+  ]
+}

@@ -1,171 +1,18 @@
-"""Async CLI routing, execution, result output, and cleanup."""
+"""CLI routing before configuration and process logger initialization."""
 
 from __future__ import annotations
 
 import sys
 from collections.abc import Sequence
-from contextlib import suppress
 
-from lclang.cli.binding import CliBinding, build_binding
 from lclang.cli.commands import Command
-from lclang.cli.console_logging import FILE_ONLY_ATTRIBUTE, attach_console_handlers
-from lclang.cli.context import CliContext
 from lclang.cli.entrance import CliEntrance
+from lclang.cli.execution import execute_command
 from lclang.cli.help import render_command_help, render_group_help, render_usage_error
-from lclang.cli.logging import (
-    LoggerHandle,
-    VerboseLoggerHandle,
-    create_logger,
-    create_verbose_logger,
-    log_execution_start,
-)
-from lclang.cli.models import CliConfig, CliParams, CliResult, CliResultStatus
+from lclang.cli.models import CliConfig, CliResultStatus
 from lclang.cli.parser import help_requested, parse_cli_params
 from lclang.cli.process import ArgvParts, split_argv
 from lclang.cli.routing import RouteAction, RouteFailure, route_command
-from lclang.diagnostics import internal_verbose_scope
-
-
-def write_result(
-    result: CliResult,
-    logger_handle: LoggerHandle,
-    *,
-    log_result: bool = True,
-) -> None:
-    """Print and optionally log one non-empty command result.
-
-    :param result: Validated command result.
-    :param logger_handle: Active command logger owner.
-    :param log_result: Whether this result still needs a log record.
-    :returns: ``None``.
-    """
-    if not result.description:
-        return
-    if result.result_status is CliResultStatus.SUCCESS:
-        print(result.description, file=sys.stdout)
-        if log_result:
-            logger_handle.logger.info(
-                "%s",
-                result.description,
-                extra={FILE_ONLY_ATTRIBUTE: True},
-            )
-    else:
-        print(result.description, file=sys.stderr)
-        if log_result:
-            logger_handle.logger.error(
-                "%s",
-                result.description,
-                extra={FILE_ONLY_ATTRIBUTE: True},
-            )
-
-
-async def close_after_control_flow(binding: CliBinding, logger_handle: LoggerHandle) -> None:
-    """Best-effort close resources before propagating process-control failures.
-
-    :param binding: Owned Frame hierarchy.
-    :param logger_handle: Owned logger handlers.
-    :returns: ``None``.
-    """
-    with suppress(Exception):
-        await binding.stack.close()
-    logger_handle.close()
-
-
-async def execute_command(
-    command: Command,
-    params: object,
-    cli_config: CliConfig,
-) -> int:
-    """Build context, invoke one handler, and map its complete outcome.
-
-    :param command: Selected command declaration.
-    :param params: Parsed :class:`CliParams` value.
-    :param cli_config: Effective framework defaults.
-    :returns: Integer status without leaking ordinary exceptions.
-    :raises TypeError: Internally converted if the handler returns a wrong value.
-    """
-    if not isinstance(params, CliParams):
-        print("error: internal CLI params type mismatch", file=sys.stderr)
-        return int(CliResultStatus.EXCEPTION)
-    verbose_handle = create_verbose_logger(str(id(params))) if params.verbose else None
-    try:
-        logger = None if verbose_handle is None else verbose_handle.logger
-        with internal_verbose_scope(logger):
-            return await internal_execute_command(command, params, cli_config, verbose_handle)
-    finally:
-        if verbose_handle is not None:
-            verbose_handle.close()
-
-
-async def internal_execute_command(
-    command: Command,
-    params: CliParams,
-    cli_config: CliConfig,
-    verbose_handle: VerboseLoggerHandle | None,
-) -> int:
-    """Execute one validated invocation while its optional trace scope is active.
-
-    :param command: Selected command declaration.
-    :param params: Validated :class:`CliParams` value.
-    :param cli_config: Effective framework defaults.
-    :param verbose_handle: Optional trace logger awaiting the file handler.
-    :returns: Integer status without leaking ordinary exceptions.
-    :raises TypeError: Internally converted if the handler returns a wrong value.
-    """
-    try:
-        binding = await build_binding(command, params, cli_config)
-    except Exception as error:
-        print(f"error: {error}", file=sys.stderr)
-        return int(CliResultStatus.EXCEPTION)
-    try:
-        logger_handle = await create_logger(binding.frame, str(id(binding.frame)))
-    except Exception as error:
-        with suppress(Exception):
-            await binding.stack.close()
-        print(f"error: {error}", file=sys.stderr)
-        return int(CliResultStatus.EXCEPTION)
-    log_execution_start(
-        logger_handle,
-        params,
-        binding.frame,
-        binding.execution_config_names,
-    )
-    attach_console_handlers(logger_handle, params.verbose)
-    if verbose_handle is not None:
-        verbose_handle.attach(logger_handle.handlers[0])
-    context = CliContext(
-        params.as_of_date,
-        params.dryrun,
-        binding.frame,
-        logger_handle.logger,
-        params,
-    )
-    logged = False
-    try:
-        result = await command.handler(context)
-        if not isinstance(result, CliResult):
-            raise TypeError("CLI command handler must return CliResult")
-    except Exception as error:
-        logger_handle.logger.exception("command exception: %s", error)
-        result = CliResult(CliResultStatus.EXCEPTION, str(error))
-        logged = True
-    except BaseException:
-        await close_after_control_flow(binding, logger_handle)
-        raise
-    try:
-        await binding.stack.close()
-    except Exception as error:
-        logger_handle.logger.exception("command cleanup exception: %s", error)
-        result = CliResult(CliResultStatus.EXCEPTION, str(error))
-        logged = True
-    try:
-        write_result(result, logger_handle, log_result=not logged)
-    except Exception as error:
-        logger_handle.logger.exception("command output exception: %s", error)
-        result = CliResult(CliResultStatus.EXCEPTION, str(error))
-    finally:
-        logger_handle.close()
-    return int(result.result_status)
 
 
 def script_label_from_args(args: Sequence[str] | None) -> str:

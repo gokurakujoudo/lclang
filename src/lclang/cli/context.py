@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import date
 
 from lclang.cli.models import CliParams
+from lclang.logger.logger import Logger
 from lclang.runtime import Frame
 
 
@@ -24,7 +25,7 @@ class CliContext:
     as_of_date: date
     dryrun: bool
     frame: Frame
-    logger: logging.Logger
+    logger: logging.Logger | Logger
     raw_params: CliParams
 
     def __post_init__(self) -> None:
@@ -39,7 +40,7 @@ class CliContext:
             raise TypeError("context dryrun must be Boolean")
         if not isinstance(self.frame, Frame):
             raise TypeError("context frame must be a Frame")
-        if not isinstance(self.logger, logging.Logger):
+        if not isinstance(self.logger, (logging.Logger, Logger)):
             raise TypeError("context logger must be a Logger")
         if not isinstance(self.raw_params, CliParams):
             raise TypeError("context raw params must be CliParams")

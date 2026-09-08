@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path
 
 from lclang.cli.models import CliParams
 from lclang.cli.parser import OVERRIDE_OPTIONS
 from lclang.diagnostics import internal_render_value
 from lclang.lang.printer import to_source
+from lclang.logger.formatter import FILE_ONLY_ATTRIBUTE
+from lclang.logger.logger import Logger
 from lclang.masking import MASKED_VALUE, split_masked_name
 from lclang.runtime import Frame
 from lclang.runtime.frame.binding_lookup import find_scoped_binding
@@ -139,22 +140,19 @@ def execution_banner(params: CliParams) -> str:
 
 
 def emit_execution_start(
-    logger: logging.Logger,
-    log_path: Path | None,
+    logger: logging.Logger | Logger,
     params: CliParams,
     frame: Frame,
     names: tuple[str, ...],
 ) -> None:
-    """Write the fixed four-record audit preamble.
+    """Write the execution banner, redacted argv and lazy configuration.
 
     :param logger: Invocation logger receiving audit records.
-    :param log_path: Bound file path, or ``None`` when disabled.
     :param params: Parsed invocation values.
     :param frame: Effective invocation Frame.
     :param names: Candidate execution configuration names.
     """
-    extra = {AUDIT_RECORD_ATTRIBUTE: True}
-    logger.info(f"execution log file path: {log_path or 'disabled'}", extra=extra)
+    extra = {AUDIT_RECORD_ATTRIBUTE: True, FILE_ONLY_ATTRIBUTE: True}
     logger.info(execution_banner(params), extra=extra)
     argv = json.dumps(normalized_argv(params, frame), ensure_ascii=False)
     logger.info(f"execution command line: {argv}", extra=extra)

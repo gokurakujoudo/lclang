@@ -6,37 +6,43 @@ decorated command handler receives one `CliContext`, including its invocation
 Frame, as-of date, dry-run flag, and logging context, and returns a deterministic
 `CliResult`.
 
-The framework provides immutable invocation values, nested command groups,
-structured help, full-argument parsing, platform-neutral process entry points,
-alphabetized configuration-parameter help, isolated formal file logging, and
-opt-in internal tracing. Logger settings use scoped configuration names such as
-`logger.log_dir`. Non-error application records print to stdout, application
-errors print to stderr, and `--verbose` adds `DEBUG` records to stdout,
-independently of file logging. File and terminal application records share the
-configured structured format, including time, level, source location,
-function, and message; the default no longer appends logging argument tuples.
-Logger expressions can use the reserved values `__as_of_date__`, `__dryrun__`,
-`__verbose__`, `__ymd__`, `__execution_timestamp__`, and `__command__`; public
-Python constants provide every runtime key, including `__cli_params__`. Enabled
-file logs begin
-with four readable audit records: their bound path, a centered multi-line
-execution banner, exact JSON argv with masked override redaction, and sorted,
-aligned winning configuration. The configuration audit renders lazy LCL source
-without evaluating expressions or warming caches. Pass `--verbose` after a
-selected command to trace expression parsing, value provenance, caching, fallbacks, and
-evaluation to stderr; enabled file logging receives the same records. Trace
-values use bounded representations. A trailing `!` on a definition or binding
-key, such as `api_token!: load_token()`, keeps the runtime name `api_token` but
-renders its parse, evaluation, lookup, cache, failure, and inspection payloads
-as `*masked*`. The marker is exact-name and sticky across overrides; derived
-keys require their own marker. Application-authored log messages remain the
-handler's responsibility. The existing `-v/--version` spelling remains the
-version command. Precedence rises from preset and command defaults through
-configuration definitions and command-line overrides to reserved runtime
-values. Built-in commands inventory available values, parse LCL, and evaluate
-LCL using the same routing model. Exact valueless `-o FORCE` makes a marked
-`RESULT=LCL[...]` parse strictly and reports a source-aligned status-2 syntax
-diagnostic; ordinary and non-RESULT override parsing remains permissive.
+The CLI resolves logging from the same final Frame as application configuration.
+`CliConfig.log_config` supplies a `LoggerHandlerConfig` declaration; `.lclcfg`
+settings and `-o` overrides replace the corresponding `logger.*` leaves.
+`logger.console` controls the console and `logger.file.<sink>` declares named
+files. `logger.file.default` supplies missing fields without creating a sink.
+Explicit sink values always win over this template, regardless of which source
+supplied the template. Thus a CLI default.enabled=False preserves a configured
+sink's explicit enabled=True; override that sink directly to close it.
+
+The logger scope starts after configuration is resolved and remains active
+through command execution, workflow resources, and Frame cleanup. Preparation
+errors go directly to stderr. Normal output drain completes before returning.
+Overlapping CLI entry invocations are rejected because root logging is global.
+All diagnostic console records use stderr; successful command results retain
+stdout. The shared format uses UTC microseconds, level, process, thread, source
+name, file/line, function, prefix and message. Each permanent file segment begins
+with its absolute path. Execution audit records contain the banner, exact
+redacted argv and lazy winning configuration without fixed initial positions.
+
+`--verbose` enables runtime DEBUG diagnostics and lowers global and enabled
+sink thresholds to DEBUG, retaining lower existing thresholds. Disabled sinks
+stay disabled and source filters remain effective. Preparation records are not
+replayed. Value rendering remains bounded and respects trailing-bang masks.
+`-v/--version` retains its existing meaning.
+
+Logger expressions can use `__as_of_date__`, `__dryrun__`, `__verbose__`,
+`__ymd__`, `__execution_timestamp__`, `__command__`, and `__cli_params__`.
+The date and command metadata retain the existing runtime-key semantics.
+Ordinary CLI values are strings; numeric, Boolean and collection overrides use
+`LCL[...]`. No logger-specific coercion is added. Unknown logger keys are errors,
+including in Workflow commands where valid logger keys bypass business-input
+validation. See the [logger reference](logger.md) for the complete sink contract.
+
+Built-in commands use this same routing model. Exact valueless `-o FORCE` makes
+a marked `RESULT=LCL[...]` parse strictly; ordinary override parsing remains
+permissive. Invalid marked logger overrides fail when their effective field is
+validated.
 
 Dry-run remains an explicit handler decision, so the framework never pretends
 to know whether an application-specific side effect is safe.

@@ -9,8 +9,8 @@ from enum import IntEnum
 from typing import Self
 
 from lclang.cli.validation import freeze_mapping, normalize_text, require_lcl_qualified_name
+from lclang.logger import LoggerHandlerConfig
 from lclang.masking import normalize_masked_mapping, split_masked_name
-from lclang.utils.logging import LogConfig
 
 
 @dataclass(frozen=True, slots=True)
@@ -180,13 +180,13 @@ class CliConfig:
     :param log_config: Immutable default logger configuration.
     """
 
-    log_config: LogConfig = field(default_factory=LogConfig)
+    log_config: LoggerHandlerConfig = field(default_factory=LoggerHandlerConfig)
 
     def __post_init__(self) -> None:
         """Require the public logging configuration type.
 
         :returns: ``None``.
-        :raises TypeError: If *log_config* is not a :class:`LogConfig`.
+        :raises TypeError: If *log_config* is not a :class:`LoggerHandlerConfig`.
         """
-        if not isinstance(self.log_config, LogConfig):
-            raise TypeError("CLI log configuration must be LogConfig")
+        if not isinstance(self.log_config, LoggerHandlerConfig):
+            raise TypeError("CLI log configuration must be LoggerHandlerConfig")

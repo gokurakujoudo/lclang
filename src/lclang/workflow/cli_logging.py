@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import random
 
+from lclang.logger.logger import Logger
 from lclang.runtime import Frame
 from lclang.workflow.logging import status_level
 from lclang.workflow.models import ExecutionStatus, ExecutionStatusTree
@@ -41,7 +42,7 @@ def status_lines(tree: ExecutionStatusTree) -> list[str]:
 
 
 def log_status_tree(
-    logger: logging.Logger,
+    logger: logging.Logger | Logger,
     tree: ExecutionStatusTree,
     workflow_id: str,
 ) -> None:
@@ -59,7 +60,7 @@ def log_status_tree(
 
 
 async def log_lunch_option(
-    logger: logging.Logger,
+    logger: logging.Logger | Logger,
     frame: Frame,
     status: ExecutionStatus,
 ) -> None:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from lclang.cli import CliContext, CliResult, CliResultStatus, Command, ParameterDoc
+from lclang.cli.logger_config import logger_parameter
 from lclang.errors import LclCliUsageError
 from lclang.masking import normalize_masked_mapping
 from lclang.workflow.cli_logging import log_lunch_option, log_status_tree, status_lines
@@ -115,7 +116,11 @@ def workflow_command(
         :returns: Empty logger-only workflow result.
         :raises LclCliUsageError: If an override is not an external variable.
         """
-        unknown = set(context.raw_params.overrides) - allowed
+        unknown = {
+            name
+            for name in context.raw_params.overrides
+            if name not in allowed and not logger_parameter(name)
+        }
         if unknown:
             raise LclCliUsageError("workflow override targets non-external variable")
         result = await workflow.execute(

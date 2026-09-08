@@ -15,10 +15,10 @@ from lclang.cli import (
     CliEntrance,
     CliResult,
     CommandGroup,
-    LogConfig,
     cli,
 )
 from lclang.cli.application import LCLANG_CLI_ENTRANCE
+from lclang.logger import LoggerHandlerConfig
 
 
 class BrokenRepresentation:
@@ -87,7 +87,11 @@ def make_verbose_entrance(log_dir: str | None = None) -> CliEntrance:
             await context.frame.get("absent")
         return CliResult.success(str(result))
 
-    config = CliConfig(LogConfig(log_dir=log_dir, log_level="ERROR"))
+    config = CliConfig(
+        LoggerHandlerConfig(
+            file={} if log_dir is None else {"app": {"directory": log_dir, "level": "ERROR"}}
+        )
+    )
     return CliEntrance(CommandGroup("root", "Trace", [trace_command]), cli_config=config)
 
 
@@ -134,7 +138,7 @@ def test_verbose_reports_parse_lookup_evaluation_and_safe_values(
     captured = capsys.readouterr()
     assert captured.out == "value!\n"
     trace = captured.err
-    assert "[lclang.parse]" in trace
+    assert "[lclang.evaluate]" in trace
     assert "[lclang.evaluate]" in trace
     assert "source=external-provided value=(str) 'value'" in trace
     assert "source=lcl-evaluated value=(str) 'value!'" in trace
@@ -150,7 +154,7 @@ def test_verbose_reports_parse_lookup_evaluation_and_safe_values(
     assert "<truncated>" in trace
 
 
-def test_verbose_replays_early_records_to_the_configured_file(
+def test_verbose_writes_runtime_records_to_the_configured_file(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Explicit verbose mode reaches stderr and file despite an ERROR log level."""
@@ -158,9 +162,9 @@ def test_verbose_replays_early_records_to_the_configured_file(
         entrance = make_verbose_entrance(directory)
         assert asyncio.run(entrance.run(trace_args("--verbose"))) == 0
         stderr = capsys.readouterr().err
-        contents = (Path(directory) / "lclang.log").read_text(encoding="utf-8")
-    assert "[lclang.parse]" in stderr
-    assert "[lclang.parse]" in contents
+        contents = next(Path(directory).glob("*.log")).read_text(encoding="utf-8")
+    assert "[lclang.evaluate]" in stderr
+    assert "[lclang.evaluate]" in contents
     assert "source=fallback" in contents
 
 
@@ -183,7 +187,7 @@ def test_verbose_redacts_masked_config_and_override_payloads(
         )
         assert asyncio.run(entrance.run(args)) == 0
         stderr = capsys.readouterr().err
-        contents = (root / "lclang.log").read_text(encoding="utf-8")
+        contents = next(root.glob("*.log")).read_text(encoding="utf-8")
     for trace in (stderr, contents):
         assert "*masked*" in trace
         assert "config-secret" not in trace
@@ -194,6 +198,7 @@ def test_verbose_reports_evaluation_failures(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Failed definitions retain both evaluation and lookup diagnostics."""
+
     @cli.command()
     async def failure_command(context: CliContext) -> CliResult:
         """Resolve the same failed definition twice to expose its cached failure.
@@ -231,7 +236,7 @@ def test_verbose_reports_evaluation_failures(
     assert "division by zero" in trace
 
 
-def test_concurrent_invocations_keep_verbose_state_task_local(
+def test_concurrent_invocations_reject_overlapping_handler_scopes(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """A quiet sibling Task never emits its distinct values into verbose stderr."""
@@ -252,7 +257,7 @@ def test_concurrent_invocations_keep_verbose_state_task_local(
         first, second = await asyncio.gather(entrance.run(noisy), entrance.run(quiet))
         return first, second
 
-    assert asyncio.run(exercise()) == (0, 0)
+    assert asyncio.run(exercise()) == (0, 2)
     captured = capsys.readouterr()
     assert "noisy-value" in captured.err
     assert "quiet-value" not in captured.err
@@ -275,5 +280,5 @@ def test_builtin_cli_verbose_keeps_result_on_stdout(
     assert asyncio.run(LCLANG_CLI_ENTRANCE.run(args)) == 0
     captured = capsys.readouterr()
     assert captured.out == "42\n"
-    assert "[lclang.parse]" in captured.err
+    assert "[lclang.evaluate]" in captured.err
     assert "source=lcl-evaluated value=(int) 42" in captured.err

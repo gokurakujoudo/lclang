@@ -44,9 +44,8 @@ the same live fallback without mutating the process environment.
 
 ## Own a standalone logger
 
-`LogConfig` and `create_logger` do not require a CLI entrance. The returned
-`LoggerHandle` owns its handlers, so close it when the application component is
-finished.
+A process entry point owns one handler scope. Application loggers only bind
+source names and prefixes; the scope owns the background writer and its sinks.
 
 <!-- lclang-doc-exec -->
 ```python
@@ -54,39 +53,35 @@ import asyncio
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from lclang.utils import LogConfig, create_logger
+from lclang.logger import LoggerHandlerConfig, use_logger, use_logger_handler
 
 
 async def main() -> None:
     with TemporaryDirectory(prefix="lclang-logger-tutorial-") as directory:
-        root = Path(directory)
-        handle = await create_logger(
-            LogConfig(
-                log_dir=str(root),
-                log_file_name="worker.log",
-                log_level="INFO",
-            ),
-            "example.worker",
+        config = LoggerHandlerConfig(
+            console={"enabled": False},
+            file={"worker": {"directory": directory}},
         )
-        try:
-            handle.logger.info("processed %d records", 3)
-            assert handle.log_path == root / "worker.log"
-        finally:
-            handle.close()
-
-        text = (root / "worker.log").read_text(encoding="utf-8")
-        assert "INFO" in text
-        assert "processed 3 records" in text
+        async with use_logger_handler(config) as runtime:
+            logger = await use_logger(name="example.worker", prefix="[WORKER]")
+            logger.info("processed %d records", 3)
+        paths = list(Path(directory).glob("*.log"))
+        assert len(paths) == 1
+        text = paths[0].read_text(encoding="utf-8")
+        assert text.startswith("log file: ")
+        assert "[WORKER] processed 3 records" in text
+        assert runtime.metrics.records_written == 1
 
 
 asyncio.run(main())
 ```
 
-The factory creates a non-propagating standard-library logger. It creates the
-directory and UTF-8 file only when logging is enabled; `LogConfig()` instead
-uses a null handler. `close()` is idempotent, which makes cleanup safe in a
-`finally` block. `DEFAULT_LOG_FORMAT` is public when an application wants to
-extend the default while retaining its diagnostic fields.
+The producer enqueues the record without file I/O. Scope exit drains it before
+returning, so reading the segment afterwards observes the completed message.
+The exclusive filename contains the process ID, UTC creation timestamp, and
+sequence. Closed segments keep that path permanently. Console output can run
+alongside any number of files. The [logger reference](../reference/logger.md)
+explains templates, rotation, filtering, cancellation, and worker initialization.
 
 ## Reuse the reviewed standard helpers
 
@@ -184,7 +179,7 @@ renderer produces a stable failure description; the helper adds no type label.
 
 Downstream code can adopt only the layer it needs:
 
-- `lclang.utils` provides the live environment and standalone logging.
+- `lclang.utils` provides the live environment; `lclang.logger` owns process logging.
 - `lclang.stdlib` provides reviewed pure-data helpers and preset assembly.
 - `lclang.utils.calendar` provides date policy and managed calendar loading.
 - `lclang.workflow` provides typed task trees and nested execution status.

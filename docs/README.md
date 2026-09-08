@@ -23,3 +23,5 @@
 
 - [Local Development Guide](development/README.md)
 - [Architecture and module layout](development/architecture.md)
+
+- [Unified process logging](reference/logger.md)

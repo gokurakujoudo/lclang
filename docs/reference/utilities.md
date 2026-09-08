@@ -51,14 +51,11 @@ missing names return the default and reads never snapshot or mutate the process
 environment. The canonical LCL `env` utility adds scoped Frame overrides on top
 of this view.
 
-The same module exports `DEFAULT_LOG_FORMAT`, `LogConfig`, `LoggerHandle`, and
-`async create_logger(config, name)`. `LogConfig` validates a disabled or file
-logging policy without touching the filesystem. `create_logger` creates an
-isolated, non-propagating standard-library logger and returns its owned handle;
-`LoggerHandle.close()` detaches and closes handlers idempotently. This surface
-does not require an lclang CLI application. `lclang.cli.LogConfig` remains a
-compatible export, and the CLI materializes its scoped `logger` proxy with
-`as_record(LogConfig)` before delegating file handler creation to this utility.
+Process logging lives in `lclang.logger`. Its two async entry points are
+`use_logger_handler(config)` and `use_logger(name=None, prefix="", emit_level=0)`.
+The handler scope owns console and named file output and restores stdlib logging
+on exit. CLI and Workflow applications resolve the same configuration from LCL
+and command-line overrides; see the [logger reference](logger.md).
 
 ## Workflow status
 

@@ -16,7 +16,6 @@ def test_cli_exports_are_curated_without_expanding_package_root() -> None:
         "CliResultStatus",
         "Command",
         "CommandGroup",
-        "LogConfig",
         "ParameterDoc",
         "RUNTIME_AS_OF_DATE_KEY",
         "RUNTIME_CLI_PARAMS_KEY",

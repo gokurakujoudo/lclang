@@ -97,7 +97,7 @@ class Command:
         names = [item.name for item in docs]
         if len(names) != len(set(names)):
             raise ValueError("duplicate command parameter name")
-        if set(names) & DECLARATION_RESERVED_NAMES:
+        if any(name.split(".", 1)[0] in DECLARATION_RESERVED_NAMES for name in names):
             raise ValueError("command parameter name is reserved")
         if not isinstance(self.preset, Mapping):
             raise TypeError("command preset must be a mapping")
