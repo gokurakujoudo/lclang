@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING
 
-from lclang.logger.logger import Logger
+from lclang.logger import Logger
 from lclang.runtime import Frame
 from lclang.types import TaskID
 from lclang.workflow.manager import ExecutionStatusManager

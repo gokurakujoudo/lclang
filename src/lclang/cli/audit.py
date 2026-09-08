@@ -9,8 +9,8 @@ from lclang.cli.models import CliParams
 from lclang.cli.parser import OVERRIDE_OPTIONS
 from lclang.diagnostics import internal_render_value
 from lclang.lang.printer import to_source
+from lclang.logger import Logger
 from lclang.logger.formatter import FILE_ONLY_ATTRIBUTE
-from lclang.logger.logger import Logger
 from lclang.masking import MASKED_VALUE, split_masked_name
 from lclang.runtime import Frame
 from lclang.runtime.frame.binding_lookup import find_scoped_binding

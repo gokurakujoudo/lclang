@@ -18,7 +18,7 @@ src/lclang/
     dependency/    static/dynamic analytics and qualified Frame graphs
   stdlib/          reviewed manifests, namespaces and async helpers
   config/          logical lines, includes, origins and config diagnostics
-  logger/          process scope, queue writer, named sinks and permanent rotation
+  logger/          Frame configuration, process scope, queue writer, sinks and rotation
   cli/             typed contexts, parsing, routing, runners and built-ins
   workflow/        immutable task trees, execution, mappings, CLI and status
   utils/
@@ -36,6 +36,8 @@ responsibility-based modules. Scripts and tests are outside this size policy.
 Dependencies flow inward: CLI may depend on config/runtime; config may depend
 on language/runtime; runtime may depend on AST/language primitives. AST, source,
 types, errors, and workflow status never import runtime, config, or CLI.
+Logger Frame configuration depends on runtime and never imports CLI; CLI adds
+parameter recognition and entry-point defaults around the shared resolver.
 
 ## Test packages
 

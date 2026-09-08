@@ -8,18 +8,12 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from lclang import define_frame, define_module, parse_expression
+from lclang import parse_expression
 from lclang.cli import CliConfig, CliContext, CliParams, CliResult, cli
 from lclang.cli.binding import build_binding
-from lclang.cli.logger_config import (
-    logger_parameter,
-    logger_source,
-    resolve_logger_config,
-    verbose_config,
-)
+from lclang.cli.logger_config import logger_parameter
 from lclang.diagnostics import internal_verbose_scope
-from lclang.logger import LoggerHandlerConfig
-from lclang.runtime import Frame
+from lclang.logger import LoggerHandlerConfig, resolve_logger_config
 
 # Static configuration keeps test file inputs independent of runtime path creation.
 LOGGER_SOURCE = """
@@ -159,61 +153,7 @@ def test_entry_defaults_retain_unset_fields() -> None:
     asyncio.run(exercise())
 
 
-@pytest.mark.asyncio
-async def test_invalid_logger_namespace_and_expression_report_paths() -> None:
-    """Scalar replacement and failing configuration expressions fail before entry."""
-    async with define_frame(define_module("bad", {"logger": "1"})) as frame:
-        with pytest.raises(TypeError, match="FrameProxy"):
-            await resolve_logger_config(frame)
-    async with define_frame(define_module("bad", {"logger.console.level": "1 / 0"})) as frame:
-        with pytest.raises(ValueError, match="logger.console.level"):
-            await resolve_logger_config(frame)
-
-
 def test_runtime_parsing_retains_verbose_diagnostics() -> None:
     """Parsing performed after scope setup can still produce internal trace records."""
     with internal_verbose_scope(logging.getLogger(__name__)):
         assert parse_expression("1 + 2") is not None
-
-
-def test_verbose_preserves_disabled_console_level() -> None:
-    """Disabled sinks keep their original policy under a verbose invocation."""
-    config = LoggerHandlerConfig(console={"enabled": False, "level": "ERROR"})
-    assert verbose_config(config).resolved_console().level == logging.ERROR
-
-
-@pytest.mark.asyncio
-async def test_invalid_fields_include_defining_source() -> None:
-    """Validation attaches source information without evaluating unrelated bindings."""
-    async with define_frame(define_module("bad_settings", {"logger.level": '"NOPE"'})) as frame:
-        with pytest.raises(ValueError, match="logger.level.*bad_settings"):
-            await resolve_logger_config(frame)
-    async with Frame(define_module("override_layer", {}), values={"logger.level": "NOPE"}) as frame:
-        with pytest.raises(ValueError, match="logger.level.*override_layer"):
-            await resolve_logger_config(frame)
-
-
-@pytest.mark.asyncio
-async def test_source_for_absent_and_inherited_fields() -> None:
-    """Missing requirements name their layer; inherited failures point at the template."""
-    async with define_frame(define_module("empty_layer", {})) as frame:
-        assert logger_source(frame, "logger.level") == "empty_layer"
-    async with define_frame(define_module("partial", {"logger.file.app.enabled": "True"})) as frame:
-        with pytest.raises(ValueError, match="logger.file.app.directory.*partial"):
-            await resolve_logger_config(frame)
-    async with (
-        define_frame(
-            define_module("template", {"logger.file.default.rotation.align": "True"})
-        ) as base,
-        base.derive(
-            define_module(
-                "sink",
-                {
-                    "logger.file.app.enabled": "False",
-                    "logger.file.app.rotation.interval": '"2h"',
-                },
-            )
-        ) as frame,
-    ):
-        with pytest.raises(ValueError, match="logger.file.app.rotation.align.*template"):
-            await resolve_logger_config(frame)

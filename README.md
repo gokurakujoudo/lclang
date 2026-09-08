@@ -307,7 +307,10 @@ See the [CLI reference](https://jihulab.com/midnightprotocol/lclang/-/blob/main/
 and [CLI tutorial](https://jihulab.com/midnightprotocol/lclang/-/blob/main/docs/tutorials/09-command-line-applications.md).
 
 Standalone applications use `LoggerHandlerConfig`, `use_logger_handler` and
-`use_logger` from `lclang.logger`. One background writer handles stderr and named
+`use_logger` from `lclang.logger`, which also exports `Logger`, runtime, resolved
+configuration and metric types. `await resolve_logger_config(frame)` extracts
+`logger.*` from a Frame loaded from `.lclcfg`, without requiring CLI.
+One background writer handles stderr and named
 file sinks, with independent UTC time/size rotation and permanent segment paths.
 `logger.file.default` supplies missing sink fields; explicit enabled settings
 win over template overrides. CLI and Workflow share these keys through LCL and

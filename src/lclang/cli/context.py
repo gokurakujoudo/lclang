@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import date
 
 from lclang.cli.models import CliParams
-from lclang.logger.logger import Logger
+from lclang.logger import Logger
 from lclang.runtime import Frame
 
 

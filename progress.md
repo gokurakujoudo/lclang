@@ -70,7 +70,8 @@ runtime dependencies.
   helpers without ambient I/O or dynamic-code capabilities.
 - Process-scoped queue logging with named sinks, template defaults, UTC time/size
   rotation, permanent linked segments, diagnostics and reversible stdlib takeover;
-  a live Python environment utility.
+  public logger/runtime/configuration/metric types and async Frame configuration
+  resolution for standalone applications; a live Python environment utility.
 - Async three-state business-day calendars with canonical composition, bounded
   mappings, strict JSON loading, and dependency-aware cache retirement.
 - Validated tree workflows with typed dataclass mappings, named variables,

@@ -45,7 +45,13 @@ async def test_uvicorn_complete_service_entry() -> None:
         listener.bind(("127.0.0.1", 0))
         stream = io.StringIO()
         server = uvicorn.Server(uvicorn.Config(app, log_config=None))
-        source = marked_blocks((ROOT / "docs/reference/logger.md").read_text(encoding="utf-8"))[0]
+        source = next(
+            block
+            for block in marked_blocks(
+                (ROOT / "docs/reference/logger.md").read_text(encoding="utf-8")
+            )
+            if "async def serve(" in block
+        )
         serve = cast(Any, execute_example(source, "logger.md")["serve"])
         task = asyncio.create_task(
             serve(

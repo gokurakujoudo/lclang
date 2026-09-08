@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Export logger, runtime, resolved configuration and metric types from
+  `lclang.logger`; share public `resolve_logger_config(frame)` between CLI and
+  standalone `.lclcfg` applications, with handler defaults for an absent namespace.
 - Preserve Gunicorn's graceful SIGTERM handler in the documented Uvicorn worker
   so replayed shutdown signals allow queued logs to drain and files to close.
 

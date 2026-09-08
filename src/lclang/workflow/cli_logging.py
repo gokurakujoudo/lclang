@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import random
 
-from lclang.logger.logger import Logger
+from lclang.logger import Logger
 from lclang.runtime import Frame
 from lclang.workflow.logging import status_level
 from lclang.workflow.models import ExecutionStatus, ExecutionStatusTree

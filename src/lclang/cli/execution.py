@@ -10,12 +10,10 @@ from lclang.cli.audit import emit_execution_start
 from lclang.cli.binding import CliBinding, build_binding
 from lclang.cli.commands import Command
 from lclang.cli.context import CliContext
-from lclang.cli.logger_config import resolve_logger_config
 from lclang.cli.models import CliConfig, CliParams, CliResult, CliResultStatus
 from lclang.diagnostics import internal_verbose_scope
-from lclang.logger import use_logger, use_logger_handler
+from lclang.logger import Logger, resolve_logger_config, use_logger, use_logger_handler
 from lclang.logger.formatter import FILE_ONLY_ATTRIBUTE
-from lclang.logger.logger import Logger
 
 
 def write_result(result: CliResult, logger: Logger, *, log_result: bool = True) -> None:

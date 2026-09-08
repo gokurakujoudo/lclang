@@ -1,7 +1,7 @@
 # Unified application logging
 
-`lclang.logger` provides `LoggerHandlerConfig`, `use_logger_handler`, and
-`use_logger`. A process owns one asynchronous handler scope. Producer threads
+`lclang.logger` provides `LoggerHandlerConfig`, `resolve_logger_config`,
+`use_logger_handler`, and `use_logger`. A process owns one asynchronous handler scope. Producer threads
 enqueue records; one writer formats and writes console and named file sinks.
 Nested/concurrent scopes are rejected. Logger wrappers select the current
 process scope, and reject use outside a scope. Initialize after worker creation.
@@ -10,8 +10,10 @@ process scope, and reject use outside a scope. Initialize after worker creation.
 
 Python objects and mappings share the `level`, `format`, `console`, `file`,
 `takeover_loggers`, and `capture_warnings` fields. No configuration files are
-read by this package. CLI/Workflow adapters resolve `logger.*` through their
-ordinary Frame and `-c`/`-o` layering before entering the handler scope.
+read by this package. Applications load `.lclcfg` files with `lclang.config`,
+then call `await resolve_logger_config(frame, verbose=False)` to materialize
+`logger.*` from their ordinary Frame. CLI/Workflow use the same resolver after
+their `-c`/`-o` layering, before entering the handler scope.
 
 `file` is a mapping of sink names. `file.default` supplies missing leaf fields
 and never creates a sink. Explicit sink fields always take precedence over
@@ -35,6 +37,84 @@ without enabling disabled sinks or removing source filters.
 Disabled outputs retain their configured thresholds. Invalid fields include
 their complete logger path; CLI diagnostics also identify the defining source
 and position when available, or the owning configuration layer otherwise.
+
+## Public Python types
+
+All of the following can be imported directly from `lclang.logger`:
+
+| Type | Role |
+| --- | --- |
+| `Logger` | Wrapper returned by `await use_logger(...)`; use it to annotate application logging arguments. |
+| `LoggerHandlerConfig` | Immutable declaration accepted by `use_logger_handler`. |
+| `LoggerRuntime` | Runtime yielded by the handler scope; read `metrics` for diagnostics. |
+| `ConsoleConfig`, `FileConfig`, `RotationConfig` | Resolved output policies returned by `resolved_console()` and `resolved_files()`. |
+| `RuntimeMetrics`, `SinkMetrics` | Detached aggregate and per-sink diagnostic snapshots. |
+
+Obtain loggers and runtimes through the scope APIs. Resolved policy types describe
+validated results; declare console, file and rotation settings with mappings in
+`LoggerHandlerConfig`.
+
+## Configuration without CLI
+
+`resolve_logger_config` evaluates only the logger subtree and its dependencies,
+using the supplied Frame's hierarchy, overrides and cached snapshots. Missing
+fields use the ordinary handler defaults; an absent logger namespace returns
+`LoggerHandlerConfig()` settings. If present, `logger` must be a scoped
+`FrameProxy`, not a scalar or a nested Python mapping. Invalid namespace or
+field types raise `TypeError`; invalid values and failing leaf expressions raise
+`ValueError`. Field validation includes source metadata when available, and
+leaf evaluation errors include the logger path and retain their cause.
+
+Resolution does not enter a handler scope, initialize sinks, modify bindings,
+or close the Frame. Application-supplied callables evaluated by LCL retain their
+normal effects. `verbose=True` lowers the global and enabled output thresholds
+to DEBUG while preserving lower thresholds, disabled outputs and source filters.
+No CLI invocation variables are injected; supply application inputs explicitly.
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from lclang.config import load_config
+from lclang.logger import Logger, resolve_logger_config, use_logger, use_logger_handler
+
+
+async def main() -> None:
+    with TemporaryDirectory() as directory:
+        path = Path(directory) / "service.lclcfg"
+        path.write_text('''
+__LCL_VERSION__: 1
+logger.console.enabled: False
+logger.file.default.directory: log_directory
+logger.file.service.filename: f"{service}.log"
+logger.file.service.level: "INFO"
+''', encoding="utf-8")
+        loaded = await load_config(path)
+        async with loaded.frame_factory().create(
+            values={"service": "catalog", "log_directory": directory}
+        ) as frame:
+            config = await resolve_logger_config(frame)
+            assert config.resolved_files()["service"].filename == "catalog.log"
+            async with use_logger_handler(config) as runtime:
+                logger: Logger = await use_logger("catalog")
+                logger.info("service ready")
+            metrics = runtime.metrics
+            assert metrics.records_written == 1
+            segment = metrics.sinks["file.service"].path
+            assert segment is not None
+            assert "service ready" in segment.read_text(encoding="utf-8")
+
+
+asyncio.run(main())
+```
+
+The application owns `service` and `log_directory`; the file derives the sink's
+filename and inherits its directory from `file.default`. Resolving the Frame
+produces the same immutable configuration used by CLI. The handler scope drains
+the queued record before the assertions read its permanent segment, then the
+Frame and temporary directory close.
 
 ## Records and ownership
 
