@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Publish a tag build to the selected registry
+        description: Publish a tag build, or publish the release branch to PyPI
         type: choice
         default: none
         options:
@@ -35,7 +35,9 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && inputs.publish != 'none'
         env:
           REF_TYPE: ${{ github.ref_type }}
-        run: test "$REF_TYPE" = tag
+          REF: ${{ github.ref }}
+          REGISTRY: ${{ inputs.publish }}
+        run: test "$REF_TYPE" = tag || { test "$REF" = refs/heads/release && test "$REGISTRY" = pypi; }
       - run: python -m pip install "pip==${LCLANG_CI_PIP_VERSION}"
       - run: python -m pip install --group dev
       - run: python -m pip check
@@ -105,11 +107,34 @@ jobs:
       - uses: actions/deploy-pages@v4
         id: deployment
 
-  publish:
-    if: github.event_name == 'workflow_dispatch' && inputs.publish != 'none' && github.ref_type == 'tag'
+  publish-pypi:
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/release') ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish == 'pypi' &&
+      (github.ref_type == 'tag' || github.ref == 'refs/heads/release'))
     needs: build
     runs-on: ubuntu-latest
-    environment: ${{ inputs.publish }}
+    permissions:
+      id-token: write
+    environment:
+      name: pypi
+      url: https://pypi.org/project/lclang/
+    concurrency:
+      group: pypi-publish
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: distributions
+          path: dist
+      - name: Publish to PyPI with Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+
+  publish-artifactory:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish == 'artifactory' && github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    environment: artifactory
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -121,18 +146,7 @@ jobs:
         with:
           name: distributions
           path: dist
-      - name: Upload to PyPI
-        if: inputs.publish == 'pypi'
-        env:
-          TWINE_REPOSITORY_URL: https://upload.pypi.org/legacy/
-          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-        run: |
-          : "${TWINE_USERNAME:?Configure PYPI_USERNAME}"
-          : "${TWINE_PASSWORD:?Configure PYPI_PASSWORD}"
-          python -m twine upload --non-interactive dist/*
       - name: Upload to Artifactory
-        if: inputs.publish == 'artifactory'
         env:
           TWINE_REPOSITORY_URL: ${{ vars.ARTIFACTORY_REPOSITORY_URL }}
           TWINE_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}

@@ -104,6 +104,7 @@ runtime dependencies.
   property tests, concurrency and dependency stress tests, leak checks, and
   executable documentation.
 - Source CLI smoke, default full stress execution, and minimal downstream sdist
-  contents. CI builds follow source verification on every run; tags support manual publishing.
+  contents. CI builds follow source verification on every run; the `release`
+  branch publishes to PyPI with Trusted Publishing, and tags support manual publishing.
 - Public `lclang.utils.safe_repr` protects single-line value rendering, masking,
   canonical renderers and exact truncation budgets.
