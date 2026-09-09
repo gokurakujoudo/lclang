@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="$description">
+  <meta name="theme-color" content="#101a2c">
+  <title>$title · lclang documentation</title>
+  <link rel="canonical" href="https://gokurakujoudo.github.io/lclang/$route">
+  <link rel="stylesheet" href="${base}styles.css">
+  <link rel="icon" type="image/png" href="${base}assets/favicon.png">
+  <link rel="apple-touch-icon" href="${base}assets/apple-touch-icon.png">
+  <script src="${base}theme.js"></script>
+  <script src="${base}docs.js" defer></script>
+</head>
+<body data-base="$base" class="$page_class">
+  <a class="skip" href="#main">Skip to content</a>
+  <aside class="sidebar" id="navigation">
+    <a class="wordmark" href="${base}index.html"><img src="${base}assets/logo.png" width="38" height="38" alt="">lclang <span>docs</span></a>
+    <div class="release"><span class="status-dot"></span>v$version <span>stable · Python 3.14+</span></div>
+    <button class="search-open" type="button" hidden>Search documentation <kbd>/</kbd></button>
+    <nav aria-label="Documentation">$navigation</nav>
+    <div class="sidebar-footer"><span>Lazy Context Language</span><a href="https://pypi.org/project/lclang/">PyPI ↗</a></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar">
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="navigation" hidden>Menu</button>
+      <nav aria-label="Breadcrumb"><a href="${base}index.html">Docs</a><span aria-hidden="true">/</span><span>$group</span></nav>
+      <div class="top-actions"><a href="https://github.com/gokurakujoudo/lclang">GitHub ↗</a><button class="theme-toggle" type="button" hidden>Dark mode</button></div>
+    </header>
+    <div class="reading-layout">
+      <main id="main" tabindex="-1">
+        <div class="page-meta"><span>$group</span><a href="$source_url">View source ↗</a></div>
+        <article>$content</article>
+        <nav class="page-turn" aria-label="Previous and next page">$pagination</nav>
+        <footer class="page-footer"><a class="wordmark" href="${base}index.html"><img src="${base}assets/logo.png" width="24" height="24" alt="">lclang</a><span>MIT licensed · Pure Python · No runtime dependencies</span></footer>
+      </main>
+      <aside class="contents"><nav aria-label="On this page"><p>On this page</p>$toc</nav><a class="back-top" href="#main">Back to top ↑</a></aside>
+    </div>
+  </div>
+  <dialog class="search-dialog" aria-labelledby="search-title">
+    <div class="search-heading"><h2 id="search-title">Search documentation</h2><button class="search-close" type="button" aria-label="Close search">Close <kbd>Esc</kbd></button></div>
+    <label class="visually-hidden" for="search-input">Search terms</label>
+    <input id="search-input" type="search" placeholder="Try Frame, configuration, or logging…" autocomplete="off">
+    <p id="search-status" role="status">Type to search all documentation.</p>
+    <ol id="search-results"></ol>
+  </dialog>
+</body>
+</html>

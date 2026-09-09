@@ -105,9 +105,9 @@ for manual dispatch using a tag ref.
 
 ## Documentation publishing
 
-The [introduction site](https://gokurakujoudo.github.io/lclang/) is served by
-GitHub Pages. The [Wiki](https://github.com/gokurakujoudo/lclang/wiki) is the
-reader-facing documentation library. Keep editing Markdown under `docs/`:
+The [documentation site](https://gokurakujoudo.github.io/lclang/) is served by
+GitHub Pages, with the [Wiki](https://github.com/gokurakujoudo/lclang/wiki) as an
+alternative view. Keep editing Markdown under `docs/`:
 it remains the canonical source and its marked examples run in the quality gate.
 The Wiki export preserves those examples and rewrites local prose links into
 Wiki navigation. Non-Markdown attachments link to the exact source revision.
@@ -131,8 +131,33 @@ committing. The tutorial introduction remains the single ordered series index.
 Wiki pushes use the maintainer's Git credentials; no personal token is stored
 in the workflow. Direct Wiki edits should be made in `docs/` instead.
 
-The dependency-free introduction lives in `site/`. The CI `pages` job publishes
-it only after verification and package builds pass, on pushes to the repository
+The shared page template, styles, scripts, and logo live in `site/`.
+`scripts.build_site` renders every documentation page as static HTML using the
+build-only `markdown-it-py` dependency; the library still has no runtime dependencies.
+Tutorial navigation follows the series introduction, and the build rejects pages
+missing from navigation. Code blocks preserve the exact documented examples.
+Local document links become relative HTML links, including anchors; repository
+attachments and source links point to the built Git revision.
+
+Build and preview from the repository root:
+
+```console
+python -m pip install --group docs
+python -m scripts.build_site
+python -m http.server 8000 --bind 127.0.0.1 --directory build/site
+```
+
+Open `http://127.0.0.1:8000/`. The output directory must be a subdirectory of
+`build/`; generated HTML is not checked in. Pages support section search,
+keyboard shortcuts (`/` or Ctrl/Cmd+K), light and dark themes, code copying,
+mobile navigation, and print styles. Search loads its local index on first use;
+if loading fails, readers can retry or continue using the sidebar. Reading and
+navigation work without JavaScript. No CDN, analytics, or external search service
+is required. The site uses the package version from `pyproject.toml`.
+
+CI builds and retains the `documentation-site` artifact on every verified run.
+The CI `pages` job publishes that same artifact only after verification and
+package builds pass, on pushes to the repository
 variable `PAGES_SOURCE_BRANCH` (or the default branch when unset). During the
 normal publishing this variable selects `main`. Pages uses the native GitHub
 Actions deployment mechanism.

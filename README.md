@@ -11,8 +11,8 @@
 **A typed, async-first configuration expression language for Python.**
 
 [Project website](https://gokurakujoudo.github.io/lclang/) ·
-[Documentation Wiki](https://github.com/gokurakujoudo/lclang/wiki) ·
-[Tutorials](https://github.com/gokurakujoudo/lclang/wiki/Tutorials)
+[Documentation](https://gokurakujoudo.github.io/lclang/) ·
+[Tutorials](https://gokurakujoudo.github.io/lclang/tutorials/)
 
 `lclang` gives applications a disciplined way to express calculated
 configuration, evaluate it only when needed, and explain where every result
@@ -315,8 +315,8 @@ capability.
 `lclang.cli` combines typed async commands, nested groups, configuration and
 overrides, structured help, process-scoped queue logging and explicit dry-run policy.
 Handlers receive a `CliContext` and return a `CliResult`.
-See the [CLI reference](https://github.com/gokurakujoudo/lclang/wiki/reference-cli)
-and [CLI tutorial](https://github.com/gokurakujoudo/lclang/wiki/tutorials-09-command-line-applications).
+See the [CLI reference](https://gokurakujoudo.github.io/lclang/reference/cli.html)
+and [CLI tutorial](https://gokurakujoudo.github.io/lclang/tutorials/09-command-line-applications.html).
 
 Standalone applications use `LoggerHandlerConfig`, `use_logger_handler` and
 `use_logger` from `lclang.logger`, which also exports `Logger`, runtime, resolved
@@ -327,10 +327,10 @@ file sinks, with independent UTC time/size rotation and permanent segment paths.
 `logger.file.default` supplies missing sink fields; explicit enabled settings
 win over template overrides. CLI and Workflow share these keys through LCL and
 `-o`. Scope exit drains output and restores stdlib logging configuration.
-See the [logger reference](https://github.com/gokurakujoudo/lclang/wiki/reference-logger).
+See the [logger reference](https://gokurakujoudo.github.io/lclang/reference/logger.html).
 
 `env` and `safe_repr` remain available from `lclang.utils`; the
-[Python utilities tutorial](https://github.com/gokurakujoudo/lclang/wiki/tutorials-16-python-utilities)
+[Python utilities tutorial](https://gokurakujoudo.github.io/lclang/tutorials/16-python-utilities.html)
 shows these APIs without requiring CLI or LCL evaluation.
 
 ### Tree workflows and status
