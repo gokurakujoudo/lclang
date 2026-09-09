@@ -61,18 +61,40 @@ a failure before pytest produces no test report, and a documentation failure
 prevents behavioral reports from being generated. The README coverage badge
 states the enforced 100% requirement; measured results are in each run's reports.
 
-Publishing is explicit: dispatch `ci.yml` with a tag as the workflow ref and
-the `publish` input set to `pypi` or `artifactory`. The default `none` only
-verifies and builds. Publishing from a branch is rejected. The selected tag
-must contain this workflow, and the workflow must also exist on the default
-branch before manual dispatch is available. A manual run verifies and builds
-the selected tag again before uploading its artifacts.
+Every push to the persistent `release` branch publishes its wheel and source
+distribution to PyPI after the full quality gate and builds pass. Prepare a
+new version in `pyproject.toml` and its changelog on `main`, then fast-forward
+`release` to the tested commit and push it. The publishing gate fetches `main`
+and rejects any commit that is not already in its history. It also requires a
+nonempty dated changelog section matching the stable `1.0.x` package version;
+manual tag builds must match that version, and an existing version tag must
+point to the publishing commit.
 
-Configure the matching GitHub environment (`pypi` or `artifactory`) before
-publishing. PyPI needs `PYPI_USERNAME` and `PYPI_PASSWORD` secrets. Artifactory
-needs the `ARTIFACTORY_REPOSITORY_URL` variable and `ARTIFACTORY_USERNAME` and
-`ARTIFACTORY_PASSWORD` secrets. Existing GitLab CI variables do not transfer
-with Git history. No package is published by a push alone.
+After PyPI succeeds, CI creates the matching version tag and GitHub Release at
+that exact commit, with the changelog notes and the same wheel and source
+distribution attached. If this final step fails, rerun the failed job to finish
+the GitHub Release without repeating the successful PyPI upload. Keep `release`
+as a persistent branch, fast-forwarded from `main` for each version; do not add
+release-only commits. PyPI versions are immutable: every
+new release needs a new version. Existing-version uploads fail explicitly;
+the workflow does not silently skip them or replace published files.
+
+PyPI uses [Trusted Publishing](https://docs.pypi.org/trusted-publishers/adding-a-publisher/)
+with owner `gokurakujoudo`, repository `lclang`, workflow filename `ci.yml`, and
+GitHub environment `pypi`. Register those values in the PyPI project's Publishing
+settings. Configure the GitHub `pypi` environment to allow the `release` branch
+and version tags. No PyPI username or password secret is needed. Only the upload
+job can request an identity token; it downloads the already verified build
+artifacts without checking out or executing project code. Uploads are serialized.
+
+Manual publishing remains available: dispatch `ci.yml` with `publish=pypi`
+on `release` or a version tag, or `publish=artifactory` on a tag. Other branches
+cannot publish. A manual run with the default `publish=none` only verifies and
+builds, even on `release`. Pull requests never publish. The selected ref must
+contain this workflow, and the workflow must exist on the default branch for
+manual dispatch. Artifactory still uses its matching GitHub environment,
+`ARTIFACTORY_REPOSITORY_URL` variable, and `ARTIFACTORY_USERNAME` and
+`ARTIFACTORY_PASSWORD` secrets.
 
 See GitHub's [workflow triggering guide](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)
 for manual dispatch using a tag ref.
