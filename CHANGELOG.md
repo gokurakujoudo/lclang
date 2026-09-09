@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Publish tested documentation to GitHub Wiki with preserved examples and
+  rewritten navigation; add a GitHub Pages introduction and gated deployment.
 - Export JUnit test results and portable raw, XML, JSON and HTML coverage
   reports; retain available CI reports on failure and add README status badges.
 - Build wheel and source distributions after verification on every GitHub CI

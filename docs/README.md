@@ -1,5 +1,9 @@
 # lclang documentation
 
+Read the [GitHub Wiki](https://github.com/gokurakujoudo/lclang/wiki) or visit the
+[project introduction](https://gokurakujoudo.github.io/lclang/). This directory
+contains the canonical, tested Markdown used to publish the Wiki.
+
 ## Getting started
 
 - [Installation](installation.md)

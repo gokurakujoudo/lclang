@@ -77,6 +77,40 @@ with Git history. No package is published by a push alone.
 See GitHub's [workflow triggering guide](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)
 for manual dispatch using a tag ref.
 
+## Documentation publishing
+
+The [introduction site](https://gokurakujoudo.github.io/lclang/) is served by
+GitHub Pages. The [Wiki](https://github.com/gokurakujoudo/lclang/wiki) is the
+reader-facing documentation library. Keep editing Markdown under `docs/`:
+it remains the canonical source and its marked examples run in the quality gate.
+The Wiki export preserves those examples and rewrites local prose links into
+Wiki navigation. Non-Markdown attachments link to the exact source revision.
+
+CI exports all pages as the `wiki` artifact. To publish the current checked-out
+documentation after quality checks, initialize the Wiki's Home page on GitHub
+once, then use a separate Wiki checkout:
+
+```console
+git clone https://github.com/gokurakujoudo/lclang.wiki.git build/wiki-checkout
+python -m scripts.export_wiki build/wiki-checkout
+git -C build/wiki-checkout add --all
+git -C build/wiki-checkout commit -m "Publish tested documentation"
+git -C build/wiki-checkout push
+```
+
+Reuse an existing checkout on later updates, pulling before export. Generated
+pages are overwritten; unrelated files are preserved. When retiring or renaming
+a source page, remove its obsolete exported page in the Wiki checkout before
+committing. The tutorial introduction remains the single ordered series index.
+Wiki pushes use the maintainer's Git credentials; no personal token is stored
+in the workflow. Direct Wiki edits should be made in `docs/` instead.
+
+The dependency-free introduction lives in `site/`. The CI `pages` job publishes
+it only after verification and package builds pass, on pushes to the repository
+variable `PAGES_SOURCE_BRANCH` (or the default branch when unset). During the
+hosting migration this variable selects `codex/impl`; switch it to `main` after
+merging that branch. Pages uses the native GitHub Actions deployment mechanism.
+
 ## Change workflow
 
 For a bug, update the relevant reference and prove a reproducing test fails
