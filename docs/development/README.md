@@ -108,8 +108,8 @@ in the workflow. Direct Wiki edits should be made in `docs/` instead.
 The dependency-free introduction lives in `site/`. The CI `pages` job publishes
 it only after verification and package builds pass, on pushes to the repository
 variable `PAGES_SOURCE_BRANCH` (or the default branch when unset). During the
-hosting migration this variable selects `codex/impl`; switch it to `main` after
-merging that branch. Pages uses the native GitHub Actions deployment mechanism.
+normal publishing this variable selects `main`. Pages uses the native GitHub
+Actions deployment mechanism.
 
 ## Change workflow
 
