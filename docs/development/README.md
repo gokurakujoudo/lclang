@@ -60,6 +60,10 @@ produced are uploaded even when verification fails. Because the gate fails fast,
 a failure before pytest produces no test report, and a documentation failure
 prevents behavioral reports from being generated. The README coverage badge
 states the enforced 100% requirement; measured results are in each run's reports.
+The PyPI version badge reads `info.version` from PyPI's project JSON through
+Shields' dynamic JSON badge with a five-minute badge cache. It follows published
+versions without editing the README; upstream PyPI and browser caches may add
+delay. The standard Shields PyPI badge can retain a version for three hours.
 
 Every push to the persistent `release` branch publishes its wheel and source
 distribution to PyPI after the full quality gate and builds pass. Prepare a
