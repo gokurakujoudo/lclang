@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Replace the Pages introduction with a complete documentation site generated
+  from existing Markdown, with grouped navigation, section search, page contents,
+  dark mode, code copying, mobile and print layouts, and verified CI artifacts.
 - Read the README version badge from PyPI JSON with a shorter badge cache so
   it reflects newly published versions sooner.
 
