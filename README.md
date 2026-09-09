@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/gokurakujoudo/lclang/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/gokurakujoudo/lclang/actions/workflows/ci.yml?query=branch%3Amain)
 [![Coverage: 100% required](https://img.shields.io/badge/coverage-100%25%20required-brightgreen)](https://github.com/gokurakujoudo/lclang/actions/workflows/ci.yml?query=branch%3Amain)
-[![PyPI](https://img.shields.io/pypi/v/lclang)](https://pypi.org/project/lclang/)
+[![PyPI](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fpypi.org%2Fpypi%2Flclang%2Fjson&query=%24.info.version&label=pypi&prefix=v&color=blue&cacheSeconds=300)](https://pypi.org/project/lclang/)
 [![Python](https://img.shields.io/pypi/pyversions/lclang)](https://pypi.org/project/lclang/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/gokurakujoudo/lclang/blob/main/LICENSE)
 

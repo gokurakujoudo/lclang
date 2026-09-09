@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Read the README version badge from PyPI JSON with a shorter badge cache so
+  it reflects newly published versions sooner.
+
 ## 1.0.9 - 2026-09-09
 
 - Publish pushes to the `release` branch to PyPI after verification and builds,
