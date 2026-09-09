@@ -5,7 +5,8 @@
 ## 1.0.9 - 2026-09-09
 
 - Publish pushes to the `release` branch to PyPI after verification and builds,
-  using Trusted Publishing and the dedicated `pypi` environment.
+  using Trusted Publishing and the dedicated `pypi` environment. Require release
+  commits to come from `main` and create matching version tags and GitHub Releases.
 - Add a shared PNG logo to the website, README, Wiki, and browser icons.
 - Publish tested documentation to GitHub Wiki with preserved examples and
   rewritten navigation; add a GitHub Pages introduction and gated deployment.

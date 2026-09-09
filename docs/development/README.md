@@ -64,7 +64,18 @@ states the enforced 100% requirement; measured results are in each run's reports
 Every push to the persistent `release` branch publishes its wheel and source
 distribution to PyPI after the full quality gate and builds pass. Prepare a
 new version in `pyproject.toml` and its changelog on `main`, then fast-forward
-`release` to the tested commit and push it. PyPI versions are immutable: every
+`release` to the tested commit and push it. The publishing gate fetches `main`
+and rejects any commit that is not already in its history. It also requires a
+nonempty dated changelog section matching the stable `1.0.x` package version;
+manual tag builds must match that version, and an existing version tag must
+point to the publishing commit.
+
+After PyPI succeeds, CI creates the matching version tag and GitHub Release at
+that exact commit, with the changelog notes and the same wheel and source
+distribution attached. If this final step fails, rerun the failed job to finish
+the GitHub Release without repeating the successful PyPI upload. Keep `release`
+as a persistent branch, fast-forwarded from `main` for each version; do not add
+release-only commits. PyPI versions are immutable: every
 new release needs a new version. Existing-version uploads fail explicitly;
 the workflow does not silently skip them or replace published files.
 
