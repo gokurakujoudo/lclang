@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Build wheel and source distributions after verification on every GitHub CI
+  run, and declare GitHub as the package homepage in PyPI metadata.
 - Move repository hosting and project links to `gokurakujoudo/lclang` on
   GitHub, with GitHub Actions verification, tag builds and manual publishing.
 - Export logger, runtime, resolved configuration and metric types from

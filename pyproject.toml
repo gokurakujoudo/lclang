@@ -21,6 +21,7 @@ classifiers = [
 ]
 
 [project.urls]
+Homepage = "https://github.com/gokurakujoudo/lclang"
 Documentation = "https://github.com/gokurakujoudo/lclang/tree/main/docs"
 Issues = "https://github.com/gokurakujoudo/lclang/issues"
 Source = "https://github.com/gokurakujoudo/lclang"

@@ -45,7 +45,7 @@ venv\Scripts\python -m scripts.build_package --output dist
 
 The repository is hosted at [gokurakujoudo/lclang](https://github.com/gokurakujoudo/lclang).
 The `CI` GitHub Actions workflow verifies pushes and pull requests using the
-same `scripts.quality` gate as local development. Tag runs build distributions
+same `scripts.quality` gate as local development. All runs build distributions
 after verification; coverage and distribution artifacts are retained for seven days.
 
 Publishing is explicit: dispatch `ci.yml` with a tag as the workflow ref and
@@ -91,7 +91,7 @@ through Ruff and mypy.
 
 Static architecture scans enforce implementation constraints; they do not prove
 that trusted configuration is a hostile-code sandbox. Builds are explicit local
-operations or tag-pipeline jobs after verification. Distribution archives contain
+operations or CI jobs after verification. Distribution archives contain
 only downstream code, typing data, build metadata, the license and root README.
 
 Tests mirror production subsystem ownership. Reusable fixtures belong in
