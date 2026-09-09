@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Export JUnit test results and portable raw, XML, JSON and HTML coverage
+  reports; retain available CI reports on failure and add README status badges.
 - Build wheel and source distributions after verification on every GitHub CI
   run, and declare GitHub as the package homepage in PyPI metadata.
 - Move repository hosting and project links to `gokurakujoudo/lclang` on

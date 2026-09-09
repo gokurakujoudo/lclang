@@ -5,6 +5,7 @@
 /.ruff_cache/
 /build/
 /dist/
+/reports/
 /*.egg-info/
 **/__pycache__/
 *.py[cod]

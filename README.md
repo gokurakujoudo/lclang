@@ -1,5 +1,11 @@
 # lclang
 
+[![CI](https://github.com/gokurakujoudo/lclang/actions/workflows/ci.yml/badge.svg?branch=codex%2Fimpl)](https://github.com/gokurakujoudo/lclang/actions/workflows/ci.yml?query=branch%3Acodex%2Fimpl)
+[![Coverage: 100% required](https://img.shields.io/badge/coverage-100%25%20required-brightgreen)](https://github.com/gokurakujoudo/lclang/actions/workflows/ci.yml?query=branch%3Acodex%2Fimpl)
+[![PyPI](https://img.shields.io/pypi/v/lclang)](https://pypi.org/project/lclang/)
+[![Python](https://img.shields.io/pypi/pyversions/lclang)](https://pypi.org/project/lclang/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/gokurakujoudo/lclang/blob/main/LICENSE)
+
 **A typed, async-first configuration expression language for Python.**
 
 `lclang` gives applications a disciplined way to express calculated

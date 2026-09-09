@@ -46,7 +46,20 @@ venv\Scripts\python -m scripts.build_package --output dist
 The repository is hosted at [gokurakujoudo/lclang](https://github.com/gokurakujoudo/lclang).
 The `CI` GitHub Actions workflow verifies pushes and pull requests using the
 same `scripts.quality` gate as local development. All runs build distributions
-after verification; coverage and distribution artifacts are retained for seven days.
+after verification; test reports, coverage and distributions are retained for seven days.
+
+The quality gate writes `reports/tests-docs.xml` and `reports/tests-behavior.xml`
+in JUnit XML format for test-result consumers. Behavioral tests also write
+`reports/coverage.xml` (Cobertura), `reports/coverage.json`, and the browsable
+`reports/htmlcov/index.html` report. The raw `.coverage` database uses relative
+source paths so coverage.py can read it from another checkout of the same commit.
+These generated files are ignored by Git.
+
+Download `test-results` and `coverage` from a CI run's artifacts. Reports already
+produced are uploaded even when verification fails. Because the gate fails fast,
+a failure before pytest produces no test report, and a documentation failure
+prevents behavioral reports from being generated. The README coverage badge
+states the enforced 100% requirement; measured results are in each run's reports.
 
 Publishing is explicit: dispatch `ci.yml` with a tag as the workflow ref and
 the `publish` input set to `pypi` or `artifactory`. The default `none` only

@@ -65,6 +65,7 @@ markers = [
 
 [tool.coverage.run]
 branch = true
+relative_files = true
 source = ["lclang"]
 
 [tool.coverage.report]
