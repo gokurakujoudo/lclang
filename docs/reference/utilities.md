@@ -14,8 +14,8 @@ It also exposes these functions:
 `pow`, `range`, `recursive`, `repr`, `reversed`, `round`, `slice`, `sorted`,
 `sum`, `to_ymd`, and `zip`.
 
-`parse_ymd` converts strict `YYYYMMDD` integers to dates and `to_ymd` performs
-the reverse conversion. `recursive(builder)` returns an eager fixed-point
+`parse_ymd` converts strict eight-character `YYYYMMDD` strings to dates;
+`to_ymd` returns that string format. Integer inputs are rejected. `recursive(builder)` returns an eager fixed-point
 function suitable for recursive LCL programs.
 
 ## Standard namespaces
@@ -28,8 +28,10 @@ manifests. Canonical Frames merge those bindings into `LCL_BUILTINS`:
 - `data.lookup` and `data.merge` work with immutable mapping snapshots.
 - `json.encode` and `json.decode` provide strict JSON conversion.
 
-These helpers do not provide ambient filesystem, process, network, dynamic
-import, reflection, or mutation capabilities.
+The `iter`, `text`, `data` and `json` helpers perform only their documented
+operations. The separately exposed `env` utility reads the live process
+environment. Calendar file loading can access the filesystem when explicitly
+configured by the application. These capabilities follow the trusted-code model.
 
 Canonical Frames also expose the reviewed `calendars` namespace and explicit
 calendar-manager construction helpers. Filesystem access remains opt-in through
@@ -49,14 +51,11 @@ missing names return the default and reads never snapshot or mutate the process
 environment. The canonical LCL `env` utility adds scoped Frame overrides on top
 of this view.
 
-The same module exports `DEFAULT_LOG_FORMAT`, `LogConfig`, `LoggerHandle`, and
-`async create_logger(config, name)`. `LogConfig` validates a disabled or file
-logging policy without touching the filesystem. `create_logger` creates an
-isolated, non-propagating standard-library logger and returns its owned handle;
-`LoggerHandle.close()` detaches and closes handlers idempotently. This surface
-does not require an lclang CLI application. `lclang.cli.LogConfig` remains a
-compatible export, and the CLI materializes its scoped `logger` proxy with
-`as_record(LogConfig)` before delegating file handler creation to this utility.
+Process logging lives in `lclang.logger`. Its two async entry points are
+`use_logger_handler(config)` and `use_logger(name=None, prefix="", emit_level=0)`.
+The handler scope owns console and named file output and restores stdlib logging
+on exit. CLI and Workflow applications resolve the same configuration from LCL
+and command-line overrides; see the [logger reference](logger.md).
 
 ## Workflow status
 
@@ -75,3 +74,15 @@ deterministic, subtree operations are locked, and snapshots preserve child
 order. `FAILURE_COVERED` records an exception handled by an explicit workflow
 context without disguising it as success. See the [workflow reference](workflow.md)
 for task definitions, mappings, execution, static rendering, and CLI conversion.
+
+## Safe representations
+
+`lclang.utils.safe_repr(value, *, max_length=200, renderer=None, masked=False)`
+returns one physical line without a type prefix or task-local masking state.
+It uses `repr` or the supplied `renderer(value)`, escapes CR and LF, and converts
+renderer exceptions (including `BaseException`) or non-string results to
+`<repr failed: ExceptionType>`. The length budget includes `...<truncated>`;
+small budgets retain its prefix, zero returns empty text, and `None` disables
+truncation. A negative budget raises `ValueError`; non-integers, including bool,
+raise `TypeError`. With `masked=True`, the result is `*masked*` and no renderer
+runs; the masking marker is independent of the validated budget.

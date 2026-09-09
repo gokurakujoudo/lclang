@@ -18,7 +18,7 @@ segment. A decorated async handler receives exactly one `CliContext`.
 Configuration parameter rows are rendered in case-insensitive A-Z order, so
 help remains easy to scan even when declarations follow business data flow.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 import io
@@ -76,7 +76,7 @@ The next command loads derived text from a temporary config, overrides one
 dependency, and asks the handler to describe rather than perform its side
 effect.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 import io
@@ -179,23 +179,29 @@ dynamic `using f"..."` target. The same override is reused in the final Frame,
 so it can select a file from the prior source context and remain the runtime
 winner.
 
-Logger configuration occupies the `logger` scope. A configuration file can set
-`logger.log_dir`, `logger.log_file_name`, `logger.log_level`, and
-`logger.log_format`; command parameters remain separate from these framework
-settings. Calls to `context.logger.info(...)` print their rendered messages to
-stdout. Calls to `context.logger.debug(...)` do the same only when `--verbose`
-is present, while `context.logger.error(...)` always prints to stderr. Console
-logging remains active when file logging is disabled, and the configured file
-level never changes console visibility. File and console application handlers
-use the same `logger.log_format`. A custom format must retain the timestamp,
-level, filename, line number, function, and message fields used by the default
-structured format. `%(args)s` is neither present nor required. When a file is
-enabled, its first record reports the bound path immediately after the handler
-is installed; the remaining audit preamble then records the centered execution
-banner, exact raw command line, and masked winning configuration.
-Applications that only need the same file-logging policy can instead import
-`LogConfig` and `create_logger` from `lclang.utils`; this standalone utility
-does not require CLI routing.
+Logger configuration occupies the `logger` scope. Use `logger.console.*` for
+console output and `logger.file.<sink>.*` for named files. The reserved
+`logger.file.default.*` template supplies missing leaf fields without creating
+a file. Explicit sink values, including False, override the template.
+
+All diagnostic console records go to stderr. Command results remain on stdout
+for successful results. The same background writer formats console and file
+records using `logger.format`; producer threads do no output I/O.
+
+```lclcfg
+logger.file.default.enabled: False
+logger.file.default.directory: "./logs"
+logger.file.app.filename: "app.{pid}.log"
+logger.file.audit.enabled: True
+logger.file.audit.level: "INFO"
+```
+
+This enables audit and disables app. `-o logger.file.default.enabled
+"LCL[False]"` preserves the audit exception; use `-o logger.file.audit.enabled
+"LCL[False]"` to disable audit too. Console is independent. Configuration is
+resolved before the unique process scope opens, and cleanup completes before
+the CLI returns. Workflow commands use these same framework parameters without
+requiring matching business inputs. See the [logger reference](../reference/logger.md).
 
 Every invocation injects seven reserved values before logger configuration is
 evaluated. `__as_of_date__` is the Python `date`, `__dryrun__` and
@@ -219,22 +225,21 @@ from lclang.cli import (
 ```
 
 ```lclcfg
-logger.log_file_name: f"{__command__}-{__ymd__}-{__execution_timestamp__}.log"
+logger.file.app.filename: f"{__command__}-{__ymd__}-{__execution_timestamp__}.log"
 ```
 
 ## Trace parsing and evaluation
 
-Place `--verbose` after a leaf command to follow top-level parsing, value
-lookup provenance, caching, fallbacks, and evaluation without changing normal
-stdout:
+Place `--verbose` after a leaf command to follow runtime value lookup, caching,
+fallbacks, and evaluation without changing command-result stdout:
 
 ```console
 python -m lclang.cli eval_lcl --verbose -o RESULT "LCL[40 + 2]"
 ```
 
-Internal trace lines go to stderr. When file logging is enabled, the invocation
-log also receives setup records buffered before its effective configuration was
-known and all later trace records. Values use bounded one-line `(type) value`
+Internal trace lines go to stderr and enabled files. Verbose forces thresholds
+to DEBUG without enabling disabled sinks or removing source filters. Preparation
+records produced before logger configuration is resolved are not replayed. Values use bounded one-line `(type) value`
 representations. Mark a binding name with one trailing `!`, such as
 `api_token!: load_token()` in configuration or `-o api_token! value`, to render
 that exact name's expressions, values, results, and failures as `*masked*`.
@@ -242,9 +247,9 @@ References use `api_token` without the marker. Derived values require their own
 marker, and application-authored log messages remain the handler's
 responsibility.
 
-Enabled invocation logs begin with four audit records in order: the absolute
-log path; one multi-line 51-character execution banner; the raw argv as JSON;
-and one multi-line, sorted, aligned execution configuration. Normal parsing
+Each file segment starts with its permanent absolute path. Execution audit
+records contain the banner, raw argv as JSON, and sorted winning configuration;
+they are not constrained to four initial records. Normal parsing
 preserves exact token order and option spellings. Masked override payloads use
 `*masked*`; manually created `CliParams` without raw argv fall back to a
 reconstructed sequence.
@@ -264,4 +269,4 @@ version operation. Like other common options, verbose belongs after the selected
 command. An override still treats its optional next token literally, including
 `--verbose`; place the verbose flag before a valueless override.
 
-[Previous: Dependency analysis](08-dependency-analysis.md) | [Next: Workflow status](10-workflow-status.md)
+[Previous: Dependency analysis](08-dependency-analysis.md) | [Next: Workflow status](10-workflow-status.md) | [Return to the series introduction](README.md)

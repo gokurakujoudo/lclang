@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, fields, is_dataclass
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, cast
+
+if TYPE_CHECKING:
+    from lclang.runtime.frame.frame import Frame
 
 from lclang.errors import LclNameError
 from lclang.scopes import ScopedProxyValue
@@ -51,7 +54,7 @@ class FrameProxy(ScopedProxyValue):
         :returns: Nested proxy or coroutine resolving a real leaf.
         :raises AttributeError: If the qualified child is absent.
         """
-        from lclang.runtime.frame.scoped import find_scoped_binding
+        from lclang.runtime.frame.binding_lookup import find_scoped_binding
 
         if name.startswith("_"):
             raise AttributeError(name)
@@ -83,24 +86,26 @@ class FrameProxy(ScopedProxyValue):
         :returns: Nested proxy, resolved terminal value, or *default*.
         :raises TypeError: If *name* is not text.
         """
-        from lclang.runtime.frame.scoped import find_scoped_binding
+        from lclang.runtime.frame.binding_lookup import select_binding
+        from lclang.runtime.frame.evaluation import read_selected_binding
 
         if not isinstance(name, str):
             raise TypeError("FrameProxy child name must be text")
         full = ".".join((*self.path, name))
-        owner, kind = find_scoped_binding(self.frame, full)
+        selected = select_binding(self.frame, full)
+        owner, kind = selected.owner, selected.kind
         if owner is None:
             return default
         if kind == "proxy":
             return FrameProxy(self.frame, (*self.path, name), self.trace)
-        return await self.frame.get_resolved(full, None)
+        return await read_selected_binding(cast("Frame", self.frame), full, None, selected)
 
     async def field_names(self) -> list[str]:
         """Return alphabetically sorted identifiers for direct proxy children.
 
         :returns: Effective direct child names across the Frame hierarchy.
         """
-        from lclang.runtime.frame.scoped import hierarchy_binding_names
+        from lclang.runtime.frame.binding_lookup import hierarchy_binding_names
 
         prefix = ".".join(self.path) + "."
         names = {
@@ -143,10 +148,12 @@ class FrameProxy(ScopedProxyValue):
         :returns: Nested proxy, terminal value, or ``None``.
         :raises LclNameError: If an ordinary scoped child is absent.
         """
-        from lclang.runtime.frame.scoped import find_scoped_binding
+        from lclang.runtime.frame.binding_lookup import select_binding
+        from lclang.runtime.frame.evaluation import read_selected_binding
 
         full = ".".join((*self.path, name))
-        owner, kind = find_scoped_binding(self.frame, full)
+        selected = select_binding(self.frame, full)
+        owner, kind = selected.owner, selected.kind
         if owner is None:
             if safe:
                 return None
@@ -155,7 +162,7 @@ class FrameProxy(ScopedProxyValue):
             return FrameProxy(self.frame, (*self.path, name), self.trace)
         if self.trace is not None:
             self.trace(full, span)
-        return await self.frame.get_resolved(full, span)
+        return await read_selected_binding(cast("Frame", self.frame), full, span, selected)
 
     def with_trace(self, trace: Callable[[str, SourceSpan], None]) -> FrameProxy:
         """Return this proxy with one dynamic dependency recorder.

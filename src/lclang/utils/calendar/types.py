@@ -10,6 +10,8 @@ CalendarID = NewType("CalendarID", str)
 class DayType(Enum):
     """Classify a date as business, holiday, or not defined."""
 
+    # Unitless public labels follow the three-state calendar contract; a distinct
+    # Undefined value preserves no-opinion semantics rather than treating it as Holiday.
     # The date is available for business-day calculations.
     BusinessDay = "BusinessDay"
     # The date is explicitly unavailable for business-day calculations.

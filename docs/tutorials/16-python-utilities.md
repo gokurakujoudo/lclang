@@ -19,7 +19,7 @@ Import `env` from `lclang.utils`. Attribute access is convenient for valid
 Python and LCL identifiers; `get` also accepts names containing punctuation.
 Every access consults `os.environ` at that moment.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import os
 from unittest.mock import patch
@@ -44,49 +44,44 @@ the same live fallback without mutating the process environment.
 
 ## Own a standalone logger
 
-`LogConfig` and `create_logger` do not require a CLI entrance. The returned
-`LoggerHandle` owns its handlers, so close it when the application component is
-finished.
+A process entry point owns one handler scope. Application loggers only bind
+source names and prefixes; the scope owns the background writer and its sinks.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from lclang.utils import LogConfig, create_logger
+from lclang.logger import LoggerHandlerConfig, use_logger, use_logger_handler
 
 
 async def main() -> None:
     with TemporaryDirectory(prefix="lclang-logger-tutorial-") as directory:
-        root = Path(directory)
-        handle = await create_logger(
-            LogConfig(
-                log_dir=str(root),
-                log_file_name="worker.log",
-                log_level="INFO",
-            ),
-            "example.worker",
+        config = LoggerHandlerConfig(
+            console={"enabled": False},
+            file={"worker": {"directory": directory}},
         )
-        try:
-            handle.logger.info("processed %d records", 3)
-            assert handle.log_path == root / "worker.log"
-        finally:
-            handle.close()
-
-        text = (root / "worker.log").read_text(encoding="utf-8")
-        assert "INFO" in text
-        assert "processed 3 records" in text
+        async with use_logger_handler(config) as runtime:
+            logger = await use_logger(name="example.worker", prefix="[WORKER]")
+            logger.info("processed %d records", 3)
+        paths = list(Path(directory).glob("*.log"))
+        assert len(paths) == 1
+        text = paths[0].read_text(encoding="utf-8")
+        assert text.startswith("log file: ")
+        assert "[WORKER] processed 3 records" in text
+        assert runtime.metrics.records_written == 1
 
 
 asyncio.run(main())
 ```
 
-The factory creates a non-propagating standard-library logger. It creates the
-directory and UTF-8 file only when logging is enabled; `LogConfig()` instead
-uses a null handler. `close()` is idempotent, which makes cleanup safe in a
-`finally` block. `DEFAULT_LOG_FORMAT` is public when an application wants to
-extend the default while retaining its diagnostic fields.
+The producer enqueues the record without file I/O. Scope exit drains it before
+returning, so reading the segment afterwards observes the completed message.
+The exclusive filename contains the process ID, UTC creation timestamp, and
+sequence. Closed segments keep that path permanently. Console output can run
+alongside any number of files. The [logger reference](../reference/logger.md)
+explains templates, rotation, filtering, cancellation, and worker initialization.
 
 ## Reuse the reviewed standard helpers
 
@@ -94,7 +89,7 @@ The functions behind LCL's `iter`, `text`, `data`, and `json` namespaces are
 also direct exports from `lclang.stdlib`. The iterable and join helpers accept
 synchronous or asynchronous iteration.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -135,7 +130,7 @@ Calendars live under `lclang.utils.calendar` and do not depend on parsing LCL.
 This example turns a weekend report date into the next weekday and then moves
 one further business day.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 from datetime import date
@@ -160,11 +155,31 @@ that mapped value and reaches Tuesday. For calendar algebra, sparse policies,
 strict JSON loading, and managed caches, continue with the
 [business-day calendar chapter](11-business-day-calendars.md).
 
+## Render an untrusted representation safely
+
+Use `safe_repr` when a value's display code must not break a diagnostic. Masking
+skips rendering entirely, and a canonical renderer can choose the displayed form.
+
+<!-- lclang-doc-exec -->
+```python
+from lclang.utils import safe_repr
+
+assert safe_repr(42) == "42"
+assert safe_repr("private", masked=True) == "*masked*"
+assert safe_repr("line", renderer=lambda value: "a\n" + value) == "a\\nline"
+assert len(safe_repr("x" * 300)) == 200
+assert safe_repr("x" * 300, max_length=None) == repr("x" * 300)
+```
+
+The default limit counts characters after line-break escaping and includes the
+truncation marker. `None` preserves the full escaped representation. A failed
+renderer produces a stable failure description; the helper adds no type label.
+
 ## Choose the narrowest public surface
 
 Downstream code can adopt only the layer it needs:
 
-- `lclang.utils` provides the live environment and standalone logging.
+- `lclang.utils` provides the live environment; `lclang.logger` owns process logging.
 - `lclang.stdlib` provides reviewed pure-data helpers and preset assembly.
 - `lclang.utils.calendar` provides date policy and managed calendar loading.
 - `lclang.workflow` provides typed task trees and nested execution status.

@@ -5,12 +5,12 @@ from typing import Any, cast
 
 import pytest
 
-from lclang.cli import CliConfig, CliParams, CliResult, CliResultStatus, LogConfig, ParameterDoc
+from lclang.cli import CliConfig, CliParams, CliResult, CliResultStatus, ParameterDoc
+from lclang.logger import LoggerHandlerConfig
 
 InvalidParameterDoc = cast(Any, ParameterDoc)
 InvalidCliParams = cast(Any, CliParams)
 InvalidCliResult = cast(Any, CliResult)
-InvalidLogConfig = cast(Any, LogConfig)
 InvalidCliConfig = cast(Any, CliConfig)
 
 
@@ -47,22 +47,10 @@ def test_parameter_and_log_contracts_reject_invalid_values() -> None:
     """Names and logging formats are validated before an invocation."""
     assert ParameterDoc("count", list[int], True, "item count").default is None
     assert ParameterDoc("meter.start", float, True, "Opening meter reading").name == "meter.start"
-    without_args = (
-        "%(asctime)s %(levelname)s %(filename)s:%(lineno)d "
-        "%(funcName)s %(message)s"
-    )
-    assert LogConfig(log_format=without_args).log_format == without_args
+    assert LoggerHandlerConfig(format="%(message)s").format == "%(message)s"
     with pytest.raises(ValueError, match="identifier"):
         ParameterDoc("bad-key", str, False, "bad")
-    with pytest.raises(ValueError, match="log format"):
-        LogConfig(log_format="%(message)s")
-    with pytest.raises(ValueError, match="log format"):
-        LogConfig(
-            log_format=(
-                "%(asctime)s %(filename)s:%(lineno)d %(funcName)s "
-                "%(message)s %(args)r"
-            )
-        )
+
 
 
 def test_parameter_defaults_and_direct_params_accept_mask_markers() -> None:
@@ -135,13 +123,6 @@ def test_parameter_defaults_and_direct_params_accept_mask_markers() -> None:
         ),
         (lambda: InvalidCliResult(0, "x"), TypeError),
         (lambda: InvalidCliResult(CliResultStatus.SUCCESS, 1), TypeError),
-        (lambda: InvalidLogConfig(log_dir=1), TypeError),
-        (lambda: InvalidLogConfig(log_dir=""), ValueError),
-        (lambda: InvalidLogConfig(log_file_name=1), TypeError),
-        (lambda: InvalidLogConfig(log_file_name="folder/x.log"), ValueError),
-        (lambda: InvalidLogConfig(log_level="NOPE"), ValueError),
-        (lambda: InvalidLogConfig(log_level=object()), TypeError),
-        (lambda: InvalidLogConfig(log_format=1), TypeError),
         (lambda: InvalidCliConfig(log_config=object()), TypeError),
     ],
 )
@@ -156,5 +137,5 @@ def test_value_models_reject_each_invalid_public_shape(
 
 def test_integer_log_level_and_valid_config_are_supported() -> None:
     """Numeric standard-library levels remain valid effective configuration."""
-    config = CliConfig(LogConfig(log_level=20))
-    assert config.log_config.log_level == 20
+    config = CliConfig(LoggerHandlerConfig(level=20))
+    assert config.log_config.level == 20

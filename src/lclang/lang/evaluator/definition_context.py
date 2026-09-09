@@ -9,6 +9,9 @@ from contextvars import ContextVar
 from lclang.errors import LclEvaluationError
 
 # Active ordered Frame and lexical-function definition owners.
+# Unitless context key names identify task-local lexical definition state. An empty initial
+# stack denotes no active definition; nested entries preserve lhs() ownership independently
+# across tasks.
 ACTIVE_DEFINITION_STACK: ContextVar[tuple[str, ...]] = ContextVar(
     "lclang_active_definition_stack",
     default=(),

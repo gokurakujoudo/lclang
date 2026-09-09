@@ -5,24 +5,30 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from lclang.lang.lexer.characters import ASCII_DIGITS, character_at
 from lclang.lang.lexer.escapes import EscapeDecodeError, decode_content
 from lclang.lang.lexer.fstrings import FStringScanError, scan_fstring
 from lclang.lang.lexer.tokens import TokenKind
 
+# Unitless regular expressions implement the numeric literal grammar; separate candidate and
+# validation patterns retain precise malformed-literal errors.
 _DIGITS = r"\d(?:_?\d)*"
 _FLOAT = re.compile(
     rf"(?:(?:(?:{_DIGITS})?\.(?:{_DIGITS})?)(?:[eE][+-]?{_DIGITS})?"
     rf"|{_DIGITS}[eE][+-]?{_DIGITS})"
 )
+# Unitless regular expressions implement the numeric literal grammar; separate candidate and
+# validation patterns retain precise malformed-literal errors.
 _INTEGER = re.compile(
     r"(?:0[xX]_?[0-9a-fA-F](?:_?[0-9a-fA-F])*"
     r"|0[oO]_?[0-7](?:_?[0-7])*"
     r"|0[bB]_?[01](?:_?[01])*"
     r"|0(?:_?0)*|[1-9](?:_?\d)*)"
 )
+# Unitless regular expressions implement the numeric literal grammar; separate candidate and
+# validation patterns retain precise malformed-literal errors.
 _NUMBER_CANDIDATE = re.compile(r"(?:\d|\.\d)(?:[A-Za-z0-9_.]|(?<=[eE])[+-])*")
 # ASCII digits accepted by Python-style numeric literals.
-_ASCII_DIGITS = frozenset("0123456789")
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,8 +86,8 @@ def scan_literal(text: str, start: int) -> LiteralMatch | None:
     if start >= len(text):
         return None
     character = text[start]
-    if character in _ASCII_DIGITS or (
-        character == "." and internal_peek(text, start + 1) in _ASCII_DIGITS
+    if character in ASCII_DIGITS or (
+        character == "." and character_at(text, start + 1) in ASCII_DIGITS
     ):
         return internal_scan_number(text, start)
     prefix, quote_at = internal_string_prefix(text, start)
@@ -142,7 +148,7 @@ def internal_string_prefix(text: str, start: int) -> tuple[str, int | None]:
     for length in (2, 1):
         prefix = text[start : start + length]
         quote_at = start + length
-        quote = internal_peek(text, quote_at)
+        quote = character_at(text, quote_at)
         valid_prefixes = {"b", "r", "f", "br", "rb", "fr", "rf"}
         if prefix.lower() in valid_prefixes and quote and quote in "'\"":
             return prefix, quote_at
@@ -188,21 +194,8 @@ def internal_scan_string(text: str, start: int, prefix: str, quote_at: int) -> L
             if (
                 cursor < len(text)
                 and text[cursor] == "\r"
-                and internal_peek(text, cursor + 1) == "\n"
+                and character_at(text, cursor + 1) == "\n"
             ):
                 cursor += 1
         cursor += 1
     raise InternalLiteralScanError("unterminated string literal", len(text))
-
-
-def internal_peek(text: str, offset: int) -> str:
-    """Read one character without crossing the source boundary.
-
-    :param text: Source text being inspected.
-    :param offset: Zero-based character offset to inspect.
-    :returns: Character at *offset*, or ``""`` when past the end.
-
-    .. note::
-       The empty sentinel avoids boundary ``IndexError`` exceptions.
-    """
-    return text[offset] if offset < len(text) else ""

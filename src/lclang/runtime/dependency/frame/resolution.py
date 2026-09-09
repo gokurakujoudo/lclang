@@ -2,33 +2,18 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Protocol, cast
+from typing import TYPE_CHECKING
+
+from lclang.runtime.frame.binding_lookup import select_binding, walk_hierarchy
+
+if TYPE_CHECKING:
+    from lclang.runtime.frame.frame import Frame
 
 from lclang.runtime.dependency.frame.model import FrameDependencyBinding
-from lclang.runtime.modules import Module
 from lclang.types import FrameId
 
 
-class GraphFrame(Protocol):
-    """Describe immutable inputs consumed by Frame graph construction.
-
-    :param module: Local immutable definition snapshot.
-    :param frame_id: Non-empty diagnostic identity.
-    :param values: Current read-only host-binding view.
-    :param parent: Optional next owner in the lookup chain.
-
-    .. note::
-       Cache, lifecycle, and evaluation members are deliberately absent.
-    """
-
-    module: Module
-    frame_id: FrameId
-    values: Mapping[str, object]
-    parent: GraphFrame | None
-
-
-def collect_frames(frame: object) -> tuple[GraphFrame, ...]:
+def collect_frames(frame: object) -> tuple[Frame, ...]:
     """Collect one linear child-to-parent chain with cycle detection.
 
     :param frame: Child-most concrete Frame.
@@ -38,22 +23,11 @@ def collect_frames(frame: object) -> tuple[GraphFrame, ...]:
     .. note::
        Object identity detects cycles even when Frame IDs intentionally repeat.
     """
-    result: list[GraphFrame] = []
-    seen: set[int] = set()
-    current: object | None = frame
-    while current is not None:
-        identity = id(current)
-        if identity in seen:
-            raise ValueError("Frame hierarchy contains a parent cycle")
-        seen.add(identity)
-        selected = cast(GraphFrame, current)
-        result.append(selected)
-        current = selected.parent
-    return tuple(result)
+    return tuple(walk_hierarchy(frame))
 
 
 def resolve_frame_binding(
-    frames: tuple[GraphFrame, ...],
+    frames: tuple[Frame, ...],
     owner_index: int,
     name: str,
     definition_map: dict[tuple[int, str], FrameDependencyBinding],
@@ -71,13 +45,8 @@ def resolve_frame_binding(
     .. note::
        A same-Frame definition wins before a same-name host value.
     """
-    searched: list[FrameId] = []
-    for index in range(owner_index, len(frames)):
-        searched.append(frames[index].frame_id)
-        definition = definition_map.get((index, name))
-        if definition is not None:
-            return definition, tuple(searched)
-        value = value_map.get((index, name))
-        if value is not None:
-            return value, tuple(searched)
-    return None, tuple(searched)
+    selected = select_binding(frames[owner_index], name)
+    index = owner_index + len(selected.path) - 1
+    key = (index, name)
+    binding = definition_map.get(key) or value_map.get(key)
+    return binding, selected.path

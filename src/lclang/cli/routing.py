@@ -14,6 +14,8 @@ from lclang.errors import LclCliUsageError
 class RouteAction(Enum):
     """Distinguish execution, scoped help, and root version operations."""
 
+    # Unitless route tags identify the three CLI dispatch outcomes; names keep command, help and
+    # version handling separate.
     COMMAND = "command"
     HELP = "help"
     VERSION = "version"

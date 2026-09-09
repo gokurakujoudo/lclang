@@ -18,12 +18,22 @@ def quality_commands(python: Path) -> tuple[Command, ...]:
     """
     executable = str(python)
     return (
-        (executable, "-m", "pytest", "-m", "not docs and not release"),
-        (executable, "-m", "pytest", "-m", "docs or release", "--no-cov"),
-        (executable, "-m", "mypy"),
+        ("git", "diff", "--check"),
         (executable, "-m", "ruff", "check", "."),
         (executable, "-m", "scripts.check_project"),
         (executable, "-m", "scripts.security_audit"),
+        (executable, "-m", "mypy"),
+        (
+            executable, "-m", "pytest", "-m", "docs", "--no-cov",
+            "--junitxml=reports/tests-docs.xml",
+        ),
+        (
+            executable, "-m", "pytest", "-m", "not docs",
+            "--junitxml=reports/tests-behavior.xml",
+            "--cov-report=xml:reports/coverage.xml",
+            "--cov-report=json:reports/coverage.json",
+            "--cov-report=html:reports/htmlcov",
+        ),
     )
 
 

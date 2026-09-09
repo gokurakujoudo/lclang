@@ -15,6 +15,8 @@ from lclang.workflow.models import ExecutionStatus, ExecutionStatusTree, Executi
 from lclang.workflow.steps import ExecutionStatusStep
 from lclang.workflow.variables import TaskVar, define_variable
 
+# Unitless public export names come from this module's supported API; the explicit list keeps
+# implementation helpers out of wildcard imports.
 __all__ = [
     "ContextTask",
     "ExecutionStatus",

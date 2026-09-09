@@ -41,6 +41,8 @@ class WeekdayBDCalendar(FunctionalBDCalendar):
 
 
 # Singleton calendar that accepts Mondays.
+# Unitless singleton IDs use the public weekday names. Python weekday indices run from Monday=0
+# to Sunday=6; these seven shared instances cover exactly that Gregorian weekly cycle.
 MONDAYS = WeekdayBDCalendar(CalendarID("MONDAYS"), 0)
 # Singleton calendar that accepts Tuesdays.
 TUESDAYS = WeekdayBDCalendar(CalendarID("TUESDAYS"), 1)

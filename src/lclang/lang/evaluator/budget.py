@@ -45,10 +45,14 @@ class InternalEvaluationGuard(Protocol):
         ...
 
 
+# Task-local evaluation state starts unset or at zero levels; these defaults identify a root
+# evaluation and share its budget across nested calls.
 _ACTIVE_GUARD: ContextVar[InternalEvaluationGuard | None] = ContextVar(
     "lclang_evaluation_guard",
     default=None,
 )
+# Task-local evaluation state starts unset or at zero levels; these defaults identify a root
+# evaluation and share its budget across nested calls.
 _EVALUATION_DEPTH: ContextVar[int] = ContextVar("lclang_evaluation_depth", default=0)
 
 

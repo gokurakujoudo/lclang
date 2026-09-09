@@ -38,6 +38,8 @@ from lclang.ast.forms import LclAssert, LclFunction, LclParameter, LclRaise, Par
 from lclang.ast.fstrings import LclFormattedValue, LclJoinedString, LclStringText
 from lclang.ast.primaries import LclAttribute, LclCall, LclSafeAttribute, LclSlice, LclSubscript
 
+# Unitless public export names come from this module's supported API; the explicit list keeps
+# implementation helpers out of wildcard imports.
 __all__ = [
     "LclAstNode",
     "LclAssert",

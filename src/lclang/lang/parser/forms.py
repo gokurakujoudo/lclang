@@ -10,7 +10,7 @@ from lclang.errors import LclSyntaxError
 from lclang.lang.lexer import TokenKind
 from lclang.lang.parser.bindings import validate_binding_name
 from lclang.lang.parser.stream import TokenStream
-from lclang.source import SourceSpan
+from lclang.source import merge_source_spans
 from lclang.types import VarName
 
 
@@ -110,7 +110,7 @@ class InternalFormParser:
         return LclFunction(
             (parameter,),
             body,
-            span=internal_merge_span(name_token.span, body.span),
+            span=merge_source_spans(name_token.span, body.span),
         )
 
     def internal_function(self) -> LclFunction:
@@ -156,7 +156,7 @@ class InternalFormParser:
         return LclFunction(
             tuple(parameters),
             body,
-            span=internal_merge_span(opening.span, body.span),
+            span=merge_source_spans(opening.span, body.span),
         )
 
     def internal_parameter(
@@ -209,7 +209,7 @@ class InternalFormParser:
             VarName(name_token.lexeme),
             kind,
             default,
-            span=internal_merge_span(start, end),
+            span=merge_source_spans(start, end),
         )
 
     def internal_raise(self) -> LclRaise:
@@ -225,7 +225,7 @@ class InternalFormParser:
         self.stream.expect(TokenKind.LPAREN, "raise form requires opening parenthesis")
         value = self.parse_complete()
         closing = self.stream.expect(TokenKind.RPAREN, "raise form requires closing parenthesis")
-        return LclRaise(value, span=internal_merge_span(opening.span, closing.span))
+        return LclRaise(value, span=merge_source_spans(opening.span, closing.span))
 
     def internal_assert(self) -> LclAssert:
         """Parse an assertion with an optional message expression.
@@ -243,7 +243,7 @@ class InternalFormParser:
         if self.stream.match(TokenKind.COMMA) is not None:
             message = self.parse_complete()
         closing = self.stream.expect(TokenKind.RPAREN, "assert form requires closing parenthesis")
-        return LclAssert(condition, message, span=internal_merge_span(opening.span, closing.span))
+        return LclAssert(condition, message, span=merge_source_spans(opening.span, closing.span))
 
 
 def parse_form(
@@ -263,17 +263,3 @@ def parse_form(
        A ``None`` result never consumes a token.
     """
     return InternalFormParser(stream, parse_complete, parse_nonconditional).parse()
-
-
-def internal_merge_span(first: SourceSpan, last: SourceSpan) -> SourceSpan:
-    """Join the boundary spans of one function-like form.
-
-    :param first: Span at the opening keyword or marker.
-    :param last: Span at the final consumed expression or delimiter.
-    :returns: Half-open span from *first* start through *last* end.
-
-    .. note::
-       The source origin is inherited from *first*, and all intervening form
-       syntax is covered by the resulting range.
-    """
-    return SourceSpan(first.origin, first.start, last.end)

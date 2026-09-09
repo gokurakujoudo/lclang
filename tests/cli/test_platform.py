@@ -1,7 +1,6 @@
 """Windows/POSIX token and subprocess integration tests for the CLI."""
 
 import os
-import re
 import subprocess
 import sys
 from pathlib import Path
@@ -74,7 +73,7 @@ def test_unicode_spaced_script_runs_without_a_shell_and_cleans_logs() -> None:
                 "quoted",
                 '"kept quotes"',
                 "-o",
-                "logger.log_dir",
+                "logger.file.app.directory",
                 str(log_dir),
                 "-a",
                 "20260809",
@@ -87,20 +86,13 @@ def test_unicode_spaced_script_runs_without_a_shell_and_cleans_logs() -> None:
             text=True,
             encoding="utf-8",
         )
-        log_path = log_dir / "lclang.log"
-        log_text = log_path.read_text(encoding="utf-8") if log_path.exists() else ""
-        assert completed.returncode == 0, (completed.stderr, log_text)
-        output_lines = completed.stdout.splitlines()
-        assert len(output_lines) == 2
-        assert re.match(
-            r"^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} \| INFO +\| "
-            r"lclang\.cli\.\d+ \| sample tool\.py:\d+ \| show_command \| "
-            r"message=café ✓$",
-            output_lines[0],
-        )
-        assert output_lines[1] == (
+        assert completed.returncode == 0, completed.stderr
+        log_path = next(log_dir.glob("*.log"))
+        log_text = log_path.read_text(encoding="utf-8")
+        assert completed.stdout.splitlines() == [
             'café ✓|--looks-like-option|"kept quotes"|2026-08-09|true'
-        )
-        assert completed.stderr == ""
+        ]
+        assert "message=café ✓" in completed.stderr
+        assert "show_command" in completed.stderr
         assert "message=café ✓" in log_text
     assert temporary_path.exists() is False

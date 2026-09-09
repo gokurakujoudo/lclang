@@ -6,7 +6,8 @@ from typing import final
 
 from lclang.utils.calendar.base import BDCalendar
 from lclang.utils.calendar.functional import FunctionalBDCalendar
-from lclang.utils.calendar.transformations.logic import canonical_calendars, dependency_day_type
+from lclang.utils.calendar.transformations.logic import dependency_day_type
+from lclang.utils.calendar.transformations.operands import canonical_calendars
 from lclang.utils.calendar.types import CalendarID, DayType
 
 

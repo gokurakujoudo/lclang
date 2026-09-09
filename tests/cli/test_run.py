@@ -17,16 +17,17 @@ from lclang.cli import (
     CliResultStatus,
     Command,
     CommandGroup,
-    LogConfig,
     ParameterDoc,
     cli,
 )
-from lclang.cli.logging import LoggerHandle
+from lclang.cli.execution import execute_command, write_result
 from lclang.cli.routing import RouteAction, RouteResult
-from lclang.cli.run import execute_command, script_label_from_args, write_result
+from lclang.cli.run import script_label_from_args
+from lclang.logger import LoggerHandlerConfig
+from lclang.logger.logger import Logger
 
 # Static configuration fixture used by the complete invocation case.
-STATIC_CONFIG = "using \"child.lclcfg\"\nmessage: prefix + suffix\n"
+STATIC_CONFIG = 'using "child.lclcfg"\nmessage: prefix + suffix\n'
 # Static included configuration fixture used by the complete invocation case.
 STATIC_CHILD = 'prefix: "hello "\nsuffix: "config"\ntoken!: "config-secret"\n'
 
@@ -65,7 +66,7 @@ def test_complete_run_uses_layers_context_logging_and_cleanup(
         entrance = CliEntrance(
             CommandGroup("root", "Example", [show_command]),
             "1.2.3",
-            CliConfig(LogConfig(log_dir=str(root / "logs"))),
+            CliConfig(LoggerHandlerConfig(file={"app": {"directory": str(root / "logs")}})),
         )
         status = asyncio.run(
             entrance.run(
@@ -88,18 +89,13 @@ def test_complete_run_uses_layers_context_logging_and_cleanup(
             )
         )
         assert status == 0
-        output_lines = capsys.readouterr().out.splitlines()
-        assert len(output_lines) == 2
-        assert re.match(
-            r"^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} \| INFO +\| "
-            r"lclang\.cli\.\d+ \| test_run\.py:\d+ \| show_command \| "
-            r"message=hello override$",
-            output_lines[0],
-        )
-        assert output_lines[1] == "hello override"
+        captured = capsys.readouterr()
+        assert captured.out == "hello override\n"
+        assert "message=hello override" in captured.err
+        assert "show_command" in captured.err
         assert observed == {"date": date(2026, 8, 9), "dryrun": True, "message": "hello override"}
-        log_text = (root / "logs" / "lclang.log").read_text(encoding="utf-8")
-        assert f"execution log file path: {root / 'logs' / 'lclang.log'}" in log_text
+        log_text = next((root / "logs").glob("*.log")).read_text(encoding="utf-8")
+        assert log_text.startswith("log file: ")
         assert "execution started:\n" in log_text
         assert "==                      show                     ==" in log_text
         match = re.search(r"execution command line: (\[.*\])", log_text)
@@ -200,10 +196,11 @@ def test_result_statuses_map_to_output_and_exit(
     assert captured.err == expected_err
 
 
-def test_application_info_and_verbose_debug_logs_print_to_stdout(
+def test_application_info_and_verbose_debug_logs_print_to_stderr(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Console logging is independent from the configured file threshold."""
+
     @cli.command(name="logged")
     async def logged_handler(context: CliContext) -> CliResult:
         """Write one record at each terminal-visible level.
@@ -221,32 +218,34 @@ def test_application_info_and_verbose_debug_logs_print_to_stdout(
         for log_dir in (None, directory):
             entrance = CliEntrance(
                 CommandGroup("root", "Logging", [logged_handler]),
-                cli_config=CliConfig(LogConfig(log_dir=log_dir, log_level="ERROR")),
+                cli_config=CliConfig(
+                    LoggerHandlerConfig(
+                        file={}
+                        if log_dir is None
+                        else {"app": {"directory": log_dir, "level": "ERROR"}}
+                    )
+                ),
             )
             assert asyncio.run(entrance.run(["python", "tool.py", "logged"])) == 0
             captured = capsys.readouterr()
-            assert " | INFO     | " in captured.out
-            assert " | WARNING  | " in captured.out
-            assert " | info message" in captured.out
-            assert " | warning message" in captured.out
+            assert " | INFO     | " in captured.err
+            assert " | WARNING  | " in captured.err
+            assert " | info message" in captured.err
+            assert " | warning message" in captured.err
             assert " | ERROR    | " in captured.err
             assert " | error message" in captured.err
 
-            assert asyncio.run(
-                entrance.run(["python", "tool.py", "logged", "--verbose"])
-            ) == 0
+            assert asyncio.run(entrance.run(["python", "tool.py", "logged", "--verbose"])) == 0
             captured = capsys.readouterr()
-            assert " | DEBUG    | " in captured.out
-            assert " | debug message" in captured.out
-            assert " | info message" in captured.out
-            assert " | warning message" in captured.out
-            assert "[lclang." in captured.err
+            assert " | DEBUG    | " in captured.err
+            assert " | debug message" in captured.err
+            assert " | info message" in captured.err
+            assert " | warning message" in captured.err
             assert " | error message" in captured.err
-        file_log = (Path(directory) / "lclang.log").read_text(encoding="utf-8")
-        assert "error message" in file_log
-        assert "debug message" not in file_log
-        assert "info message" not in file_log
-        assert "warning message" not in file_log
+        file_logs = [path.read_text(encoding="utf-8") for path in Path(directory).glob("*.log")]
+        assert len(file_logs) == 2
+        assert any("debug message" in text for text in file_logs)
+        assert any("debug message" not in text for text in file_logs)
 
 
 def test_handler_exception_wrong_result_and_setup_failures_return_two(
@@ -294,9 +293,7 @@ def test_handler_exception_wrong_result_and_setup_failures_return_two(
     assert asyncio.run(entrance.run(["python", "tool.py", "boom"])) == 2
     assert asyncio.run(entrance.run(["python", "tool.py", "wrong"])) == 2
     assert asyncio.run(entrance.run(["python", "tool.py", "required"])) == 2
-    assert asyncio.run(
-        entrance.run(["python", "tool.py", "boom", "-c", "missing.lclcfg"])
-    ) == 2
+    assert asyncio.run(entrance.run(["python", "tool.py", "boom", "-c", "missing.lclcfg"])) == 2
     errors = capsys.readouterr().err
     assert "boom" in errors
     assert "must return CliResult" in errors
@@ -331,7 +328,7 @@ def test_low_level_result_writer_and_internal_params_guard(
     logger = __import__("logging").Logger("writer")
     handler = __import__("logging").NullHandler()
     logger.addHandler(handler)
-    handle = LoggerHandle(logger, (handler,))
+    handle = Logger(logger.name, "", 0)
     with caplog.at_level(__import__("logging").INFO):
         write_result(CliResult(CliResultStatus.SUCCESS, "quiet"), handle, log_result=False)
     assert caplog.records == []
@@ -339,7 +336,7 @@ def test_low_level_result_writer_and_internal_params_guard(
     command = make_result_entrance(CliResultStatus.SUCCESS, "").command_group.commands[0]
     assert isinstance(command, Command)
     assert asyncio.run(execute_command(command, object(), CliConfig())) == 2
-    handle.close()
+    handler.close()
     captured = capsys.readouterr()
     assert captured.out == "quiet\n"
     errors = captured.err
@@ -356,18 +353,21 @@ def test_logger_cleanup_output_and_internal_route_failures_are_converted(
 ) -> None:
     """Late framework failures are logged, cleaned, and returned as status two."""
     entrance = make_result_entrance(CliResultStatus.SUCCESS, "ok")
-    assert asyncio.run(
-        entrance.run(
-            [
-                "python",
-                "tool.py",
-                "result",
-                "-o",
-                "logger.log_format",
-                "bad",
-            ]
+    assert (
+        asyncio.run(
+            entrance.run(
+                [
+                    "python",
+                    "tool.py",
+                    "result",
+                    "-o",
+                    "logger.format",
+                    "bad",
+                ]
+            )
         )
-    ) == 2
+        == 2
+    )
 
     async def fail_close(self: object) -> None:
         """Raise one synthetic cleanup failure.
@@ -392,7 +392,7 @@ def test_logger_cleanup_output_and_internal_route_failures_are_converted(
         """
         raise OSError("output failed")
 
-    monkeypatch.setattr("lclang.cli.run.write_result", fail_output)
+    monkeypatch.setattr("lclang.cli.execution.write_result", fail_output)
     assert asyncio.run(entrance.run(["python", "tool.py", "result"])) == 2
     monkeypatch.undo()
 
@@ -411,7 +411,7 @@ def test_logger_cleanup_output_and_internal_route_failures_are_converted(
     monkeypatch.undo()
     assert asyncio.run(entrance.run(["python", "tool", "result"])) == 2
     errors = capsys.readouterr().err
-    assert "log format" in errors
+    assert "format" in errors
     assert "cleanup failed" in errors
     assert "route did not select" in errors
     assert ".py" in errors

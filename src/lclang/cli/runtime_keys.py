@@ -1,6 +1,9 @@
 """Constant keys for values owned by one CLI invocation."""
 
 # Reserved typed as-of date binding key.
+# Unitless reserved key spellings come from the CLI runtime contract. Their exact double-
+# underscore names distinguish framework state from user configuration; the collected set
+# protects every listed runtime binding.
 RUNTIME_AS_OF_DATE_KEY = "__as_of_date__"
 # Reserved immutable CLI parameter binding key.
 RUNTIME_CLI_PARAMS_KEY = "__cli_params__"

@@ -24,7 +24,7 @@ Begin with one external integer and one produced integer. A `TaskVar[int]`
 names each value. Its `quote` property lets the static dataclass instance double
 as a field mapping while preserving the field's type for mypy.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 from dataclasses import dataclass
 
@@ -87,7 +87,7 @@ sessions available to the wrapped action without publishing them to siblings.
 Explicit action outputs, by contrast, are mixed into the shared execution Frame
 and can feed later tasks.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 import logging

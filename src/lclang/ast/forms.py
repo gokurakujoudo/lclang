@@ -16,6 +16,8 @@ class ParameterKind(StrEnum):
        Values are stable diagnostic labels rather than source prefixes.
     """
 
+    # Unitless signature categories follow Python calling conventions; distinct values preserve
+    # positional and keyword binding rules.
     POSITIONAL = "positional"
     KEYWORD_ONLY = "keyword-only"
     VAR_POSITIONAL = "variadic-positional"

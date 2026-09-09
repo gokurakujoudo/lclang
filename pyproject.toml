@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lclang"
-version = "1.0.7"
+version = "1.0.8"
 description = "A typed, async-first configuration expression language"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -21,14 +21,21 @@ classifiers = [
 ]
 
 [project.urls]
-Documentation = "https://jihulab.com/midnightprotocol/lclang/-/tree/main/docs"
-Issues = "https://jihulab.com/midnightprotocol/lclang/-/work_items"
-Source = "https://jihulab.com/midnightprotocol/lclang"
+Homepage = "https://gokurakujoudo.github.io/lclang/"
+Documentation = "https://github.com/gokurakujoudo/lclang/wiki"
+Issues = "https://github.com/gokurakujoudo/lclang/issues"
+Source = "https://github.com/gokurakujoudo/lclang"
 
 [dependency-groups]
+build = ["hatchling==1.31.0"]
+integration = [
+  "fastapi==0.141.1",
+  "uvicorn==0.52.4",
+  "uvicorn-worker==0.4.0; sys_platform != 'win32'",
+]
 dev = [
-  "build==1.5.0",
-  "hatchling==1.31.0",
+  { include-group = "build" },
+  { include-group = "integration" },
   "hypothesis==6.165.0",
   "mypy==2.3.0",
   "pytest==9.1.1",
@@ -54,11 +61,11 @@ pythonpath = ["src"]
 testpaths = ["tests"]
 markers = [
   "docs: documentation structure and executable-example checks",
-  "release: artifact, clean-install, portability, and release-candidate checks",
 ]
 
 [tool.coverage.run]
 branch = true
+relative_files = true
 source = ["lclang"]
 
 [tool.coverage.report]
@@ -87,16 +94,7 @@ ignore = ["D203", "D213"]
 "tests/**" = ["D102"]
 
 [tool.hatch.build.targets.sdist]
-include = [
-  "/AGENTS.md",
-  "/CHANGELOG.md",
-  "/LICENSE",
-  "/README.md",
-  "/docs",
-  "/progress.md",
-  "/src/lclang",
-  "/tests",
-]
+include = ["/src/lclang", "/pyproject.toml", "/LICENSE", "/README.md"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lclang"]

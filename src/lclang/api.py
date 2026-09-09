@@ -23,7 +23,11 @@ from lclang.utils.calendar.loading import (
 )
 from lclang.utils.environment import env
 
-# Curated ordinary Python value types and ambient-I/O-free functions.
+# Curated ordinary Python values and explicit environment/calendar utilities.
+# Unitless canonical names and objects below come from the runtime hierarchy contract. Stable
+# IDs distinguish root, builtins, runtime, imports and user layers; shared defaults preserve
+# their precedence. The builtin inventory includes explicit environment and calendar-loader
+# capabilities.
 LCL_BUILTIN_VALUES: dict[str, object] = {
     **STANDARD_PRESET.values,
     "abs": abs,
@@ -91,7 +95,7 @@ LCL_ROOT = Frame(
     values={"lhs": lhs},
     native_values=True,
 )
-# Standard Python value types and pure functions above the LCL mixin.
+# Standard Python values and explicit utilities above the LCL mixin.
 LCL_BUILTINS = Frame(
     LCL_BUILTINS_MODULE,
     FrameId("LCL_BUILTINS"),

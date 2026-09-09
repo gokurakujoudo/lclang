@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import random
 
+from lclang.logger import Logger
 from lclang.runtime import Frame
 from lclang.workflow.logging import status_level
 from lclang.workflow.models import ExecutionStatus, ExecutionStatusTree
@@ -41,7 +42,7 @@ def status_lines(tree: ExecutionStatusTree) -> list[str]:
 
 
 def log_status_tree(
-    logger: logging.Logger,
+    logger: logging.Logger | Logger,
     tree: ExecutionStatusTree,
     workflow_id: str,
 ) -> None:
@@ -59,7 +60,7 @@ def log_status_tree(
 
 
 async def log_lunch_option(
-    logger: logging.Logger,
+    logger: logging.Logger | Logger,
     frame: Frame,
     status: ExecutionStatus,
 ) -> None:
@@ -68,16 +69,20 @@ async def log_lunch_option(
     :param logger: Command logger receiving an optional lunch record.
     :param frame: Invocation Frame supplying ``lunch.options``.
     :param status: Final workflow status.
+    :raises BaseException: If cancellation or process control interrupts the operation.
+
+    Ordinary failures in masking, configuration, random choice or logging are
+    isolated together; this easter egg must never change a completed workflow.
     """
-    if frame.is_masked("lunch.options"):
-        return
     try:
+        if frame.is_masked("lunch.options"):
+            return
         options = await frame.get("lunch.options", fallback=[])
+        if not isinstance(options, list) or not options:
+            return
+        if any(not isinstance(item, str) for item in options):
+            return
+        selected = random.choice(options) if status is ExecutionStatus.SUCCESS else "no lunch!"
+        logger.info("lunch option: %s", selected)
     except Exception:
         return
-    if not isinstance(options, list) or not options:
-        return
-    if any(not isinstance(item, str) for item in options):
-        return
-    selected = random.choice(options) if status is ExecutionStatus.SUCCESS else "no lunch!"
-    logger.info("lunch option: %s", selected)

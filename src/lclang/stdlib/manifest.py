@@ -6,6 +6,8 @@ import keyword
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+# Unitless reserved names come from namespace inspection methods; excluding them prevents module
+# members from shadowing that API.
 _RESERVED_NAMES = frozenset({"get", "items", "keys", "members", "namespace", "values"})
 
 

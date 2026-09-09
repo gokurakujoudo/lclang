@@ -12,3 +12,7 @@
   execution, static trees, failure covering, and CLI conversion.
 - [Business day calendars](calendar.md): three-state calendars, composition,
   mappings, strict JSON loading, management, and LCL exposure.
+
+- [Command-line API](cli.md): declaration, routing, configuration, logging and trusted command discovery.
+
+- [Unified process logging](logger.md)

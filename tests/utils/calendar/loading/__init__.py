@@ -1,0 +1,1 @@
+"""Calendar loading behavior contracts."""

@@ -8,10 +8,10 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import lclang
-from lclang.cli import CliConfig, CliContext, CliParams, CliResult, LogConfig, ParameterDoc, cli
-from lclang.cli.audit import normalized_argv, selected_binding
+from lclang.cli import CliConfig, CliContext, CliParams, CliResult, ParameterDoc, cli
+from lclang.cli.audit import emit_execution_start, normalized_argv, selected_binding
 from lclang.cli.binding import build_binding
-from lclang.cli.logging import LoggerHandle, log_execution_start
+from lclang.logger import LoggerHandlerConfig
 from lclang.runtime import VariableInspectionStatus
 
 
@@ -38,7 +38,7 @@ def test_audit_preamble_is_readable_redacted_and_non_evaluating() -> None:
         config_path = root / "audit.lclcfg"
         config_path.write_text(
             'prefix: "hello "\n'
-            'group.value: 1\n'
+            "group.value: 1\n"
             'message: prefix + "config"\n'
             'stored!: "file-secret"\n'
             'token!: "config-secret"\n',
@@ -74,10 +74,9 @@ def test_audit_preamble_is_readable_redacted_and_non_evaluating() -> None:
         handler = logging.StreamHandler(stream)
         handler.setFormatter(logging.Formatter("%(message)s"))
         logger.addHandler(handler)
-        handle = LoggerHandle(logger, (handler,), root / "audit.log")
         try:
-            log_execution_start(
-                handle,
+            emit_execution_start(
+                logger,
                 params,
                 binding.frame,
                 binding.execution_config_names,
@@ -89,12 +88,11 @@ def test_audit_preamble_is_readable_redacted_and_non_evaluating() -> None:
             assert selected_binding(binding.frame, "group") is None
             assert selected_binding(binding.frame, "absent") is None
         finally:
-            handle.close()
+            handler.close()
             asyncio.run(binding.stack.close())
 
     messages = stream.getvalue().splitlines()
-    assert messages[:3] == [
-        f"execution log file path: {root / 'audit.log'}",
+    assert messages[:2] == [
         "execution started:",
         "===================================================",
     ]
@@ -118,8 +116,8 @@ def test_audit_preamble_is_readable_redacted_and_non_evaluating() -> None:
 
 def test_default_log_format_does_not_render_logging_args() -> None:
     """The public default ends with the rendered message."""
-    config = LogConfig()
-    assert "%(args)" not in config.log_format
+    config = LoggerHandlerConfig()
+    assert "%(args)" not in config.format
 
 
 def test_manual_params_reconstruct_a_redacted_argv_fallback() -> None:
@@ -151,6 +149,22 @@ def test_manual_params_reconstruct_a_redacted_argv_fallback() -> None:
             "20260829",
             "--dryrun",
             "--verbose",
+        ]
+    finally:
+        asyncio.run(frame.close())
+
+
+def test_plain_params_omit_optional_canonical_tokens() -> None:
+    """A manually built quiet invocation has no synthetic config or flag tokens."""
+    params = CliParams("python", ("run",), date(2026, 9, 8), False, None, {})
+    frame = lclang.define_frame()
+    try:
+        assert normalized_argv(params, frame) == [
+            "python",
+            "script.py",
+            "run",
+            "--as-of",
+            "20260908",
         ]
     finally:
         asyncio.run(frame.close())

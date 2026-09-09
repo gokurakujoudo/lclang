@@ -16,11 +16,15 @@ type BinaryFunction = Callable[[Any, Any], object]
 type ComparisonFunction = Callable[[Any, Any], object]
 type OperationNode = LclUnary | LclBinary | LclCompare
 
+# Unitless dispatch tables map grammar operators to Python operator functions; explicit entries
+# restrict evaluation to supported operations.
 _UNARY: dict[UnaryOperator, UnaryFunction] = {
     UnaryOperator.POSITIVE: operator.pos,
     UnaryOperator.NEGATIVE: operator.neg,
     UnaryOperator.INVERT: operator.invert,
 }
+# Unitless dispatch tables map grammar operators to Python operator functions; explicit entries
+# restrict evaluation to supported operations.
 _BINARY: dict[BinaryOperator, BinaryFunction] = {
     BinaryOperator.ADD: operator.add,
     BinaryOperator.SUBTRACT: operator.sub,
@@ -36,6 +40,8 @@ _BINARY: dict[BinaryOperator, BinaryFunction] = {
     BinaryOperator.BIT_XOR: operator.xor,
     BinaryOperator.BIT_OR: operator.or_,
 }
+# Unitless dispatch tables map grammar operators to Python operator functions; explicit entries
+# restrict evaluation to supported operations.
 _COMPARE: dict[ComparisonOperator, ComparisonFunction] = {
     ComparisonOperator.LESS: operator.lt,
     ComparisonOperator.LESS_EQUAL: operator.le,

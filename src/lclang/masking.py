@@ -5,6 +5,9 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 
 # Suffix declaring that one exact binding name is masked.
+# Unitless markers follow the binding and presentation contract: ! is the trailing declaration
+# syntax and *masked* is the stable replacement. Exact spellings preserve runtime-name
+# normalization and consistent redaction.
 MASK_SUFFIX = "!"
 # Stable diagnostic replacement for masked payloads.
 MASKED_VALUE = "*masked*"

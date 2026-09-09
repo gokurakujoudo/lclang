@@ -19,7 +19,7 @@ without adding a Module definition or cache entry.
 The smallest useful scope needs only a qualified leaf. Prefix proxies are
 inferred automatically.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -57,7 +57,7 @@ metadata for a Python Module that must promise a scope even when an optional
 descendant may be absent; it is not recommended as ordinary configuration-file
 layout.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -92,7 +92,7 @@ the Frame but do not add snapshots. Their definition context is `<expr>`.
 A proxy always starts lookup from the Frame that produced it. A child can
 therefore override one scoped leaf while another leaf falls back to its parent.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -142,7 +142,7 @@ its local `service.retries` value.
 Each `frame.evaluate` call parses and executes its root expression again.
 Named dependencies still use ordinary Frame snapshots.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -187,7 +187,7 @@ retains `<expr>` as its lexical `lhs()` owner.
 A configuration file may define dotted left-hand names directly. This complete
 example also applies a qualified CLI override.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 import io
@@ -274,7 +274,7 @@ including across a Frame's live hierarchy.
 Ad hoc evaluation keeps the normal syntax, name, evaluation-limit, and Frame
 lifecycle errors. An uncached returned resource belongs to the caller.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -336,7 +336,7 @@ A scope can represent a collection without storing one aggregate list. Each
 item stays independently overrideable, while Python can materialize a typed,
 detached view when it needs one.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 from dataclasses import dataclass

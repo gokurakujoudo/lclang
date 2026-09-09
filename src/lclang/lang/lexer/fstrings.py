@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from lclang.lang.lexer.characters import character_at
 from lclang.lang.lexer.escapes import EscapeDecodeError, decode_content
 from lclang.lang.lexer.fstring_values import (
     FStringField,
@@ -280,10 +281,10 @@ class InternalFStringScanner:
         :returns: Current character, or ``""`` at end of source.
 
         .. note::
-           Slicing supplies the empty sentinel without raising ``IndexError``
+           The shared character reader supplies an empty sentinel without ``IndexError``
            at the input boundary.
         """
-        return self.text[self.cursor : self.cursor + 1]
+        return character_at(self.text, self.cursor)
 
 
 def scan_fstring(text: str, quote_at: int, *, raw: bool) -> FStringMatch:

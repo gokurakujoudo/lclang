@@ -19,9 +19,11 @@ from lclang.lang.parser.primaries import parse_primaries
 from lclang.lang.parser.stream import TokenStream
 from lclang.lang.printer import to_source
 from lclang.scopes import is_frame_proxy
-from lclang.source import SourceOrigin, SourceSpan
+from lclang.source import SourceOrigin, merge_source_spans
 from lclang.version import LCL_V1, LanguageVersion
 
+# Unitless binding powers follow Python-style operator precedence; relative ranks and
+# associativity govern Pratt parsing.
 _BINARY: dict[TokenKind, tuple[BinaryOperator, int, int]] = {
     TokenKind.PIPE: (BinaryOperator.BIT_OR, 10, 11),
     TokenKind.CARET: (BinaryOperator.BIT_XOR, 20, 21),
@@ -37,6 +39,8 @@ _BINARY: dict[TokenKind, tuple[BinaryOperator, int, int]] = {
     TokenKind.PERCENT: (BinaryOperator.MODULO, 60, 61),
     TokenKind.DOUBLE_STAR: (BinaryOperator.POWER, 80, 80),
 }
+# Unitless binding powers follow Python-style operator precedence; relative ranks and
+# associativity govern Pratt parsing.
 _UNARY = {
     TokenKind.PLUS: UnaryOperator.POSITIVE,
     TokenKind.MINUS: UnaryOperator.NEGATIVE,
@@ -83,7 +87,7 @@ class InternalPrattParser:
                     break
             node = LclTuple(
                 tuple(elements),
-                span=internal_merge_span(elements[0].span, elements[-1].span),
+                span=merge_source_spans(elements[0].span, elements[-1].span),
             )
         if self.stream.current.kind is not TokenKind.EOF:
             raise LclSyntaxError("unexpected trailing token", span=self.stream.current.span)
@@ -148,7 +152,7 @@ class InternalPrattParser:
             left = LclUnary(
                 operator=_UNARY[token.kind],
                 operand=operand,
-                span=internal_merge_span(token.span, operand.span),
+                span=merge_source_spans(token.span, operand.span),
             )
         else:
             left = parse_atom(
@@ -167,7 +171,7 @@ class InternalPrattParser:
                 left=left,
                 operator=operator,
                 right=right,
-                span=internal_merge_span(left.span, right.span),
+                span=merge_source_spans(left.span, right.span),
             )
         return left
 
@@ -237,17 +241,3 @@ def parse_tokens(
             span=markers[0].span,
         )
     return node
-
-
-def internal_merge_span(first: SourceSpan, last: SourceSpan) -> SourceSpan:
-    """Join the boundary spans of one parsed expression.
-
-    :param first: Span at the first token or operand.
-    :param last: Span at the final token or operand.
-    :returns: Half-open span from *first* start through *last* end.
-
-    .. note::
-       The source origin is inherited from *first*, and all intervening
-       operators or nested syntax are covered by the resulting range.
-    """
-    return SourceSpan(first.origin, first.start, last.end)

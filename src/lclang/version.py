@@ -10,6 +10,11 @@ class LanguageVersion(StrEnum):
        Enum values are stable strings suitable for persisted configuration.
     """
 
+    # Unitless version label comes from the supported language contract; the sole value
+    # identifies stable version 1 semantics.
+    # Unitless language version values below come from the stable V1 contract. The explicit
+    # alias selects the sole supported semantics without requiring callers to construct a
+    # version value.
     V1 = "1"
 
 

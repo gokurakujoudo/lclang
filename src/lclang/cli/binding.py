@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from lclang.api import LCL_RUNTIME
 from lclang.ast import LclAstNode, LclConstant
 from lclang.cli.commands import Command
+from lclang.cli.logger_config import logger_definitions
 from lclang.cli.models import CliConfig, CliParams
 from lclang.cli.overrides import partition_overrides, require_forced_result
 from lclang.cli.runtime_keys import (
@@ -27,6 +28,10 @@ from lclang.runtime import Frame, Module
 from lclang.types import ModuleName
 
 # Module label for the call-specific preset/import layer.
+# Unitless layer identifiers below follow the CLI precedence contract and keep diagnostics
+# distinguishable. Date formats use strftime directives: YYYYMMDD has day precision;
+# YYYYMMDDhhmmss has local second precision. Compact numeric formats are stable configuration
+# inputs and filename components.
 IMPORTS_MODULE_NAME = ModuleName("LCL_IMPORTS")
 # Module label for command and logger defaults.
 DEFAULTS_MODULE_NAME = ModuleName("command_defaults")
@@ -94,13 +99,7 @@ def default_definitions(command: Command, cli_config: CliConfig) -> dict[str, Lc
     :param cli_config: Framework defaults.
     :returns: Fresh definition mapping.
     """
-    log_config = cli_config.log_config
-    definitions: dict[str, LclAstNode] = {
-        "logger.log_dir": LclConstant(value=log_config.log_dir),
-        "logger.log_file_name": LclConstant(value=log_config.log_file_name),
-        "logger.log_level": LclConstant(value=log_config.log_level),
-        "logger.log_format": LclConstant(value=log_config.log_format),
-    }
+    definitions = logger_definitions(cli_config.log_config)
     definitions.update(
         {
             parameter.name: LclConstant(value=parameter.default)

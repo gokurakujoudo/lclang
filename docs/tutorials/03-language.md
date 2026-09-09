@@ -34,7 +34,7 @@ fail for the current input.
 The host may provide an object or `None`. Safe attribute access handles the
 missing object, `??` supplies a fallback, and an f-string formats the result.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 from types import SimpleNamespace
 
@@ -70,7 +70,7 @@ This example filters even values, calls a local arrow function, sorts the
 result through a supplied host function, and returns both details and a total
 as named fields.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import lclang
 
@@ -110,7 +110,7 @@ and dictionary comprehensions materialize results.
 
 Canonical printing is useful for formatters, diagnostics, and code review.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import lclang
 
@@ -139,4 +139,4 @@ available expression forms still support complex trusted policy.
 For the exact grammar, precedence table, control forms, and rainy cases, use
 the [language reference](../reference/language.md).
 
-[Previous: Modules and Frames](02-modules-and-frames.md) | [Next: Configuration files](04-configuration-files.md)
+[Previous: Modules and Frames](02-modules-and-frames.md) | [Next: Configuration files](04-configuration-files.md) | [Return to the series introduction](README.md)

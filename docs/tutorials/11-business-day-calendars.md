@@ -16,7 +16,7 @@ means a calendar has no opinion, not that the date is a holiday.
 Builtins such as `ALL_WEEKDAYS` are total. `at(...)` is sparse. Union lets an
 explicit special business day add an exception to the weekday rule.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 from datetime import date
@@ -57,7 +57,7 @@ policy is assembled dynamically.
 A mapping answers where a source date moves. This example adjusts a weekend to
 Monday and then schedules execution one trading day later.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 from datetime import date
@@ -94,7 +94,7 @@ day.
 Filesystem access is explicit: the application selects the directory and
 constructs the loader. Tests keep that input inside a temporary directory.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 import json
@@ -145,4 +145,4 @@ The JSON object must contain exactly `business_days` and `holidays` arrays of
 unique strict `YYYYMMDD` strings. Managed loads are single-flight within one
 event loop. Retirement removes a cached calendar and recursive dependants.
 
-[Previous: Workflow status](10-workflow-status.md) | [Next: Production patterns](12-production-patterns.md)
+[Previous: Workflow status](10-workflow-status.md) | [Next: Production patterns](12-production-patterns.md) | [Return to the series introduction](README.md)

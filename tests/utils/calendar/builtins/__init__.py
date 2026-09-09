@@ -1,0 +1,1 @@
+"""Calendar builtins behavior contracts."""

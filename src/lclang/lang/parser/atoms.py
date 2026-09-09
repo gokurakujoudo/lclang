@@ -11,15 +11,19 @@ from lclang.lang.parser.displays import parse_display
 from lclang.lang.parser.fstrings import internal_parse_fstring
 from lclang.lang.parser.stream import TokenStream
 from lclang.scopes import FRAME_PROXY
-from lclang.source import SourceSpan
+from lclang.source import merge_source_spans
 from lclang.types import VarName
 
+# Unitless literal dispatch follows lexer token kinds; the explicit mapping preserves literal
+# values and constant-keyword semantics.
 _LITERALS = {
     TokenKind.INTEGER,
     TokenKind.FLOAT,
     TokenKind.STRING,
     TokenKind.BYTES,
 }
+# Unitless literal dispatch follows lexer token kinds; the explicit mapping preserves literal
+# values and constant-keyword semantics.
 _CONSTANT_KEYWORDS = {
     TokenKind.KW_TRUE: True,
     TokenKind.KW_FALSE: False,
@@ -87,18 +91,4 @@ def internal_parse_literal(stream: TokenStream) -> LclConstant:
                 "cannot mix adjacent text and bytes literals",
                 span=stream.current.span,
             )
-    return LclConstant(value=value, span=internal_merge_span(first.span, last.span))
-
-
-def internal_merge_span(first: SourceSpan, last: SourceSpan) -> SourceSpan:
-    """Join two spans that belong to one syntactic literal expression.
-
-    :param first: Span of the first consumed literal token.
-    :param last: Span of the final consumed adjacent literal token.
-    :returns: Half-open span from *first* start through *last* end.
-
-    .. note::
-       The first span supplies the shared source origin, while intervening
-       source text is intentionally covered by the resulting range.
-    """
-    return SourceSpan(first.origin, first.start, last.end)
+    return LclConstant(value=value, span=merge_source_spans(first.span, last.span))

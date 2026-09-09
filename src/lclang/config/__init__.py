@@ -19,6 +19,8 @@ from lclang.config.result import Config
 from lclang.config.sources import ResolvedConfigSource
 from lclang.errors import LclConfigError
 
+# Unitless public export names come from this module's supported API; the explicit list keeps
+# implementation helpers out of wildcard imports.
 __all__ = [
     "Config",
     "ConfigDefinition",

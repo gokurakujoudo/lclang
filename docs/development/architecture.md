@@ -14,10 +14,11 @@ src/lclang/
     printer/       precedence-aware canonical source rendering
     evaluator/     node-family evaluation handlers and auto-await helpers
   runtime/         modules, presets and public runtime exports
-    frame/         Frame core, mixins, cache lifecycle and inspection trees
+    frame/         Frame API, binding lookup, evaluation, cache lifecycle and inspection
     dependency/    static/dynamic analytics and qualified Frame graphs
   stdlib/          reviewed manifests, namespaces and async helpers
   config/          logical lines, includes, origins and config diagnostics
+  logger/          Frame configuration, process scope, queue writer, sinks and rotation
   cli/             typed contexts, parsing, routing, runners and built-ins
   workflow/        immutable task trees, execution, mappings, CLI and status
   utils/
@@ -26,12 +27,17 @@ src/lclang/
 
 Shared public value objects and errors remain small top-level modules. Package
 `__init__.py` files only re-export names; they contain no behavioural logic.
-Every implementation file must stay below 200 physical lines. When a module
-approaches the limit, split by a behavioural axis before adding more branches.
+Each production Python file has at most 200 code-bearing physical lines,
+excluding imports, docstrings, pure comments, and blank lines. Multiline
+expressions, signatures, and runtime strings count; compressing statements or
+embedding executable source is not an alternative to concise algorithms and
+responsibility-based modules. Scripts and tests are outside this size policy.
 
 Dependencies flow inward: CLI may depend on config/runtime; config may depend
 on language/runtime; runtime may depend on AST/language primitives. AST, source,
 types, errors, and workflow status never import runtime, config, or CLI.
+Logger Frame configuration depends on runtime and never imports CLI; CLI adds
+parameter recognition and entry-point defaults around the shared resolver.
 
 ## Test packages
 
@@ -46,23 +52,40 @@ tests/
     dependency/    static/dynamic and qualified graph behaviour
   stdlib/          manifest and async-helper behaviour
   config/          text, include, origin and diagnostic behaviour
+  logger/          configuration, ownership, output, timers and failure isolation
   cli/             argv, routing, stream and exit-code behaviour
   workflow/        definitions, execution, mappings, rendering and status
   utils/
     calendar/      calendar strategies, algebra, mapping, loading, and LCL integration
   support/         reusable factories, fake resources and corpus loaders
-  stress/          opt-in scale, concurrency and leak scenarios
+  stress/          default full-suite scale, concurrency and leak scenarios
 ```
 
-Within each subsystem, test paths mirror production paths one-for-one. For
-example, `src/lclang/ast/base.py` is covered by `tests/ast/test_base.py`, while
-`src/lclang/lang/lexer/scanner.py` is covered by
-`tests/lang/lexer/test_scanner.py`. A test may span several production modules
-only when it verifies an explicitly documented integration boundary; those
-tests live in a sibling `test_integration_*.py` module.
+Within each subsystem, tests correspond to production submodule responsibilities.
+One test file may cover several closely related implementation files. Explicit
+integration contracts live in `test_integration_*.py` modules. First pass the
+existing tests, refactor production code, pass the same tests, and only then
+reorganize test files and shared fixtures to match the resulting responsibilities.
 
 A behaviour has one obvious owning test module. Tests assert public behaviour,
 structured state, or diagnostics rather than private method calls. Shared
 fixtures enter `tests/support` only after at least two subsystems need them.
-Generated corpora and benchmarks remain separate from unit tests so the normal
-quality loop stays fast and deterministic.
+Benchmarks remain separate from the quality gate. Deterministic stress and
+property tests run in the default full behavior suite.
+
+## Frame responsibilities
+
+`runtime/frame/frame.py` owns Frame state and its public methods.
+`binding_lookup.py` selects owner, kind and diagnostic path for one operation;
+`host_bindings.py` validates and atomically publishes mixins. `evaluation.py`
+reads selected values, while `evaluation_flights.py` coordinates cycles,
+single-flight and recalculation. `cache_lifecycle.py` commits snapshots and
+closes owned resources. `dependency_snapshots.py` owns static and dynamic
+observations. `inspection_values.py`, `inspection_builder.py` and
+`inspection_rendering.py` separate the public result, construction and display.
+`frame_factory.py` and `evaluation_limits.py` contain reusable creation policy
+and work budgets. Public package exports retain the supported import surface.
+
+Calendar period boundaries, range boundaries, directional adjustments and sparse
+filters share implementations by responsibility. Operand normalization preserves
+encounter order for fallback and sorts only commutative compositions.

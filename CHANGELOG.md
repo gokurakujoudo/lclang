@@ -2,6 +2,59 @@
 
 ## Unreleased
 
+- Publish tested documentation to GitHub Wiki with preserved examples and
+  rewritten navigation; add a GitHub Pages introduction and gated deployment.
+- Export JUnit test results and portable raw, XML, JSON and HTML coverage
+  reports; retain available CI reports on failure and add README status badges.
+- Build wheel and source distributions after verification on every GitHub CI
+  run, and declare GitHub as the package homepage in PyPI metadata.
+- Move repository hosting and project links to `gokurakujoudo/lclang` on
+  GitHub, with GitHub Actions verification, tag builds and manual publishing.
+- Export logger, runtime, resolved configuration and metric types from
+  `lclang.logger`; share public `resolve_logger_config(frame)` between CLI and
+  standalone `.lclcfg` applications, with handler defaults for an absent namespace.
+- Preserve Gunicorn's graceful SIGTERM handler in the documented Uvicorn worker
+  so replayed shutdown signals allow queued logs to drain and files to close.
+
+## 1.0.8 - 2026-09-08
+
+- Add `lclang.logger` process scopes, deferred writer-thread formatting, named
+  sinks, immutable metrics, reversible stdlib takeover and warnings capture.
+- Add permanent successor-linked file segments with independent UTC time and
+  size rotation, failure isolation and cancellation-resilient draining.
+- Unify CLI/Workflow logging through `logger.console`, `logger.file.<sink>` and
+  `logger.file.default`, with LCL/CLI field precedence and explicit enabled
+  overrides. Diagnostics use stderr; verbose affects enabled sinks only.
+- Replace standalone logger handles with scoped ownership; update executable
+  tutorials, source integration tests and server integration examples.
+- Replace artifact installation smoke with a source CLI integration test;
+  correct the logging override to `logger.log_dir` and retain resource cleanup.
+- Remove archive audits, rebuild comparisons and installation validation.
+  Restrict sdist to downstream code, typing data, build metadata, license and
+  root README; tag pipelines build after verification for manual publishing.
+- Run whitespace, Ruff, production policies, architecture checks and mypy
+  before documentation and full behavioral coverage, including default stress.
+- Count at most 200 production code-bearing physical lines per file. Tighten
+  semantic naming, scoped rST exception checks and constant explanations, while
+  removing redundant tutorial structure and test-file requirements.
+- Share parser source spans and lexer lookahead, and centralize command
+  validation and immutable snapshots at construction.
+- Reuse operation-local Frame binding selections, remove thin API mixins and
+  redundant state protocols, and organize evaluation, lifecycle and inspection
+  implementations by responsibility without changing public import layers.
+- Consolidate paired calendar algorithms and common operand validation while
+  preserving IDs, singletons, three-state behavior and mapping caches.
+- Export `lclang.utils.safe_repr` for protected single-line representations,
+  masking, canonical rendering and exact truncation budgets; share it across
+  diagnostics, workflow mappings and inspection.
+- Isolate all ordinary failures in the optional lunch easter egg; retain
+  cancellation and process-control propagation.
+- Execute exact Markdown examples through shared fixtures, derive tutorial
+  structure from one table of contents, centralize the CLI reference and correct
+  date conversion, dynamic using and trusted capability descriptions.
+- Require permission requests for blocked filesystem or temporary-directory
+  operations rather than changing paths, isolation or checks to bypass them.
+
 ## 1.0.7 - 2026-09-02
 
 - Add Frame proxy string indexing, sorted immediate child discovery,

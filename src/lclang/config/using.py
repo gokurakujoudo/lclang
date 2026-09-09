@@ -13,6 +13,9 @@ from lclang.runtime import Module
 from lclang.types import ModuleName
 
 # Transient module name for definitions visible before one using declaration.
+# Unitless private evaluation labels below distinguish dynamic-using context, overrides and
+# targets in diagnostic Frames. Fixed labels come from the loader implementation and avoid
+# collisions with ordinary configuration names.
 USING_CONTEXT_MODULE = ModuleName("using_context")
 # Transient module name for call-level using overrides.
 USING_OVERRIDES_MODULE = ModuleName("using_overrides")

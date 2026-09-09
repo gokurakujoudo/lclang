@@ -9,6 +9,8 @@ from typing import Any
 from lclang.lang.lexer.tokens import TokenKind
 
 # LCL keywords and canonical constant spellings unavailable as dotted field names.
+# Unitless reserved attribute names come from record inspection methods. Excluding these exact
+# names prevents user fields from shadowing the record interface.
 RECORD_RESERVED_NAMES = frozenset(
     [kind.value for kind in TokenKind if kind.name.startswith("KW_")]
     + ["True", "False", "None"]

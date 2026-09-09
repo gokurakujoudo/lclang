@@ -82,6 +82,26 @@ async def valid_handler(context: CliContext) -> CliResult:
     return CliResult(CliResultStatus.SUCCESS, str(context.dryrun))
 
 
+def test_command_snapshots_inputs_and_validates_handler_once() -> None:
+    """Construction owns validation and detaches normalized declaration containers."""
+    from unittest.mock import patch
+
+    from lclang.cli.commands import validate_handler
+
+    values: dict[str, object] = {"token!": "secret"}
+    docs = [ParameterDoc("token", str, False, "Token")]
+    with patch("lclang.cli.commands.validate_handler", wraps=validate_handler) as validate:
+        command = cli.command(preset=values, parameter_docs=docs)(valid_handler)
+        assert validate.call_count == 1
+    values.clear()
+    docs.clear()
+    assert command.preset == {"token": "secret"}
+    assert command.masked_names == frozenset({"token"})
+    assert len(command.parameter_docs) == 1
+    with pytest.raises(TypeError, match="mapping"):
+        InvalidCommand("run", "", (), [], valid_handler)
+
+
 @pytest.mark.parametrize(
     "factory, message",
     [

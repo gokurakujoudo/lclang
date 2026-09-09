@@ -10,6 +10,8 @@ class UnaryOperator(StrEnum):
        Values are exact canonical source spellings.
     """
 
+    # Unitless operator spellings come from the language grammar; exact tokens preserve parsing
+    # and canonical printing.
     POSITIVE = "+"
     NEGATIVE = "-"
     INVERT = "~"
@@ -23,6 +25,8 @@ class BinaryOperator(StrEnum):
        Precedence is owned by the parser rather than this enum.
     """
 
+    # Unitless operator spellings come from the language grammar; exact tokens preserve parsing
+    # and canonical printing.
     ADD = "+"
     SUBTRACT = "-"
     MULTIPLY = "*"
@@ -45,6 +49,8 @@ class BooleanOperator(StrEnum):
        Nodes may contain more than two operands for canonical flattening.
     """
 
+    # Unitless operator spellings come from the language grammar; exact tokens preserve parsing
+    # and canonical printing.
     AND = "and"
     OR = "or"
 
@@ -56,6 +62,8 @@ class ComparisonOperator(StrEnum):
        Two-word values are emitted and printed as one logical operator.
     """
 
+    # Unitless operator spellings come from the language grammar; exact tokens preserve parsing
+    # and canonical printing.
     LESS = "<"
     LESS_EQUAL = "<="
     GREATER = ">"

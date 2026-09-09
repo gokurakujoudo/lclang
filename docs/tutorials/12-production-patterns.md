@@ -16,7 +16,7 @@ same strong structure used in small examples scales to services and tools.
 A `FrameFactory` retains immutable construction policy. Presets hold stable host
 bindings; `create(values=...)` adds or replaces per-run inputs.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -84,7 +84,7 @@ uses only its explicit values.
 File-backed policy can use the same factory pattern. The test controls file I/O
 with a temporary directory and covers sunny, alternate, and rainy inputs.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 from pathlib import Path
@@ -154,4 +154,4 @@ The pattern is opinionated on purpose. Applications gain flexibility through
 definitions and controlled inputs, not by bypassing the runtime's ownership,
 inspection, and lifecycle rules.
 
-[Previous: Business-day calendars](11-business-day-calendars.md) | [Next: Scoped values and Frame evaluation](13-scoped-values-and-frame-evaluation.md)
+[Previous: Business-day calendars](11-business-day-calendars.md) | [Next: Scoped values and Frame evaluation](13-scoped-values-and-frame-evaluation.md) | [Return to the series introduction](README.md)

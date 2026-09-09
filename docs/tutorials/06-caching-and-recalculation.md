@@ -17,7 +17,7 @@ Two callers request the same definition before it finishes. The Frame creates
 one owner task, shields it from individual waiter cancellation, and publishes
 one result for later reads.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -67,7 +67,7 @@ raises the stored structured failure rather than repeating host work.
 `mixin` updates local host values. Existing cached definitions remain exactly
 as they were until explicitly recalculated.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -122,4 +122,4 @@ until the refresh succeeds or commits a new failure. Concurrent recalculation
 callers share one refresh owner. Cancellation commits nothing and leaves the
 previous snapshot available.
 
-[Previous: Async Python integration](05-async-python-integration.md) | [Next: Errors and inspection](07-errors-and-inspection.md)
+[Previous: Async Python integration](05-async-python-integration.md) | [Next: Errors and inspection](07-errors-and-inspection.md) | [Return to the series introduction](README.md)

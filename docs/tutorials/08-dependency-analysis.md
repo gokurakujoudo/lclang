@@ -16,7 +16,7 @@ dynamic tracing records actual successful and failed Frame lookups.
 Conditional branches remain possible dependencies even though only one branch
 runs for a particular input.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import lclang
 from lclang.runtime import analyze_dependencies
@@ -49,7 +49,7 @@ source spans and reconciliation evidence are not lost.
 Graph vertices are local definitions. Names not defined by the Module are
 reported as external requirements.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import lclang
 from lclang.runtime import build_dependency_graph, topological_order
@@ -89,7 +89,7 @@ deferred function body, it can appear before `subtotal` and `total`.
 This final example evaluates the true branch. The remote dependency remains a
 valid static possibility but is classified as inactive for this run.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -136,4 +136,4 @@ Use `build_dependency_graph(frame)` when parent lookup, shadowing, and host
 value terminals matter. Graph construction remains non-evaluating. Rebuild a
 Frame graph after changing host bindings because it is an immutable snapshot.
 
-[Previous: Errors and inspection](07-errors-and-inspection.md) | [Next: Command-line applications](09-command-line-applications.md)
+[Previous: Errors and inspection](07-errors-and-inspection.md) | [Next: Command-line applications](09-command-line-applications.md) | [Return to the series introduction](README.md)

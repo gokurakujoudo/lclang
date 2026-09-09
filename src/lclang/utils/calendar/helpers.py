@@ -18,6 +18,9 @@ from lclang.utils.calendar.types import DayType
 if TYPE_CHECKING:
     from lclang.utils.calendar.base import BDCalendar
 
+# Unitless exception categories below come from the calendar error contract. These existing
+# domain failures propagate unchanged while unexpected dependency failures receive calendar
+# context.
 CALENDAR_ERRORS = (
     CalendarCannotLoadException,
     CalendarLogicException,

@@ -11,6 +11,8 @@ from lclang.runtime.dependency.graph import DependencyGraph
 from lclang.runtime.dependency.model import DependencyEdge, DependencyKind
 from lclang.types import VarName
 
+# Unitless selection contains only eager edges by design; topological ordering must not force
+# conditional or deferred evaluation.
 _EAGER_ONLY = frozenset({DependencyKind.EAGER})
 
 

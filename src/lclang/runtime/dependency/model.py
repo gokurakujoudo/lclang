@@ -16,6 +16,8 @@ class DependencyKind(StrEnum):
        String values are stable graph and diagnostic labels.
     """
 
+    # Unitless edge labels describe interpreter evaluation timing; distinct values preserve
+    # eager, conditional, deferred and dynamic analysis.
     EAGER = "eager"
     CONDITIONAL = "conditional"
     DEFERRED = "deferred"

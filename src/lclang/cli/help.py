@@ -9,11 +9,12 @@ from collections.abc import Iterable
 from lclang.cli.commands import Command, CommandGroup
 from lclang.masking import MASKED_VALUE
 
-# Fixed rendering width independent of terminal state.
+# Characters per line; the CLI layout contract fixes 100 for deterministic help
+# across terminal sizes while leaving useful room for parameter descriptions.
 HELP_WIDTH = 100
-# Indentation for aligned help detail rows.
+# Spaces; the help layout uses two to separate detail rows from section labels.
 ROW_INDENT = 2
-# Minimum gap between row labels and descriptions.
+# Spaces; the help layout uses two to keep adjacent aligned columns distinguishable.
 ROW_GAP = 2
 
 
@@ -49,7 +50,7 @@ def common_option_rows() -> tuple[tuple[str, str], ...]:
         ),
         ("-a, --as-of <YYYYMMDD>", "Set the invocation date; defaults to today's local date."),
         ("-wif, --dryrun", "Tell the handler to avoid side effects when it supports dryrun."),
-        ("--verbose", "Trace parsing, value provenance, and evaluation to stderr and logs."),
+        ("--verbose", "Enable internal DEBUG and lower enabled logger output thresholds."),
         ("-h, --help", "Show this command help."),
     )
 
@@ -111,6 +112,14 @@ def render_command_help(script: str, command: Command, path: tuple[str, ...]) ->
         detail = f"{type_name}; {required}{default}. {parameter.description}".strip()
         parameter_rows.append((parameter.name, detail))
     lines.extend(format_rows(parameter_rows) or ["  (none)"])
+    lines.extend([
+        "", "Logger configuration:",
+        "  -o logger.console.level DEBUG",
+        '  -o logger.file.default.enabled "LCL[False]"',
+        '  -o logger.file.audit.enabled "LCL[True]"',
+        "  logger.file.<sink> inherits missing fields from logger.file.default.",
+        "  Explicit sink fields override the template; default never creates a file.",
+    ])
     lines.extend(["", "Options:"])
     lines.extend(format_rows(common_option_rows()))
     return "\n".join(lines) + "\n"

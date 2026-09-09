@@ -22,7 +22,7 @@ from lclang.ast.call_arguments import LclCallArgument
 from lclang.errors import LclSyntaxError
 from lclang.lang.lexer import TokenKind
 from lclang.lang.parser.stream import TokenStream
-from lclang.source import SourceSpan
+from lclang.source import SourceSpan, merge_source_spans
 from lclang.types import VarName
 
 
@@ -88,7 +88,7 @@ class InternalPrimaryParser:
         """
         self.stream.advance()
         name = self.stream.expect(TokenKind.IDENTIFIER, "expected attribute name")
-        span = internal_merge_span(value.span, name.span)
+        span = merge_source_spans(value.span, name.span)
         node_type = LclSafeAttribute if safe else LclAttribute
         return node_type(value=value, name=VarName(name.lexeme), span=span)
 
@@ -123,19 +123,19 @@ class InternalPrimaryParser:
                 closing = self.stream.expect(TokenKind.RBRACKET, "expected closing bracket")
                 index = LclTuple(
                     tuple(elements),
-                    span=internal_merge_span(opening.span, closing.span),
+                    span=merge_source_spans(opening.span, closing.span),
                 )
             else:
                 closing = self.stream.expect(TokenKind.RBRACKET, "expected closing bracket")
                 return LclSubscript(
                     value=value,
                     index=first,
-                    span=internal_merge_span(value.span, closing.span),
+                    span=merge_source_spans(value.span, closing.span),
                 )
         return LclSubscript(
             value=value,
             index=index,
-            span=internal_merge_span(value.span, index.span),
+            span=merge_source_spans(value.span, index.span),
         )
 
     def internal_slice(self, opening: SourceSpan, lower: LclAstNode | None) -> LclSlice:
@@ -162,7 +162,7 @@ class InternalPrimaryParser:
             lower=lower,
             upper=upper,
             step=step,
-            span=internal_merge_span(opening, closing.span),
+            span=merge_source_spans(opening, closing.span),
         )
 
     def internal_call(self, function: LclAstNode) -> LclCall:
@@ -200,7 +200,7 @@ class InternalPrimaryParser:
         return LclCall(
             function=function,
             arguments=tuple(arguments),
-            span=internal_merge_span(function.span, closing.span),
+            span=merge_source_spans(function.span, closing.span),
         )
 
     def internal_argument(
@@ -229,7 +229,7 @@ class InternalPrimaryParser:
             value = self.parse_nested()
             return LclKeywordUnpackArgument(
                 value,
-                span=internal_merge_span(marker.span, value.span),
+                span=merge_source_spans(marker.span, value.span),
             )
         marker = self.stream.match(TokenKind.STAR)
         if marker is not None:
@@ -239,7 +239,7 @@ class InternalPrimaryParser:
                     span=marker.span,
                 )
             value = self.parse_nested()
-            return LclStarArgument(value, span=internal_merge_span(marker.span, value.span))
+            return LclStarArgument(value, span=merge_source_spans(marker.span, value.span))
         candidate = self.parse_nested()
         if self.stream.match(TokenKind.EQUAL) is not None:
             if not isinstance(candidate, LclName):
@@ -251,7 +251,7 @@ class InternalPrimaryParser:
             return LclKeywordArgument(
                 candidate.identifier,
                 value,
-                span=internal_merge_span(candidate.span, value.span),
+                span=merge_source_spans(candidate.span, value.span),
             )
         if seen_keyword or seen_keyword_unpack:
             raise LclSyntaxError(
@@ -278,17 +278,3 @@ def parse_primaries(
        The callback stops naturally at postfix delimiters and commas.
     """
     return InternalPrimaryParser(stream, parse_nested).parse(value)
-
-
-def internal_merge_span(first: SourceSpan, last: SourceSpan) -> SourceSpan:
-    """Join spans from the first and last tokens of one primary expression.
-
-    :param first: Span of the expression's first consumed token.
-    :param last: Span of its final consumed token.
-    :returns: Half-open span from *first* start through *last* end.
-
-    .. note::
-       The source origin comes from *first* because all tokens in a primary
-       chain belong to the same parsed source.
-    """
-    return SourceSpan(first.origin, first.start, last.end)

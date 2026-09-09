@@ -27,6 +27,9 @@ from lclang.utils.calendar.factories import (
 from lclang.utils.calendar.types import DayType
 
 # Reviewed read-only namespace exposing calendar construction to LCL.
+# Unitless namespace identity and entries below come from the reviewed calendar API. Explicit
+# exports keep LCL factories and singleton bindings aligned with the supported Python calendar
+# surface.
 CALENDARS_NAMESPACE = StdlibNamespace(
     "calendars",
     {

@@ -19,6 +19,8 @@ from lclang.workflow.mappings import mapped_outputs, materialize_args
 from lclang.workflow.models import ExecutionStatus
 
 # Statuses that stop declared workflow traversal.
+# Unitless stop statuses below come from the workflow execution contract. The selected failure
+# states prevent dependent child tasks from continuing after their prerequisites fail.
 STOP_STATUSES = frozenset(
     {ExecutionStatus.FAILURE, ExecutionStatus.FAILURE_COVERED, ExecutionStatus.ERROR}
 )

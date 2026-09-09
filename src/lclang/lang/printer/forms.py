@@ -16,6 +16,8 @@ from lclang.ast import (
 )
 from lclang.lang.printer._types import Render, RenderResult
 
+# Unitless precedence 5 places control forms below operators; this parser-compatible rank
+# preserves grouping in canonical output.
 FORM_PRECEDENCE = 5
 
 

@@ -8,15 +8,14 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 
 from lclang.masking import MASKED_VALUE
-
-# Maximum characters retained from one rendered value payload.
-VERBOSE_VALUE_LIMIT = 200
-# Marker included within the value limit when a representation is shortened.
-TRUNCATION_MARKER = "...<truncated>"
+from lclang.utils.representation import safe_repr
 
 type ValueRenderer = Callable[[], str]
 
 # Logger selected only for the current invocation and its child Tasks.
+# Unitless diagnostic context keys are local to this implementation. Logger state starts at None
+# and masking at False so ordinary execution remains silent and unmasked until an invocation
+# explicitly opts in.
 ACTIVE_VERBOSE_LOGGER: ContextVar[logging.Logger | None] = ContextVar(
     "lclang_active_verbose_logger",
     default=None,
@@ -48,13 +47,9 @@ def internal_render_value(
     """
     if masked or ACTIVE_MASKED_VALUE.get():
         return MASKED_VALUE
-    try:
-        payload = repr(value) if renderer is None else renderer()
-    except BaseException as error:
-        payload = f"<repr failed: {type(error).__name__}>"
-    payload = payload.replace("\r", "\\r").replace("\n", "\\n")
-    if len(payload) > VERBOSE_VALUE_LIMIT:
-        payload = payload[: VERBOSE_VALUE_LIMIT - len(TRUNCATION_MARKER)] + TRUNCATION_MARKER
+    payload = safe_repr(
+        value, renderer=None if renderer is None else lambda value: renderer(),
+    )
     return f"({type(value).__name__}) {payload}"
 
 

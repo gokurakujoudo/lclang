@@ -16,7 +16,7 @@ a Module and Frame.
 
 Pass the expression and a dictionary of host values to `evaluate_sync`.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import lclang
 
@@ -42,7 +42,7 @@ Now keep the same inputs but add a discount, a threshold comparison, and a
 dictionary result. LCL dictionary values are ordinary expressions, so related
 results can be returned together without inventing a Python result class.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import lclang
 
@@ -84,7 +84,7 @@ Async applications should parse stable source during setup, then await
 `evaluate` with a resolver for each run. This example adds filtering, a
 comprehension, and a per-run multiplier.
 
-<!-- lclang-tutorial-exec -->
+<!-- lclang-doc-exec -->
 ```python
 import asyncio
 
@@ -136,4 +136,4 @@ running loop. Direct async evaluation has no Frame cache or hierarchy. These
 are useful constraints: choose the smallest boundary that owns exactly the
 state your calculation needs.
 
-[Next: Modules and Frames](02-modules-and-frames.md)
+[Next: Modules and Frames](02-modules-and-frames.md) | [Return to the series introduction](README.md)
