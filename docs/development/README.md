@@ -41,6 +41,29 @@ venv\Scripts\python -m scripts.performance_baseline
 venv\Scripts\python -m scripts.build_package --output dist
 ```
 
+## GitHub CI and publishing
+
+The repository is hosted at [gokurakujoudo/lclang](https://github.com/gokurakujoudo/lclang).
+The `CI` GitHub Actions workflow verifies pushes and pull requests using the
+same `scripts.quality` gate as local development. Tag runs build distributions
+after verification; coverage and distribution artifacts are retained for seven days.
+
+Publishing is explicit: dispatch `ci.yml` with a tag as the workflow ref and
+the `publish` input set to `pypi` or `artifactory`. The default `none` only
+verifies and builds. Publishing from a branch is rejected. The selected tag
+must contain this workflow, and the workflow must also exist on the default
+branch before manual dispatch is available. A manual run verifies and builds
+the selected tag again before uploading its artifacts.
+
+Configure the matching GitHub environment (`pypi` or `artifactory`) before
+publishing. PyPI needs `PYPI_USERNAME` and `PYPI_PASSWORD` secrets. Artifactory
+needs the `ARTIFACTORY_REPOSITORY_URL` variable and `ARTIFACTORY_USERNAME` and
+`ARTIFACTORY_PASSWORD` secrets. Existing GitLab CI variables do not transfer
+with Git history. No package is published by a push alone.
+
+See GitHub's [workflow triggering guide](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)
+for manual dispatch using a tag ref.
+
 ## Change workflow
 
 For a bug, update the relevant reference and prove a reproducing test fails

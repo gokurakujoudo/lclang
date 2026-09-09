@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish a tag build to the selected registry
+        type: choice
+        default: none
+        options:
+          - none
+          - pypi
+          - artifactory
+
+permissions:
+  contents: read
+
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: '1'
+  LCLANG_CI_PIP_VERSION: '25.3'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Validate publishing ref
+        if: github.event_name == 'workflow_dispatch' && inputs.publish != 'none'
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+        run: test "$REF_TYPE" = tag
+      - run: python -m pip install "pip==${LCLANG_CI_PIP_VERSION}"
+      - run: python -m pip install --group dev
+      - run: python -m pip check
+      - run: python -m scripts.quality
+      - run: python -m coverage xml -o coverage.xml
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: coverage
+          path: coverage.xml
+          retention-days: 7
+
+  build:
+    if: github.ref_type == 'tag'
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+      - run: python -m pip install "pip==${LCLANG_CI_PIP_VERSION}"
+      - run: python -m pip install --group build
+      - run: python -m scripts.build_package --output dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: distributions
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish != 'none' && github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.publish }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+      - run: python -m pip install "pip==${LCLANG_CI_PIP_VERSION}"
+      - run: python -m pip install --group publish
+      - uses: actions/download-artifact@v8
+        with:
+          name: distributions
+          path: dist
+      - name: Upload to PyPI
+        if: inputs.publish == 'pypi'
+        env:
+          TWINE_REPOSITORY_URL: https://upload.pypi.org/legacy/
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          : "${TWINE_USERNAME:?Configure PYPI_USERNAME}"
+          : "${TWINE_PASSWORD:?Configure PYPI_PASSWORD}"
+          python -m twine upload --non-interactive dist/*
+      - name: Upload to Artifactory
+        if: inputs.publish == 'artifactory'
+        env:
+          TWINE_REPOSITORY_URL: ${{ vars.ARTIFACTORY_REPOSITORY_URL }}
+          TWINE_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.ARTIFACTORY_PASSWORD }}
+        run: |
+          : "${TWINE_REPOSITORY_URL:?Configure the registry URL}"
+          : "${TWINE_USERNAME:?Configure the registry username secret}"
+          : "${TWINE_PASSWORD:?Configure the registry password secret}"
+          python -m twine upload --non-interactive dist/*

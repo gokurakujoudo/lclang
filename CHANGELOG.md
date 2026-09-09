@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Move repository hosting and project links to `gokurakujoudo/lclang` on
+  GitHub, with GitHub Actions verification, tag builds and manual publishing.
 - Export logger, runtime, resolved configuration and metric types from
   `lclang.logger`; share public `resolve_logger_config(frame)` between CLI and
   standalone `.lclcfg` applications, with handler defaults for an absent namespace.

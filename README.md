@@ -303,8 +303,8 @@ capability.
 `lclang.cli` combines typed async commands, nested groups, configuration and
 overrides, structured help, process-scoped queue logging and explicit dry-run policy.
 Handlers receive a `CliContext` and return a `CliResult`.
-See the [CLI reference](https://jihulab.com/midnightprotocol/lclang/-/blob/main/docs/reference/cli.md)
-and [CLI tutorial](https://jihulab.com/midnightprotocol/lclang/-/blob/main/docs/tutorials/09-command-line-applications.md).
+See the [CLI reference](https://github.com/gokurakujoudo/lclang/blob/main/docs/reference/cli.md)
+and [CLI tutorial](https://github.com/gokurakujoudo/lclang/blob/main/docs/tutorials/09-command-line-applications.md).
 
 Standalone applications use `LoggerHandlerConfig`, `use_logger_handler` and
 `use_logger` from `lclang.logger`, which also exports `Logger`, runtime, resolved
@@ -315,10 +315,10 @@ file sinks, with independent UTC time/size rotation and permanent segment paths.
 `logger.file.default` supplies missing sink fields; explicit enabled settings
 win over template overrides. CLI and Workflow share these keys through LCL and
 `-o`. Scope exit drains output and restores stdlib logging configuration.
-See the [logger reference](https://jihulab.com/midnightprotocol/lclang/-/blob/main/docs/reference/logger.md).
+See the [logger reference](https://github.com/gokurakujoudo/lclang/blob/main/docs/reference/logger.md).
 
 `env` and `safe_repr` remain available from `lclang.utils`; the
-[Python utilities tutorial](https://jihulab.com/midnightprotocol/lclang/-/blob/main/docs/tutorials/16-python-utilities.md)
+[Python utilities tutorial](https://github.com/gokurakujoudo/lclang/blob/main/docs/tutorials/16-python-utilities.md)
 shows these APIs without requiring CLI or LCL evaluation.
 
 ### Tree workflows and status

@@ -21,9 +21,9 @@ classifiers = [
 ]
 
 [project.urls]
-Documentation = "https://jihulab.com/midnightprotocol/lclang/-/tree/main/docs"
-Issues = "https://jihulab.com/midnightprotocol/lclang/-/work_items"
-Source = "https://jihulab.com/midnightprotocol/lclang"
+Documentation = "https://github.com/gokurakujoudo/lclang/tree/main/docs"
+Issues = "https://github.com/gokurakujoudo/lclang/issues"
+Source = "https://github.com/gokurakujoudo/lclang"
 
 [dependency-groups]
 build = ["hatchling==1.31.0"]
