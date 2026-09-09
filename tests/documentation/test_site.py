@@ -26,8 +26,11 @@ class SiteParser(HTMLParser):
             self.ids.add(str(values["id"]))
         if tag == "a":
             self.links.append(str(values["href"]))
-        if tag == "link" and values.get("rel") == "stylesheet":
+        if tag == "link" and values.get("rel") in {"stylesheet", "icon", "apple-touch-icon"}:
             self.styles.append(str(values["href"]))
+        if tag == "img":
+            assert "alt" in values
+            self.styles.append(str(values["src"]))
         if tag == "code" and values.get("data-example") == "python":
             self.in_example = True
 

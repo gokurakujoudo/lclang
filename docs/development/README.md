@@ -111,6 +111,21 @@ variable `PAGES_SOURCE_BRANCH` (or the default branch when unset). During the
 normal publishing this variable selects `main`. Pages uses the native GitHub
 Actions deployment mechanism.
 
+## Project logo
+
+The canonical [PNG logo](../../site/assets/logo.png) lives in `site/assets/`.
+Its white L-shaped path represents requested work; the separate mint node
+represents a value waiting to be requested. Blue encloses the evaluation context.
+Use the same asset in the site navigation, footer and favicon, README, and Wiki
+home and sidebar. README images use the absolute Pages URL so the package
+description also works on PyPI when a new distribution is published.
+
+Keep the square proportions and surrounding clear space. The colors are blue
+`#1856d6`, white `#ffffff`, and mint `#99dec5`; the solid blue background works
+on both light and dark surfaces. Preserve the PNG's transparent margins and
+corners. The image needs no font or runtime dependency and is covered by the
+repository's MIT license. Its generation brief is recorded alongside the asset.
+
 ## Change workflow
 
 For a bug, update the relevant reference and prove a reproducing test fails

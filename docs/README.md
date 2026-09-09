@@ -1,3 +1,5 @@
+<img src="https://gokurakujoudo.github.io/lclang/assets/logo.png" width="64" height="64" alt="lclang logo">
+
 # lclang documentation
 
 Read the [GitHub Wiki](https://github.com/gokurakujoudo/lclang/wiki) or visit the
