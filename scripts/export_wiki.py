@@ -76,6 +76,8 @@ def export_wiki(root: Path, output: Path, ref: str) -> list[Path]:
         origin = f"{REPOSITORY}/blob/{quote(ref, safe='')}/{source.relative_to(root).as_posix()}"
         pages[name] = f"{content.rstrip()}\n\n---\n[Edit the tested source]({origin}).\n"
     pages["_Sidebar"] = (
+        '<img src="https://gokurakujoudo.github.io/lclang/assets/logo.png" '
+        'width="40" height="40" alt="lclang logo">\n\n'
         f"[Home]({WIKI}/Home)\n\n[Quick start]({WIKI}/quick-start)\n\n"
         f"[Tutorial series]({WIKI}/Tutorials)\n\n[Reference]({WIKI}/Reference)\n\n"
         f"[Development]({WIKI}/Development)\n\n"

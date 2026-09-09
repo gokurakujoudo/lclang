@@ -1,3 +1,5 @@
+<img src="https://gokurakujoudo.github.io/lclang/assets/logo.png" width="80" height="80" alt="lclang logo">
+
 # lclang
 
 [![CI](https://github.com/gokurakujoudo/lclang/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/gokurakujoudo/lclang/actions/workflows/ci.yml?query=branch%3Amain)
