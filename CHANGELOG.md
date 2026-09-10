@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 1.0.10 - 2026-09-10
+
+- Add `lclang.utils.SnowflakeGenerator` and the matching canonical LCL builtin
+  for thread-safe 63-bit IDs with explicit worker assignment, validated epochs,
+  and fail-fast clock/sequence bounds. Document ownership, uniqueness conditions,
+  and Python/LCL composition with executable utility tutorial examples.
 - Replace the Pages introduction with a complete documentation site generated
   from existing Markdown, with grouped navigation, section search, page contents,
   dark mode, code copying, mobile and print layouts, and verified CI artifacts.

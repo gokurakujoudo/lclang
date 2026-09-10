@@ -66,6 +66,9 @@ runtime dependencies.
 ## Standard utilities
 
 - Manifest-driven read-only namespaces and immutable standard presets.
+- Caller-owned, thread-safe Snowflake ID generation through `lclang.utils` and
+  the canonical LCL `SnowflakeGenerator` builtin, with explicit worker IDs and
+  fail-fast clock rollback, sequence exhaustion, and timestamp bounds.
 - Reviewed iterable, text, immutable-data, strict JSON, date, and recursion
   helpers without ambient I/O or dynamic-code capabilities.
 - Process-scoped queue logging with named sinks, template defaults, UTC time/size

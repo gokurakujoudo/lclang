@@ -8,6 +8,7 @@ integration.
 ## What you will learn
 
 - how to read the live process environment without snapshotting or mutation;
+- how to generate Snowflake IDs in Python and reuse the same state in LCL;
 - how to create and close an isolated file logger outside `lclang.cli`;
 - how to call the reviewed iterable, text, data, and JSON helpers from Python;
 - how to reuse business-day calendars in an ordinary async application;
@@ -41,6 +42,104 @@ The singleton is a live read-only view, not a Frame proxy. Assigning to or
 deleting `os.environ` remains the host application's responsibility. In an LCL
 Frame, the canonical `env` binding adds scoped configuration overrides above
 the same live fallback without mutating the process environment.
+
+## Generate Snowflake IDs
+
+Create one `SnowflakeGenerator` for an application-assigned worker and retain it.
+Each synchronous `next_id()` call reads UTC wall-clock milliseconds and allocates
+a sequence under a thread lock. No event loop or cleanup scope is needed.
+The clock is frozen here only to make the example deterministic.
+
+<!-- lclang-doc-exec -->
+```python
+from unittest.mock import patch
+
+from lclang.utils import SnowflakeGenerator
+
+ids = SnowflakeGenerator(worker_id=7)
+with patch("lclang.utils.snowflake.time_ns", return_value=(ids.epoch_ms + 1) * 1_000_000):
+    first = ids.next_id()
+    second = ids.next_id()
+    assert first == (1 << 22) | (7 << 12)
+    assert second == first + 1
+```
+
+The first millisecond after the default 2024-01-01 UTC epoch occupies the high
+41 bits; worker 7 occupies the next 10, and sequences 0 and 1 occupy the low 12.
+The signed 64-bit sign bit stays clear. IDs are predictable identifiers, not
+secrets. Different concurrent generators must have distinct worker IDs in
+`0..1023` and the same epoch. State is not persisted: before reusing a worker
+after restart, ensure time is beyond every timestamp it previously emitted.
+Do not inherit generators into forked children or recreate them per ID.
+
+LCL exposes the same constructor as `SnowflakeGenerator`. A retained definition
+owns one generator; named ID results follow ordinary Frame snapshot rules.
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+from unittest.mock import patch
+
+import lclang
+
+
+async def main() -> None:
+    module = lclang.define_module("request", {
+        "ids": "SnowflakeGenerator(worker_id, epoch_ms=0)",
+        "request_id": "ids.next_id()",
+        "label": 'f"request-{request_id}"',
+    })
+    with patch("lclang.utils.snowflake.time_ns", return_value=1_000_000):
+        async with lclang.define_frame(module, preset={"worker_id": 7}) as frame:
+            first = (1 << 22) | (7 << 12)
+            assert await frame.get("request_id") == first
+            assert await frame.get("request_id") == first
+            assert await frame.get("label") == f"request-{first}"
+            await frame.recalculate("request_id")
+            assert await frame.get("request_id") == first + 1
+            assert await frame.get("label") == f"request-{first}"
+
+
+asyncio.run(main())
+```
+
+`request_id` resolves `ids`, which constructs the generator once using the host
+worker. The second lookup reuses the cached ID. Recalculation calls the same
+generator again, increasing the sequence; the dependent `label` retains its
+earlier snapshot. Never recalculate `ids`, because a fresh generator resets the
+sequence and may duplicate an ID. Separate Frames needing the same worker
+should instead borrow one application-owned Python instance:
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+from unittest.mock import patch
+
+import lclang
+from lclang.utils import SnowflakeGenerator
+
+
+async def main() -> None:
+    ids = SnowflakeGenerator(7, epoch_ms=0)
+    module = lclang.define_module("request", {"id": "ids.next_id()"})
+    with patch("lclang.utils.snowflake.time_ns", return_value=1_000_000):
+        generated = []
+        for _ in range(2):
+            async with lclang.define_frame(module, preset={"ids": ids}) as frame:
+                generated.append(await frame.get("id"))
+        assert generated == [(1 << 22) | (7 << 12), (1 << 22) | (7 << 12) | 1]
+
+
+asyncio.run(main())
+```
+
+Each Frame owns its cached `id` and closes independently. The preset borrows
+the same generator, so closing the first Frame does not reset the sequence.
+Clock rollback raises `RuntimeError`; a pre-epoch clock raises `ValueError`.
+Exhausting 4096 sequences in one millisecond or the 41-bit timestamp raises
+`OverflowError`. These failures preserve state and never wait for the clock.
+After sequence exhaustion, retry only when time advances. See the
+[Snowflake reference](../reference/utilities.md#snowflake-ids) for the full contract.
 
 ## Own a standalone logger
 
@@ -179,7 +278,8 @@ renderer produces a stable failure description; the helper adds no type label.
 
 Downstream code can adopt only the layer it needs:
 
-- `lclang.utils` provides the live environment; `lclang.logger` owns process logging.
+- `lclang.utils` provides the live environment, safe representations, and Snowflake
+  IDs; `lclang.logger` owns process logging.
 - `lclang.stdlib` provides reviewed pure-data helpers and preset assembly.
 - `lclang.utils.calendar` provides date policy and managed calendar loading.
 - `lclang.workflow` provides typed task trees and nested execution status.

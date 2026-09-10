@@ -13,6 +13,7 @@ from lclang.utils.calendar.lcl import CALENDARS_NAMESPACE
 # inconsistent or overly broad contracts.
 BUILTIN_DESCRIPTIONS: Mapping[str, str] = MappingProxyType(
     {
+        "SnowflakeGenerator": "Create a Snowflake ID generator for an assigned worker.",
         "abs": "Return the absolute value.",
         "all": "Test whether all items are truthy.",
         "any": "Test whether any item is truthy.",

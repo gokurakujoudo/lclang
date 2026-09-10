@@ -303,10 +303,13 @@ namespaces assembled from reviewed manifests:
 - `json.encode` and `json.decode` provide strict JSON conversion.
 - `parse_ymd` and `to_ymd` convert dates to and from strict `YYYYMMDD` strings.
 - `recursive` builds eager fixed-point functions for recursive LCL programs.
+- `SnowflakeGenerator` creates a reusable ID generator with an assigned worker ID.
 - `env.NAME` reads a live process environment value, with scoped overrides and
   `env.get(name, default)` for arbitrary names.
 
-Apart from the explicit read-only `env` utility, they provide no ambient
+`SnowflakeGenerator.next_id()` reads the wall clock and advances its instance's
+sequence. Apart from this stateful utility and the explicit read-only `env`
+utility, the helpers provide no ambient
 filesystem, process, network, dynamic import, reflection, or mutation
 capability.
 
@@ -329,7 +332,7 @@ win over template overrides. CLI and Workflow share these keys through LCL and
 `-o`. Scope exit drains output and restores stdlib logging configuration.
 See the [logger reference](https://gokurakujoudo.github.io/lclang/reference/logger.html).
 
-`env` and `safe_repr` remain available from `lclang.utils`; the
+`env`, `safe_repr`, and `SnowflakeGenerator` are available from `lclang.utils`; the
 [Python utilities tutorial](https://gokurakujoudo.github.io/lclang/tutorials/16-python-utilities.html)
 shows these APIs without requiring CLI or LCL evaluation.
 

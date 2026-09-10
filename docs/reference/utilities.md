@@ -7,6 +7,9 @@ The canonical runtime hierarchy exposes these value types:
 `bool`, `bytes`, `dict`, `float`, `frozenset`, `int`, `list`, `set`, `str`, and
 `tuple`.
 
+`SnowflakeGenerator` is also available as an explicit stateful utility constructor;
+see [Snowflake IDs](#snowflake-ids) below.
+
 It also exposes these functions:
 
 `abs`, `all`, `any`, `bin`, `chr`, `divmod`, `enumerate`, `filter`, `format`,
@@ -42,6 +45,54 @@ Python integrations may import `STANDARD_MANIFESTS`, `STANDARD_PRESET`,
 `StdlibEntry`, `StdlibManifest`, `StdlibNamespace`, `RecursiveFunction`,
 `assemble_stdlib`, `collect`, `first`, `join`, `lines`, `lookup`, `merge`,
 `json_encode`, `json_decode`, and `recursive` from `lclang.stdlib`.
+
+## Snowflake IDs
+
+`from lclang.utils import SnowflakeGenerator` exposes
+`SnowflakeGenerator(worker_id, *, epoch_ms=1704067200000)`. The same constructor
+is a canonical LCL builtin. Retain one instance and call `generator.next_id()`
+to obtain a nonnegative Python integer that fits in a signed 64-bit column.
+Construction and generation are synchronous, with no I/O or owned async resources.
+
+The layout is `(elapsed_ms << 22) | (worker_id << 12) | sequence`: 41 bits of
+elapsed UTC Unix milliseconds, 10 worker bits, and 12 sequence bits. The default
+epoch is 2024-01-01 00:00:00 UTC. The clock is read with integer `time.time_ns()`
+conversion, never floating-point seconds. The first sequence in each millisecond
+is zero; IDs strictly increase within an instance. Worker zero at the epoch can
+produce ID zero. The maximum elapsed time is `2**41 - 1` milliseconds, about
+69.7 years after the configured epoch; at most 4096 IDs fit in each millisecond
+per worker. These are identifiers, not secrets or cryptographic random values.
+
+Both arguments must be integers excluding bool (`TypeError` otherwise).
+`worker_id` must be in `0..1023` and `epoch_ms` must be nonnegative (`ValueError`
+otherwise). The read-only properties `worker_id` and `epoch_ms` expose the
+validated configuration. Each instance serializes clock reads and state updates
+with a thread lock, so Python threads and tasks in different event loops can
+share it. It never sleeps or spins waiting for the clock.
+
+`next_id()` raises `ValueError` when the clock precedes the epoch,
+`RuntimeError` when it moves behind the last successful millisecond, and
+`OverflowError` when the sequence or 41-bit timestamp is exhausted. Failures
+leave the last successful timestamp and sequence unchanged. After sequence
+exhaustion, the caller may retry when the clock advances; after rollback, it
+must wait until the clock catches up (and advances if that sequence was full).
+Timestamp exhaustion requires a planned migration to a new ID domain.
+
+Uniqueness across instances is the application's responsibility: use the same
+epoch throughout an ID domain and assign distinct worker IDs to concurrent
+generators/processes. No worker discovery, coordination, or persistent state is
+provided. Do not copy a generator into a forked child or recreate it per ID.
+Reusing a worker ID after restart is safe only once wall time is strictly beyond
+every timestamp previously emitted by that worker. Changing the epoch does not
+preserve uniqueness with old IDs.
+
+In LCL, define `ids: SnowflakeGenerator(worker_id)` once and use
+`request_id: ids.next_id()`. A named result is a cached Frame snapshot: repeated
+`frame.get("request_id")` returns the same ID, while explicit recalculation
+generates another. Do not recalculate the `ids` definition: that resets its state.
+For multiple Frames using the same worker, construct the generator in Python
+and share it through a preset instead of constructing one in each Frame.
+See the [executable Python and LCL examples](../tutorials/16-python-utilities.md#generate-snowflake-ids).
 
 ## Environment and logging utilities
 

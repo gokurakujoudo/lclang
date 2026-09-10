@@ -58,6 +58,7 @@ async def test_module_definitions_share_record_attributes_with_python() -> None:
 def test_builtin_layer_has_a_fixed_reviewed_inventory() -> None:
     """The standard layer exposes only reviewed utilities and pure operations."""
     expected = {
+        "SnowflakeGenerator",
         "abs",
         "all",
         "any",
