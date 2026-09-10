@@ -22,14 +22,16 @@ from lclang.utils.calendar.loading import (
     use_file_system_hardcoded_calendar_loader,
 )
 from lclang.utils.environment import env
+from lclang.utils.snowflake import SnowflakeGenerator
 
 # Curated ordinary Python values and explicit environment/calendar utilities.
 # Unitless canonical names and objects below come from the runtime hierarchy contract. Stable
 # IDs distinguish root, builtins, runtime, imports and user layers; shared defaults preserve
 # their precedence. The builtin inventory includes explicit environment and calendar-loader
-# capabilities.
+# capabilities, plus explicitly constructed clock-backed Snowflake generators.
 LCL_BUILTIN_VALUES: dict[str, object] = {
     **STANDARD_PRESET.values,
+    "SnowflakeGenerator": SnowflakeGenerator,
     "abs": abs,
     "all": all,
     "any": any,

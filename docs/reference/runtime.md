@@ -48,6 +48,11 @@ layer. User definitions therefore win over presets, which win over runtime
 values. Canonical ancestors are borrowed and closing a user Frame never closes
 them.
 
+`LCL_BUILTINS` also exposes `SnowflakeGenerator(worker_id, *, epoch_ms=1704067200000)`.
+Retain the constructed instance and call `next_id()` for clock-backed integer
+identifiers. The [Snowflake utility contract](utilities.md#snowflake-ids) defines
+worker assignment, uniqueness conditions, failure handling, and Frame ownership.
+
 Definition and host-value names may be qualified paths such as
 `service.database.port`. The runtime stores the complete spelling as one flat
 binding. Missing prefixes are lazy `FrameProxy` views over the requesting
