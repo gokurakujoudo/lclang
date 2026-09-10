@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.0.10 - 2026-09-10
+
 - Add `lclang.utils.SnowflakeGenerator` and the matching canonical LCL builtin
   for thread-safe 63-bit IDs with explicit worker assignment, validated epochs,
   and fail-fast clock/sequence bounds. Document ownership, uniqueness conditions,
