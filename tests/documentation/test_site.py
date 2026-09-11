@@ -10,8 +10,9 @@ from urllib.parse import unquote, urlsplit
 import pytest
 from markdown_it import MarkdownIt
 
-from scripts.build_site import build_site, documentation_groups, local_link, render_document
+from scripts.build_site import build_site
 from scripts.export_wiki import ROOT
+from scripts.site_navigation import documentation_groups
 
 
 class SiteParser(HTMLParser):
@@ -62,18 +63,29 @@ def test_complete_site_links_anchors_assets_and_examples() -> None:
             shutil.copytree(
                 ROOT / folder, root / folder, ignore=shutil.ignore_patterns("__pycache__"),
             )
-        for name in ("README.md", "LICENSE", "AGENTS.md"):
+        for name in ("README.md", "LICENSE", "AGENTS.md", "mkdocs.yml"):
             shutil.copyfile(ROOT / name, root / name)
         output = root / "build/lclang"
+        sample = root / "docs/README.md"
+        sample.write_text(sample.read_text(encoding="utf-8") + (
+            '\n## Highlighting examples\n\n'
+            '```python\n\nasync def greet():\n\treturn "<script>&雪"\n\n```\n\n'
+            '```lcl\ntrue if item?.value ?? null else false\n```\n\n'
+            '```lclcfg\nusing "base.lclcfg"\nport: 8443 # default\n```\n\n'
+            '```unknown-language\n<script>unsafe</script>\n```\n'
+        ), encoding="utf-8")
         paths = build_site(root, output, "revision")
-        parsed = {path.resolve(): SiteParser(path) for path in paths}
+        parsed = {path.resolve(): SiteParser(path) for path in output.rglob("*.html")}
         assert len(paths) == len(list((root / "docs").rglob("*.md")))
-        for path, page in parsed.items():
+        for path in paths:
+            page = parsed[path.resolve()]
             for url in page.links:
                 link = urlsplit(url)
                 if link.scheme or link.netloc:
                     continue
                 target = (path.parent / unquote(link.path)).resolve() if link.path else path
+                if target.is_dir():
+                    target /= "index.html"
                 assert target.is_relative_to(output), (path, url)
                 assert target.is_file(), (path, url)
                 if link.fragment:
@@ -85,45 +97,31 @@ def test_complete_site_links_anchors_assets_and_examples() -> None:
             tokens = MarkdownIt().parse(source.read_text(encoding="utf-8"))
             assert page.blocks == [token.content for token in tokens
                                    if token.type in {"fence", "code_block"}]
-        search = json.loads((output / "search-index.json").read_text(encoding="utf-8"))
-        assert any("recalculate" in entry["text"] for entry in search)
-        for entry in search:
-            link = urlsplit(entry["url"])
-            assert link.fragment in parsed[(output / link.path).resolve()].ids
+        search = json.loads((output / "search/search_index.json").read_text(encoding="utf-8"))
+        assert any("recalculate" in entry["text"] for entry in search["docs"])
+        for entry in search["docs"]:
+            link = urlsplit(entry["location"])
+            target = (output / (link.path or "index.html")).resolve()
+            assert target in parsed
+            if link.fragment:
+                assert link.fragment in parsed[target].ids
         assert (output / "assets/logo.png").is_file()
         assert (output / ".nojekyll").is_file()
-        assert not (output / "template.html").exists()
-
-
-def test_rendering_duplicate_headings_links_tables_and_code() -> None:
-    """Markdown syntax gets stable anchors while literal code never gets link rewriting."""
-    with TemporaryDirectory() as directory:
-        root = Path(directory)
-        docs = root / "docs"
-        docs.mkdir()
-        source = docs / "README.md"
-        source.write_text(
-            '# Overview\n\n## `Frame.get()`\n\n## `Frame.get()`\n\n'
-            'Words across\na source line break.\n\n'
-            '[Next](other.md#heading)\n\n'
-            '| Input | Output |\n| --- | --- |\n| 1 | 2 |\n\n'
-            '```python\nprint("[Next](other.md)")\n```\n', encoding="utf-8",
-        )
-        (docs / "other.md").write_text("# Heading\n", encoding="utf-8")
-        content, title, toc, sections = render_document(source, root, "rev")
-        assert title == "Overview"
-        assert 'id="frameget"' in content and 'id="frameget-1"' in content
-        assert 'href="other.html#heading"' in content and "<table>" in content
-        assert '[Next](other.md)' in content
-        assert "#frameget-1" in toc and len(sections) == 3
-        assert "Words across a source line break." in sections[-1]["text"]
-        assert local_link("https://example.com/a.md", source, root, "rev").endswith("a.md")
-        with pytest.raises(ValueError, match="invalid local link"):
-            local_link("missing.md", source, root, "rev")
-        with pytest.raises(ValueError, match="invalid local link"):
-            local_link("../../outside.md", source, root, "rev")
+        home = (output / "index.html").read_text(encoding="utf-8")
+        assert 'class="wy-nav-side' in home
+        assert '<span class="k">async' in home
+        assert '<span class="kc">true' in home
+        assert '<span class="s' in home
+        assert "&lt;script&gt;unsafe&lt;/script&gt;" in home
+        assert "<script>unsafe</script>" not in home
+        assert ((output / "assets/logo.png").read_bytes()
+                == (ROOT / "site/assets/logo.png").read_bytes())
+        assert 'assets/favicon.png' in home
+        assert not (output / "overrides/main.html").exists()
+        guide = (output / "development/index.html").read_text(encoding="utf-8")
+        assert "github.com/gokurakujoudo/lclang/blob/revision/" in guide
         with pytest.raises(ValueError, match="subdirectory"):
-            build_site(root, docs, "rev")
+            build_site(root, root / "docs", "revision")
 
 
 def test_navigation_requires_all_pages_and_follows_tutorial_index() -> None:

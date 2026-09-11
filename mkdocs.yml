@@ -1,0 +1,38 @@
+site_name: lclang
+site_description: A typed, async-first configuration expression language for Python.
+site_url: https://gokurakujoudo.github.io/lclang/
+repo_url: https://github.com/gokurakujoudo/lclang
+repo_name: GitHub
+docs_dir: docs
+site_dir: build/site
+use_directory_urls: false
+strict: true
+theme:
+  name: readthedocs
+  custom_dir: site/overrides
+  logo: assets/logo.png
+  highlightjs: false
+  navigation_depth: 3
+hooks:
+  - scripts/mkdocs_hooks.py
+plugins:
+  - search
+markdown_extensions:
+  - toc:
+      permalink: true
+  - tables
+  - admonition
+  - pymdownx.tilde
+  - pymdownx.superfences:
+      preserve_tabs: true
+      custom_fences:
+        - name: '*'
+          class: highlight
+          format: !!python/name:scripts.site_highlighting.format_fence
+extra_css:
+  - syntax.css
+extra_javascript:
+  - copy-code.js
+validation:
+  links:
+    anchors: warn

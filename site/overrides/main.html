@@ -1,0 +1,4 @@
+{% extends "base.html" %}
+{% block site_meta %}
+  {{ super() | replace("img/favicon.ico", "assets/favicon.png") }}
+{% endblock %}

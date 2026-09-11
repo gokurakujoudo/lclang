@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Replace the custom Pages renderer with MkDocs and its Read the Docs theme,
+  preserving page URLs, canonical tutorial navigation, local search, and the logo.
+  Highlight code at build time with LCL/configuration support, exact code copying,
+  and escaped plain-text fallback.
+
+- Adopt the supplied geometric lclang logo across the README, documentation,
+  Wiki export, and browser icons.
+
 ## 1.0.10 - 2026-09-10
 
 - Add `lclang.utils.SnowflakeGenerator` and the matching canonical LCL builtin

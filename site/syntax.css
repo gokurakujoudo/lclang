@@ -1,0 +1,10 @@
+/* Local Pygments colors complement the built-in Read the Docs theme. */
+pre code span[class^="k"], pre code .ow { color: #7135a5; font-weight: 600; }
+pre code span[class^="s"] { color: #21633b; }
+pre code span[class^="m"] { color: #94400b; }
+pre code .nb, pre code .nc, pre code .nf, pre code .nn, pre code .nt { color: #1756a0; }
+pre code span[class^="c"], pre code .go { color: #58667c; }
+pre code .gp { color: #1756a0; font-weight: 600; }
+.wy-side-nav-search .logo { max-width: 150px; }
+.copy-code { display: block; margin-left: auto; padding: .3em .7em; cursor: pointer; }
+@media print { .copy-code { display: none; } }

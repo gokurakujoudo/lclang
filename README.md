@@ -1,4 +1,4 @@
-<img src="https://gokurakujoudo.github.io/lclang/assets/logo.png" width="80" height="80" alt="lclang logo">
+<img src="https://gokurakujoudo.github.io/lclang/assets/logo.png" width="240" height="240" alt="lclang logo">
 
 # lclang
 
