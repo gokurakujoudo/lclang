@@ -179,7 +179,7 @@ Actions deployment mechanism.
 The canonical [PNG logo](../../site/assets/logo.png) lives in `site/assets/`.
 The supplied artwork combines a blue, navy, and pale-blue geometric symbol
 with the lclang wordmark on a light background.
-Use the same asset in the site navigation and favicon, README, and Wiki
+Use the same asset above the home page content and in the favicon, README, and Wiki
 home and sidebar. README images use the absolute Pages URL so the package
 description also works on PyPI when a new distribution is published.
 

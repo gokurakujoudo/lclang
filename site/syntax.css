@@ -5,7 +5,7 @@ pre code span[class^="m"] { color: #94400b; }
 pre code .nb, pre code .nc, pre code .nf, pre code .nn, pre code .nt { color: #1756a0; }
 pre code span[class^="c"], pre code .go { color: #58667c; }
 pre code .gp { color: #1756a0; font-weight: 600; }
-.wy-side-nav-search .logo { max-width: 150px; }
+.home-logo { display: block; max-width: 100%; height: auto; margin: 0 auto 24px; }
 .wy-nav-content-wrap { background: #fcfcfc; }
 .wy-nav-content { width: 100%; max-width: none; margin: 0 auto; }
 .rst-content div.highlight { position: relative; border: 1px solid #e1e4e5; border-radius: 6px; background: #f6f8fa; overflow: hidden; }

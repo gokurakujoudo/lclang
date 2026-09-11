@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Move the documentation logo from the sidebar to the top of the home page content.
+
 - Use the available documentation width with centered content, and simplify code
   blocks to one bordered surface with compact Copy controls.
 
