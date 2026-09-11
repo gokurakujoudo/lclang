@@ -10,7 +10,6 @@ strict: true
 theme:
   name: readthedocs
   custom_dir: site/overrides
-  logo: assets/logo.png
   highlightjs: false
   navigation_depth: 3
 hooks:

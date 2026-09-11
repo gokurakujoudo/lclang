@@ -2,3 +2,9 @@
 {% block site_meta %}
   {{ super() | replace("img/favicon.ico", "assets/favicon.png") }}
 {% endblock %}
+{% block content %}
+  {% if page and page.file.src_uri == 'README.md' %}
+    <img class="home-logo" src="{{ 'assets/logo.png' | url }}" width="240" height="240" alt="lclang logo">
+  {% endif %}
+  {{ super() }}
+{% endblock %}
