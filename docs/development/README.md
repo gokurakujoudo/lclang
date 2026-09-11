@@ -131,36 +131,38 @@ committing. The tutorial introduction remains the single ordered series index.
 Wiki pushes use the maintainer's Git credentials; no personal token is stored
 in the workflow. Direct Wiki edits should be made in `docs/` instead.
 
-The shared page template, styles, scripts, and logo live in `site/`.
-`scripts.build_site` renders every documentation page as static HTML using the
-build-only `markdown-it-py` and `Pygments` dependencies; the library still has no
-runtime dependencies. Labeled code fences receive syntax highlighting at build
-time, with colors for both light and dark themes. Python, console commands, and
-other Pygments languages are supported. `lcl` and `lclcfg` use Python-style
-highlighting extended for LCL literals and operators; colors are a reading aid,
-not syntax validation. Unknown, unlabeled, and `text` blocks remain escaped plain
-text. Highlighting works without JavaScript or network requests and preserves
-the exact code text, including whitespace, for selection and copying.
-Tutorial navigation follows the series introduction, and the build rejects pages
-missing from navigation. Code blocks preserve the exact documented examples.
-Local document links become relative HTML links, including anchors; repository
-attachments and source links point to the built Git revision.
+The site uses [MkDocs](https://www.mkdocs.org/) with its built-in Read the Docs
+theme, configured in the root `mkdocs.yml`. MkDocs owns the page layout,
+responsive navigation, breadcrumbs, previous/next links, and local search.
+The small adapters under `scripts/` derive navigation from canonical Markdown,
+resolve repository attachments at the built revision, and include the shared
+logo and assets from `site/`. Existing `.html` page URLs are retained.
+
+Tutorial navigation follows the series introduction, and the build rejects
+pages missing from navigation. The package version comes from `pyproject.toml`.
+The library still has no runtime dependencies; MkDocs, PyMdown Extensions,
+Pygments, and markdown-it-py are documentation build dependencies only.
+
+Labeled code fences receive Pygments colors at build time. `lcl` and `lclcfg`
+use Python-style highlighting extended for LCL literals and operators; colors
+are a reading aid, not syntax validation. Unknown, unlabeled, and `text` blocks
+remain escaped plain text. A SuperFences adapter preserves the exact source,
+including tabs and trailing blank lines, for selection and the Copy button.
+Highlighting and navigation work without JavaScript; search and copying use
+local scripts. No CDN, analytics, or external search service is required.
+The Read the Docs theme uses its standard light reading surface.
 
 Build and preview from the repository root:
 
 ```console
 python -m pip install --group docs
 python -m scripts.build_site
-python -m http.server 8000 --bind 127.0.0.1 --directory build/site
+python -m mkdocs serve --dev-addr 127.0.0.1:8000
 ```
 
-Open `http://127.0.0.1:8000/`. The output directory must be a subdirectory of
-`build/`; generated HTML is not checked in. Pages support section search,
-keyboard shortcuts (`/` or Ctrl/Cmd+K), light and dark themes, code copying,
-mobile navigation, and print styles. Search loads its local index on first use;
-if loading fails, readers can retry or continue using the sidebar. Reading and
-navigation work without JavaScript. No CDN, analytics, or external search service
-is required. The site uses the package version from `pyproject.toml`.
+Open `http://127.0.0.1:8000/`. Both the wrapper and direct `python -m mkdocs build`
+use strict validation. Site output must be a subdirectory of `build/`; generated
+HTML is not checked in. `mkdocs serve` rebuilds changed Markdown for local preview.
 
 CI builds and retains the `documentation-site` artifact on every verified run.
 The CI `pages` job publishes that same artifact only after verification and
@@ -174,7 +176,7 @@ Actions deployment mechanism.
 The canonical [PNG logo](../../site/assets/logo.png) lives in `site/assets/`.
 The supplied artwork combines a blue, navy, and pale-blue geometric symbol
 with the lclang wordmark on a light background.
-Use the same asset in the site navigation, footer and favicon, README, and Wiki
+Use the same asset in the site navigation and favicon, README, and Wiki
 home and sidebar. README images use the absolute Pages URL so the package
 description also works on PyPI when a new distribution is published.
 

@@ -1,12 +1,10 @@
-/* Pygments token classes; colors contrast with the site's code surfaces. */
-:root { --syntax-keyword: #7135a5; --syntax-string: #21633b; --syntax-number: #94400b; --syntax-name: #1756a0; }
-:root[data-theme="dark"] { --syntax-keyword: #d4a7ff; --syntax-string: #a2dbac; --syntax-number: #ffc08b; --syntax-name: #9ecbff; }
-pre code span[class^="k"], pre code .ow { color: var(--syntax-keyword); font-weight: 600; }
-pre code span[class^="s"] { color: var(--syntax-string); }
-pre code span[class^="m"] { color: var(--syntax-number); }
-pre code .nb, pre code .nc, pre code .nf, pre code .nn, pre code .nt { color: var(--syntax-name); }
-pre code span[class^="c"], pre code .go { color: var(--muted); }
-pre code .gp { color: var(--syntax-name); font-weight: 600; }
-@media print {
-  :root, :root[data-theme="dark"] { --syntax-keyword: #7135a5; --syntax-string: #21633b; --syntax-number: #94400b; --syntax-name: #1756a0; }
-}
+/* Local Pygments colors complement the built-in Read the Docs theme. */
+pre code span[class^="k"], pre code .ow { color: #7135a5; font-weight: 600; }
+pre code span[class^="s"] { color: #21633b; }
+pre code span[class^="m"] { color: #94400b; }
+pre code .nb, pre code .nc, pre code .nf, pre code .nn, pre code .nt { color: #1756a0; }
+pre code span[class^="c"], pre code .go { color: #58667c; }
+pre code .gp { color: #1756a0; font-weight: 600; }
+.wy-side-nav-search .logo { max-width: 150px; }
+.copy-code { display: block; margin-left: auto; padding: .3em .7em; cursor: pointer; }
+@media print { .copy-code { display: none; } }

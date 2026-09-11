@@ -28,7 +28,12 @@ Source = "https://github.com/gokurakujoudo/lclang"
 
 [dependency-groups]
 build = ["hatchling==1.31.0"]
-docs = ["markdown-it-py==4.2.0", "Pygments==2.20.0"]
+docs = [
+  "markdown-it-py==4.2.0",
+  "mkdocs==1.6.1",
+  "pymdown-extensions==11.0.2",
+  "Pygments==2.20.0",
+]
 integration = [
   "fastapi==0.141.1",
   "uvicorn==0.52.4",

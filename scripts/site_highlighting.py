@@ -1,5 +1,7 @@
 """Render static syntax colors without changing documentation code text."""
 
+from html import escape
+
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
 from pygments.lexer import inherit
@@ -30,3 +32,14 @@ def highlight_code(source: str, language: str, attributes: str) -> str:
     except ClassNotFound:
         return ""
     return highlight(source, lexer, HtmlFormatter(nowrap=True))
+
+
+def format_fence(
+    source: str, language: str, css_class: str, options: dict[str, object],
+    md: object, **kwargs: object,
+) -> str:
+    """Restore SuperFences' removed line terminator before highlighting exact source."""
+    source += "\n"
+    content = highlight_code(source, language, "") or escape(source)
+    return (f'<div class="highlight"><pre><code class="language-{escape(language, quote=True)}">'
+            f'{content}</code></pre></div>')
