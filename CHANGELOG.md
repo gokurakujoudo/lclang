@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Highlight documentation code fences at build time with light and dark colors,
+  LCL/configuration support, exact code copying, and plain-text fallback.
+
+- Adopt the supplied geometric lclang logo across the README, documentation,
+  Wiki export, and browser icons.
+
 ## 1.0.10 - 2026-09-10
 
 - Add `lclang.utils.SnowflakeGenerator` and the matching canonical LCL builtin

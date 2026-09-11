@@ -28,7 +28,7 @@ Source = "https://github.com/gokurakujoudo/lclang"
 
 [dependency-groups]
 build = ["hatchling==1.31.0"]
-docs = ["markdown-it-py==4.2.0"]
+docs = ["markdown-it-py==4.2.0", "Pygments==2.20.0"]
 integration = [
   "fastapi==0.141.1",
   "uvicorn==0.52.4",
@@ -44,6 +44,7 @@ dev = [
   "pytest-asyncio==1.4.0",
   "pytest-cov==7.1.0",
   "ruff==0.16.1",
+  "types-Pygments==2.21.0.20260819",
 ]
 publish = ["twine==6.2.0"]
 

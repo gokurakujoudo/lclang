@@ -16,6 +16,7 @@ from markdown_it import MarkdownIt
 from markdown_it.token import Token
 
 from scripts.export_wiki import REPOSITORY, ROOT
+from scripts.site_highlighting import highlight_code
 
 
 def page_route(source: Path) -> str:
@@ -54,7 +55,9 @@ def render_document(
     source: Path, root: Path, ref: str,
 ) -> tuple[str, str, str, list[dict[str, str]]]:
     """Render exact code blocks, unique heading anchors, contents and searchable sections."""
-    markdown = MarkdownIt("commonmark").enable(["table", "strikethrough"])
+    markdown = MarkdownIt("commonmark", {"highlight": highlight_code}).enable(
+        ["table", "strikethrough"],
+    )
     tokens = markdown.parse(source.read_text(encoding="utf-8"))
     headings: list[str] = []
     sections: list[dict[str, str]] = []

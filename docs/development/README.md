@@ -133,7 +133,14 @@ in the workflow. Direct Wiki edits should be made in `docs/` instead.
 
 The shared page template, styles, scripts, and logo live in `site/`.
 `scripts.build_site` renders every documentation page as static HTML using the
-build-only `markdown-it-py` dependency; the library still has no runtime dependencies.
+build-only `markdown-it-py` and `Pygments` dependencies; the library still has no
+runtime dependencies. Labeled code fences receive syntax highlighting at build
+time, with colors for both light and dark themes. Python, console commands, and
+other Pygments languages are supported. `lcl` and `lclcfg` use Python-style
+highlighting extended for LCL literals and operators; colors are a reading aid,
+not syntax validation. Unknown, unlabeled, and `text` blocks remain escaped plain
+text. Highlighting works without JavaScript or network requests and preserves
+the exact code text, including whitespace, for selection and copying.
 Tutorial navigation follows the series introduction, and the build rejects pages
 missing from navigation. Code blocks preserve the exact documented examples.
 Local document links become relative HTML links, including anchors; repository
@@ -165,17 +172,16 @@ Actions deployment mechanism.
 ## Project logo
 
 The canonical [PNG logo](../../site/assets/logo.png) lives in `site/assets/`.
-Its white L-shaped path represents requested work; the separate mint node
-represents a value waiting to be requested. Blue encloses the evaluation context.
+The supplied artwork combines a blue, navy, and pale-blue geometric symbol
+with the lclang wordmark on a light background.
 Use the same asset in the site navigation, footer and favicon, README, and Wiki
 home and sidebar. README images use the absolute Pages URL so the package
 description also works on PyPI when a new distribution is published.
 
-Keep the square proportions and surrounding clear space. The colors are blue
-`#1856d6`, white `#ffffff`, and mint `#99dec5`; the solid blue background works
-on both light and dark surfaces. Preserve the PNG's transparent margins and
-corners. The image needs no font or runtime dependency and is covered by the
-repository's MIT license. Its generation brief is recorded alongside the asset.
+Keep the square proportions, original background, and surrounding clear space.
+Browser icon assets use the same supplied PNG, scaled by the browser. The
+wordmark is part of the image and needs no font or runtime dependency.
+Asset provenance and usage are recorded alongside the logo.
 
 ## Change workflow
 

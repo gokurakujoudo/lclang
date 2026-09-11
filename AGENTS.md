@@ -76,6 +76,83 @@ weaken isolation, skip checks, or use another path solely to work around the
 permission failure without the user's authorization. Continue independent work
 that does not require that permission.
 
+## GitHub feature development
+
+Use this lifecycle for feature development and bug fixes:
+`issue -> feature branch -> pull request -> squash merge -> branch cleanup`.
+
+1. Create or reuse an issue in `gokurakujoudo/lclang` before implementation.
+   Record the problem, scope, public behavior, and acceptance criteria; avoid
+   duplicate issues for the same work.
+2. Fetch `origin`, preserve unrelated local changes, and create a feature branch
+   from current `origin/main`. Use `codex/<issue-number>-<short-description>`.
+   Keep implementation, tests, and documentation together on that branch;
+   do not develop directly on `main` or `release`.
+3. Follow the required workflow above, update the relevant documentation and
+   `CHANGELOG.md` under `Unreleased`, and run `python -m scripts.quality` before
+   the final code handoff. Include stress tests and retain 100% branch coverage.
+4. Commit and push the branch, then open a PR targeting `main` with
+   `Closes #<issue-number>`. Describe the final behavior, relevant limitations,
+   and actual validation results; update the description when scope changes.
+5. Wait for all applicable CI checks on the latest PR head, including push and
+   pull-request verification and builds. Fix failures and check the new head
+   again. Results from an earlier commit do not approve a later commit; jobs
+   intentionally excluded by workflow conditions are not missing checks.
+6. Unless the user requests a draft or review-only handoff, squash merge once
+   checks pass and merge requirements are satisfied. Guard the merge with the
+   expected head SHA so a concurrent update cannot merge unverified work.
+   Confirm the PR is merged and its linked issue is closed.
+7. Synchronize local `main`. After confirming that the implementation branch
+   contains no work added after the merged PR head, delete its remote and local
+   copies. Squash merging does not preserve feature-commit ancestry, so verify
+   the merged content before forcing local branch deletion if necessary.
+   Finish on `main` and report any unrelated work left in the checkout.
+
+Feature completion does not itself publish a version. When the user also
+requests a release, complete the release workflow before final branch cleanup.
+
+## Version release
+
+Use this lifecycle when a version release is requested:
+`version update -> tested PR -> squash merge to main -> fast-forward release
+-> CI verification/build -> PyPI -> version tag and GitHub Release`.
+
+1. Prepare the requested unused stable `1.0.x` version on the feature branch,
+   or on a dedicated branch using the issue/PR workflow above. Update both
+   `pyproject.toml` and `src/lclang/_version.py` to the same version. Move the
+   changes being released into a nonempty `CHANGELOG.md` section named
+   `## <version> - YYYY-MM-DD`, retaining `Unreleased` for future changes.
+2. Validate release-note extraction with `scripts.release_notes`, run the full
+   quality gate after the version update, and wait for the updated PR's CI.
+   Squash merge only the verified head; version preparation must reach `main`
+   before publication. Never add release-only commits on `release`.
+3. Fetch the merged commit and verify that its content matches the tested PR.
+   Fast-forward the persistent `release` branch to that exact commit on `main`
+   and push it to `origin`. Do not force-update `release`, publish a feature
+   branch, or include unreviewed work in the publishing commit.
+4. Use the existing [.github/workflows/ci.yml](.github/workflows/ci.yml)
+   pipeline. A push to `release` verifies ancestry and version notes, runs the
+   full quality gate and builds, publishes the built wheel and source archive
+   to PyPI with Trusted Publishing, then creates the matching GitHub tag and
+   Release with changelog notes and those same distribution artifacts.
+5. Tags use the exact package version without a `v` prefix. The version tag,
+   GitHub Release, and PyPI artifacts must identify the same publishing commit
+   and version. Let CI create the tag and Release after PyPI succeeds; do not
+   create a parallel manual release or move an existing version tag.
+6. Wait for publishing to finish and verify the final outcomes, not merely
+   workflow dispatch: successful publication, the expected tag target, a
+   published GitHub Release, and both attached distribution files. Check the
+   merged `main` workflow and applicable documentation deployment as well.
+   If PyPI succeeds but GitHub Release creation fails, rerun only the failed
+   job; do not repeat the successful upload. Published PyPI versions are
+   immutable, so changed artifacts require a new version.
+7. Fetch the published tag, retain the persistent `main` and `release` branches,
+   remove the completed implementation branch locally and remotely, and return
+   to `main`. Report the version, PR, Release/PyPI links, checks, and cleanup.
+
+See the [development guide](docs/development/README.md) for CI configuration,
+Trusted Publishing setup, and supported manual recovery procedures.
+
 ## Tutorial maintenance
 
 - `docs/tutorials/README.md` is the human-oriented introduction and the single

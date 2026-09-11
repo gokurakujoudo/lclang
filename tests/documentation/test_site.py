@@ -126,6 +126,30 @@ def test_rendering_duplicate_headings_links_tables_and_code() -> None:
             build_site(root, docs, "rev")
 
 
+@pytest.mark.parametrize("language,code,colored", [
+    ("python", '\nasync def greet():\n\treturn "<script>&雪"\n\n', True),
+    ("lcl", 'true if item?.value ?? null else false\n', True),
+    ("lclcfg", 'using "base.lclcfg"\nport: 8443 # default\n', True),
+    ("console", '$ python -m pip install lclang\n', True),
+    ("json", '{"enabled": true, "port": 8443}\n', True),
+    ("unknown-language", '<script>alert("unsafe")</script>\n', False),
+    ("text", 'a -> b & c\n', False),
+    ("", '<b>plain</b>\n', False),
+])
+def test_code_highlighting_preserves_source(language: str, code: str, colored: bool) -> None:
+    """Colors preserve whitespace and escaped text, with safe plain-text fallback."""
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        source = root / "example.md"
+        source.write_text(f"# Example\n\n```{language}\n{code}```\n", encoding="utf-8")
+        content, _, _, _ = render_document(source, root, "rev")
+        output = root / "example.html"
+        output.write_text(content, encoding="utf-8")
+        assert SiteParser(output).blocks == [code]
+        assert ('<span class="' in content) is colored
+        assert "<script>" not in content and "<b>plain</b>" not in content
+
+
 def test_navigation_requires_all_pages_and_follows_tutorial_index() -> None:
     """New unlisted chapters fail instead of silently disappearing from the site."""
     with TemporaryDirectory() as directory:
