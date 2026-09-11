@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Use the available documentation width with centered content, and simplify code
+  blocks to one bordered surface with compact Copy controls.
+
 - Replace the custom Pages renderer with MkDocs and its Read the Docs theme,
   preserving page URLs, canonical tutorial navigation, local search, and the logo.
   Highlight code at build time with LCL/configuration support, exact code copying,

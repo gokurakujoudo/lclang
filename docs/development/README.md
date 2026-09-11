@@ -151,6 +151,9 @@ including tabs and trailing blank lines, for selection and the Copy button.
 Highlighting and navigation work without JavaScript; search and copying use
 local scripts. No CDN, analytics, or external search service is required.
 The Read the Docs theme uses its standard light reading surface.
+Content fills the available width beside the sidebar with balanced horizontal
+padding. Code blocks use one bordered surface, a compact Copy button, and
+horizontal scrolling for long lines without widening the page.
 
 Build and preview from the repository root:
 
