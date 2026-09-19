@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from contextlib import AbstractAsyncContextManager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from lclang.types import TaskID
@@ -66,10 +67,24 @@ class Workflow:
 
     :param title: Human-readable workflow title.
     :param root_task: Root task node.
+    :param lcl_mixin: Shallow host bindings exposed to configuration and tasks.
     """
 
     title: str
     root_task: TaskNode
+    lcl_mixin: Mapping[str, object] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        """Detach host bindings while preserving their values by reference.
+
+        :raises TypeError: If binding names are not strings.
+        :raises ValueError: If binding names or scopes conflict.
+        """
+        from lclang.runtime import Preset
+
+        snapshot = dict(self.lcl_mixin)
+        Preset("workflow", snapshot)
+        object.__setattr__(self, "lcl_mixin", MappingProxyType(snapshot))
 
     async def execute(self, context: WorkflowExecutionContext) -> WorkflowExecutionResult:
         """Execute this definition once against a borrowed Frame.

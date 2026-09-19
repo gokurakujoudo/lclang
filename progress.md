@@ -80,6 +80,7 @@ runtime dependencies.
 - Validated tree workflows with typed dataclass mappings, named variables,
   task-local context resources, parent-first depth-first execution, explicit
   publication, reverse cleanup, static rendering, and complete status trees.
+  Workflow `lcl_mixin` snapshots expose host values and callables to configs and tasks.
 - Nested task and step status management with covered-failure semantics,
   deterministic aggregation, locking, scoped mutation, and failure capture.
 

@@ -14,6 +14,25 @@ The definition never owns execution state. One execution borrows a shared
 and creates a fresh status tree. Reusing a `Workflow` is therefore analogous to
 reusing a `Module`; each call is analogous to creating a new per-run `Frame`.
 
+`define_workflow(title, root_task, lcl_mixin=None)` accepts a `dict[str, Any]`
+of host values and callables, for example `lcl_mixin={"service": service}`.
+The mapping is copied shallowly when defined; objects remain shared by reference.
+Qualified names and trailing `!` masking markers follow normal Frame rules.
+Invalid names and conflicting scopes fail at definition time.
+
+Direct `execute` mixes these bindings into the borrowed shared Frame before any
+task starts. They override existing bindings and remain in that Frame afterward.
+Configuration expressions, context tasks, and actions resolve them through the
+same Frame hierarchy. Existing cached dependants remain snapshots; mixins do not
+invalidate them. Task outputs may subsequently replace the supplied bindings.
+
+For `to_cli`, these bindings instead seed the command's host preset before
+configuration evaluation and logger setup. Explicit `to_cli(preset=...)` values,
+configuration definitions, and CLI overrides retain their normal precedence over
+these defaults. Only inferred external task variables remain CLI parameters;
+extra host helpers do not become parameters. Dynamic `using` targets retain the
+loader's existing scope and do not receive command host presets.
+
 ## Variables and mappings
 
 Create variables through the subscribed factory:

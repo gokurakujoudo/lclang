@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from lclang.cli import CliContext, CliResult, CliResultStatus, Command, ParameterDoc
 from lclang.cli.logger_config import logger_parameter
 from lclang.errors import LclCliUsageError
@@ -95,6 +97,10 @@ def workflow_command(
     unexpected = set(values) - allowed
     if unexpected:
         raise ValueError("workflow preset contains non-external variable")
+    mixin_values, mixin_masks = normalize_masked_mapping(workflow.lcl_mixin)
+    values = {**mixin_values, **values}
+    preset_masks |= mixin_masks
+    execution_workflow = replace(workflow, lcl_mixin={})
     docs = tuple(
         ParameterDoc(
             item.name,
@@ -123,7 +129,7 @@ def workflow_command(
         }
         if unknown:
             raise LclCliUsageError("workflow override targets non-external variable")
-        result = await workflow.execute(
+        result = await execution_workflow.execute(
             WorkflowExecutionContext(
                 context.dryrun,
                 context.as_of_date,
