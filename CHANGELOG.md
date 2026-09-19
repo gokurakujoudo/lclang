@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add workflow `lcl_mixin` host bindings for configuration expressions and tasks,
+  with shallow definition snapshots and CLI host-default integration.
+
 - Move the documentation logo from the sidebar to the top of the home page content.
 
 - Use the available documentation width with centered content, and simplify code

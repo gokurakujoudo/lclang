@@ -344,6 +344,8 @@ publish outputs. Each node can own async context tasks for local resources or
 exception handling, followed by ordered child tasks. Execution is parent-first,
 depth-first against one shared Frame; task-local Frames confine context outputs,
 while mapped action outputs can feed later nodes.
+`define_workflow(..., lcl_mixin={...})` supplies host values and callables to
+configuration expressions and tasks, and becomes host defaults in CLI commands.
 
 The fixed tree, scope, cleanup, and status rules provide a strong format. Inside
 it, actions remain ordinary async Python and can use application-specific

@@ -180,11 +180,16 @@ def define_task[ArgsT, OutputsT](
     )
 
 
-def define_workflow(title: str, root_task: TaskNode) -> Workflow:
+def define_workflow(
+    title: str,
+    root_task: TaskNode,
+    lcl_mixin: dict[str, object] | None = None,
+) -> Workflow:
     """Define and validate one reusable workflow tree.
 
     :param title: Human-readable workflow title.
     :param root_task: Root task node.
+    :param lcl_mixin: Optional shallow host bindings for configuration and tasks.
     :returns: Immutable validated workflow.
     :raises TypeError: If *root_task* has the wrong public type.
     :raises ValueError: If IDs or variable declarations conflict.
@@ -192,7 +197,9 @@ def define_workflow(title: str, root_task: TaskNode) -> Workflow:
     if not isinstance(root_task, TaskNode):
         raise TypeError("workflow root must be a TaskNode")
     validate_workflow_tree(root_task)
-    return Workflow(require_title(title, "workflow title"), root_task)
+    return Workflow(
+        require_title(title, "workflow title"), root_task, {} if lcl_mixin is None else lcl_mixin
+    )
 
 
 def validate_workflow_tree(root: TaskNode) -> None:

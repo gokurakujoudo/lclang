@@ -219,6 +219,8 @@ async def execute_workflow(
     """
     if not isinstance(context, WorkflowExecutionContext):
         raise TypeError("workflow execution context has the wrong type")
+    if workflow.lcl_mixin:
+        context.frame.mixin(dict(workflow.lcl_mixin))
     manager = ExecutionStatusManager(workflow.title, status=ExecutionStatus.RUNNING)
     state = WorkflowRunState(context, {}, {})
     with suppress(Exception):
