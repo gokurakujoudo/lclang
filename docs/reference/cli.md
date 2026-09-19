@@ -6,6 +6,24 @@ decorated command handler receives one `CliContext`, including its invocation
 Frame, as-of date, dry-run flag, and logging context, and returns a deterministic
 `CliResult`.
 
+`CliEntrance(group, lcl_mixin={"service": service})` supplies shared host values
+and callables to every command routed through the entrance, including commands
+inside nested groups and workflows converted with `to_cli()`. The entrance
+copies the mapping shallowly at definition time; the referenced objects remain
+shared. Binding names are validated and trailing `!` markers retain masking.
+
+Each invocation combines these defaults with the selected command's host preset
+before config expressions and logger settings are evaluated. Precedence is
+entrance `lcl_mixin`, command/workflow preset, parameter defaults, config, then
+CLI overrides, with later layers winning. Workflow `lcl_mixin` is part of its
+command preset and therefore wins over entrance defaults. Host helpers do not
+automatically become CLI parameters. Dynamic `using` targets keep the loader's
+existing scope and do not receive host presets.
+
+Original command definitions remain unchanged. Invocations own separate Frames
+and caches, while supplied objects retain their ordinary shared Python state.
+Running a command directly with `command.run()` does not apply entrance bindings.
+
 The CLI resolves logging from the same final Frame as application configuration.
 `CliConfig.log_config` supplies a `LoggerHandlerConfig` declaration; `.lclcfg`
 settings and `-o` overrides replace the corresponding `logger.*` leaves.

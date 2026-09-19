@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Sequence
+from dataclasses import replace
 
 from lclang.cli.commands import Command
 from lclang.cli.entrance import CliEntrance
@@ -13,6 +14,7 @@ from lclang.cli.models import CliConfig, CliResultStatus
 from lclang.cli.parser import help_requested, parse_cli_params
 from lclang.cli.process import ArgvParts, split_argv
 from lclang.cli.routing import RouteAction, RouteFailure, route_command
+from lclang.masking import normalize_masked_mapping
 
 
 def script_label_from_args(args: Sequence[str] | None) -> str:
@@ -79,6 +81,12 @@ async def run_entrance(entrance: CliEntrance, args: Sequence[str] | None = None)
             print(render_command_help(parts.script_label, command, route.path), end="")
             return 0
         params = parse_cli_params(parts, route.path, route.remaining)
+        values, masked_names = normalize_masked_mapping(entrance.lcl_mixin)
+        command = replace(
+            command,
+            preset={**values, **command.preset},
+            masked_names=masked_names | command.masked_names,
+        )
         return await execute_command(command, params, entrance.cli_config)
     except RouteFailure as error:
         label = script_label_from_args(args) if parts is None else parts.script_label
