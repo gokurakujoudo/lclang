@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add `CliEntrance(..., lcl_mixin={...})` to share host values and callables
+  across every routed command's configuration and workflow tasks.
+
 - Add workflow `lcl_mixin` host bindings for configuration expressions and tasks,
   with shallow definition snapshots and CLI host-default integration.
 

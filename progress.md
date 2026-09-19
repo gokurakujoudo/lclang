@@ -86,6 +86,9 @@ runtime dependencies.
 
 ## Command-line framework
 
+- Entrance `lcl_mixin` snapshots share host defaults across routed commands,
+  configuration expressions, and workflow tasks while preserving local precedence.
+
 - Immutable invocation values, typed async commands, decorators, nested command
   groups, full-argument parsing, A-Z configuration-parameter help, and
   platform-neutral process entry points.

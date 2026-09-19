@@ -318,6 +318,8 @@ capability.
 `lclang.cli` combines typed async commands, nested groups, configuration and
 overrides, structured help, process-scoped queue logging and explicit dry-run policy.
 Handlers receive a `CliContext` and return a `CliResult`.
+`CliEntrance(..., lcl_mixin={...})` shares host defaults with every routed
+command's configuration and workflow tasks.
 See the [CLI reference](https://gokurakujoudo.github.io/lclang/reference/cli.html)
 and [CLI tutorial](https://gokurakujoudo.github.io/lclang/tutorials/09-command-line-applications.html).
 
