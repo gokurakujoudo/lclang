@@ -83,6 +83,8 @@ runtime dependencies.
   Workflow `lcl_mixin` snapshots expose host values and callables to configs and tasks.
 - Generic variable annotations and whole-record workflow mappings with shallow
   scope-to-record conversion and record-to-scope publication.
+- Per-execution action control to omit child subtrees without status records,
+  while preserving action outputs, context cleanup, and failure propagation.
 - Nested task and step status management with covered-failure semantics,
   deterministic aggregation, locking, scoped mutation, and failure capture.
 

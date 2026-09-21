@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add action-only `TaskContext.skip_children()` to omit child subtrees without
+  status records, preserving output publication and cleanup even on later failures.
+
 - Support generic workflow variable annotations and whole-record `.quote`
   argument/output mappings, including scope-to-record inputs and shallow
   record-to-scope output publication.

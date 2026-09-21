@@ -176,6 +176,84 @@ resumed safely.
 
 ## Execution and results
 
+### Omitting child tasks
+
+During its action, a task may call synchronous `context.skip_children()` to
+omit all its children and their descendants, including their context tasks.
+No status nodes (not even `SKIPPED`), lifecycle logs, or argument/output entries
+are created for that subtree. The call is idempotent and irreversible for this
+execution; it does not return early from the action or change its status.
+Normal output validation/publication still occurs, entered contexts unwind in
+reverse order, and successful completion permits later parent-level siblings.
+
+The omission takes effect immediately, even if the action subsequently fails,
+output publication fails, cleanup fails, or an exception is covered. Those
+failures retain their normal reporting and propagation, but omitted children
+are never added back as skipped status nodes. Cancellation still propagates.
+Calls before or after the action's active lifetime raise `RuntimeError`;
+context entry and exit are outside that lifetime. A task with no children may
+call the method without additional effects. Each execution owns fresh control
+state, including concurrent executions of the same workflow.
+
+Static `to_lines()` still shows the complete definition tree, and CLI parameter
+inference and required-input checks still consider all declared tasks.
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+import logging
+from dataclasses import dataclass
+from datetime import date
+
+import lclang
+import lclang.workflow as wf
+
+
+@dataclass
+class Options:
+    run_children: bool
+
+
+async def choose(
+    context: wf.TaskContext,
+    args: Options,
+    status_mgr: wf.ExecutionStatusManager,
+) -> Options:
+    if not args.run_children:
+        context.skip_children()
+    return args
+
+
+async def main() -> None:
+    child = wf.define_task(
+        "child", "Optional child", task_action=choose, args_mapping=Options(True),
+    )
+    root = wf.define_task(
+        "root", "Choose children", task_action=choose,
+        args_mapping=Options(False), children=[child],
+    )
+    async with lclang.define_frame() as frame:
+        result = await wf.define_workflow("Conditional work", root).execute(
+            wf.WorkflowExecutionContext(
+                False, date(2026, 9, 21), False, logging.getLogger("skip-example"), frame,
+            )
+        )
+    assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
+    assert result.execution_status.sub_tasks[0].sub_tasks == []
+    assert set(result.task_args) == {"root"}
+    assert result.task_outputs == {"root": Options(False)}
+
+
+asyncio.run(main())
+```
+
+The root action chooses not to enter its child, then returns its normal output.
+The root succeeds and retains that output; the child has no status node or
+materialized values. The immutable definition still contains the child for
+other executions that choose to run it.
+
+### Result values
+
 `await workflow.execute(context)` returns `WorkflowExecutionResult` with the
 finalized `execution_status`, the borrowed `execution_frame`, and dictionaries
 of successfully materialized action arguments and returned outputs. A key is

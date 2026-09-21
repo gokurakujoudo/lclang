@@ -172,11 +172,14 @@ async def execute_action_and_children(
             raise
         state.task_args[task.task_id] = args
         log_mapping(state.context, stack, task.args_mapping, args, output=False)
+        context._child_execution.action_active = True
         try:
             output = await task.task_action(context, args, manager)
         except Exception as error:
             record_exception(state, manager, stack, error)
             raise
+        finally:
+            context._child_execution.action_active = False
         return_type = get_type_hints(task.task_action).get("return")
         try:
             valid_output = type(output) is record_type(return_type)
@@ -197,6 +200,8 @@ async def execute_action_and_children(
             record_exception(state, manager, stack, error)
             raise
         raise_for_status(state, manager, stack)
+    if context._child_execution.children_skipped:
+        return True
     for index, child in enumerate(task.children):
         from lclang.workflow.runner import execute_task
 

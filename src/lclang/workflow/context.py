@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncIterator
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from typing import TYPE_CHECKING
 
@@ -49,6 +49,18 @@ class WorkflowExecutionContext:
     frame: Frame
 
 
+@dataclass(slots=True)
+class TaskChildExecution:
+    """Retain child traversal decisions for one task execution.
+
+    :param action_active: Whether the action is currently running.
+    :param children_skipped: Irreversible request to omit the entire child subtree.
+    """
+
+    action_active: bool = False
+    children_skipped: bool = False
+
+
 @dataclass(frozen=True, slots=True)
 class TaskContext:
     """Expose services and identity for one executing task node.
@@ -69,6 +81,21 @@ class TaskContext:
     frame: Frame
     task_node: TaskNode
     task_id_stack: list[TaskID]
+    _child_execution: TaskChildExecution = field(
+        default_factory=TaskChildExecution, init=False, repr=False, compare=False,
+    )
+
+    def skip_children(self) -> None:
+        """Omit this task's child subtrees without creating status records.
+
+        The request is idempotent and survives subsequent action or cleanup
+        failures. It does not stop the action or prevent output publication.
+
+        :raises RuntimeError: If called outside the action's active lifetime.
+        """
+        if not self._child_execution.action_active:
+            raise RuntimeError("skip_children is only available during the task action")
+        self._child_execution.children_skipped = True
 
 
 @dataclass(frozen=True, slots=True)

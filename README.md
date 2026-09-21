@@ -348,6 +348,8 @@ context tasks for local resources or
 exception handling, followed by ordered child tasks. Execution is parent-first,
 depth-first against one shared Frame; task-local Frames confine context outputs,
 while mapped action outputs can feed later nodes.
+An action can call `context.skip_children()` to omit its child subtree without
+creating status records, while retaining its own output and resource cleanup.
 `define_workflow(..., lcl_mixin={...})` supplies host values and callables to
 configuration expressions and tasks, and becomes host defaults in CLI commands.
 
