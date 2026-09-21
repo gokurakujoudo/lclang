@@ -130,6 +130,8 @@ def test_command_snapshots_inputs_and_validates_handler_once() -> None:
         (lambda: InvalidCommand("run", "x", [object()], {}, valid_handler), "ParameterDoc"),
         (lambda: Command("run", "x", (), {"bad-key": 1}, valid_handler), "identifier"),
         (lambda: Command("run", "x", (), {"logger": 1}, valid_handler), "reserved"),
+        (lambda: Command("run", "x", (), {"logger.console": 1}, valid_handler), "reserved"),
+        (lambda: Command("run", "x", (), {"a..b": 1}, valid_handler), "identifier"),
         (lambda: CommandGroup("Bad", "x", ()), "lowercase"),
         (lambda: CommandGroup("_hidden", "x", ()), "snake_case"),
         (lambda: InvalidCommandGroup("root", "x", [object()]), "commands or groups"),

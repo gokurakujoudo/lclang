@@ -342,10 +342,14 @@ shows these APIs without requiring CLI or LCL evaluation.
 
 `lclang.workflow` defines a validated tree of typed async actions. Plain
 dataclass mappings connect named `TaskVar` values to arguments and explicitly
-publish outputs. Each node can own async context tasks for local resources or
+publish outputs. A typed variable's `.quote` can also supply an entire dataclass
+mapping, with scope record conversion and publication. Each node can own async
+context tasks for local resources or
 exception handling, followed by ordered child tasks. Execution is parent-first,
 depth-first against one shared Frame; task-local Frames confine context outputs,
 while mapped action outputs can feed later nodes.
+An action can call `context.skip_children()` to omit its child subtree without
+creating status records, while retaining its own output and resource cleanup.
 `define_workflow(..., lcl_mixin={...})` supplies host values and callables to
 configuration expressions and tasks, and becomes host defaults in CLI commands.
 
@@ -353,7 +357,8 @@ The fixed tree, scope, cleanup, and status rules provide a strong format. Inside
 it, actions remain ordinary async Python and can use application-specific
 services or detailed status steps. `workflow.to_lines()` renders the static tree
 and field flows. `workflow.to_cli()` infers external parameters, help, and
-masking, and `lclang.cli.scan_commands()` discovers commands in a package.
+masking, with required/optional inputs and static defaults grouped by scope.
+`lclang.cli.scan_commands()` discovers commands in a package.
 
 Execution records nested task and step outcomes, including visible covered
 failures, skipped branches, and error origins. Contexts unwind in reverse order,

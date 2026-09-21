@@ -105,7 +105,7 @@ def workflow_command(
         ParameterDoc(
             item.name,
             item.value_type,
-            True,
+            item.name not in values,
             item.description or NO_HELP_MESSAGE,
             masked=item.is_masked,
         )

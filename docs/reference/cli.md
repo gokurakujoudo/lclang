@@ -66,6 +66,23 @@ Dry-run remains an explicit handler decision, so the framework never pretends
 to know whether an application-specific side effect is safe.
 
 
+## Parameter help
+
+Command help groups documented parameters by their full parent scope, with
+unqualified names in a first `(global)` block. Scopes and rows sort alphabetically
+(ignoring case), and rows retain full names for copying into `-o` overrides.
+Type annotations omit the `collections.abc.` prefix, including nested types.
+
+Static defaults make an input optional and appear as `default=...`. Help uses
+the same precedence as execution: entrance bindings, command/workflow presets,
+then declared parameter defaults. A preset entry containing `None`, `False`,
+zero, or an empty container is still a default. `ParameterDoc.default=None`
+retains its existing meaning of no declared default. Defaults use bounded,
+single-line representations; masked values appear as `*masked*`.
+
+Help never loads the selected `-c` file, evaluates configuration expressions,
+initializes logging, or runs the command. Extra host helpers are not parameters.
+
 ## Trusted command discovery
 
 `lclang.cli.scan_commands(module, name, description)` imports the developer's

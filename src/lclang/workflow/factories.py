@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import inspect
-from collections.abc import Awaitable, Callable, Iterable
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Iterable
 from contextlib import AbstractAsyncContextManager
-from typing import cast, get_type_hints
+from typing import cast, get_args, get_origin, get_type_hints
 
 from lclang.scopes import validate_qualified_name
 from lclang.types import TaskID
@@ -13,6 +13,8 @@ from lclang.workflow.context import FailureCoveringContextTask, TaskContext
 from lclang.workflow.definitions import ContextTask, TaskAction, TaskNode, Workflow
 from lclang.workflow.manager import ExecutionStatusManager
 from lclang.workflow.mappings import mapping_variables, require_mapping
+from lclang.workflow.record_types import mapping_annotation
+from lclang.workflow.variables import TaskVar
 
 
 def require_task_id(value: str) -> TaskID:
@@ -67,11 +69,16 @@ def validate_callable(value: object, *, coroutine: bool) -> None:
         raise TypeError("workflow callable must accept exactly context, args, status_mgr")
 
 
-def validate_annotations(value: object, args_mapping: object) -> None:
+def validate_annotations(
+    value: object, args_mapping: object, outputs_mapping: object | None = None,
+    *, context: bool = False,
+) -> None:
     """Require exact public context, argument, and manager annotations.
 
     :param value: Callable whose annotations are resolved.
     :param args_mapping: Dataclass mapping selecting the argument type.
+    :param outputs_mapping: Optional output mapping, including a whole-record variable.
+    :param context: Whether the return annotation describes a context manager.
     :raises TypeError: If annotations cannot be resolved or do not match.
     """
     if isinstance(value, FailureCoveringContextTask):
@@ -88,10 +95,18 @@ def validate_annotations(value: object, args_mapping: object) -> None:
         raise TypeError("workflow callable annotations cannot be resolved") from error
     if (
         hints.get("context") is not TaskContext
-        or hints.get("args") is not type(args_mapping)
+        or hints.get("args") != mapping_annotation(args_mapping)
         or hints.get("status_mgr") is not ExecutionStatusManager
     ):
         raise TypeError("workflow callable annotations do not match its mappings")
+    if isinstance(outputs_mapping, TaskVar):
+        result_type = hints.get("return")
+        if context and get_origin(result_type) in {
+            AsyncIterator, AsyncGenerator, AbstractAsyncContextManager,
+        }:
+            result_type = get_args(result_type)[0]
+        if result_type != outputs_mapping.value_type:
+            raise TypeError("workflow output annotations do not match its mapping")
 
 
 def define_context_task[ArgsT, OutputsT](
@@ -109,15 +124,15 @@ def define_context_task[ArgsT, OutputsT](
     :param task_id: Globally unique context-task identifier.
     :param title: Human-readable title.
     :param task_context: Async context-manager factory.
-    :param args_mapping: Required dataclass argument mapping.
-    :param outputs_mapping: Optional resource publication mapping.
+    :param args_mapping: Dataclass argument mapping or exactly typed record variable quote.
+    :param outputs_mapping: Optional field mapping or exactly typed whole-resource quote.
     :returns: Immutable context-task definition.
     """
     require_mapping(args_mapping, "context argument mapping")
     if outputs_mapping is not None:
         require_mapping(outputs_mapping, "context output mapping")
     validate_callable(task_context, coroutine=False)
-    validate_annotations(task_context, args_mapping)
+    validate_annotations(task_context, args_mapping, outputs_mapping, context=True)
     return ContextTask(
         require_task_id(task_id),
         require_title(title, "context-task title"),
@@ -144,8 +159,8 @@ def define_task[ArgsT, OutputsT](
     :param task_id: Globally unique task identifier.
     :param title: Human-readable title.
     :param task_action: Optional async task action.
-    :param args_mapping: Required dataclass mapping when an action exists.
-    :param outputs_mapping: Optional explicit output publication mapping.
+    :param args_mapping: Dataclass mapping or exactly typed record quote for an action.
+    :param outputs_mapping: Optional field mapping or exactly typed whole-output quote.
     :param context_tasks: Ordered task contexts.
     :param children: Ordered child task nodes.
     :returns: Immutable task definition.
@@ -162,7 +177,7 @@ def define_task[ArgsT, OutputsT](
         if outputs_mapping is not None:
             require_mapping(outputs_mapping, "task output mapping")
         validate_callable(task_action, coroutine=True)
-        validate_annotations(task_action, args_mapping)
+        validate_annotations(task_action, args_mapping, outputs_mapping)
     contexts = tuple(context_tasks)
     child_nodes = tuple(children)
     if any(not isinstance(item, ContextTask) for item in contexts):

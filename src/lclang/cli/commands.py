@@ -14,7 +14,7 @@ from lclang.cli.validation import (
     DECLARATION_RESERVED_NAMES,
     normalize_text,
     require_command_segment,
-    require_lcl_identifier,
+    require_lcl_qualified_name,
 )
 from lclang.masking import normalize_masked_mapping
 
@@ -106,8 +106,8 @@ class Command:
             self.masked_names,
         )
         for preset_name in normalized_preset:
-            require_lcl_identifier(preset_name, "preset name")
-        if set(normalized_preset) & DECLARATION_RESERVED_NAMES:
+            require_lcl_qualified_name(preset_name, "preset name")
+        if {name.split(".", 1)[0] for name in normalized_preset} & DECLARATION_RESERVED_NAMES:
             raise ValueError("command preset name is reserved")
         object.__setattr__(self, "name", name)
         object.__setattr__(self, "summary", normalize_text(self.summary, "command summary"))

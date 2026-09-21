@@ -28,8 +28,8 @@ class ContextTask:
     :param task_id: Globally unique LCL identifier.
     :param title: Human-readable title.
     :param task_context: Async context-manager factory.
-    :param args_mapping: Dataclass argument mapping.
-    :param outputs_mapping: Optional dataclass resource mapping.
+    :param args_mapping: Dataclass argument mapping or whole-record variable quote.
+    :param outputs_mapping: Optional dataclass resource mapping or whole-record quote.
     """
 
     task_id: TaskID
@@ -46,8 +46,8 @@ class TaskNode:
     :param task_id: Globally unique LCL identifier.
     :param title: Human-readable title.
     :param task_action: Optional async action.
-    :param args_mapping: Required dataclass mapping for an action.
-    :param outputs_mapping: Optional explicit publication mapping.
+    :param args_mapping: Dataclass mapping or whole-record quote required for an action.
+    :param outputs_mapping: Optional field mapping or whole-record publication quote.
     :param context_tasks: Ordered context declarations.
     :param children: Ordered child task nodes.
     """

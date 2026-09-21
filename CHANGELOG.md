@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 1.0.12 - 2026-09-21
+
+- Add action-only `TaskContext.skip_children()` to omit child subtrees without
+  status records, preserving output publication and cleanup even on later failures.
+
+- Support generic workflow variable annotations and whole-record `.quote`
+  argument/output mappings, including scope-to-record inputs and shallow
+  record-to-scope output publication.
+
+- Classify defaulted workflow CLI inputs as optional, display safe static defaults,
+  and group parameter help alphabetically by scope with concise type annotations.
+  Accept qualified CLI preset names while preserving reserved-name checks.
+
 ## 1.0.11 - 2026-09-19
 
 - Add `CliEntrance(..., lcl_mixin={...})` to share host values and callables

@@ -197,13 +197,13 @@ def test_workflow_graph_rejects_wrong_roots_cycles_and_variable_aliases() -> Non
 async def test_mapping_edges_are_explicit_safe_and_bounded() -> None:
     """Output selection rejects ambiguity and rendering contains hostile reprs."""
     target = wf.define_variable[int]("target", is_masked=True)
-    assert mapped_outputs(None, Pair(1)) == {}
-    with pytest.raises(TypeError, match="mapping dataclass"):
-        mapped_outputs(Pair(target.quote), object())
-    with pytest.raises(ValueError, match="duplicate"):
-        mapped_outputs(Pair(target.quote, target.quote), Pair(1, 2))
-    assert mapped_outputs(Pair(1, target.quote), Pair(3, 4)) == {"target!": 4}
     async with lclang.define_frame() as frame:
+        assert await mapped_outputs(None, Pair(1), frame) == {}
+        with pytest.raises(TypeError, match="mapping dataclass"):
+            await mapped_outputs(Pair(target.quote), object(), frame)
+        with pytest.raises(ValueError, match="duplicate"):
+            await mapped_outputs(Pair(target.quote, target.quote), Pair(1, 2), frame)
+        assert await mapped_outputs(Pair(1, target.quote), Pair(3, 4), frame) == {"target!": 4}
         assert await materialize_args(Pair(1, 2), frame) == Pair(1, 2)
 
     class BrokenRepr:

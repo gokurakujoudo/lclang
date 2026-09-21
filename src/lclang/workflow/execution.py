@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, is_dataclass
+from dataclasses import dataclass
 from typing import get_type_hints
 
 from lclang.runtime import Frame
@@ -17,6 +17,7 @@ from lclang.workflow.logging import log_mapping, log_task_error
 from lclang.workflow.manager import ExecutionStatusManager
 from lclang.workflow.mappings import mapped_outputs, materialize_args
 from lclang.workflow.models import ExecutionStatus
+from lclang.workflow.record_types import record_type
 
 # Statuses that stop declared workflow traversal.
 # Unitless stop statuses below come from the workflow execution contract. The selected failure
@@ -171,17 +172,20 @@ async def execute_action_and_children(
             raise
         state.task_args[task.task_id] = args
         log_mapping(state.context, stack, task.args_mapping, args, output=False)
+        context._child_execution.action_active = True
         try:
             output = await task.task_action(context, args, manager)
         except Exception as error:
             record_exception(state, manager, stack, error)
             raise
+        finally:
+            context._child_execution.action_active = False
         return_type = get_type_hints(task.task_action).get("return")
-        if (
-            not isinstance(return_type, type)
-            or not is_dataclass(return_type)
-            or type(output) is not return_type
-        ):
+        try:
+            valid_output = type(output) is record_type(return_type)
+        except TypeError:
+            valid_output = False
+        if not valid_output:
             wrong_output = TypeError(
                 "workflow action must return its annotated dataclass"
             )
@@ -189,13 +193,15 @@ async def execute_action_and_children(
             raise wrong_output
         state.task_outputs[task.task_id] = output
         try:
-            published = mapped_outputs(task.outputs_mapping, output)
+            published = await mapped_outputs(task.outputs_mapping, output, state.context.frame)
             if published:
                 state.context.frame.mixin(published)
         except Exception as error:
             record_exception(state, manager, stack, error)
             raise
         raise_for_status(state, manager, stack)
+    if context._child_execution.children_skipped:
+        return True
     for index, child in enumerate(task.children):
         from lclang.workflow.runner import execute_task
 

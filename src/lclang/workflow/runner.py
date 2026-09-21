@@ -83,7 +83,7 @@ async def execute_context_scope(
     completed = False
     try:
         try:
-            updates = mapped_outputs(definition.outputs_mapping, resource)
+            updates = await mapped_outputs(definition.outputs_mapping, resource, task_context.frame)
         except Exception as error:
             record_exception(state, context_manager, branch, error)
             raise
@@ -138,11 +138,14 @@ async def execute_context_scope(
 def add_unexecuted_statuses(
     manager: ExecutionStatusManager,
     task: TaskNode,
+    *,
+    omit_children: bool = False,
 ) -> None:
     """Append every context and child not already represented in status.
 
     :param manager: Current task status manager.
     :param task: Current task definition.
+    :param omit_children: Whether the action deliberately omitted child status records.
     """
     existing = {child.task_name for child in manager.current.sub_tasks}
     for definition in task.context_tasks:
@@ -150,6 +153,8 @@ def add_unexecuted_statuses(
             manager.add_sub_task(
                 definition.task_id, definition.title, ExecutionStatus.SKIPPED
             ).finalize()
+    if omit_children:
+        return
     existing = {child.task_name for child in manager.current.sub_tasks}
     for child in task.children:
         if child.task_id not in existing:
@@ -184,7 +189,9 @@ async def execute_task(
     except BaseException as error:
         pending = error
     if pending is not None or not completed:
-        add_unexecuted_statuses(manager, task)
+        add_unexecuted_statuses(
+            manager, task, omit_children=context._child_execution.children_skipped,
+        )
     try:
         await frame.close()
     except Exception as error:

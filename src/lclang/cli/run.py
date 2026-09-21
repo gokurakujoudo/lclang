@@ -77,16 +77,16 @@ async def run_entrance(entrance: CliEntrance, args: Sequence[str] | None = None)
         command = route.command
         if command is None:
             raise RuntimeError("command route did not select a command")
-        if help_requested(route.remaining):
-            print(render_command_help(parts.script_label, command, route.path), end="")
-            return 0
-        params = parse_cli_params(parts, route.path, route.remaining)
         values, masked_names = normalize_masked_mapping(entrance.lcl_mixin)
         command = replace(
             command,
             preset={**values, **command.preset},
             masked_names=masked_names | command.masked_names,
         )
+        if help_requested(route.remaining):
+            print(render_command_help(parts.script_label, command, route.path), end="")
+            return 0
+        params = parse_cli_params(parts, route.path, route.remaining)
         return await execute_command(command, params, entrance.cli_config)
     except RouteFailure as error:
         label = script_label_from_args(args) if parts is None else parts.script_label
