@@ -45,6 +45,86 @@ secret = wf.define_variable[str]("service.token", "Service token", is_masked=Tru
 result = wf.define_variable[float]("result")
 ```
 
+The subscription accepts Python type annotations, including `list[str]`,
+`Mapping[str, int]`, `Callable[[str], int]`, unions, and generic dataclasses such
+as `Record[int]`. The resulting `.quote` retains that exact static type.
+
+An entire argument or output mapping may also be a dataclass variable's
+`.quote`. Its declared type must exactly match the callable's corresponding
+annotation (including generic arguments); non-dataclass variables cannot be
+whole mappings. The keyword remains `outputs_mapping` for output publication.
+These rules apply to actions and context tasks alike.
+
+`args_mapping=var.quote` reads just `var.name` from the task Frame. A stored
+dataclass is passed through; a scope proxy is materialized using `as_record`
+with the declared dataclass type. Conversion is shallow, preserves constructor
+defaults, and reports missing required fields or failed field expressions.
+Runtime checks validate the dataclass class, not its individual field types.
+
+`outputs_mapping=var.quote` publishes the returned dataclass under `var.name`.
+If that name already denotes a scope in the destination Frame, its direct
+dataclass fields instead become `var.name.field` bindings in one mixin update.
+This is shallow publication, not recursive `asdict` conversion: nested values
+retain their identity, and unrelated existing scope fields remain unchanged.
+Action outputs target the shared Frame; context outputs target the task Frame.
+Whole-variable masking also masks every field published into a scope.
+Whole mappings participate in static trees, verbose logs, and CLI input
+inference as the named variable; existing per-field mappings remain supported.
+The existing output target is resolved to determine whether it is a proxy;
+resolution errors use the normal workflow error path without publishing fields.
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+import logging
+from dataclasses import dataclass
+from datetime import date
+
+import lclang
+import lclang.workflow as wf
+
+
+@dataclass
+class Batch[T]:
+    items: list[T]
+
+
+async def copy_batch(
+    context: wf.TaskContext,
+    args: Batch[str],
+    status_mgr: wf.ExecutionStatusManager,
+) -> Batch[str]:
+    return args
+
+
+async def main() -> None:
+    source = wf.define_variable[Batch[str]]("source")
+    target = wf.define_variable[Batch[str]]("target")
+    task = wf.define_task(
+        "copy", "Copy batch", task_action=copy_batch,
+        args_mapping=source.quote, outputs_mapping=target.quote,
+    )
+    workflow = wf.define_workflow("Batch copy", task)
+    async with lclang.define_frame(
+        preset={"source.items": ["a", "b"], "target.items": []},
+    ) as frame:
+        result = await workflow.execute(wf.WorkflowExecutionContext(
+            False, date(2026, 9, 21), False, logging.getLogger("batch-example"), frame,
+        ))
+        assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
+        assert result.task_args[wf.TaskID("copy")] == Batch(["a", "b"])
+        assert await frame.get("target.items") == ["a", "b"]
+
+
+asyncio.run(main())
+```
+
+The qualified input creates a `source` scope. The whole argument mapping reads
+its `items` child into `Batch[str]`, and the action returns that record. Since
+`target` is also a scope, publication updates `target.items`. Without the
+initial `target.items` binding, publication would instead store the record at
+`target`. In both cases the task result retains the returned dataclass.
+
 `TaskVar.quote` is statically typed as the represented value but returns the
 variable marker at runtime. It can therefore occupy a normally typed dataclass
 field in a definition mapping. Argument fields containing a marker are resolved

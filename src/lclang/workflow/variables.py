@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import cast
+from functools import partial
+from typing import Any, cast
 
 from lclang.scopes import validate_qualified_name
 
@@ -33,40 +34,53 @@ class TaskVar[ValueT]:
         return cast(ValueT, self)
 
 
-class VariableDefinition:
-    """Provide subscription syntax for typed workflow variables."""
+class VariableDefinition[ValueT](TaskVar[ValueT]):
+    """Provide generic subscription syntax for immutable workflow variables.
 
-    def __getitem__[ValueT](self, value_type: type[ValueT]) -> Callable[..., TaskVar[ValueT]]:
+    :param name: Qualified LCL binding name.
+    :param description: Human-readable help text.
+    :param is_masked: Whether diagnostics redact the value.
+    :param value_type: Runtime annotation captured by subscription.
+    """
+
+    __slots__ = ()
+
+    def __init__(
+        self,
+        name: str,
+        description: str = "",
+        is_masked: bool = False,
+        *,
+        value_type: object = None,
+    ) -> None:
+        """Construct a variable with the annotation captured by subscription.
+
+        :param name: Qualified LCL binding name.
+        :param description: Human-readable help text.
+        :param is_masked: Whether diagnostics redact this value.
+        :param value_type: Annotation injected by the subscribed constructor.
+        :raises TypeError: If subscription is absent or metadata has invalid types.
+        :raises ValueError: If *name* is not a qualified LCL name.
+        """
+        if value_type is None:
+            raise TypeError("define_variable requires a type subscription")
+        validate_qualified_name(name)
+        if not isinstance(description, str):
+            raise TypeError("workflow variable description must be text")
+        if not isinstance(is_masked, bool):
+            raise TypeError("workflow variable masked flag must be Boolean")
+        super().__init__(name, " ".join(description.split()), is_masked, value_type)
+
+    @classmethod
+    def __class_getitem__(cls, value_type: object) -> Callable[..., VariableDefinition[Any]]:
         """Return a constructor retaining one runtime value type.
 
-        :param value_type: Python type represented by the variable.
+        :param value_type: Python type annotation represented by the variable.
         :returns: Typed variable constructor.
-        :raises TypeError: If subscription does not receive a type-like value.
         """
-
-        def construct(
-            name: str,
-            description: str = "",
-            is_masked: bool = False,
-        ) -> TaskVar[ValueT]:
-            """Create one validated workflow variable.
-
-            :param name: Qualified LCL binding name.
-            :param description: Human-readable help text.
-            :param is_masked: Whether diagnostics redact this value.
-            :returns: Immutable typed workflow variable.
-            :raises TypeError: If metadata has an incompatible type.
-            :raises ValueError: If *name* is not a qualified LCL name.
-            """
-            validate_qualified_name(name)
-            if not isinstance(description, str):
-                raise TypeError("workflow variable description must be text")
-            if not isinstance(is_masked, bool):
-                raise TypeError("workflow variable masked flag must be Boolean")
-            return TaskVar(name, " ".join(description.split()), is_masked, value_type)
-
-        return construct
+        return partial(cls, value_type=type(None) if value_type is None else value_type)
 
 
-# Shared stateless typed-variable factory.
-define_variable = VariableDefinition()
+# Unitless public factory alias; a generic class preserves arbitrary annotation syntax
+# for type checkers while subscription captures that annotation for runtime mappings.
+define_variable = VariableDefinition

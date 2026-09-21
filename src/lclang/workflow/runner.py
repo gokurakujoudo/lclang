@@ -83,7 +83,7 @@ async def execute_context_scope(
     completed = False
     try:
         try:
-            updates = mapped_outputs(definition.outputs_mapping, resource)
+            updates = await mapped_outputs(definition.outputs_mapping, resource, task_context.frame)
         except Exception as error:
             record_exception(state, context_manager, branch, error)
             raise

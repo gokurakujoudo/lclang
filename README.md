@@ -342,7 +342,9 @@ shows these APIs without requiring CLI or LCL evaluation.
 
 `lclang.workflow` defines a validated tree of typed async actions. Plain
 dataclass mappings connect named `TaskVar` values to arguments and explicitly
-publish outputs. Each node can own async context tasks for local resources or
+publish outputs. A typed variable's `.quote` can also supply an entire dataclass
+mapping, with scope record conversion and publication. Each node can own async
+context tasks for local resources or
 exception handling, followed by ordered child tasks. Execution is parent-first,
 depth-first against one shared Frame; task-local Frames confine context outputs,
 while mapped action outputs can feed later nodes.

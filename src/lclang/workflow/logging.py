@@ -133,15 +133,21 @@ def mapping_message(
     actual = cast(Any, value)
     declared = None if mapping is None else cast(Any, mapping)
     items = sorted(fields(actual), key=lambda item: item.name)
-    width = max(len(item.name) for item in items)
+    width = max((len(item.name) for item in items), default=0)
     arrow = "->" if output else "<-"
     rows: list[str] = []
     for item in items:
         current = getattr(actual, item.name)
-        marker = None if declared is None else getattr(declared, item.name)
+        marker = (
+            mapping if isinstance(mapping, TaskVar)
+            else None if declared is None else getattr(declared, item.name)
+        )
         if isinstance(marker, TaskVar):
             target = f"[{marker.name}]"
-            masked = marker.is_masked or context.frame.is_masked(marker.name)
+            masked = (
+                marker.is_masked or context.frame.is_masked(marker.name)
+                or context.frame.is_masked(f"{marker.name}.{item.name}")
+            )
         elif output:
             target = "unused"
             masked = False
