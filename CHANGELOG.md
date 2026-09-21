@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.0.12 - 2026-09-21
+
 - Add action-only `TaskContext.skip_children()` to omit child subtrees without
   status records, preserving output publication and cleanup even on later failures.
 
