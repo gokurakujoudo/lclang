@@ -50,19 +50,6 @@ def is_lcl_identifier(value: object) -> bool:
         return False
 
 
-def require_lcl_identifier(value: object, field: str) -> str:
-    """Return a validated LCL identifier.
-
-    :param value: Candidate identifier.
-    :param field: Field label used in diagnostics.
-    :returns: Validated identifier text.
-    :raises ValueError: If *value* is not a complete LCL identifier.
-    """
-    if not is_lcl_identifier(value):
-        raise ValueError(f"{field} must be a valid LCL identifier")
-    return str(value)
-
-
 def require_lcl_qualified_name(value: object, field: str) -> str:
     """Return one validated dot-separated LCL name.
 

@@ -123,9 +123,16 @@ reverse order.
 `workflow.to_cli(name, summary, preset=None)` infers external variables by the
 same scope-aware traversal. A context output is visible only to later contexts
 and the action in its task; an action output is visible globally after that
-action. Variables first read without a visible assignment become required CLI
-parameters. Intermediate variables are omitted and cannot be directly
-overridden. Missing descriptions render as `NO HELP MESSAGE PROVIDED`.
+action. Variables first read without a visible assignment become CLI parameters:
+they are required without a static default, or optional with a default from
+workflow `lcl_mixin`, explicit `to_cli(preset=...)`, or the CLI entrance.
+Explicit presets override workflow defaults, which override entrance defaults;
+an explicit `None` is a default too. Reading before a later assignment still
+requires an input. Variables assigned before their first read, and write-only
+variables, are omitted and cannot be directly overridden. Context assignments
+do not hide inputs needed outside that task. Missing descriptions render as
+`NO HELP MESSAGE PROVIDED`. Help groups parameters by scope and shows optional
+defaults without loading configuration; see [parameter help](cli.md#parameter-help).
 
 The generated command logs lifecycle records around every reached task and
 context task. `task start` is INFO and appends ` (dryrun)` in dry-run mode. An

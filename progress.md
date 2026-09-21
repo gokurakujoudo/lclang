@@ -90,7 +90,7 @@ runtime dependencies.
   configuration expressions, and workflow tasks while preserving local precedence.
 
 - Immutable invocation values, typed async commands, decorators, nested command
-  groups, full-argument parsing, A-Z configuration-parameter help, and
+  groups, full-argument parsing, scope-grouped A-Z parameter help with static defaults, and
   platform-neutral process entry points.
 - Preset/default/config/override Frame layering, boolean overrides, dry-run
   pass-through, scoped logger configuration with invocation date, timestamp,

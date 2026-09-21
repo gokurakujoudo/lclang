@@ -7,7 +7,7 @@ import textwrap
 from collections.abc import Iterable
 
 from lclang.cli.commands import Command, CommandGroup
-from lclang.masking import MASKED_VALUE
+from lclang.utils.representation import safe_repr
 
 # Characters per line; the CLI layout contract fixes 100 for deterministic help
 # across terminal sizes while leaving useful room for parameter descriptions.
@@ -100,18 +100,29 @@ def render_command_help(script: str, command: Command, path: tuple[str, ...]) ->
         lines.extend(textwrap.wrap(command.summary, HELP_WIDTH))
         lines.append("")
     lines.append("Configuration parameters:")
-    parameter_rows: list[tuple[str, str]] = []
+    scopes: dict[str, list[tuple[str, str]]] = {}
     for parameter in sorted(
         command.parameter_docs,
         key=lambda item: (item.name.casefold(), item.name),
     ):
-        type_name = inspect.formatannotation(parameter.value_type)
-        required = "required" if parameter.required else "optional"
-        default_value = MASKED_VALUE if parameter.masked else repr(parameter.default)
-        default = "" if parameter.default is None else f", default={default_value}"
+        type_name = inspect.formatannotation(parameter.value_type).replace("collections.abc.", "")
+        has_default = parameter.default is not None or parameter.name in command.preset
+        value = (
+            parameter.default if parameter.default is not None
+            else command.preset.get(parameter.name)
+        )
+        required = "required" if parameter.required and not has_default else "optional"
+        default_value = safe_repr(
+            value, masked=parameter.masked or parameter.name in command.masked_names,
+        )
+        default = f", default={default_value}" if has_default else ""
         detail = f"{type_name}; {required}{default}. {parameter.description}".strip()
-        parameter_rows.append((parameter.name, detail))
-    lines.extend(format_rows(parameter_rows) or ["  (none)"])
+        scope = parameter.name.rpartition(".")[0]
+        scopes.setdefault(scope, []).append((parameter.name, detail))
+    for scope in sorted(scopes, key=lambda name: (name.casefold(), name)):
+        lines.extend(["", f"{scope or '(global)'}:", *format_rows(scopes[scope])])
+    if not scopes:
+        lines.append("  (none)")
     lines.extend([
         "", "Logger configuration:",
         "  -o logger.console.level DEBUG",

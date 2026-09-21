@@ -353,7 +353,8 @@ The fixed tree, scope, cleanup, and status rules provide a strong format. Inside
 it, actions remain ordinary async Python and can use application-specific
 services or detailed status steps. `workflow.to_lines()` renders the static tree
 and field flows. `workflow.to_cli()` infers external parameters, help, and
-masking, and `lclang.cli.scan_commands()` discovers commands in a package.
+masking, with required/optional inputs and static defaults grouped by scope.
+`lclang.cli.scan_commands()` discovers commands in a package.
 
 Execution records nested task and step outcomes, including visible covered
 failures, skipped branches, and error origins. Contexts unwind in reverse order,
