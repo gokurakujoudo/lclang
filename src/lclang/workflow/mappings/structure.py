@@ -4,9 +4,9 @@ from collections.abc import Iterator
 from dataclasses import Field, dataclass, fields, is_dataclass
 from typing import Any
 
+from lclang.workflow.mappings.annotations import record_annotations
+from lclang.workflow.mappings.records import mapping_annotation
 from lclang.workflow.projections import TaskProjection
-from lclang.workflow.record_annotations import record_annotations
-from lclang.workflow.record_types import mapping_annotation
 from lclang.workflow.variables import TaskVar
 
 

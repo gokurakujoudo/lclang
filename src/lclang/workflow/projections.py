@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 
-from lclang.workflow.record_annotations import record_annotations
 from lclang.workflow.variables import TaskVar
 
 
@@ -34,6 +33,8 @@ def project_field[FieldT](
     :raises ValueError: If the field is not declared.
     :raises TypeError: If the source or field type is incompatible.
     """
+    from lclang.workflow.mappings.annotations import record_annotations
+
     annotations = record_annotations(source.value_type)
     if name not in annotations:
         raise ValueError(f"unknown workflow field: {source.name}.{name}")

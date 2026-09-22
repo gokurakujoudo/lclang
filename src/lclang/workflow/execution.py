@@ -16,8 +16,8 @@ from lclang.workflow.definitions import TaskNode
 from lclang.workflow.logging import log_mapping, log_task_error
 from lclang.workflow.manager import ExecutionStatusManager
 from lclang.workflow.mappings import mapped_outputs, materialize_args
+from lclang.workflow.mappings.records import record_type
 from lclang.workflow.models import ExecutionStatus
-from lclang.workflow.record_types import record_type
 
 # Statuses that stop declared workflow traversal.
 # Unitless stop statuses below come from the workflow execution contract. The selected failure

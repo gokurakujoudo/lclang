@@ -5,10 +5,10 @@ from types import UnionType
 from typing import Any, Union, cast, get_args, get_origin
 
 from lclang.runtime import Frame, FrameProxy
-from lclang.workflow.mapping_structure import MappingNode
+from lclang.workflow.mappings.annotations import record_annotations
+from lclang.workflow.mappings.records import record_type
+from lclang.workflow.mappings.structure import MappingNode
 from lclang.workflow.projections import TaskProjection, reference_name
-from lclang.workflow.record_annotations import record_annotations
-from lclang.workflow.record_types import record_type
 from lclang.workflow.variables import TaskVar
 
 

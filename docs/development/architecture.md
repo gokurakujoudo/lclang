@@ -20,7 +20,8 @@ src/lclang/
   config/          logical lines, includes, origins and config diagnostics
   logger/          Frame configuration, process scope, queue writer, sinks and rotation
   cli/             typed contexts, parsing, routing, runners and built-ins
-  workflow/        immutable task trees, execution, mappings, CLI and status
+  workflow/        immutable task trees, execution, CLI and status
+    mappings/      recursive structure, annotations, binding, and mapping diagnostics
   utils/
     calendar/      async calendars, mappings, loaders, and manager utilities
 ```
@@ -89,3 +90,11 @@ and work budgets. Public package exports retain the supported import surface.
 Calendar period boundaries, range boundaries, directional adjustments and sparse
 filters share implementations by responsibility. Operand normalization preserves
 encounter order for fallback and sorts only commutative compositions.
+
+## Workflow mapping responsibilities
+
+`workflow/mappings/` owns recursive dataclass structure, specialized record
+annotations, reference materialization, staged publication, and mapping logs.
+Its `__init__.py` retains the mapping entry points used by workflow execution,
+CLI analysis and static rendering. Tests for recursive and whole-record behavior
+live in `tests/workflow/mappings/`.

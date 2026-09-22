@@ -6,15 +6,15 @@ from typing import Any, cast, get_origin
 
 from lclang.runtime import Frame, FrameProxy
 from lclang.utils.representation import safe_repr
-from lclang.workflow.mapping_structure import (
+from lclang.workflow.mappings.records import record_type
+from lclang.workflow.mappings.structure import (
     MappingNode,
     mapping_nodes,
     mapping_structure,
     validate_mapping,
 )
-from lclang.workflow.mapping_values import materialize_node
+from lclang.workflow.mappings.values import materialize_node
 from lclang.workflow.projections import TaskProjection, reference_name
-from lclang.workflow.record_types import record_type
 from lclang.workflow.variables import TaskVar
 
 

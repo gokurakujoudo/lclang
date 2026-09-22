@@ -103,7 +103,7 @@ def mapping_message(
     :param output: Whether arrows describe output publication.
     :returns: Multi-line mapping message.
     """
-    from lclang.workflow.mapping_logging import mapping_rows
+    from lclang.workflow.mappings.logging import mapping_rows
 
     items = mapping_rows(mapping, value, context.frame, output=output)
     width = max((len(path) for path, _, _ in items), default=0)

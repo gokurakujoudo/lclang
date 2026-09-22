@@ -13,7 +13,7 @@ from lclang.workflow.context import FailureCoveringContextTask, TaskContext
 from lclang.workflow.definitions import ContextTask, TaskAction, TaskNode, Workflow
 from lclang.workflow.manager import ExecutionStatusManager
 from lclang.workflow.mappings import mapping_variables, require_mapping
-from lclang.workflow.record_types import mapping_annotation
+from lclang.workflow.mappings.records import mapping_annotation
 from lclang.workflow.variables import TaskVar
 
 

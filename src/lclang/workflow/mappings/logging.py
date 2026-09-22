@@ -7,8 +7,8 @@ from typing import Any, get_origin
 from lclang.diagnostics import internal_render_value
 from lclang.masking import MASKED_VALUE
 from lclang.runtime import Frame
+from lclang.workflow.mappings.annotations import record_annotations
 from lclang.workflow.projections import reference_name
-from lclang.workflow.record_annotations import record_annotations
 from lclang.workflow.variables import TaskVar
 
 
