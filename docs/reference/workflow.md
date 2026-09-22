@@ -36,7 +36,8 @@ loader's existing scope and do not receive command host presets.
 ## Variables and mappings
 
 Variables accept mutually exclusive `default=` and `default_factory=` keywords.
-Omission differs from an explicit `None`. Defaults are lower priority than all
+Omission differs from an explicit `default=None`; an explicitly supplied
+`default_factory` must be callable. Defaults are lower priority than all
 effective configuration, CLI, preset and host bindings. They are available to
 both mapping resolution and LCL expressions during execution. A missing quote
 may finally use its dataclass field default; a failed existing definition never
@@ -366,9 +367,10 @@ reverse order.
 same scope-aware traversal. A context output is visible to later contexts, the owning action,
 and all descendant tasks; an action output is visible globally after that
 action. Variables first read without a visible assignment become CLI parameters:
-they are required without a static default, or optional with a default from
+they are optional with a variable default, applicable field defaults, or values from
 workflow `lcl_mixin`, explicit `to_cli(preset=...)`, or the CLI entrance.
-Explicit presets override workflow defaults, which override entrance defaults;
+Explicit presets override workflow host defaults, which override entrance bindings;
+variable defaults are below all of those sources.
 an explicit `None` is a default too. Reading before a later assignment still
 requires an input. Variables assigned before their first read, and write-only
 variables, are omitted and cannot be directly overridden. Context assignments
@@ -407,3 +409,24 @@ An ordinary business exception and cleanup exceptions are retained together in
 an exception group. Cancellation remains cancellation, with cleanup failures
 attached as its cause; cleanup continues through the remaining outer contexts
 and task Frames.
+
+### Business event logs
+
+`TaskContext.log_event(event, *, level=logging.INFO, record=None, fields=(),
+masked_fields=(), **values)` emits an application event through the execution
+logger and its existing configuration. Messages include a bounded event name,
+the task branch, and dry-run status. Record metadata also supplies
+`lclang_event`, `lclang_task_branch`, and `lclang_dryrun`.
+
+`record` is an optional dataclass instance. Only direct fields explicitly named
+in `fields` are selected, in declaration order of that selection; additional
+values follow in keyword order. Unknown fields, repeated selections, or names
+shared by the selection and keyword values raise `ValueError`. A non-dataclass
+record raises `TypeError`. No dictionary indexing, methods, or implicit whole
+record expansion occurs.
+
+Disabled levels return before inspecting records or formatting values. Explicit
+`masked_fields` are checked before reading selected fields or calling repr;
+ordinary Python values do not acquire masks by object identity. Unmasked values
+use `safe_repr` with its default 200-character limit. Standard and lclang loggers
+attribute the call to the application's `log_event` line.

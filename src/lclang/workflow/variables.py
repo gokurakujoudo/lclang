@@ -75,7 +75,7 @@ class VariableDefinition[ValueT](TaskVar[ValueT]):
         *,
         value_type: object = None,
         default: ValueT | DefaultOmission = NO_DEFAULT,
-        default_factory: Callable[[], ValueT | Awaitable[ValueT]] | None = None,
+        default_factory: Callable[[], ValueT | Awaitable[ValueT]] | DefaultOmission = NO_DEFAULT,
     ) -> None:
         """Construct a variable with the annotation captured by subscription.
 
@@ -95,9 +95,12 @@ class VariableDefinition[ValueT](TaskVar[ValueT]):
             raise TypeError("workflow variable description must be text")
         if not isinstance(is_masked, bool):
             raise TypeError("workflow variable masked flag must be Boolean")
-        DefaultBinding(default, default_factory)
+        if default_factory is not NO_DEFAULT and not callable(default_factory):
+            raise TypeError("default_factory must be callable")
+        factory = default_factory if callable(default_factory) else None
+        DefaultBinding(default, factory)
         super().__init__(name, " ".join(description.split()), is_masked, value_type,
-                         default=default, default_factory=default_factory)
+                         default=default, default_factory=factory)
 
     @classmethod
     def __class_getitem__(cls, value_type: object) -> Callable[..., VariableDefinition[Any]]:

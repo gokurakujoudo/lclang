@@ -1,5 +1,14 @@
 # Standard and Workflow Utilities
 
+## Invoking Python callbacks
+
+`await lclang.utils.invoke(callback, *args, **kwargs)` calls a synchronous or
+asynchronous callable exactly once, then resolves any returned awaitables using
+the interpreter's existing awaitable resolver. Its type signature retains the
+callback's parameters and final return type. Ordinary values retain identity;
+exceptions and cancellation propagate unchanged. The helper creates no thread,
+background task, or synchronous event-loop boundary.
+
 ## Builtin values
 
 The canonical runtime hierarchy exposes these value types:

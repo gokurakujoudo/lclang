@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import date
@@ -84,6 +84,26 @@ class TaskContext:
     _child_execution: TaskChildExecution = field(
         default_factory=TaskChildExecution, init=False, repr=False, compare=False,
     )
+
+    def log_event(
+        self, event: str, *, level: int = logging.INFO, record: object | None = None,
+        fields: Iterable[str] = (), masked_fields: Iterable[str] = (), **values: object,
+    ) -> None:
+        """Log a business event with explicit fields and pre-read masking.
+
+        :param event: Application event name.
+        :param level: Standard-library severity, defaulting to INFO.
+        :param record: Optional dataclass instance; only selected fields are read.
+        :param fields: Direct record fields in display order.
+        :param masked_fields: Record or keyword names redacted before reading or formatting.
+        :param values: Additional named values with no inferred identity-based masking.
+        :raises TypeError: If an enabled event supplies a non-dataclass record.
+        :raises ValueError: If selected fields are unknown, repeated, or conflict with values.
+        :raises Exception: If an unmasked selected getter or logger raises.
+        """
+        from lclang.workflow.events import emit_event
+
+        emit_event(self, event, level, record, fields, masked_fields, values)
 
     def skip_children(self) -> None:
         """Omit this task's child subtrees without creating status records.

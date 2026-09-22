@@ -352,6 +352,9 @@ to the owning subtree,
 while mapped action outputs can feed later nodes.
 Variables support fixed defaults or lazy synchronous/asynchronous factories,
 shared once per execution and visible to both mappings and LCL expressions.
+`TaskContext.log_event()` records selected business fields with explicit masking
+through the execution logger. `lclang.utils.invoke()` calls sync or async
+callbacks once and resolves their results without background work.
 An action can call `context.skip_children()` to omit its child subtree without
 creating status records, while retaining its own output and resource cleanup.
 `define_workflow(..., lcl_mixin={...})` supplies host values and callables to

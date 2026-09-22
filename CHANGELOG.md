@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add typed `utils.invoke` for synchronous and asynchronous callbacks, and
+  `TaskContext.log_event` for explicitly selected and masked business values.
+  Preserve application caller attribution with standard and lclang loggers.
+  Extend the Python utilities tutorial with an executable resource, projection,
+  nested mapping, default configuration, and event logging example.
+
 - Add variable `default` and lazy sync/async `default_factory` bindings with
   per-execution caches, common LCL and mapping lookup, dataclass field fallback,
   and optional CLI help that never invokes factories.

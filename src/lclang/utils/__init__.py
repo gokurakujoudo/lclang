@@ -1,6 +1,7 @@
 """Optional utility subsystems for lclang applications."""
 
 from lclang.utils.environment import Environment, env
+from lclang.utils.invocation import invoke
 from lclang.utils.representation import safe_repr
 from lclang.utils.snowflake import SnowflakeGenerator
 
@@ -10,6 +11,7 @@ __all__ = [
     "Environment",
     "SnowflakeGenerator",
     "env",
+    "invoke",
     "safe_repr",
 ]
 
