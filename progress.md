@@ -81,8 +81,10 @@ runtime dependencies.
   task-local context resources, parent-first depth-first execution, explicit
   publication, reverse cleanup, static rendering, and complete status trees.
   Workflow `lcl_mixin` snapshots expose host values and callables to configs and tasks.
-- Generic variable annotations and whole-record workflow mappings with shallow
-  scope-to-record conversion and record-to-scope publication.
+- Generic variable annotations and whole-record workflow mappings with recursive
+  scope-to-record conversion and shallow record-to-scope publication.
+- Recursive workflow dataclass mappings and typed read-only field projections,
+  with consistent CLI inference, atomic publication, and masked diagnostics.
 - Per-execution action control to omit child subtrees without status records,
   while preserving action outputs, context cleanup, and failure propagation.
 - Nested task and step status management with covered-failure semantics,

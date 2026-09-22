@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Resolve nested workflow dataclass mappings consistently across execution,
+  atomic publication, CLI discovery, and masked diagnostics. Add typed read-only
+  variable field projections with root-variable dependency ownership.
+
 ## 1.0.12 - 2026-09-21
 
 - Add action-only `TaskContext.skip_children()` to omit child subtrees without

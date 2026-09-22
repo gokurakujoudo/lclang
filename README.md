@@ -341,7 +341,8 @@ shows these APIs without requiring CLI or LCL evaluation.
 ### Tree workflows and status
 
 `lclang.workflow` defines a validated tree of typed async actions. Plain
-dataclass mappings connect named `TaskVar` values to arguments and explicitly
+recursive dataclass mappings connect named `TaskVar` values and typed field
+projections to arguments and explicitly
 publish outputs. A typed variable's `.quote` can also supply an entire dataclass
 mapping, with scope record conversion and publication. Each node can own async
 context tasks for local resources or

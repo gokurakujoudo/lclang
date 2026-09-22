@@ -5,7 +5,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from functools import partial
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from lclang.workflow.projections import TaskProjection
 
 from lclang.scopes import validate_qualified_name
 
@@ -32,6 +35,19 @@ class TaskVar[ValueT]:
         :returns: This variable cast to the mapped field type.
         """
         return cast(ValueT, self)
+
+    def field[FieldT](self, name: str, field_type: type[FieldT]) -> TaskProjection[FieldT]:
+        """Declare a typed read-only projection of a dataclass field.
+
+        :param name: Direct declared field name.
+        :param field_type: Exact annotation expected for the selected field.
+        :returns: Chainable quote marker retaining this variable as its source.
+        :raises TypeError: If the source or selected annotation is incompatible.
+        :raises ValueError: If the field is absent.
+        """
+        from lclang.workflow.projections import project_field
+
+        return project_field(self, name, field_type)
 
 
 class VariableDefinition[ValueT](TaskVar[ValueT]):

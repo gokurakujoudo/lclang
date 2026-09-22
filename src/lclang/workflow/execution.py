@@ -89,6 +89,7 @@ def record_exception(
     """
     if not preserve_status:
         manager.update(ExecutionStatus.ERROR, str(error))
+    error.add_note(f"workflow task {'.'.join(branch)}")
     log_task_error(state.context, branch, manager.current.status, error)
     state.context.frame.mixin(
         {"__exception__": WorkflowException(error, branch[-1])}
