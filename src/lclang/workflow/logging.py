@@ -3,15 +3,10 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import MISSING, fields
-from typing import Any, cast
 
-from lclang.diagnostics import internal_render_value
-from lclang.masking import MASKED_VALUE
 from lclang.types import TaskID
 from lclang.workflow.context import WorkflowExecutionContext
 from lclang.workflow.models import ExecutionStatus
-from lclang.workflow.variables import TaskVar
 
 
 def branch_text(branch: tuple[TaskID, ...]) -> str:
@@ -91,28 +86,6 @@ def log_task_complete(
     )
 
 
-def typed_value(value: object, *, masked: bool = False) -> str:
-    """Render a bounded typed mapping value while retaining masked types.
-
-    :param value: Materialized field value.
-    :param masked: Whether the payload must be hidden.
-    :returns: Stable ``(type) value`` text.
-    """
-    if masked:
-        return f"({type(value).__name__}) {MASKED_VALUE}"
-    return internal_render_value(value)
-
-
-def field_uses_default(item: Any, declared: object) -> bool:
-    """Report whether a direct argument retains its fixed dataclass default.
-
-    :param item: Dataclass field metadata.
-    :param declared: Value retained by the definition mapping.
-    :returns: Whether the fixed default remains selected.
-    """
-    return item.default is not MISSING and bool(declared == item.default)
-
-
 def mapping_message(
     context: WorkflowExecutionContext,
     branch: tuple[TaskID, ...],
@@ -130,34 +103,15 @@ def mapping_message(
     :param output: Whether arrows describe output publication.
     :returns: Multi-line mapping message.
     """
-    actual = cast(Any, value)
-    declared = None if mapping is None else cast(Any, mapping)
-    items = sorted(fields(actual), key=lambda item: item.name)
-    width = max((len(item.name) for item in items), default=0)
+    from lclang.workflow.mappings.logging import mapping_rows
+
+    items = mapping_rows(mapping, value, context.frame, output=output)
+    width = max((len(path) for path, _, _ in items), default=0)
     arrow = "->" if output else "<-"
-    rows: list[str] = []
-    for item in items:
-        current = getattr(actual, item.name)
-        marker = (
-            mapping if isinstance(mapping, TaskVar)
-            else None if declared is None else getattr(declared, item.name)
-        )
-        if isinstance(marker, TaskVar):
-            target = f"[{marker.name}]"
-            masked = (
-                marker.is_masked or context.frame.is_masked(marker.name)
-                or context.frame.is_masked(f"{marker.name}.{item.name}")
-            )
-        elif output:
-            target = "unused"
-            masked = False
-        else:
-            target = "default" if field_uses_default(item, marker) else "literal"
-            masked = False
-        rows.append(
-            f"    {item.name.ljust(width)} {arrow} {target}: "
-            f"{typed_value(current, masked=masked)}"
-        )
+    rows = [
+        f"    {path.ljust(width)} {arrow} {target}: {rendered}"
+        for path, target, rendered in items
+    ]
     kind = "outputs" if output else "args"
     header = f"{kind} mapping: [{branch_text(branch)}] {type(value).__name__}"
     return header + "\n" + "\n".join(rows)

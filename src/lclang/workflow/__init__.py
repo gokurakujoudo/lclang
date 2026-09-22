@@ -12,6 +12,7 @@ from lclang.workflow.definitions import ContextTask, TaskNode, Workflow
 from lclang.workflow.factories import define_context_task, define_task, define_workflow
 from lclang.workflow.manager import ExecutionStatusManager
 from lclang.workflow.models import ExecutionStatus, ExecutionStatusTree, ExecutionTaskType
+from lclang.workflow.projections import TaskProjection
 from lclang.workflow.steps import ExecutionStatusStep
 from lclang.workflow.variables import TaskVar, define_variable
 
@@ -28,6 +29,7 @@ __all__ = [
     "TaskContext",
     "TaskID",
     "TaskNode",
+    "TaskProjection",
     "TaskVar",
     "Workflow",
     "WorkflowException",

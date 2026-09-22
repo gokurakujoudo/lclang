@@ -16,8 +16,8 @@ from lclang.workflow.definitions import TaskNode
 from lclang.workflow.logging import log_mapping, log_task_error
 from lclang.workflow.manager import ExecutionStatusManager
 from lclang.workflow.mappings import mapped_outputs, materialize_args
+from lclang.workflow.mappings.records import record_type
 from lclang.workflow.models import ExecutionStatus
-from lclang.workflow.record_types import record_type
 
 # Statuses that stop declared workflow traversal.
 # Unitless stop statuses below come from the workflow execution contract. The selected failure
@@ -89,6 +89,7 @@ def record_exception(
     """
     if not preserve_status:
         manager.update(ExecutionStatus.ERROR, str(error))
+    error.add_note(f"workflow task {'.'.join(branch)}")
     log_task_error(state.context, branch, manager.current.status, error)
     state.context.frame.mixin(
         {"__exception__": WorkflowException(error, branch[-1])}

@@ -35,6 +35,21 @@ loader's existing scope and do not receive command host presets.
 
 ## Variables and mappings
 
+Mappings recursively resolve dataclass fields, including nested whole-record
+quotes. Containers, callbacks, and concrete referenced records retain their
+identity. Mapping templates are not mutated. Cyclic templates are rejected;
+reusing an acyclic nested template is supported. Output extraction validates
+the complete structure and target set before publishing one atomic update.
+
+`variable.field("name", FieldType).quote` reads a declared dataclass field.
+Projections may be chained, remain read-only, and retain the original variable's
+dependency and masking metadata. Missing fields, incompatible declared types,
+and null intermediate values report their mapping and variable paths. CLI
+inference, static trees and verbose logs follow the same recursive structure.
+Runtime validation checks record structure and reference contracts, not every
+ordinary value or container element. `FrameProxy.as_record()` remains shallow;
+recursive conversion is specific to workflow mappings.
+
 Create variables through the subscribed factory:
 
 ```python
@@ -57,7 +72,7 @@ These rules apply to actions and context tasks alike.
 
 `args_mapping=var.quote` reads just `var.name` from the task Frame. A stored
 dataclass is passed through; a scope proxy is materialized using `as_record`
-with the declared dataclass type. Conversion is shallow, preserves constructor
+with the declared dataclass type. Conversion is recursive, preserves constructor
 defaults, and reports missing required fields or failed field expressions.
 Runtime checks validate the dataclass class, not its individual field types.
 
@@ -127,7 +142,7 @@ initial `target.items` binding, publication would instead store the record at
 
 `TaskVar.quote` is statically typed as the represented value but returns the
 variable marker at runtime. It can therefore occupy a normally typed dataclass
-field in a definition mapping. Argument fields containing a marker are resolved
+field in a definition mapping. Nested argument fields containing a marker are resolved
 from the current task Frame. Other fields retain their literal value, including
 values supplied by dataclass defaults.
 
@@ -136,6 +151,64 @@ Within a mapping, only fields containing `TaskVar.quote` are copied from the
 returned dataclass into a Frame; other fields are retained in `task_outputs`
 but remain unmapped. Masked variables use the same exact-name redaction model
 as Modules, Presets, configuration, CLI bindings, and Frame mixins.
+
+### Grouped arguments and projections
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+import logging
+from dataclasses import dataclass
+from datetime import date
+
+import lclang
+import lclang.workflow as wf
+
+
+@dataclass
+class FormatOptions:
+    encoding: str
+
+
+@dataclass
+class ConvertArgs:
+    options: FormatOptions
+
+
+async def convert(
+    context: wf.TaskContext,
+    args: ConvertArgs,
+    status_mgr: wf.ExecutionStatusManager,
+) -> ConvertArgs:
+    return args
+
+
+async def main() -> None:
+    source = wf.define_variable[FormatOptions]("source")
+    target = wf.define_variable[str]("target.encoding")
+    task = wf.define_task(
+        "convert", "Resolve grouped options", task_action=convert,
+        args_mapping=ConvertArgs(FormatOptions(source.field("encoding", str).quote)),
+        outputs_mapping=ConvertArgs(FormatOptions(target.quote)),
+    )
+    workflow = wf.define_workflow("Grouped conversion", task)
+    async with lclang.define_frame(preset={"source.encoding": "utf-8"}) as frame:
+        result = await workflow.execute(wf.WorkflowExecutionContext(
+            False, date(2026, 9, 22), False, logging.getLogger("grouped"), frame,
+        ))
+        assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
+        assert await frame.get("target.encoding") == "utf-8"
+        assert result.task_args[wf.TaskID("convert")] == ConvertArgs(FormatOptions("utf-8"))
+
+
+asyncio.run(main())
+```
+
+The projection materializes the source record from its scope, then reads its
+encoding field. The nested argument template becomes a separate record; the
+returned nested field publishes to the explicitly selected target. CLI analysis
+recognizes the projection's original `source` variable as the input, while the
+output remains an assigned value.
 
 ## Tasks and contexts
 
