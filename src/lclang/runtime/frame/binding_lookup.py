@@ -69,7 +69,12 @@ def is_name_masked(frame: object, name: str) -> bool:
     :param name: Normalized exact binding name.
     :returns: Whether the name is marked in any visible layer.
     """
-    return any(name in current.masked_names for current in walk_hierarchy(frame))
+    from lclang.runtime.frame.defaults import default_frame_for
+
+    defaults = default_frame_for(cast("Frame", frame))
+    return any(name in current.masked_names for current in walk_hierarchy(frame)) or (
+        defaults is not None and name in defaults.masked_names
+    )
 
 
 def find_scoped_binding(frame: object, name: str) -> tuple[Frame | None, str | None]:
@@ -116,7 +121,20 @@ def select_binding(frame: object, name: str) -> BindingSelection:
                 inferred = BindingSelection(current, kind, tuple(path))
         elif kind is not None:
             return BindingSelection(current, kind, tuple(path))
-    return inferred if inferred is not None else BindingSelection(None, None, tuple(path))
+    if inferred is not None:
+        return inferred
+    from lclang.runtime.frame.defaults import default_frame_for
+
+    defaults = default_frame_for(cast("Frame", frame))
+    if defaults is not None:
+        prefixes = [".".join(name.split(".")[:index]) for index in range(1, len(name.split(".")))]
+        blocked = any(
+            local_binding_kind(owner, prefix) in {"real", "factory"}
+            for owner in walk_hierarchy(frame) for prefix in prefixes
+        )
+        if not blocked and (kind := local_binding_kind(defaults, name)) is not None:
+            return BindingSelection(defaults, kind, (*path, defaults.frame_id))
+    return BindingSelection(None, None, tuple(path))
 
 
 
@@ -162,6 +180,14 @@ def hierarchy_binding_names(frame: object) -> tuple[str, ...]:
     for current in walk_hierarchy(frame):
         result.extend(current.module.definitions)
         result.extend(name for name in current.values if name not in current.module.definitions)
+    from lclang.runtime.frame.defaults import default_frame_for
+
+    defaults = default_frame_for(cast("Frame", frame))
+    if defaults is not None:
+        result.extend(
+            name for name in (*defaults.module.definitions, *defaults.values)
+            if name not in result and select_binding(frame, name).owner is not None
+        )
     return tuple(result)
 
 

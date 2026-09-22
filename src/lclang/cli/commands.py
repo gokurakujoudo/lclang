@@ -16,6 +16,7 @@ from lclang.cli.validation import (
     require_command_segment,
     require_lcl_qualified_name,
 )
+from lclang.defaults import DefaultBinding
 from lclang.masking import normalize_masked_mapping
 
 CommandHandler = Callable[[CliContext], Awaitable[CliResult]]
@@ -74,6 +75,7 @@ class Command:
     :param preset: Immutable shallow host-binding preset.
     :param handler: Exactly typed async Python handler.
     :param masked_names: Immutable normalized preset names to redact.
+    :param default_bindings: Lowest-priority lazy workflow variable declarations.
     """
 
     name: str
@@ -82,6 +84,7 @@ class Command:
     preset: Mapping[str, object]
     handler: CommandHandler
     masked_names: frozenset[str] = field(default_factory=frozenset, kw_only=True)
+    default_bindings: Mapping[str, DefaultBinding] = field(default_factory=dict, kw_only=True)
 
     def __post_init__(self) -> None:
         """Detach declaration inputs and reject ambiguous metadata.
@@ -114,6 +117,7 @@ class Command:
         object.__setattr__(self, "parameter_docs", docs)
         object.__setattr__(self, "preset", MappingProxyType(normalized_preset))
         object.__setattr__(self, "masked_names", masked_names)
+        object.__setattr__(self, "default_bindings", MappingProxyType(dict(self.default_bindings)))
         object.__setattr__(self, "handler", validate_handler(self.handler))
 
     async def run(self, args: Sequence[str] | None = None) -> int:

@@ -23,6 +23,12 @@ needs.
 Begin with one external integer and one produced integer. A `TaskVar[int]`
 names each value. Its `quote` property lets the static dataclass instance double
 as a field mapping while preserving the field's type for mypy.
+For an optional input, pass `default=...` or `default_factory=...` to
+`define_variable[T]`. The factory runs lazily once per workflow execution, and
+its result is also visible to LCL expressions. A field's constructor default is
+the final fallback when the named binding is absent; it never hides a failed
+configuration expression. Continue to acquire and release resources in context
+tasks rather than default factories.
 
 <!-- lclang-doc-exec -->
 ```python

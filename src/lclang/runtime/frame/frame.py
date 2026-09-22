@@ -110,6 +110,7 @@ class Frame:
         self._children: WeakSet[Frame] = WeakSet()
         self.limits = EvaluationLimits() if limits is None else limits
         self.native_values = native_values
+        self._default_frame: Frame | None = None
         self._results: dict[str, object] = {}
         self._failures: dict[str, Exception] = {}
         self._inflight: dict[str, asyncio.Task[object]] = {}

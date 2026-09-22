@@ -12,6 +12,7 @@ from lclang.workflow.context import (
     WorkflowExecutionContext,
     WorkflowExecutionResult,
 )
+from lclang.workflow.defaults import execution_defaults
 from lclang.workflow.definitions import TaskNode, Workflow
 from lclang.workflow.execution import (
     STOP_STATUSES,
@@ -244,9 +245,10 @@ async def execute_workflow(
     manager = ExecutionStatusManager(workflow.title, status=ExecutionStatus.RUNNING)
     state = WorkflowRunState(context, {}, {})
     with suppress(Exception):
-        await execute_task(
-            state, workflow.root_task, manager, (workflow.root_task.task_id,)
-        )
+        async with execution_defaults(workflow, context.frame):
+            await execute_task(
+                state, workflow.root_task, manager, (workflow.root_task.task_id,)
+            )
     finalize_manager(manager)
     return WorkflowExecutionResult(
         manager.current, context.frame, dict(state.task_args), dict(state.task_outputs)
