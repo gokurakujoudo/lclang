@@ -10,9 +10,11 @@ from lclang.errors import LclCliUsageError
 from lclang.masking import normalize_masked_mapping
 from lclang.workflow.cli_logging import log_lunch_option, log_status_tree, status_lines
 from lclang.workflow.context import WorkflowExecutionContext
-from lclang.workflow.definitions import TaskNode, Workflow
-from lclang.workflow.mappings import mapping_variables
+from lclang.workflow.defaults import workflow_defaults
+from lclang.workflow.definitions import Workflow
+from lclang.workflow.mappings.dependencies import external_uses, has_field_default
 from lclang.workflow.models import ExecutionStatus
+from lclang.workflow.projections import TaskProjection
 from lclang.workflow.variables import TaskVar
 
 # Stable help used when an external variable omits its description.
@@ -29,35 +31,10 @@ def external_variables(workflow: Workflow) -> tuple[TaskVar[object], ...]:
     :param workflow: Workflow definition to analyze.
     :returns: External variables in first-use order.
     """
-    assigned: set[str] = set()
     external: dict[str, TaskVar[object]] = {}
-
-    def use(mapping: object | None, visible: set[str]) -> None:
-        """Record unresolved direct variables from one argument mapping.
-
-        :param mapping: Optional dataclass mapping.
-        :param visible: Names assigned in the current scope.
-        """
-        for variable in mapping_variables(mapping):
-            if variable.name not in visible:
-                external.setdefault(variable.name, variable)
-
-    def visit(task: TaskNode, inherited: frozenset[str] = frozenset()) -> None:
-        """Analyze one task in parent-first depth-first order.
-
-        :param task: Current task definition.
-        :param inherited: Context bindings visible from ancestor task scopes.
-        """
-        local = assigned | set(inherited)
-        for context in task.context_tasks:
-            use(context.args_mapping, local)
-            local.update(item.name for item in mapping_variables(context.outputs_mapping))
-        use(task.args_mapping, local)
-        assigned.update(item.name for item in mapping_variables(task.outputs_mapping))
-        for child in task.children:
-            visit(child, frozenset(local))
-
-    visit(workflow.root_task)
+    for node in external_uses(workflow):
+        variable = node.value.root if isinstance(node.value, TaskProjection) else node.value
+        external.setdefault(variable.name, variable)
     return tuple(external.values())
 
 
@@ -102,11 +79,16 @@ def workflow_command(
     values = {**mixin_values, **values}
     preset_masks |= mixin_masks
     execution_workflow = replace(workflow, lcl_mixin={})
+    defaults = workflow_defaults(workflow)
+    default_names = {name.removesuffix("!") for name in defaults}
+    required_names = {
+        node.value.name for node in external_uses(workflow) if not has_field_default(node)
+    }
     docs = tuple(
         ParameterDoc(
             item.name,
             item.value_type,
-            item.name not in values,
+            item.name in required_names and item.name not in values.keys() | default_names,
             item.description or NO_HELP_MESSAGE,
             masked=item.is_masked,
         )
@@ -155,4 +137,5 @@ def workflow_command(
         values,
         handler,
         masked_names=frozenset(masked),
+        default_bindings=defaults,
     )

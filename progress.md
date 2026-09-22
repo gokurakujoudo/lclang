@@ -85,6 +85,8 @@ runtime dependencies.
   scope-to-record conversion and shallow record-to-scope publication.
 - Recursive workflow dataclass mappings and typed read-only field projections,
   with consistent CLI inference, atomic publication, and masked diagnostics.
+- Per-execution variable defaults and lazy sync/async factories available to LCL,
+  mappings and optional CLI parameters without changing cached snapshots.
 - Per-execution action control to omit child subtrees without status records,
   while preserving action outputs, context cleanup, and failure propagation.
 - Nested task and step status management with covered-failure semantics,

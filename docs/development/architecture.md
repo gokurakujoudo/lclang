@@ -76,6 +76,13 @@ property tests run in the default full behavior suite.
 
 ## Frame responsibilities
 
+`runtime/frame/defaults.py` owns isolated fallback Frames. Direct workflows use
+a task-local lookup scope; CLI invocation owners attach a fallback to their own
+hierarchy. Neither mechanism rewrites borrowed parents or invalidates cached
+dependencies. Factory definitions reuse the interpreter's single-flight and
+failure caches. `workflow/defaults.py` collects declarations; mapping-local
+constructor fallbacks and scope-aware dependency discovery stay in `mappings/`.
+
 `runtime/frame/frame.py` owns Frame state and its public methods.
 `binding_lookup.py` selects owner, kind and diagnostic path for one operation;
 `host_bindings.py` validates and atomically publishes mixins. `evaluation.py`

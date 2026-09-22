@@ -1,5 +1,14 @@
 # Command-line API
 
+Workflow variable defaults occupy a separate lowest-priority binding environment.
+`Command.default_bindings` retains these declarations without evaluating them;
+each invocation owns fresh factory caches. Existing entrance, preset, parameter,
+configuration, and CLI precedence is unchanged. Help marks defaulted variables
+optional, safely renders fixed values (including `None`), and displays factories
+as `<factory>`. A dataclass field fallback also makes a workflow input optional
+when all of its unresolved uses have a field fallback. These field fallbacks
+apply only to their mapping locations and do not create LCL bindings.
+
 `lclang.cli` is a typed async framework for Python scripts whose parameters may
 come from declared defaults, `.lclcfg` files, and command-line overrides. A
 decorated command handler receives one `CliContext`, including its invocation

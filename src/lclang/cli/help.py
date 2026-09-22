@@ -111,10 +111,20 @@ def render_command_help(script: str, command: Command, path: tuple[str, ...]) ->
             parameter.default if parameter.default is not None
             else command.preset.get(parameter.name)
         )
+        binding = command.default_bindings.get(
+            parameter.name, command.default_bindings.get(parameter.name + "!"),
+        )
+        factory = False
+        if not has_default and binding is not None:
+            has_default = True
+            value = binding.value
+            factory = binding.factory is not None
         required = "required" if parameter.required and not has_default else "optional"
         default_value = safe_repr(
             value, masked=parameter.masked or parameter.name in command.masked_names,
         )
+        if factory:
+            default_value = "<factory>"
         default = f", default={default_value}" if has_default else ""
         detail = f"{type_name}; {required}{default}. {parameter.description}".strip()
         scope = parameter.name.rpartition(".")[0]

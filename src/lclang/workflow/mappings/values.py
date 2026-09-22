@@ -1,6 +1,6 @@
 """Recursive argument materialization and typed reference resolution."""
 
-from dataclasses import fields, is_dataclass, replace
+from dataclasses import MISSING, fields, is_dataclass, replace
 from types import UnionType
 from typing import Any, Union, cast, get_args, get_origin
 
@@ -90,6 +90,11 @@ async def materialize_node(node: MappingNode, frame: Frame) -> object:
     """
     if isinstance(node.value, TaskVar):
         try:
+            if not frame.has(node.value.name) and node.field is not None:
+                if node.field.default is not MISSING:
+                    return node.field.default
+                if node.field.default_factory is not MISSING:
+                    return node.field.default_factory()
             return await resolve_reference(node.value, frame)
         except Exception as error:
             error.add_note(f"workflow mapping {node.path or '<record>'} <- "

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add variable `default` and lazy sync/async `default_factory` bindings with
+  per-execution caches, common LCL and mapping lookup, dataclass field fallback,
+  and optional CLI help that never invokes factories.
+
 - Make context resources visible throughout their owning workflow subtree,
   matching CLI inference and inherited masking. Preserve business and cleanup
   failures together while cancellation continues to propagate.

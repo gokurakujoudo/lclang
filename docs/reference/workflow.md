@@ -35,6 +35,17 @@ loader's existing scope and do not receive command host presets.
 
 ## Variables and mappings
 
+Variables accept mutually exclusive `default=` and `default_factory=` keywords.
+Omission differs from an explicit `None`. Defaults are lower priority than all
+effective configuration, CLI, preset and host bindings. They are available to
+both mapping resolution and LCL expressions during execution. A missing quote
+may finally use its dataclass field default; a failed existing definition never
+falls back. Factories accept no arguments, may return an awaitable, and run only
+on first use, sharing one result or failure per execution. Fixed default values
+retain identity; use factories for independent mutable values. Help displays
+factory metadata without invoking factories. Reuse a fresh Frame when new
+dependency values are needed: cached expressions remain snapshots.
+
 Mappings recursively resolve dataclass fields, including nested whole-record
 quotes. Containers, callbacks, and concrete referenced records retain their
 identity. Mapping templates are not mutated. Cyclic templates are rejected;

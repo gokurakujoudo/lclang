@@ -25,6 +25,7 @@ from lclang.cli.runtime_keys import (
 from lclang.config import load_config
 from lclang.errors import LclCliUsageError
 from lclang.runtime import Frame, Module
+from lclang.runtime.frame.defaults import attach_defaults, create_default_frame
 from lclang.types import ModuleName
 
 # Module label for the call-specific preset/import layer.
@@ -142,6 +143,10 @@ async def build_binding(command: Command, params: CliParams, cli_config: CliConf
             masked_names=command.masked_names,
         )
         frames.append(imports)
+        if command.default_bindings:
+            variable_defaults = create_default_frame(command.default_bindings)
+            frames.insert(0, variable_defaults)
+            attach_defaults(imports, variable_defaults)
         defaults_module = Module(
             DEFAULTS_MODULE_NAME,
             default_definitions(command, cli_config),
