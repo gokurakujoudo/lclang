@@ -10,6 +10,12 @@ from lclang.defaults import DefaultBinding
 from lclang.runtime.frame.defaults import create_default_frame, default_scope
 
 
+def test_binding_rejects_non_callable_factory() -> None:
+    """CLI declaration snapshots cannot retain an invalid factory."""
+    with pytest.raises(TypeError, match="callable"):
+        DefaultBinding(factory=3)  # type: ignore[arg-type]
+
+
 @pytest.mark.asyncio
 async def test_default_scope_names_masks_and_real_prefix_shadowing() -> None:
     """Partial config scopes see default leaves while concrete parents suppress them."""

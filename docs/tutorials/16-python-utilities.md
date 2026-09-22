@@ -12,6 +12,7 @@ integration.
 - how to create and close an isolated file logger outside `lclang.cli`;
 - how to call the reviewed iterable, text, data, and JSON helpers from Python;
 - how to reuse business-day calendars in an ordinary async application;
+- how to invoke callbacks and combine resource scopes, defaults, and business events;
 - which package owns each downstream utility surface.
 
 ## Read the live environment
@@ -274,12 +275,172 @@ The default limit counts characters after line-break escaping and includes the
 truncation marker. `None` preserves the full escaped representation. A failed
 renderer produces a stable failure description; the helper adds no type label.
 
+## Call synchronous or asynchronous callbacks
+
+`invoke` forwards ordinary Python arguments and resolves the callback's result.
+It runs in the current task and propagates the original failure or cancellation.
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+
+from lclang.utils import invoke
+
+
+async def greeting(name: str) -> str:
+    return f"Hello, {name}"
+
+
+async def main() -> None:
+    assert await invoke(str.upper, "hello") == "HELLO"
+    assert await invoke(greeting, name="Ada") == "Hello, Ada"
+
+
+asyncio.run(main())
+```
+
+The first call returns immediately from a synchronous method. The second awaits
+an async function. Neither call schedules a worker or creates a new event loop.
+
+## Combine resources, nested mappings, defaults, and events
+
+This example acquires a simulated connection in a parent context, projects its
+fields into a child's nested inputs, and uses a default configuration value.
+The child writes only inside its own temporary directory and records selected
+business results through the existing logger.
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+import io
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from datetime import date
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+import lclang
+import lclang.workflow as wf
+from lclang.logger import use_logger, use_logger_handler
+from lclang.utils import invoke
+
+
+@dataclass
+class Connection:
+    endpoint: str
+    closed: bool = False
+
+    async def fetch(self, prefix: str) -> str:
+        assert not self.closed
+        return f"{prefix} from {self.endpoint}"
+
+
+@dataclass
+class Directory:
+    path: Path
+
+
+@dataclass
+class Resources:
+    connection: Connection
+    output: Path
+
+
+@dataclass
+class Request:
+    connection: Connection
+    prefix: str
+
+
+@dataclass
+class Inputs:
+    request: Request
+    output: Path
+
+
+@dataclass
+class Result:
+    bytes_written: int
+    target: str
+
+
+resource = wf.define_variable[Resources]("resource")
+prefix = wf.define_variable[str]("prefix", default="hello")
+opened: list[Connection] = []
+
+
+@asynccontextmanager
+async def acquire(
+    context: wf.TaskContext, args: Directory, status_mgr: wf.ExecutionStatusManager,
+) -> AsyncIterator[Resources]:
+    connection = Connection("simulated-service")
+    opened.append(connection)
+    try:
+        yield Resources(connection, args.path / "result.txt")
+    finally:
+        connection.closed = True
+
+
+async def save(
+    context: wf.TaskContext, args: Inputs, status_mgr: wf.ExecutionStatusManager,
+) -> Result:
+    text = await invoke(args.request.connection.fetch, args.request.prefix)
+    written = 0 if context.is_dryrun else args.output.write_bytes(text.encode("utf-8"))
+    result = Result(written, args.output.name)
+    context.log_event("saved", record=result, fields=("bytes_written",), target=result.target)
+    return result
+
+
+async def main() -> None:
+    stream = io.StringIO()
+    with TemporaryDirectory() as directory:
+        path = Path(directory)
+        scope = wf.define_context_task(
+            "connect", "Acquire connection", acquire, Directory(path), resource.quote,
+        )
+        child = wf.define_task(
+            "save", "Save result", task_action=save,
+            args_mapping=Inputs(
+                Request(resource.field("connection", Connection).quote, prefix.quote),
+                resource.field("output", Path).quote,
+            ),
+        )
+        workflow = wf.define_workflow("Transfer", wf.define_task(
+            "transfer", "Transfer", context_tasks=[scope], children=[child],
+        ))
+        command = workflow.to_cli("transfer", "Transfer one document")
+        assert [(item.name, item.required) for item in command.parameter_docs] == [("prefix", False)]
+        async with use_logger_handler({"console": {"stream": stream}}), lclang.define_frame() as frame:
+            logger = await use_logger()
+            result = await workflow.execute(wf.WorkflowExecutionContext(
+                False, date(2026, 9, 22), False, logger, frame,
+            ))
+            assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
+            assert not frame.has("resource")
+        assert opened[0].closed
+        assert (path / "result.txt").read_text(encoding="utf-8") == "hello from simulated-service"
+    assert "event 'saved': [transfer.save] bytes_written=28 target='result.txt'" in stream.getvalue()
+
+
+asyncio.run(main())
+```
+
+The parent owns the connection until its child finishes. Both projections depend
+on `resource`, which the parent context supplies, so it does not become a CLI
+parameter. `Request` is independently materialized while the acquired connection
+keeps its identity. `prefix` is absent from the execution Frame and resolves from
+the variable's lowest-priority default. The event reads only `bytes_written` from
+the result and receives the target explicitly; private fields would require an
+explicit `masked_fields` entry. The context closes the simulated connection even
+if fetching, writing, or a descendant fails.
+
 ## Choose the narrowest public surface
 
 Downstream code can adopt only the layer it needs:
 
-- `lclang.utils` provides the live environment, safe representations, and Snowflake
-  IDs; `lclang.logger` owns process logging.
+- `lclang.utils` provides the live environment, safe representations, callback invocation, and
+  Snowflake IDs; `lclang.logger` owns process logging.
 - `lclang.stdlib` provides reviewed pure-data helpers and preset assembly.
 - `lclang.utils.calendar` provides date policy and managed calendar loading.
 - `lclang.workflow` provides typed task trees and nested execution status.

@@ -134,5 +134,31 @@ def test_mutually_exclusive_defaults_and_callable_contract() -> None:
     """Invalid declaration shapes fail before workflow execution."""
     with pytest.raises(TypeError, match="mutually exclusive"):
         wf.define_variable[object]("value", default=None, default_factory=list)
-    with pytest.raises(TypeError, match="mutually exclusive"):
+    with pytest.raises(TypeError, match="callable"):
         wf.define_variable[object]("value", default_factory=cast(object, 3))  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="callable"):
+        wf.define_variable[object]("value", default_factory=None)  # type: ignore[arg-type]
+
+
+@pytest.mark.asyncio
+async def test_factory_cancellation_propagates_and_finishes_the_factory() -> None:
+    """Cancellation propagates without fallback or orphaned factory work."""
+    started = asyncio.Event()
+    finished = asyncio.Event()
+
+    async def factory() -> object:
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            finished.set()
+        return None
+
+    workflow = workflow_for(wf.define_variable[object]("value", default_factory=factory))
+    async with lclang.define_frame() as frame:
+        task = asyncio.create_task(workflow.execute(execution_context(frame)))
+        await started.wait()
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert finished.is_set() and not frame.has("value")
