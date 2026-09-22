@@ -172,7 +172,9 @@ async def execute_action_and_children(
             record_exception(state, manager, stack, error)
             raise
         state.task_args[task.task_id] = args
-        log_mapping(state.context, stack, task.args_mapping, args, output=False)
+        log_mapping(
+            state.context, stack, task.args_mapping, args, output=False, frame=context.frame,
+        )
         context._child_execution.action_active = True
         try:
             output = await task.task_action(context, args, manager)
@@ -206,7 +208,7 @@ async def execute_action_and_children(
     for index, child in enumerate(task.children):
         from lclang.workflow.runner import execute_task
 
-        if not await execute_task(state, child, manager, (*stack, child.task_id)):
+        if not await execute_task(state, child, manager, (*stack, child.task_id), context.frame):
             for remaining in task.children[index + 1 :]:
                 add_skipped_task(manager, remaining)
             return False

@@ -231,9 +231,9 @@ types received from external systems.
 Each TaskNode may have ordered context tasks and ordered child tasks. Context
 factories accept the same three arguments and return an async context manager.
 They enter left-to-right before the action and exit right-to-left after all
-children. Their mapped resources enter only the current task Frame. Every task
-Frame is derived directly from the shared execution Frame, so a context resource
-never leaks to another task. Mapped action outputs enter the shared Frame and
+children. Their mapped resources enter the owning task Frame. Child task Frames derive
+from their parent task Frame, so these resources remain visible throughout the
+owned subtree and do not leak to outside sibling branches. Mapped action outputs enter the shared Frame and
 are visible to later parent-first, depth-first tasks.
 
 Each derived task-node Frame contains `__task_id_branch__`, the dot-connected
@@ -352,8 +352,8 @@ entry lines nest above child tasks and matching exit lines appear below them in
 reverse order.
 
 `workflow.to_cli(name, summary, preset=None)` infers external variables by the
-same scope-aware traversal. A context output is visible only to later contexts
-and the action in its task; an action output is visible globally after that
+same scope-aware traversal. A context output is visible to later contexts, the owning action,
+and all descendant tasks; an action output is visible globally after that
 action. Variables first read without a visible assignment become CLI parameters:
 they are required without a static default, or optional with a default from
 workflow `lcl_mixin`, explicit `to_cli(preset=...)`, or the CLI entrance.
@@ -361,7 +361,7 @@ Explicit presets override workflow defaults, which override entrance defaults;
 an explicit `None` is a default too. Reading before a later assignment still
 requires an input. Variables assigned before their first read, and write-only
 variables, are omitted and cannot be directly overridden. Context assignments
-do not hide inputs needed outside that task. Missing descriptions render as
+do not hide inputs needed outside the owning subtree. Missing descriptions render as
 `NO HELP MESSAGE PROVIDED`. Help groups parameters by scope and shows optional
 defaults without loading configuration; see [parameter help](cli.md#parameter-help).
 
@@ -383,3 +383,16 @@ Exit codes are success `0`, failure `1`, error `2`, and covered failure `3`.
 `lclang.cli.scan_commands(module, name, description)` imports a package and its
 submodules deterministically, collects public module-level `Command` objects,
 deduplicates re-exports by identity, and rejects distinct duplicate names.
+
+### Context scope migration and cleanup failures
+
+Ancestor context resources now shadow same-named external values in descendant
+tasks. Outside sibling branches keep their own lookup environment. Ordinary
+action outputs still publish to the shared workflow Frame. A context publishes
+its acquisition-time resource, not a result only determined during exit.
+
+Context exit remains reverse ordered after the whole owned subtree finishes.
+An ordinary business exception and cleanup exceptions are retained together in
+an exception group. Cancellation remains cancellation, with cleanup failures
+attached as its cause; cleanup continues through the remaining outer contexts
+and task Frames.

@@ -8,7 +8,7 @@ inspectable workflow tree. You will learn how to:
 - declare typed inputs and outputs with plain dataclasses;
 - connect values with `TaskVar` mappings;
 - inspect a workflow before running it;
-- acquire a task-local resource with a context task; and
+- acquire a resource shared by a task and its descendants with a context task; and
 - execute parent-first, depth-first against one shared Frame.
 
 The design follows the central lclang idea: define a **strong way of working**,
