@@ -347,7 +347,8 @@ publish outputs. A typed variable's `.quote` can also supply an entire dataclass
 mapping, with scope record conversion and publication. Each node can own async
 context tasks for local resources or
 exception handling, followed by ordered child tasks. Execution is parent-first,
-depth-first against one shared Frame; task-local Frames confine context outputs,
+depth-first against one shared Frame; inherited task Frames confine context outputs
+to the owning subtree,
 while mapped action outputs can feed later nodes.
 An action can call `context.skip_children()` to omit its child subtree without
 creating status records, while retaining its own output and resource cleanup.

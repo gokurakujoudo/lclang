@@ -18,7 +18,7 @@ scoped-values, and tree-workflow chapters. It demonstrates how to:
 
 - configure scoped meter, tariff, customer, path, and secret values in `.lclcfg`;
 - pass intermediate results between ordered tasks with `TaskVar`;
-- acquire the result file as a task-local context resource;
+- acquire the result file as a context resource available to the owning subtree;
 - write ordinary step logs followed by the final workflow status tree;
 - retain exceptions and failed status in the same log file;
 - run sunny, rainy, dry-run, verbose, and help commands; and

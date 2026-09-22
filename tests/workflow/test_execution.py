@@ -62,7 +62,7 @@ def execution_context(frame: lclang.Frame) -> wf.WorkflowExecutionContext:
 
 @pytest.mark.asyncio
 async def test_nested_siblings_publish_outputs_and_scope_context_resources() -> None:
-    """Sunny composite execution is parent-first DFS over direct task Frames."""
+    """Sunny composite execution is parent-first DFS over inherited task Frames."""
     events: list[str] = []
     source = wf.define_variable[int]("source", "External source")
     resource = wf.define_variable[int]("resource")
@@ -111,7 +111,7 @@ async def test_nested_siblings_publish_outputs_and_scope_context_resources() -> 
         args: NumberArgs,
         status_mgr: wf.ExecutionStatusManager,
     ) -> NumberOutputs:
-        """Publish a child result without seeing the parent's context resource.
+        """Publish a child result while inheriting the parent's context resource.
 
         :param context: Current task context.
         :param args: Materialized action arguments.
@@ -120,7 +120,7 @@ async def test_nested_siblings_publish_outputs_and_scope_context_resources() -> 
         """
         del status_mgr
         events.append("child")
-        assert context.frame.has("resource") is False
+        assert context.frame.has("resource") is True
         assert context.task_id_stack == [wf.TaskID("root"), wf.TaskID("child")]
         return NumberOutputs(args.value + 1)
 

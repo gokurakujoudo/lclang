@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 
+from lclang.runtime import Frame
 from lclang.types import TaskID
 from lclang.workflow.context import WorkflowExecutionContext
 from lclang.workflow.models import ExecutionStatus
@@ -124,6 +126,7 @@ def log_mapping(
     value: object,
     *,
     output: bool,
+    frame: Frame,
 ) -> None:
     """Emit one verbose mapping record when requested.
 
@@ -132,8 +135,10 @@ def log_mapping(
     :param mapping: Definition mapping associated with the value.
     :param value: Materialized argument or output value.
     :param output: Whether this is an output mapping.
+    :param frame: Effective task Frame used for inherited masking.
     """
     if not context.verbose_mode:
         return
-    message = mapping_message(context, branch, mapping, value, output=output)
+    effective = replace(context, frame=frame)
+    message = mapping_message(effective, branch, mapping, value, output=output)
     context.logger.debug("%s", message)

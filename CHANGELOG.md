@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Make context resources visible throughout their owning workflow subtree,
+  matching CLI inference and inherited masking. Preserve business and cleanup
+  failures together while cancellation continues to propagate.
+
 - Resolve nested workflow dataclass mappings consistently across execution,
   atomic publication, CLI discovery, and masked diagnostics. Add typed read-only
   variable field projections with root-variable dependency ownership.

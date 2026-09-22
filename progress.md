@@ -78,7 +78,7 @@ runtime dependencies.
 - Async three-state business-day calendars with canonical composition, bounded
   mappings, strict JSON loading, and dependency-aware cache retirement.
 - Validated tree workflows with typed dataclass mappings, named variables,
-  task-local context resources, parent-first depth-first execution, explicit
+  subtree-scoped context resources, parent-first depth-first execution, explicit
   publication, reverse cleanup, static rendering, and complete status trees.
   Workflow `lcl_mixin` snapshots expose host values and callables to configs and tasks.
 - Generic variable annotations and whole-record workflow mappings with recursive

@@ -5,7 +5,7 @@ from __future__ import annotations
 from contextlib import AbstractAsyncContextManager, suppress
 from typing import cast
 
-from lclang.runtime import Module
+from lclang.runtime import Frame, Module
 from lclang.types import ModuleName, TaskID
 from lclang.workflow.context import (
     TaskContext,
@@ -23,6 +23,7 @@ from lclang.workflow.execution import (
     record_exception,
     task_context_for,
 )
+from lclang.workflow.failures import combine_failures
 from lclang.workflow.logging import (
     branch_text,
     log_mapping,
@@ -68,14 +69,16 @@ async def execute_context_scope(
             definition.args_mapping,
             args,
             output=False,
+            frame=task_context.frame,
         )
         scope = cast(
             AbstractAsyncContextManager[object],
             definition.task_context(task_context, args, context_manager),
         )
         resource = await scope.__aenter__()
-    except Exception as error:
-        record_exception(state, context_manager, branch, error)
+    except BaseException as error:
+        if isinstance(error, Exception):
+            record_exception(state, context_manager, branch, error)
         finalize_manager(context_manager)
         log_task_complete(state.context, branch, context_manager.current.status)
         raise
@@ -101,8 +104,11 @@ async def execute_context_scope(
             incoming,
             None if incoming is None else incoming.__traceback__,
         )
-    except Exception as error:
-        record_exception(state, context_manager, branch, error)
+    except BaseException as error:
+        failure = combine_failures(incoming, error)
+        if isinstance(error, Exception):
+            recorded = failure if isinstance(failure, Exception) else error
+            record_exception(state, context_manager, branch, recorded)
         finalize_manager(context_manager)
         log_task_complete(state.context, branch, context_manager.current.status)
         log_mapping(
@@ -111,8 +117,9 @@ async def execute_context_scope(
             definition.outputs_mapping,
             resource,
             output=True,
+            frame=task_context.frame,
         )
-        raise
+        raise failure from failure.__cause__
     finalize_manager(context_manager)
     log_task_complete(state.context, branch, context_manager.current.status)
     log_mapping(
@@ -121,6 +128,7 @@ async def execute_context_scope(
         definition.outputs_mapping,
         resource,
         output=True,
+        frame=task_context.frame,
     )
     if incoming is not None:
         if (
@@ -166,6 +174,7 @@ async def execute_task(
     task: TaskNode,
     parent: ExecutionStatusManager,
     stack: tuple[TaskID, ...],
+    parent_frame: Frame | None = None,
 ) -> bool:
     """Execute and finalize one declared task node.
 
@@ -173,11 +182,12 @@ async def execute_task(
     :param task: Task definition to execute.
     :param parent: Parent status manager.
     :param stack: Root-to-current task path.
+    :param parent_frame: Parent task lookup environment, or the shared Frame for the root.
     :returns: Whether traversal may continue.
     """
     manager = parent.add_sub_task(task.task_id, task.title, ExecutionStatus.RUNNING)
     log_task_start(state.context, stack, task.title)
-    frame = state.context.frame.derive(
+    frame = (state.context.frame if parent_frame is None else parent_frame).derive(
         Module(ModuleName(str(task.task_id)), {}),
         {"__task_id_branch__": branch_text(stack)},
     )
@@ -194,9 +204,11 @@ async def execute_task(
         )
     try:
         await frame.close()
-    except Exception as error:
-        record_exception(state, manager, stack, error)
-        pending = error
+    except BaseException as error:
+        pending = combine_failures(pending, error)
+        if isinstance(error, Exception):
+            recorded = pending if isinstance(pending, Exception) else error
+            record_exception(state, manager, stack, recorded)
     finalize_manager(manager)
     log_task_complete(state.context, stack, manager.current.status)
     output = state.task_outputs.get(task.task_id)
@@ -207,6 +219,7 @@ async def execute_task(
             task.outputs_mapping,
             output,
             output=True,
+            frame=frame,
         )
     if pending is not None:
         raise pending

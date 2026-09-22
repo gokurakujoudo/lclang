@@ -42,19 +42,20 @@ def external_variables(workflow: Workflow) -> tuple[TaskVar[object], ...]:
             if variable.name not in visible:
                 external.setdefault(variable.name, variable)
 
-    def visit(task: TaskNode) -> None:
+    def visit(task: TaskNode, inherited: frozenset[str] = frozenset()) -> None:
         """Analyze one task in parent-first depth-first order.
 
         :param task: Current task definition.
+        :param inherited: Context bindings visible from ancestor task scopes.
         """
-        local = set(assigned)
+        local = assigned | set(inherited)
         for context in task.context_tasks:
             use(context.args_mapping, local)
             local.update(item.name for item in mapping_variables(context.outputs_mapping))
         use(task.args_mapping, local)
         assigned.update(item.name for item in mapping_variables(task.outputs_mapping))
         for child in task.children:
-            visit(child)
+            visit(child, frozenset(local))
 
     visit(workflow.root_task)
     return tuple(external.values())
