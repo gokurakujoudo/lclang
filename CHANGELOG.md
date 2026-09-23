@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.0.14 - 2026-09-24
+
 - Add scoped `Workflow.execute_in_task` calls with isolated Frames, native
   results, detached child status, sticky failure propagation and cancellation-safe
   owned cleanup. Document sequential batch aggregation and result lifetimes.
