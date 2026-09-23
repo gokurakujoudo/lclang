@@ -5,6 +5,7 @@ from types import UnionType
 from typing import Any, Union, cast, get_args, get_origin
 
 from lclang.runtime import Frame, FrameProxy
+from lclang.utils.boxes import box_value, get_box_type
 from lclang.workflow.mappings.annotations import record_annotations
 from lclang.workflow.mappings.records import record_type
 from lclang.workflow.mappings.structure import MappingNode
@@ -46,7 +47,9 @@ async def materialize_record(value: object, annotation: Any) -> object:
             if item.init and item.name in available:
                 current = await value.get(item.name)
                 expected = annotations[item.name]
-                if is_dataclass(get_origin(expected) or expected):
+                if get_box_type(expected) is None and is_dataclass(
+                    get_origin(expected) or expected,
+                ):
                     current = await materialize_record(current, expected)
                 updates[item.name] = current
         return cls(**updates)
@@ -65,14 +68,16 @@ async def resolve_reference(variable: TaskVar[object], frame: Frame) -> object:
     :raises Exception: If lookup, record conversion or projected type checks fail.
     """
     root = variable.root if isinstance(variable, TaskProjection) else variable
-    value = await frame.get(root.name)
-    if is_dataclass(get_origin(root.value_type) or root.value_type):
+    value = box_value(await frame.get(root.name), root.value_type)
+    if get_box_type(root.value_type) is None and is_dataclass(
+        get_origin(root.value_type) or root.value_type,
+    ):
         value = await materialize_record(value, root.value_type)
     if isinstance(variable, TaskProjection):
         annotation = root.value_type
         for name in variable.path:
             expected = record_annotations(annotation)[name]
-            value = getattr(value, name)
+            value = box_value(getattr(value, name), expected)
             if not matches_annotation(value, expected):
                 detail = "null value" if value is None else "type mismatch"
                 raise TypeError(f"workflow field {detail}: {reference_name(variable)}")

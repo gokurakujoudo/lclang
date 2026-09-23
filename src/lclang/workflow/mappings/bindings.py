@@ -5,6 +5,7 @@ from inspect import formatannotation
 from typing import Any, cast, get_origin
 
 from lclang.runtime import Frame, FrameProxy
+from lclang.utils.boxes import get_box_type, unbox_value
 from lclang.utils.representation import safe_repr
 from lclang.workflow.mappings.records import record_type
 from lclang.workflow.mappings.structure import (
@@ -78,6 +79,9 @@ async def output_updates(node: MappingNode, output: object, frame: Frame) -> dic
     if isinstance(mapping, TaskVar):
         masked = mapping.is_masked or frame.is_masked(mapping.name)
         suffix = "!" if masked else ""
+        output = unbox_value(output, mapping.value_type)
+        if get_box_type(mapping.value_type) is not None:
+            return {mapping.name + suffix: output}
         if is_dataclass(get_origin(mapping.value_type) or mapping.value_type):
             if type(output) is not record_type(mapping.value_type):
                 raise TypeError("workflow output must match its mapping dataclass")

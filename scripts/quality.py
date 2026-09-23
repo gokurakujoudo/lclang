@@ -23,6 +23,7 @@ def quality_commands(python: Path) -> tuple[Command, ...]:
         (executable, "-m", "scripts.check_project"),
         (executable, "-m", "scripts.security_audit"),
         (executable, "-m", "mypy"),
+        (executable, "-m", "pyright"),
         (
             executable, "-m", "pytest", "-m", "docs", "--no-cov",
             "--junitxml=reports/tests-docs.xml",

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add explicit `ValueBox` and `CallableBox` values with shallow workflow binding
+  conversion, preserving zero runtime dependencies and typed projections.
+  Add dedicated variable-type and mapping-shape chapters with executable best
+  practices, conversion costs and supported boundaries.
 - Improve business event readability with aligned multiline fields and public
   synchronous `make_repr_lines` and `make_multi_log_lines` formatting tools.
 
