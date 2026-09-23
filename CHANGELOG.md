@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.0.13 - 2026-09-23
+
 - Add typed `utils.invoke` for synchronous and asynchronous callbacks, and
   `TaskContext.log_event` for explicitly selected and masked business values.
   Preserve application caller attribution with standard and lclang loggers.
