@@ -22,6 +22,8 @@ reference documentation before changing the project.
 - Production class and function names must describe their purpose without an
   underscore prefix. Only Python protocol methods may use required dunder
   spellings. Avoid generic `internal` prefixes; curate exports with `__all__`.
+- New function and method names start with a descriptive verb. Existing public
+  spellings and Python protocol methods remain compatible.
 - A `Frame` is safe for concurrent tasks in one event loop, not across loops.
 - Cached values are snapshots. Recalculation never invalidates dependants.
 - Each production Python file contains at most 200 code-bearing physical lines,

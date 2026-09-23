@@ -5,7 +5,7 @@ from dataclasses import fields as record_fields
 from dataclasses import is_dataclass
 from typing import TYPE_CHECKING
 
-from lclang.utils.representation import safe_repr
+from lclang.utils.representation import align_repr_fields, make_multi_log_lines, safe_repr
 
 if TYPE_CHECKING:
     from lclang.workflow.context import TaskContext
@@ -40,18 +40,17 @@ def emit_event(
         or set(selected) & values.keys()
     ):
         raise ValueError("event fields must be declared, unique, and separate from keyword values")
-    rendered: list[str] = []
+    rendered: list[tuple[str, str]] = []
     for name in selected:
         value = None if name in masked else getattr(record, name)
-        rendered.append(f"{name}={safe_repr(value, masked=name in masked)}")
+        rendered.append((name, safe_repr(value, masked=name in masked)))
     rendered.extend(
-        f"{name}={safe_repr(value, masked=name in masked)}" for name, value in values.items()
+        (name, safe_repr(value, masked=name in masked)) for name, value in values.items()
     )
     branch = ".".join(context.task_id_stack)
     dryrun = " (dryrun)" if context.is_dryrun else ""
     message = f"event {safe_repr(event)}: [{branch}]{dryrun}"
-    if rendered:
-        message += " " + " ".join(rendered)
+    message = make_multi_log_lines(message, align_repr_fields(rendered))
     context.logger.log(level, message, stacklevel=3, extra={
         "lclang_event": event, "lclang_task_branch": branch, "lclang_dryrun": context.is_dryrun,
     })

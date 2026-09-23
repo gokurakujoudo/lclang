@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Improve business event readability with aligned multiline fields and public
+  synchronous `make_repr_lines` and `make_multi_log_lines` formatting tools.
+
 ## 1.0.13 - 2026-09-23
 
 - Add typed `utils.invoke` for synchronous and asynchronous callbacks, and

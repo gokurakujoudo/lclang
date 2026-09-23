@@ -146,3 +146,34 @@ small budgets retain its prefix, zero returns empty text, and `None` disables
 truncation. A negative budget raises `ValueError`; non-integers, including bool,
 raise `TypeError`. With `masked=True`, the result is `*masked*` and no renderer
 runs; the masking marker is independent of the validated budget.
+
+## Multiline representations
+
+`make_repr_lines(instances, key_column_length=None, sort_keys=False,
+masked_keys=None)` accepts one dataclass instance or string-keyed dictionary,
+or an iterable of those records. It retains declaration, insertion and record
+order, including duplicate names; sorting by name is stable when requested.
+The key width is the maximum of all name lengths and the supplied minimum.
+Dataclass classes, unsupported records and non-string keys raise `TypeError`.
+Widths must be nonnegative integers (not bool), or `None`. Empty inputs yield
+no lines. Masked names are checked before getters or dictionary reads and
+render as `*masked*`; other values use `safe_repr`. Neither nested values nor
+masks are recursively expanded or copied.
+
+`make_multi_log_lines(title, lines, line_indent="    ")` indents every body
+line, including empty lines and embedded newlines, while leaving the title
+unchanged. An empty body produces only the title. Both helpers are synchronous
+and available from `lclang.utils` and `lclang.utils.representation`.
+
+<!-- lclang-doc-exec -->
+```python
+from lclang.utils import make_multi_log_lines, make_repr_lines
+
+lines = make_repr_lines({"count": 3, "token": "secret"}, masked_keys={"token"})
+message = make_multi_log_lines("scan completed", lines)
+assert message == "scan completed\n    count: 3\n    token: *masked*"
+```
+
+Each dictionary field contributes one line. The two names have equal width;
+the token value is never read or represented. Joining the lines creates one
+message suitable for a single logger call.

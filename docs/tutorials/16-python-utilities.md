@@ -420,7 +420,9 @@ async def main() -> None:
             assert not frame.has("resource")
         assert opened[0].closed
         assert (path / "result.txt").read_text(encoding="utf-8") == "hello from simulated-service"
-    assert "event 'saved': [transfer.save] bytes_written=28 target='result.txt'" in stream.getvalue()
+    assert (
+        "event 'saved': [transfer.save]\n    bytes_written: 28\n    target       : 'result.txt'"
+    ) in stream.getvalue()
 
 
 asyncio.run(main())

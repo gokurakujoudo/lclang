@@ -1,10 +1,13 @@
 """Business events select and mask values before touching application objects."""
 
+import asyncio
 import inspect
 import io
 import logging
 from dataclasses import dataclass
 from datetime import date
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import pytest
 
@@ -41,7 +44,9 @@ async def test_business_event_fields_metadata_and_caller(caplog: pytest.LogCaptu
     assert event.__dict__["lclang_event"] == "copied"
     assert event.__dict__["lclang_task_branch"] == "root.child"
     assert event.__dict__["lclang_dryrun"] is True
-    assert "visible='shown'" in event.getMessage() and "count=3" in event.getMessage()
+    assert event.getMessage() == (
+        "event 'copied': [root.child] (dryrun)\n    visible: 'shown'\n    count  : 3"
+    )
     assert "hidden" not in event.getMessage() and "dryrun" in event.getMessage()
     assert "...<truncated>" in caplog.records[1].getMessage()
 
@@ -83,7 +88,7 @@ async def test_disabled_and_masked_events_do_not_read_or_format(
             context.log_event("identity", value=await frame.get("secret"))
             context.log_event("empty")
         assert touches == []
-        assert "secret=*masked* value=*masked*" in caplog.records[0].getMessage()
+        assert "\n    secret: *masked*\n    value : *masked*" in caplog.records[0].getMessage()
         assert "same-object" in caplog.records[1].getMessage()
         assert caplog.records[2].getMessage() == "event 'empty': [root]"
 
@@ -132,5 +137,51 @@ async def test_lclang_logger_keeps_business_caller_and_configuration() -> None:
         expected = line.f_lineno + 1
         context.log_event("warning", level=logging.WARNING, value=3)
     assert stream.getvalue().strip() == (
-        f"test_events.py:{expected} WARNING [APP] event 'warning': [root] value=3"
+        f"test_events.py:{expected} WARNING [APP] event 'warning': [root]\n    value: 3"
     )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("standard", [False, True])
+async def test_multiline_events_reach_console_and_files(standard: bool) -> None:
+    """Both logger entry points retain exactly the same complete message body."""
+    stream = io.StringIO()
+    with TemporaryDirectory() as directory:
+        async with use_logger_handler({
+            "format": "%(message)s", "console": {"stream": stream},
+            "file": {"events": {"directory": directory}},
+        }), lclang.define_frame() as frame:
+            logger = logging.getLogger("multiline") if standard else await use_logger("multiline")
+            context = wf.TaskContext(
+                False, date(2026, 9, 23), False, logger, frame,
+                wf.define_task("root", "Root"), [wf.TaskID("root")],
+            )
+            context.log_event("saved", first=1, longer=2)
+        expected = "event 'saved': [root]\n    first : 1\n    longer: 2"
+        assert stream.getvalue().count(expected) == 1
+        files = await asyncio.to_thread(lambda: list(Path(directory).rglob("*.log")))
+        assert files
+        assert sum(path.read_text(encoding="utf-8").count(expected) for path in files) == 1
+
+
+@pytest.mark.asyncio
+async def test_disabled_event_does_not_consume_selection_iterators() -> None:
+    """No iteration or validation occurs before a disabled severity is admitted."""
+    def fail_iteration() -> list[str]:
+        raise AssertionError("selection consumed")
+
+    logger = logging.getLogger("disabled-selection")
+    before = logger.level
+    logger.setLevel(logging.ERROR)
+    try:
+        async with lclang.define_frame() as frame:
+            context = wf.TaskContext(
+                False, date(2026, 9, 23), False, logger, frame,
+                wf.define_task("root", "Root"), [wf.TaskID("root")],
+            )
+            context.log_event(
+                "ignored", fields=(name for _ in range(1) for name in fail_iteration()),
+                masked_fields=(name for _ in range(1) for name in fail_iteration()),
+            )
+    finally:
+        logger.setLevel(before)
