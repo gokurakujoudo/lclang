@@ -99,6 +99,10 @@ runtime dependencies.
 
 ## Command-line framework
 
+- Dataclass metadata supplies nested field help and override paths, with shared
+  constructor defaults and masking. Selective dataclass flattening creates
+  dotted presets without deep-copying leaves.
+
 - Entrance `lcl_mixin` snapshots share host defaults across routed commands,
   configuration expressions, and workflow tasks while preserving local precedence.
 

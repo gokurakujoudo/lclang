@@ -7,6 +7,7 @@ import textwrap
 from collections.abc import Iterable
 
 from lclang.cli.commands import Command, CommandGroup
+from lclang.cli.parameter_details import DerivedParameterDoc
 from lclang.utils.representation import safe_repr
 
 # Characters per line; the CLI layout contract fixes 100 for deterministic help
@@ -114,6 +115,8 @@ def render_command_help(script: str, command: Command, path: tuple[str, ...]) ->
         binding = command.default_bindings.get(
             parameter.name, command.default_bindings.get(parameter.name + "!"),
         )
+        if binding is None and isinstance(parameter, DerivedParameterDoc):
+            binding = parameter.help_default
         factory = False
         if not has_default and binding is not None:
             has_default = True

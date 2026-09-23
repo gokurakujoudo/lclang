@@ -57,7 +57,9 @@ async def test_whole_records_read_and_publish(
         args_mapping=source.quote, outputs_mapping=target.quote,
     )
     workflow = wf.define_workflow("Records", task)
-    assert [item.name for item in workflow.to_cli("run", "Run").parameter_docs] == ["source"]
+    assert [item.name for item in workflow.to_cli("run", "Run").parameter_docs] == [
+        "source", "source.value", "source.count",
+    ]
     assert "Record[int] <- $source" in "\n".join(workflow.to_lines())
     assert "Record[int] -> $target!" in "\n".join(workflow.to_lines())
     original = Record(17)
@@ -96,7 +98,9 @@ async def test_whole_context_records_remain_local() -> None:
         "root", "Root", task_action=echo, args_mapping=local.quote, context_tasks=[context],
     )
     workflow = wf.define_workflow("Records", task)
-    assert [item.name for item in workflow.to_cli("run", "Run").parameter_docs] == ["source"]
+    assert [item.name for item in workflow.to_cli("run", "Run").parameter_docs] == [
+        "source", "source.value", "source.count",
+    ]
     async with lclang.define_frame(preset={"source": Record(7), "local.value": -1}) as frame:
         result = await workflow.execute(execution_context(frame))
         assert result.execution_status.status is wf.ExecutionStatus.SUCCESS

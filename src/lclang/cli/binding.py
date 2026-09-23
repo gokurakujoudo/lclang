@@ -13,6 +13,7 @@ from lclang.cli.commands import Command
 from lclang.cli.logger_config import logger_definitions
 from lclang.cli.models import CliConfig, CliParams
 from lclang.cli.overrides import partition_overrides, require_forced_result
+from lclang.cli.parameter_details import DerivedParameterDoc, get_parameter_masks
 from lclang.cli.runtime_keys import (
     RUNTIME_AS_OF_DATE_KEY,
     RUNTIME_CLI_PARAMS_KEY,
@@ -192,16 +193,15 @@ async def build_binding(command: Command, params: CliParams, cli_config: CliConf
         frames.append(overrides)
         runtime = overrides.derive(
             Module(RUNTIME_MODULE_NAME, {}),
-            masked_names=frozenset(
-                item.name for item in command.parameter_docs if item.masked
-            ),
+            masked_names=get_parameter_masks(command.parameter_docs, overrides),
         )
         frames.append(runtime)
         stack = FrameStack(tuple(frames))
         missing = [
             item.name
             for item in command.parameter_docs
-            if item.required and not runtime.has(item.name)
+            if item.required and not isinstance(item, DerivedParameterDoc)
+            and not runtime.has(item.name)
         ]
         if missing:
             raise LclCliUsageError("missing required parameter: " + ", ".join(missing))
