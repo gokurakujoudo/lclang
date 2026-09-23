@@ -123,7 +123,8 @@ class WorkflowExecutionResult:
     """Return workflow status, shared values, and materialized action values.
 
     :param execution_status: Finalized status tree.
-    :param execution_frame: Borrowed shared execution Frame after publication.
+    :param execution_frame: Borrowed shared Frame after publication; for
+       ``execute_in_task``, usable only inside its asynchronous call scope.
     :param task_args: Successfully materialized action arguments by task ID.
     :param task_outputs: Successfully returned action outputs by task ID.
     """

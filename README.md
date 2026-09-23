@@ -369,6 +369,9 @@ formatting for application records. `lclang.utils.invoke()` calls sync or async
 callbacks once and resolves their results without background work.
 An action can call `context.skip_children()` to omit its child subtree without
 creating status records, while retaining its own output and resource cleanup.
+Actions can use [`async with workflow.execute_in_task(...)`](docs/reference/workflow-calls.md)
+for dynamic batches, with explicit inputs, isolated Frames, native outputs and
+detached child status. The child Frame stays available until the call scope exits.
 `define_workflow(..., lcl_mixin={...})` supplies host values and callables to
 configuration expressions and tasks, and becomes host defaults in CLI commands.
 

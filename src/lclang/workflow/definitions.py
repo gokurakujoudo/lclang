@@ -13,9 +13,11 @@ from lclang.types import TaskID
 if TYPE_CHECKING:
     from lclang.cli import Command
     from lclang.workflow.context import (
+        TaskContext,
         WorkflowExecutionContext,
         WorkflowExecutionResult,
     )
+    from lclang.workflow.manager import ExecutionStatusManager
 
 type TaskAction = Callable[..., Awaitable[object]]
 type ContextAction = Callable[..., AbstractAsyncContextManager[object]]
@@ -104,6 +106,26 @@ class Workflow:
         from lclang.workflow.rendering import render_workflow
 
         return render_workflow(self)
+
+    def execute_in_task(
+        self, context: TaskContext, status_mgr: ExecutionStatusManager, *,
+        name: str, preset: Mapping[str, object] | None = None,
+    ) -> AbstractAsyncContextManager[WorkflowExecutionResult]:
+        """Execute a child workflow in an action-owned asynchronous scope.
+
+        :param context: Active parent action metadata and logger.
+        :param status_mgr: Editable parent action status manager.
+        :param name: Unique call name under that task.
+        :param preset: Explicit bindings copied shallowly into an isolated Frame.
+        :returns: Async context yielding the native result while its Frame remains open.
+        :raises TypeError: On incompatible input types or invalid preset bindings.
+        :raises ValueError: On invalid or conflicting names or a leaf-step parent.
+        :raises RuntimeError: Outside an active action or with a finalized parent.
+        :raises BaseException: On scope setup, cleanup, body errors or cancellation.
+        """
+        from lclang.workflow.calls import execute_workflow_in_task
+
+        return execute_workflow_in_task(self, context, status_mgr, name=name, preset=preset)
 
     def to_cli(
         self,

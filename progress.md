@@ -84,6 +84,8 @@ runtime dependencies.
   subtree-scoped context resources, parent-first depth-first execution, explicit
   publication, reverse cleanup, static rendering, and complete status trees.
   Workflow `lcl_mixin` snapshots expose host values and callables to configs and tasks.
+- Scoped action-owned workflow calls with isolated Frames, native results,
+  detached status attachment, monotonic failure severity and awaited cleanup.
 - Generic variable annotations and whole-record workflow mappings with recursive
   scope-to-record conversion and shallow record-to-scope publication.
 - Recursive workflow dataclass mappings and typed read-only field projections,
