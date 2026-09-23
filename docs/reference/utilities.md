@@ -149,6 +149,8 @@ runs; the masking marker is independent of the validated budget.
 
 ## Multiline representations
 
+See also [dataclass flattening](#dataclass-flattening) for creating dotted preset keys.
+
 `make_repr_lines(instances, key_column_length=None, sort_keys=False,
 masked_keys=None)` accepts one dataclass instance or string-keyed dictionary,
 or an iterable of those records. It retains declaration, insertion and record
@@ -177,3 +179,51 @@ assert message == "scan completed\n    count: 3\n    token: *masked*"
 Each dictionary field contributes one line. The two names have equal width;
 the token value is never read or represented. Joining the lines creates one
 message suitable for a single logger call.
+
+## Dataclass flattening
+
+`flatten_to_dict(instance, prefix="", nested=True)` always expands the root
+dataclass's direct fields into a new dictionary. Values remain shared by
+reference. `nested=False` keeps nested records as leaves; `nested=True` expands
+every nested dataclass instance; a `set[str]` expands only its relative paths
+and the ancestors needed to reach them. Set paths exclude the prefix. An empty
+set is equivalent to False. Containers and dataclass class objects are leaves.
+Empty nested records also remain leaves so an explicitly present empty value
+does not disappear. Empty root records produce an empty dictionary.
+
+Invalid root/control types raise `TypeError`. Invalid, unknown or non-record
+selected paths and cycles on expanded paths raise `ValueError`. Reusing an
+acyclic record on different branches is supported. The helper never calls a
+constructor or default factory, performs no masking or box conversion, and
+does not deep-copy values. It uses `dataclasses.fields`, including `init=False`
+instance fields but excluding ClassVar and InitVar. When creating CLI presets,
+omit computed `init=False` fields because they are not configurable inputs.
+
+<!-- lclang-doc-exec -->
+```python
+from dataclasses import dataclass
+
+from lclang.utils import flatten_to_dict
+
+
+@dataclass
+class Dialect:
+    delimiter: str = ","
+
+
+@dataclass
+class Options:
+    dialect: Dialect
+    headers: list[str]
+
+
+options = Options(Dialect(), ["name"])
+flat = flatten_to_dict(options, "csv", {"dialect"})
+assert flat == {"csv.dialect.delimiter": ",", "csv.headers": ["name"]}
+assert flat["csv.headers"] is options.headers
+assert flatten_to_dict(options, nested=False)["dialect"] is options.dialect
+```
+
+The selected dialect becomes a dotted leaf. The headers list remains the same
+object, and shallow expansion preserves the dialect instance too. Pass `flat`
+to `workflow.to_cli(..., preset=flat)` when individual CLI overrides are needed.

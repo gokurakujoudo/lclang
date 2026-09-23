@@ -340,6 +340,10 @@ shows these APIs without requiring CLI or LCL evaluation.
 
 ### Tree workflows and status
 
+Dataclass fields supply CLI help and override paths from annotations, defaults
+and `metadata["help"]`. `flatten_to_dict` prepares dotted presets while preserving
+leaf references and the existing Frame rules for objects and scoped paths.
+
 Explicit `ValueBox` and `CallableBox` wrappers let typed projections represent
 optional values, collections and callbacks without runtime dependencies. Only
 declared workflow bindings box inputs and unbox outputs; ordinary objects keep

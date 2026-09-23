@@ -9,10 +9,12 @@ from lclang.cli.logger_config import logger_parameter
 from lclang.errors import LclCliUsageError
 from lclang.masking import normalize_masked_mapping
 from lclang.workflow.cli_logging import log_lunch_option, log_status_tree, status_lines
+from lclang.workflow.cli_parameters import expand_record_parameters
 from lclang.workflow.context import WorkflowExecutionContext
 from lclang.workflow.defaults import workflow_defaults
 from lclang.workflow.definitions import Workflow
 from lclang.workflow.mappings.dependencies import external_uses, has_field_default
+from lclang.workflow.mappings.records import can_construct_record
 from lclang.workflow.models import ExecutionStatus
 from lclang.workflow.projections import TaskProjection
 from lclang.workflow.variables import TaskVar
@@ -70,11 +72,8 @@ def workflow_command(
     :raises ValueError: If a preset targets a non-external variable.
     """
     variables = external_variables(workflow)
-    allowed = {item.name for item in variables}
     values, preset_masks = normalize_masked_mapping({} if preset is None else preset)
-    unexpected = set(values) - allowed
-    if unexpected:
-        raise ValueError("workflow preset contains non-external variable")
+    supplied_names = set(values)
     mixin_values, mixin_masks = normalize_masked_mapping(workflow.lcl_mixin)
     values = {**mixin_values, **values}
     preset_masks |= mixin_masks
@@ -84,16 +83,20 @@ def workflow_command(
     required_names = {
         node.value.name for node in external_uses(workflow) if not has_field_default(node)
     }
-    docs = tuple(
+    docs = expand_record_parameters(tuple(
         ParameterDoc(
             item.name,
             item.value_type,
-            item.name in required_names and item.name not in values.keys() | default_names,
+            item.name in required_names and item.name not in values.keys() | default_names
+            and not can_construct_record(item.value_type),
             item.description or NO_HELP_MESSAGE,
-            masked=item.is_masked,
+            masked=item.is_masked or item.name in preset_masks,
         )
         for item in variables
-    )
+    ))
+    allowed = {item.name for item in docs}
+    if supplied_names - allowed:
+        raise ValueError("workflow preset contains non-external variable")
     masked = preset_masks | {
         item.name for item in variables if item.is_masked and item.name in values
     }

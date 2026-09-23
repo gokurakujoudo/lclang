@@ -361,6 +361,70 @@ retains the existing success/all-skipped aggregation rules. Process-control
 
 ## Static trees and CLI conversion
 
+### Dataclass parameter fields
+
+An external definite dataclass exposes its root description and constructor
+fields in help, including generic specialization and nested paths. Field help
+uses `metadata={"help": "..."}`; missing help uses `NO HELP MESSAGE PROVIDED`.
+Containers, unions, explicit boxes and recursive type boundaries remain leaves.
+`init=False`, ClassVar and InitVar are not configurable paths. Explicit leaf
+declarations retain their help and must agree with inferred annotations. Root
+masks propagate to known fields in help, overrides and audit logs.
+
+Constructor defaults are display metadata, not injected Frame bindings. None
+displays as a real default; factories display as `<factory>` without running.
+Child required/optional labels describe construction without enclosing defaults.
+Presence checks apply to the root; once a scope exists, missing required fields
+retain the shared constructor's normal workflow error. An absent dataclass whose
+constructor fields all have defaults can be constructed in both CLI and direct
+execution. Mutable factory defaults remain independent. Existing bindings that
+fail never fall back to constructor defaults.
+
+Inferred paths work in `to_cli(preset=...)` and `-o`; unknown paths remain usage
+errors. Existing CLI value parsing is unchanged; field types do not introduce
+coercion. Whole-object bindings and child paths remain mutually exclusive.
+Use `flatten_to_dict(instance, prefix="csv")` for field presets. Root objects
+and factory results are not deep-merged with partial child overrides.
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+from dataclasses import dataclass, field
+
+from lclang.utils import flatten_to_dict
+from lclang.workflow import (
+    ExecutionStatusManager, TaskContext, define_task, define_variable, define_workflow,
+)
+
+
+@dataclass
+class CsvOptions:
+    encoding: str = field(default="utf-8", metadata={"help": "Input encoding"})
+    delimiter: str = field(default=",", metadata={"help": "Input separator"})
+
+
+async def convert(
+    context: TaskContext, args: CsvOptions, status_mgr: ExecutionStatusManager,
+) -> CsvOptions:
+    assert args == CsvOptions(encoding="gbk", delimiter=";")
+    return args
+
+
+csv = define_variable[CsvOptions]("csv", "CSV conversion options")
+workflow = define_workflow("CSV", define_task(
+    "convert", "Convert", task_action=convert, args_mapping=csv.quote,
+))
+command = workflow.to_cli(
+    "convert", "Convert CSV", preset=flatten_to_dict(CsvOptions(encoding="gbk"), "csv"),
+)
+assert {item.name for item in command.parameter_docs} == {"csv", "csv.encoding", "csv.delimiter"}
+assert asyncio.run(command.run(["python", "tool.py", "-o", "csv.delimiter", ";"])) == 0
+```
+
+One declared variable supplies the whole record. Its fields provide additional
+help rows and accepted paths. The flattened preset supplies the encoding; the
+explicit override replaces only the delimiter before record construction.
+
 `workflow.to_lines()` renders the definition without executing it. Task and
 context lines show IDs, titles, argument flows (`field <- $variable`), output
 flows (`field -> $variable`), literals, defaults, and unmapped fields. Context

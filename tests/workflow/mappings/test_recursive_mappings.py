@@ -72,7 +72,9 @@ async def test_nested_projection_reads_concrete_record() -> None:
         args_mapping=Arguments(Options(projection.quote, [])),
     )
     workflow = wf.define_workflow("Projection", task)
-    assert [item.name for item in workflow.to_cli("run", "Run").parameter_docs] == ["source"]
+    assert [item.name for item in workflow.to_cli("run", "Run").parameter_docs] == [
+        "source", "source.options", "source.options.encoding", "source.options.shared",
+    ]
     async with lclang.define_frame(preset={"source": Arguments(Options("utf-8", []))}) as frame:
         result = await workflow.execute(wf.WorkflowExecutionContext(
             False, date(2026, 9, 22), True, logging.getLogger("nested"), frame,
