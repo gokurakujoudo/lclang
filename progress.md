@@ -125,3 +125,5 @@ runtime dependencies.
   branch publishes to PyPI with Trusted Publishing, and tags support manual publishing.
 - Public `lclang.utils.safe_repr` protects single-line value rendering, masking,
   canonical renderers and exact truncation budgets.
+- Synchronous record representation and multiline message tools share protected,
+  aligned field rendering with business event logs.

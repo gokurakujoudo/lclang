@@ -2,7 +2,7 @@
 
 from lclang.utils.environment import Environment, env
 from lclang.utils.invocation import invoke
-from lclang.utils.representation import safe_repr
+from lclang.utils.representation import make_multi_log_lines, make_repr_lines, safe_repr
 from lclang.utils.snowflake import SnowflakeGenerator
 
 # Unitless public export names come from this module's supported API; the explicit list keeps
@@ -13,5 +13,7 @@ __all__ = [
     "env",
     "invoke",
     "safe_repr",
+    "make_multi_log_lines",
+    "make_repr_lines",
 ]
 
