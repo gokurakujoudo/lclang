@@ -48,6 +48,10 @@ The `CI` GitHub Actions workflow verifies pushes and pull requests using the
 same `scripts.quality` gate as local development. All runs build distributions
 after verification; test reports, coverage and distributions are retained for seven days.
 
+The gate runs strict mypy over source, scripts and tests, and strict Pyright over
+the focused public typing contracts in `tests/typing`. Both are development tools;
+the installed library retains zero third-party runtime dependencies.
+
 The quality gate writes `reports/tests-docs.xml` and `reports/tests-behavior.xml`
 in JUnit XML format for test-result consumers. Behavioral tests also write
 `reports/coverage.xml` (Cobertura), `reports/coverage.json`, and the browsable

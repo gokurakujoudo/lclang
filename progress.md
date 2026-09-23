@@ -65,6 +65,9 @@ runtime dependencies.
 
 ## Standard utilities
 
+- Explicit value and callback boxes preserve typed projections and convert only
+  at declared workflow variable or field-projection boundaries.
+
 - Manifest-driven read-only namespaces and immutable standard presets.
 - Caller-owned, thread-safe Snowflake ID generation through `lclang.utils` and
   the canonical LCL `SnowflakeGenerator` builtin, with explicit worker IDs and

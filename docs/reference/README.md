@@ -10,6 +10,10 @@
   namespaces, Python helper APIs, and execution-status values.
 - [Tree workflows](workflow.md): typed task/context definitions, mappings,
   execution, static trees, failure covering, and CLI conversion.
+- [Workflow variable types and explicit boxes](workflow-types.md): supported
+  annotations, conversion costs, limitations and examples.
+- [Workflow mapping shapes](workflow-mappings.md): direct, per-field and nested
+  quotes, defaults, identity and publication best practices.
 - [Business day calendars](calendar.md): three-state calendars, composition,
   mappings, strict JSON loading, management, and LCL exposure.
 

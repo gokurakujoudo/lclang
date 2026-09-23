@@ -340,6 +340,12 @@ shows these APIs without requiring CLI or LCL evaluation.
 
 ### Tree workflows and status
 
+Explicit `ValueBox` and `CallableBox` wrappers let typed projections represent
+optional values, collections and callbacks without runtime dependencies. Only
+declared workflow bindings box inputs and unbox outputs; ordinary objects keep
+their contents and identity. See the [type guide](docs/reference/workflow-types.md)
+and [mapping guide](docs/reference/workflow-mappings.md).
+
 `lclang.workflow` defines a validated tree of typed async actions. Plain
 recursive dataclass mappings connect named `TaskVar` values and typed field
 projections to arguments and explicitly

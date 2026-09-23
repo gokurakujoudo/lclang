@@ -45,6 +45,7 @@ dev = [
   { include-group = "integration" },
   "hypothesis==6.165.0",
   "mypy==2.3.0",
+  "pyright==1.1.414",
   "pytest==9.1.1",
   "pytest-asyncio==1.4.0",
   "pytest-cov==7.1.0",

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add explicit `ValueBox` and `CallableBox` values with shallow workflow binding
+  conversion, preserving zero runtime dependencies and typed projections.
+  Add dedicated variable-type and mapping-shape chapters with executable best
+  practices, conversion costs and supported boundaries.
+
 ## 1.0.13 - 2026-09-23
 
 - Add typed `utils.invoke` for synchronous and asynchronous callbacks, and
