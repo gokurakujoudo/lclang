@@ -422,6 +422,11 @@ logger and its existing configuration. Messages include a bounded event name,
 the task branch, and dry-run status. Record metadata also supplies
 `lclang_event`, `lclang_task_branch`, and `lclang_dryrun`.
 
+Each event is one log record: its title is followed by four-space-indented
+`field: value` lines with aligned colons. Empty events contain only the title.
+String newlines remain escaped within their value. Console and file handlers
+retain the multiline body; timestamps and severity belong to the logger formatter.
+
 `record` is an optional dataclass instance. Only direct fields explicitly named
 in `fields` are selected, in declaration order of that selection; additional
 values follow in keyword order. Unknown fields, repeated selections, or names
