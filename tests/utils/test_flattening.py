@@ -60,7 +60,8 @@ def test_invalid_selected_paths_fail(path: str) -> None:
 
 def test_invalid_argument_types_fail() -> None:
     """Classes, mappings and malformed expansion controls are not accepted."""
-    for value in (Root, {}, None):
+    invalid: tuple[object, ...] = (Root, {}, None)
+    for value in invalid:
         with pytest.raises(TypeError):
             flatten_to_dict(value)
     with pytest.raises(TypeError):

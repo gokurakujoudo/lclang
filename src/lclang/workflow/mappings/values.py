@@ -7,7 +7,7 @@ from typing import Any, Union, cast, get_args, get_origin
 from lclang.runtime import Frame, FrameProxy
 from lclang.utils.boxes import box_value, get_box_type
 from lclang.workflow.mappings.annotations import record_annotations
-from lclang.workflow.mappings.records import record_type
+from lclang.workflow.mappings.records import can_construct_record, record_type
 from lclang.workflow.mappings.structure import MappingNode
 from lclang.workflow.projections import TaskProjection, reference_name
 from lclang.workflow.variables import TaskVar
@@ -68,7 +68,10 @@ async def resolve_reference(variable: TaskVar[object], frame: Frame) -> object:
     :raises Exception: If lookup, record conversion or projected type checks fail.
     """
     root = variable.root if isinstance(variable, TaskProjection) else variable
-    value = box_value(await frame.get(root.name), root.value_type)
+    if not frame.has(root.name) and can_construct_record(root.value_type):
+        value = record_type(root.value_type)()
+    else:
+        value = box_value(await frame.get(root.name), root.value_type)
     if get_box_type(root.value_type) is None and is_dataclass(
         get_origin(root.value_type) or root.value_type,
     ):

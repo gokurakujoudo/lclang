@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Infer dataclass CLI field help and override paths without duplicating workflow
+  variables or eagerly calling default factories. Add selective `flatten_to_dict`
+  for reference-preserving dotted presets; retain Frame object/path exclusivity.
+
 - Add explicit `ValueBox` and `CallableBox` values with shallow workflow binding
   conversion, preserving zero runtime dependencies and typed projections.
   Add dedicated variable-type and mapping-shape chapters with executable best

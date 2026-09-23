@@ -1,9 +1,27 @@
 """Dataclass annotation checks shared by whole-record workflow mappings."""
 
 from dataclasses import is_dataclass
+from inspect import signature
 from typing import Any, get_origin
 
+from lclang.utils.boxes import get_box_type
 from lclang.workflow.variables import TaskVar
+
+
+def can_construct_record(annotation: object) -> bool:
+    """Inspect whether a definite record supplies every constructor field default.
+
+    :param annotation: Concrete or generic record annotation, or any other type.
+    :returns: Whether ordinary dataclass defaults can construct a missing record.
+    """
+    cls = get_origin(annotation) or annotation
+    if not isinstance(cls, type) or not is_dataclass(cls) or get_box_type(annotation) is not None:
+        return False
+    try:
+        signature(cls).bind()
+    except TypeError:
+        return False
+    return True
 
 
 def record_type(annotation: object) -> type[Any]:
