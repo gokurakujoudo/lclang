@@ -14,6 +14,11 @@ The definition never owns execution state. One execution borrows a shared
 and creates a fresh status tree. Reusing a `Workflow` is therefore analogous to
 reusing a `Module`; each call is analogous to creating a new per-run `Frame`.
 
+For runtime-sized batches, use
+[`async with workflow.execute_in_task(...)`](workflow-calls.md) from an action.
+It provides an isolated Frame, native results, detached status attachment and
+explicit resource lifetime.
+
 `define_workflow(title, root_task, lcl_mixin=None)` accepts a `dict[str, Any]`
 of host values and callables, for example `lcl_mixin={"service": service}`.
 The mapping is copied shallowly when defined; objects remain shared by reference.

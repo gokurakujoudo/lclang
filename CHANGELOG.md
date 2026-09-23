@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add scoped `Workflow.execute_in_task` calls with isolated Frames, native
+  results, detached child status, sticky failure propagation and cancellation-safe
+  owned cleanup. Document sequential batch aggregation and result lifetimes.
 - Infer dataclass CLI field help and override paths without duplicating workflow
   variables or eagerly calling default factories. Add selective `flatten_to_dict`
   for reference-preserving dotted presets; retain Frame object/path exclusivity.

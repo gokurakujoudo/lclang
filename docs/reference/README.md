@@ -14,6 +14,8 @@
   annotations, conversion costs, limitations and examples.
 - [Workflow mapping shapes](workflow-mappings.md): direct, per-field and nested
   quotes, defaults, identity and publication best practices.
+- [Calling workflows from actions](workflow-calls.md): isolated sequential calls,
+  native results, status propagation and explicit Frame lifetimes.
 - [Business day calendars](calendar.md): three-state calendars, composition,
   mappings, strict JSON loading, management, and LCL exposure.
 

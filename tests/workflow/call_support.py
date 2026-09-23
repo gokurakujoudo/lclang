@@ -5,6 +5,9 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import date
 
+import pytest
+
+import lclang
 from lclang.runtime import Frame
 from lclang.workflow import (
     ExecutionStatus,
@@ -70,3 +73,13 @@ def make_child(
     )
     root = define_task("group", "Group", children=[node]) if grouped else node
     return define_workflow("Child workflow", root)
+
+
+def install_call_resource(monkeypatch: pytest.MonkeyPatch, factory: Callable[[], object]) -> None:
+    """Give calls a real owned definition to exercise root Frame cleanup."""
+    def create() -> Frame:
+        frame = lclang.define_frame(lclang.define_module("owned", {"resource": "make()"}))
+        frame.mixin({"make": factory})
+        return frame
+
+    monkeypatch.setattr("lclang.workflow.calls.define_frame", create)
