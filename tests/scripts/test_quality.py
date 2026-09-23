@@ -14,6 +14,7 @@ def test_quality_orders_fast_checks_before_documentation_and_behavior() -> None:
         ("python", "-m", "scripts.check_project"),
         ("python", "-m", "scripts.security_audit"),
         ("python", "-m", "mypy"),
+        ("python", "-m", "pyright"),
         (
             "python", "-m", "pytest", "-m", "docs", "--no-cov",
             "--junitxml=reports/tests-docs.xml",

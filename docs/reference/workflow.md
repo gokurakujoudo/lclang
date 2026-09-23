@@ -35,6 +35,10 @@ loader's existing scope and do not receive command host presets.
 
 ## Variables and mappings
 
+See [variable types and boxes](workflow-types.md) and
+[mapping shapes and best practices](workflow-mappings.md) for supported
+annotations, conversion costs and complete examples of each mapping shape.
+
 Variables accept mutually exclusive `default=` and `default_factory=` keywords.
 Omission differs from an explicit `default=None`; an explicitly supplied
 `default_factory` must be callable. Defaults are lower priority than all
