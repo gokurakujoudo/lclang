@@ -1,6 +1,6 @@
 """Workflow input classification follows visible reads and writes."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import date
@@ -23,7 +23,9 @@ class Values:
 
 
 async def echo(
-    context: wf.TaskContext, args: Values, status_mgr: wf.ExecutionStatusManager,
+    context: wf.TaskContext,
+    args: Values,
+    status_mgr: wf.ExecutionStatusManager,
 ) -> Values:
     """Echo the materialized value."""
     return args
@@ -31,8 +33,10 @@ async def echo(
 
 @asynccontextmanager
 async def local_value_context(
-    context: wf.TaskContext, args: Values, status_mgr: wf.ExecutionStatusManager,
-) -> AsyncIterator[Values]:
+    context: wf.TaskContext,
+    args: Values,
+    status_mgr: wf.ExecutionStatusManager,
+) -> AsyncGenerator[Values]:
     """Publish a value visible only inside this task."""
     yield args
 
@@ -42,8 +46,11 @@ def test_defaulted_read_before_write_is_optional(default: object) -> None:
     """Key presence distinguishes None and false values from an absent default."""
     value = wf.define_variable[object]("csv.value", "Value")
     task = wf.define_task(
-        "root", "Root", task_action=echo,
-        args_mapping=Values(value.quote), outputs_mapping=Values(value.quote),
+        "root",
+        "Root",
+        task_action=echo,
+        args_mapping=Values(value.quote),
+        outputs_mapping=Values(value.quote),
     )
     workflow = wf.define_workflow("Example", task, lcl_mixin={"csv.value": 99, "helper": abs})
     command = workflow.to_cli("run", "Run", {"csv.value": default})
@@ -59,27 +66,44 @@ def test_read_write_order_and_context_visibility() -> None:
     produced = wf.define_variable[object]("produced")
     write_only = wf.define_variable[object]("write_only")
     context = wf.define_context_task(
-        "context", "Context", local_value_context,
-        Values(source.quote), Values(local.quote),
+        "context",
+        "Context",
+        local_value_context,
+        Values(source.quote),
+        Values(local.quote),
     )
     first = wf.define_task(
-        "first", "First", task_action=echo, args_mapping=Values(local.quote),
-        outputs_mapping=Values(produced.quote), context_tasks=[context],
+        "first",
+        "First",
+        task_action=echo,
+        args_mapping=Values(local.quote),
+        outputs_mapping=Values(produced.quote),
+        context_tasks=[context],
     )
     second = wf.define_task(
-        "second", "Second", task_action=echo, args_mapping=Values(produced.quote),
+        "second",
+        "Second",
+        task_action=echo,
+        args_mapping=Values(produced.quote),
         outputs_mapping=Values(write_only.quote),
     )
     third = wf.define_task(
-        "third", "Third", task_action=echo, args_mapping=Values(local.quote),
+        "third",
+        "Third",
+        task_action=echo,
+        args_mapping=Values(local.quote),
     )
     root = wf.define_task(
-        "root", "Root", task_action=echo, args_mapping=Values(source.quote),
+        "root",
+        "Root",
+        task_action=echo,
+        args_mapping=Values(source.quote),
         children=[first, second, third],
     )
     command = wf.define_workflow("Example", root).to_cli("run", "Run")
     assert [(item.name, item.required) for item in command.parameter_docs] == [
-        ("source", True), ("local", True),
+        ("source", True),
+        ("local", True),
     ]
 
 
@@ -93,7 +117,9 @@ def test_read_write_order_and_context_visibility() -> None:
     ],
 )
 async def test_scoped_defaults_remain_below_config_and_overrides(
-    source: str | None, overrides: dict[str, str | bool], expected: object,
+    source: str | None,
+    overrides: dict[str, str | bool],
+    expected: object,
 ) -> None:
     """Displaying a default does not promote its runtime binding priority."""
     value = wf.define_variable[object]("csv.value", "Value")
@@ -108,8 +134,12 @@ async def test_scoped_defaults_remain_below_config_and_overrides(
             path = Path(directory) / "input.lclcfg"
             path.write_text(source, encoding="utf-8")
         params = CliParams(
-            "python", ("run",), date(2026, 9, 21), False,
-            None if path is None else str(path), overrides,
+            "python",
+            ("run",),
+            date(2026, 9, 21),
+            False,
+            None if path is None else str(path),
+            overrides,
         )
         binding = await build_binding(command, params, CliConfig())
         try:

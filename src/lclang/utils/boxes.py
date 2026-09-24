@@ -46,7 +46,7 @@ def get_box_type(annotation: object) -> type[ValueBox[Any]] | type[CallableBox[.
     """
     origin = get_origin(annotation) or annotation
     if isinstance(origin, type) and issubclass(origin, (ValueBox, CallableBox)):
-        return origin
+        return cast(type[ValueBox[Any]] | type[CallableBox[..., Any]], origin)
     return None
 
 
@@ -58,9 +58,10 @@ def box_value(value: object, annotation: object) -> object:
     :returns: Corresponding box or the original ordinary value.
     :raises TypeError: If an existing box has an incompatible concrete type.
     """
+    original = value
     cls = get_box_type(annotation)
     if cls is None or isinstance(value, cls):
-        return value
+        return original
     if isinstance(value, (ValueBox, CallableBox)):
         raise TypeError("workflow value has an incompatible box type")
     return cls(cast(Any, value))
@@ -79,4 +80,4 @@ def unbox_value(value: object, annotation: object) -> object:
         return value
     if not isinstance(value, cls):
         raise TypeError("workflow output must match its declared box type")
-    return value.value
+    return cast(ValueBox[object] | CallableBox[..., object], value).value

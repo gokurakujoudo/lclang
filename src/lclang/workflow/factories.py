@@ -55,23 +55,21 @@ def validate_callable(value: object, *, coroutine: bool) -> None:
     :raises TypeError: If its runtime signature is incompatible.
     """
     if not callable(value) or (coroutine and not inspect.iscoroutinefunction(value)):
-        message = (
-            "workflow action must be async"
-            if coroutine
-            else "context task must be callable"
-        )
+        message = "workflow action must be async" if coroutine else "context task must be callable"
         raise TypeError(message)
     parameters = tuple(inspect.signature(value).parameters.values())
-    if (
-        [item.name for item in parameters] != ["context", "args", "status_mgr"]
-        or any(item.default is not inspect.Parameter.empty for item in parameters)
+    if [item.name for item in parameters] != ["context", "args", "status_mgr"] or any(
+        item.default is not inspect.Parameter.empty for item in parameters
     ):
         raise TypeError("workflow callable must accept exactly context, args, status_mgr")
 
 
 def validate_annotations(
-    value: object, args_mapping: object, outputs_mapping: object | None = None,
-    *, context: bool = False,
+    value: object,
+    args_mapping: object,
+    outputs_mapping: object | None = None,
+    *,
+    context: bool = False,
 ) -> None:
     """Require exact public context, argument, and manager annotations.
 
@@ -82,12 +80,10 @@ def validate_annotations(
     :raises TypeError: If annotations cannot be resolved or do not match.
     """
     if isinstance(value, FailureCoveringContextTask):
-        target = value.acquire
+        target = cast(FailureCoveringContextTask[object, object], value).acquire
     else:
         target = (
-            value
-            if inspect.isfunction(value)
-            else getattr(value, "__call__")  # noqa: B004, B009
+            value if inspect.isfunction(value) else getattr(value, "__call__")  # noqa: B004, B009
         )
     try:
         hints = get_type_hints(target)
@@ -102,7 +98,9 @@ def validate_annotations(
     if isinstance(outputs_mapping, TaskVar):
         result_type = hints.get("return")
         if context and get_origin(result_type) in {
-            AsyncIterator, AsyncGenerator, AbstractAsyncContextManager,
+            AsyncIterator,
+            AsyncGenerator,
+            AbstractAsyncContextManager,
         }:
             result_type = get_args(result_type)[0]
         if result_type != outputs_mapping.value_type:
@@ -146,9 +144,9 @@ def define_task[ArgsT, OutputsT](
     task_id: str,
     title: str,
     *,
-    task_action: Callable[
-        [TaskContext, ArgsT, ExecutionStatusManager], Awaitable[OutputsT]
-    ] | None = None,
+    task_action: (
+        Callable[[TaskContext, ArgsT, ExecutionStatusManager], Awaitable[OutputsT]] | None
+    ) = None,
     args_mapping: ArgsT | None = None,
     outputs_mapping: OutputsT | None = None,
     context_tasks: Iterable[ContextTask] = (),
@@ -240,8 +238,7 @@ def validate_workflow_tree(root: TaskNode) -> None:
             (node.task_id, node.args_mapping, node.outputs_mapping)
         ]
         declarations.extend(
-            (item.task_id, item.args_mapping, item.outputs_mapping)
-            for item in node.context_tasks
+            (item.task_id, item.args_mapping, item.outputs_mapping) for item in node.context_tasks
         )
         for identifier, args, outputs in declarations:
             if identifier in identifiers:

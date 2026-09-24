@@ -1,7 +1,7 @@
 """Dynamic workflow scopes finish owned cleanup before propagating cancellation."""
 
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import pytest
@@ -14,7 +14,8 @@ from tests.workflow.call_support import Value, install_call_resource, make_child
 @pytest.mark.asyncio
 @pytest.mark.parametrize("fail_cleanup", [False, True])
 async def test_cancellation_during_child_execution_unwinds_context_resources(
-    fail_cleanup: bool, monkeypatch: pytest.MonkeyPatch,
+    fail_cleanup: bool,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The active child scope unwinds before cancellation leaves the parent action."""
     entered = asyncio.Event()
@@ -30,26 +31,37 @@ async def test_cancellation_during_child_execution_unwinds_context_resources(
 
     @asynccontextmanager
     async def resource(
-        context: wf.TaskContext, args: Value, status_mgr: wf.ExecutionStatusManager,
-    ) -> AsyncIterator[Value]:
+        context: wf.TaskContext,
+        args: Value,
+        status_mgr: wf.ExecutionStatusManager,
+    ) -> AsyncGenerator[Value]:
         try:
             yield args
         finally:
             closed.append("context")
 
     async def wait(
-        context: wf.TaskContext, args: Value, status_mgr: wf.ExecutionStatusManager,
+        context: wf.TaskContext,
+        args: Value,
+        status_mgr: wf.ExecutionStatusManager,
     ) -> Value:
         await context.frame.get("resource")
         entered.set()
         await asyncio.Event().wait()
         return args
 
-    child = wf.define_workflow("Waiting", wf.define_task(
-        "wait", "Wait", task_action=wait, args_mapping=Value(1), context_tasks=[
-            wf.define_context_task("resource", "Resource", resource, Value(1)),
-        ],
-    ))
+    child = wf.define_workflow(
+        "Waiting",
+        wf.define_task(
+            "wait",
+            "Wait",
+            task_action=wait,
+            args_mapping=Value(1),
+            context_tasks=[
+                wf.define_context_task("resource", "Resource", resource, Value(1)),
+            ],
+        ),
+    )
 
     async def parent(context: wf.TaskContext, manager: wf.ExecutionStatusManager) -> Value:
         async with child.execute_in_task(context, manager, name="waiting"):
@@ -70,7 +82,8 @@ async def test_cancellation_during_child_execution_unwinds_context_resources(
 @pytest.mark.asyncio
 @pytest.mark.parametrize("fail_cleanup", [False, True])
 async def test_repeated_cancellation_waits_for_final_owned_frame_cleanup(
-    fail_cleanup: bool, monkeypatch: pytest.MonkeyPatch,
+    fail_cleanup: bool,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Even repeated cancellation cannot leave asynchronous Frame cleanup running behind."""
     entered = asyncio.Event()
@@ -90,7 +103,10 @@ async def test_repeated_cancellation_waits_for_final_owned_frame_cleanup(
 
     async def parent(context: wf.TaskContext, manager: wf.ExecutionStatusManager) -> Value:
         async with make_child().execute_in_task(
-            context, manager, name="closing", preset={"input": 1},
+            context,
+            manager,
+            name="closing",
+            preset={"input": 1},
         ) as result:
             results.append(result)
             await result.execution_frame.get("resource")
@@ -114,6 +130,7 @@ async def test_repeated_cancellation_waits_for_final_owned_frame_cleanup(
 @pytest.mark.asyncio
 async def test_nonordinary_cleanup_failure_propagates(monkeypatch: pytest.MonkeyPatch) -> None:
     """Process-control exceptions are never normalized into business results."""
+
     class StopCall(BaseException):
         pass
 
@@ -125,7 +142,10 @@ async def test_nonordinary_cleanup_failure_propagates(monkeypatch: pytest.Monkey
 
     async def parent(context: wf.TaskContext, manager: wf.ExecutionStatusManager) -> Value:
         async with make_child().execute_in_task(
-            context, manager, name="stop", preset={"input": 1},
+            context,
+            manager,
+            name="stop",
+            preset={"input": 1},
         ) as result:
             await result.execution_frame.get("resource")
         return Value(1)

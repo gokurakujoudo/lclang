@@ -61,19 +61,25 @@ def test_complete_site_links_anchors_assets_and_examples() -> None:
         # Repository links in guides are validated against their real source files.
         for folder in ("src", "tests", "scripts"):
             shutil.copytree(
-                ROOT / folder, root / folder, ignore=shutil.ignore_patterns("__pycache__"),
+                ROOT / folder,
+                root / folder,
+                ignore=shutil.ignore_patterns("__pycache__"),
             )
         for name in ("README.md", "LICENSE", "AGENTS.md", "mkdocs.yml"):
             shutil.copyfile(ROOT / name, root / name)
         output = root / "build/lclang"
         sample = root / "docs/README.md"
-        sample.write_text(sample.read_text(encoding="utf-8") + (
-            '\n## Highlighting examples\n\n'
-            '```python\n\nasync def greet():\n\treturn "<script>&雪"\n\n```\n\n'
-            '```lcl\ntrue if item?.value ?? null else false\n```\n\n'
-            '```lclcfg\nusing "base.lclcfg"\nport: 8443 # default\n```\n\n'
-            '```unknown-language\n<script>unsafe</script>\n```\n'
-        ), encoding="utf-8")
+        sample.write_text(
+            sample.read_text(encoding="utf-8")
+            + (
+                "\n## Highlighting examples\n\n"
+                '```python\n\nasync def greet():\n\treturn "<script>&雪"\n\n```\n\n'
+                "```lcl\ntrue if item?.value ?? null else false\n```\n\n"
+                '```lclcfg\nusing "base.lclcfg"\nport: 8443 # default\n```\n\n'
+                "```unknown-language\n<script>unsafe</script>\n```\n"
+            ),
+            encoding="utf-8",
+        )
         paths = build_site(root, output, "revision")
         parsed = {path.resolve(): SiteParser(path) for path in output.rglob("*.html")}
         assert len(paths) == len(list((root / "docs").rglob("*.md")))
@@ -95,12 +101,13 @@ def test_complete_site_links_anchors_assets_and_examples() -> None:
             if relative.name == "index.html":
                 source = source.with_name("README.md")
             tokens = MarkdownIt().parse(source.read_text(encoding="utf-8"))
-            assert page.blocks == [token.content for token in tokens
-                                   if token.type in {"fence", "code_block"}]
+            assert page.blocks == [
+                token.content for token in tokens if token.type in {"fence", "code_block"}
+            ]
         search = json.loads((output / "search/search_index.json").read_text(encoding="utf-8"))
         assert any("recalculate" in entry["text"] for entry in search["docs"])
         for entry in search["docs"]:
-            link = urlsplit(entry["location"])
+            link = urlsplit(str(entry["location"]))
             target = (output / (link.path or "index.html")).resolve()
             assert target in parsed
             if link.fragment:
@@ -114,9 +121,10 @@ def test_complete_site_links_anchors_assets_and_examples() -> None:
         assert '<span class="s' in home
         assert "&lt;script&gt;unsafe&lt;/script&gt;" in home
         assert "<script>unsafe</script>" not in home
-        assert ((output / "assets/logo.png").read_bytes()
-                == (ROOT / "site/assets/logo.png").read_bytes())
-        assert 'assets/favicon.png' in home
+        assert (output / "assets/logo.png").read_bytes() == (
+            ROOT / "site/assets/logo.png"
+        ).read_bytes()
+        assert "assets/favicon.png" in home
         assert not (output / "overrides/main.html").exists()
         guide = (output / "development/index.html").read_text(encoding="utf-8")
         assert "github.com/gokurakujoudo/lclang/blob/revision/" in guide

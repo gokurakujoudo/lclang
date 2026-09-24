@@ -54,6 +54,7 @@ def check_quote_types() -> None:
 
 def test_callback_types() -> None:
     """ParamSpec keeps keywords and custom subclasses retain Protocol signatures."""
+
     def convert(text: str, *, upper: bool = False) -> str:
         return text.upper() if upper else text
 

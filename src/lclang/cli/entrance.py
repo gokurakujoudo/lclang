@@ -24,7 +24,7 @@ class CliEntrance:
     command_group: CommandGroup
     version: str = "0.0.0"
     cli_config: CliConfig = field(default_factory=CliConfig)
-    lcl_mixin: Mapping[str, object] = field(default_factory=dict, kw_only=True)
+    lcl_mixin: Mapping[str, object] = field(default_factory=dict[str, object], kw_only=True)
 
     def __post_init__(self) -> None:
         """Validate the entrance without touching process state.

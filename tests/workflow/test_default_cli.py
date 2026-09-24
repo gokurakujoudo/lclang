@@ -16,9 +16,15 @@ from tests.workflow.default_support import Value, execution_context, workflow_fo
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(("source", "expected"), [
-    ("default", 3), ("preset", 5), ("config", 7), ("override", 9),
-])
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("default", 3),
+        ("preset", 5),
+        ("config", 7),
+        ("override", 9),
+    ],
+)
 async def test_cli_default_precedence(source: str, expected: int) -> None:
     """Lowest fallback does not disturb existing configuration and CLI precedence."""
     workflow = workflow_for(wf.define_variable[object]("value", default=3))
@@ -27,7 +33,10 @@ async def test_cli_default_precedence(source: str, expected: int) -> None:
         config = Path(directory) / "config.lclcfg"
         config.write_text("value: 7\ncalculated: value * 2\n", encoding="utf-8")
         params = CliParams(
-            "python", ("run",), date(2026, 9, 22), False,
+            "python",
+            ("run",),
+            date(2026, 9, 22),
+            False,
             str(config) if source in {"config", "override"} else None,
             {"value": "LCL[9]"} if source == "override" else {},
         )
@@ -73,6 +82,7 @@ async def test_cli_factory_is_not_invoked_by_help_or_binding_creation() -> None:
     ).to_cli("run", "Run")
     assert "secret" not in render_command_help("tool", secret, ("run",))
     assert "default=8" in render_command_help(
-        "tool", replace(command, preset={"value": 8}), ("run",),
+        "tool",
+        replace(command, preset={"value": 8}),
+        ("run",),
     )
-

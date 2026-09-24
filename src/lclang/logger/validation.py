@@ -6,6 +6,7 @@ import logging
 import math
 from collections.abc import Mapping
 from types import MappingProxyType
+from typing import cast
 
 
 def mapping(value: object, path: str) -> dict[str, object]:
@@ -16,9 +17,11 @@ def mapping(value: object, path: str) -> dict[str, object]:
     :returns: Detached dictionary.
     :raises TypeError: If the mapping or keys have incompatible types.
     """
-    if not isinstance(value, Mapping) or any(not isinstance(key, str) for key in value):
+    if not isinstance(value, Mapping) or any(
+        not isinstance(key, str) for key in cast(Mapping[object, object], value)
+    ):
         raise TypeError(f"{path}: expected a string-keyed mapping")
-    return dict(value)
+    return dict(cast(Mapping[str, object], value))
 
 
 def fields(value: object, allowed: set[str], path: str) -> dict[str, object]:
@@ -45,11 +48,15 @@ def freeze(value: Mapping[str, object]) -> Mapping[str, object]:
     """
     return MappingProxyType(
         {
-            key: freeze(mapping(item, key))
-            if isinstance(item, Mapping)
-            else tuple(item)
-            if isinstance(item, (list, tuple))
-            else item
+            key: (
+                freeze(mapping(cast(Mapping[object, object], item), key))
+                if isinstance(item, Mapping)
+                else (
+                    tuple(cast(list[object] | tuple[object, ...], item))
+                    if isinstance(item, (list, tuple))
+                    else item
+                )
+            )
             for key, item in value.items()
         }
     )
@@ -107,7 +114,8 @@ def names(value: object, path: str) -> tuple[str, ...]:
     :raises TypeError: If the container or a name is invalid.
     """
     if not isinstance(value, (list, tuple)) or any(
-        not isinstance(item, str) or not item for item in value
+        not isinstance(item, str) or not item
+        for item in cast(list[object] | tuple[object, ...], value)
     ):
         raise TypeError(f"{path}: expected nonempty logger names in a list or tuple")
-    return tuple(value)
+    return tuple(cast(list[str] | tuple[str, ...], value))

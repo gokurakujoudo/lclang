@@ -126,7 +126,9 @@ runtime dependencies.
 
 ## Source quality
 
-- Strict type checking, linting, 100% branch coverage, parser differential and
+- Strict mypy and Pyright/Pylance checking across source, scripts and tests,
+  pinned Black formatting with editor automation and CI verification, linting,
+  100% branch coverage, parser differential and
   property tests, concurrency and dependency stress tests, leak checks, and
   executable documentation.
 - Source CLI smoke, default full stress execution, and minimal downstream sdist

@@ -49,24 +49,16 @@ async def test_manager_validation_cycles_failures_and_retirement() -> None:
         await BDCalendarManager((CancelledLoader(),)).use_calendar(CalendarID("CANCEL"))
     with pytest.raises(CalendarCannotLoadException):
         await BDCalendarManager((RecursiveLoader(),)).use_calendar(CalendarID("LOOP"))
-    ordinary = BDCalendarManager(
-        (DictionaryLoader({CalendarID("FAIL"): RuntimeError("boom")}),)
-    )
+    ordinary = BDCalendarManager((DictionaryLoader({CalendarID("FAIL"): RuntimeError("boom")}),))
     with pytest.raises(CalendarCannotLoadException) as ordinary_failure:
         await ordinary.use_calendar(CalendarID("FAIL"))
     assert isinstance(ordinary_failure.value.__cause__, RuntimeError)
     domain = BDCalendarManager(
-        (
-            DictionaryLoader(
-                {CalendarID("FAIL"): CalendarCannotLoadException(CalendarID("FAIL"))}
-            ),
-        )
+        (DictionaryLoader({CalendarID("FAIL"): CalendarCannotLoadException(CalendarID("FAIL"))}),)
     )
     with pytest.raises(CalendarCannotLoadException):
         await domain.use_calendar(CalendarID("FAIL"))
-    mismatched = BDCalendarManager(
-        (DictionaryLoader({CalendarID("WANTED"): ALL_DAYS}),)
-    )
+    mismatched = BDCalendarManager((DictionaryLoader({CalendarID("WANTED"): ALL_DAYS}),))
     with pytest.raises(CalendarCannotLoadException) as mismatch:
         await mismatched.use_calendar(CalendarID("WANTED"))
     assert isinstance(mismatch.value.__cause__, ValueError)
@@ -143,7 +135,5 @@ async def test_manager_shields_shared_load_and_retries_after_failure() -> None:
     retrying = BDCalendarManager((flaky,))
     with pytest.raises(CalendarCannotLoadException):
         await retrying.use_calendar(CalendarID("RETRY"))
-    assert (await retrying.use_calendar(CalendarID("RETRY"))).calendar_id == CalendarID(
-        "RETRY"
-    )
+    assert (await retrying.use_calendar(CalendarID("RETRY"))).calendar_id == CalendarID("RETRY")
     assert flaky.calls == 2

@@ -66,9 +66,6 @@ class OnlyBusinessDayBDCalendar(FunctionalBDCalendar):
         return self
 
 
-
-
-
 @final
 class OnlyHolidayBDCalendar(FunctionalBDCalendar):
     """Retain only a base calendar's holidays.

@@ -63,10 +63,6 @@ def internal_leave_flight(token: Token[FlightPath]) -> None:
     _ACTIVE_FLIGHTS.reset(token)
 
 
-
-
-
-
 async def internal_refresh_definition(
     name: str,
     inflight: dict[str, asyncio.Task[object]],

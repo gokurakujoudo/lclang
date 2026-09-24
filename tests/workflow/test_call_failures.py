@@ -41,11 +41,15 @@ async def test_setup_failure_propagates_without_borrowing_parent_frame(
 @pytest.mark.asyncio
 async def test_preflight_binding_errors_create_no_call_nodes() -> None:
     """Bad bindings fail before executing or mounting anything."""
+
     async def parent(context: wf.TaskContext, manager: wf.ExecutionStatusManager) -> Value:
         for preset in (1, {1: 2}):
             with pytest.raises(TypeError):
                 async with make_child().execute_in_task(
-                    context, manager, name="bad", preset=cast(Mapping[str, object], preset),
+                    context,
+                    manager,
+                    name="bad",
+                    preset=cast(Mapping[str, object], preset),
                 ):
                     pytest.fail("entered")
         assert not manager.current.sub_tasks
@@ -65,7 +69,8 @@ async def test_unexpected_execution_exception_yields_error_with_live_frame(
     execute = wf.Workflow.execute
 
     async def fail(
-        self: wf.Workflow, context: wf.WorkflowExecutionContext,
+        self: wf.Workflow,
+        context: wf.WorkflowExecutionContext,
     ) -> wf.WorkflowExecutionResult:
         if self is child:
             raise ValueError("unexpected execution error")
@@ -90,7 +95,9 @@ async def test_unexpected_execution_exception_yields_error_with_live_frame(
 @pytest.mark.asyncio
 @pytest.mark.parametrize("body_error,cleanup_error", [(True, False), (False, True), (True, True)])
 async def test_body_and_cleanup_errors_preserve_native_values(
-    body_error: bool, cleanup_error: bool, monkeypatch: pytest.MonkeyPatch,
+    body_error: bool,
+    cleanup_error: bool,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Cleanup errors escape the scope without throwing away materialized child outputs."""
     body_failure = ValueError("body failed")
@@ -104,21 +111,28 @@ async def test_body_and_cleanup_errors_preserve_native_values(
     install_call_resource(monkeypatch, Resource)
 
     async def parent(context: wf.TaskContext, manager: wf.ExecutionStatusManager) -> Value:
+        result: wf.WorkflowExecutionResult | None = None
         with pytest.raises(Exception) as caught:
             async with make_child().execute_in_task(
-                context, manager, name="errors", preset={"input": 4},
+                context,
+                manager,
+                name="errors",
+                preset={"input": 4},
             ) as result:
                 assert isinstance(await result.execution_frame.get("resource"), Resource)
                 if body_error:
                     raise body_failure
         if body_error and cleanup_error:
-            assert isinstance(caught.value, ExceptionGroup)
-            assert caught.value.exceptions[0] is body_failure
-            assert caught.value.exceptions[1].__cause__ is cleanup_failure
+            error = caught.value
+            assert isinstance(error, ExceptionGroup)
+            errors = cast(ExceptionGroup[Exception], error).exceptions
+            assert errors[0] is body_failure
+            assert errors[1].__cause__ is cleanup_failure
         elif cleanup_error:
             assert caught.value.__cause__ is cleanup_failure
         else:
             assert caught.value is body_failure
+        assert result is not None
         assert result.task_args[wf.TaskID("child")] == Value(4)
         assert result.task_outputs[wf.TaskID("child")] == Value(5)
         assert result.execution_status.status is (

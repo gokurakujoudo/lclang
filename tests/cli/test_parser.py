@@ -56,22 +56,16 @@ def test_parser_accepts_aliases_last_override_and_dates() -> None:
 
 def test_parser_accepts_qualified_override_keys() -> None:
     """Scoped CLI keys retain literal and lazy override spellings."""
-    parsed = parse_common_options(
-        ["-o", "A.B.x", "42", "-o", "A.B.y", "LCL[A.B.x + 1]"]
-    )
+    parsed = parse_common_options(["-o", "A.B.x", "42", "-o", "A.B.y", "LCL[A.B.x + 1]"])
     assert parsed.overrides == {"A.B.x": "42", "A.B.y": "LCL[A.B.x + 1]"}
-    assert parse_common_options(["-o", "dryrun", "value"]).overrides == {
-        "dryrun": "value"
-    }
+    assert parse_common_options(["-o", "dryrun", "value"]).overrides == {"dryrun": "value"}
     with pytest.raises(LclCliUsageError, match="reserved"):
         parse_common_options(["-o", f"{RUNTIME_DRYRUN_KEY}.value", "1"])
 
 
 def test_parser_normalizes_masked_overrides_and_keeps_policy_sticky() -> None:
     """Repeated marked and plain spellings share one right-biased CLI key."""
-    parsed = parse_common_options(
-        ["-o", "service.token!", "old", "-o", "service.token", "new"]
-    )
+    parsed = parse_common_options(["-o", "service.token!", "old", "-o", "service.token", "new"])
     assert parsed.overrides == {"service.token": "new"}
     assert parsed.masked_names == frozenset({"service.token"})
 

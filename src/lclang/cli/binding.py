@@ -200,7 +200,8 @@ async def build_binding(command: Command, params: CliParams, cli_config: CliConf
         missing = [
             item.name
             for item in command.parameter_docs
-            if item.required and not isinstance(item, DerivedParameterDoc)
+            if item.required
+            and not isinstance(item, DerivedParameterDoc)
             and not runtime.has(item.name)
         ]
         if missing:

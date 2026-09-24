@@ -32,4 +32,3 @@ async def direct_dependency_ids(calendars: Iterable[BDCalendar]) -> Set[Calendar
     :returns: Immutable set of their IDs.
     """
     return frozenset(calendar.calendar_id for calendar in calendars)
-

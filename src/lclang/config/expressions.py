@@ -2,6 +2,7 @@
 
 from dataclasses import fields, replace
 from pathlib import Path
+from typing import cast
 
 from lclang.ast import LclAstNode, LclConstant, LclName
 from lclang.config.errors import LclConfigSyntaxError
@@ -144,7 +145,8 @@ def replace_magic_value(value: object, path: Path | None) -> object:
     if isinstance(value, LclAstNode):
         return replace_magic_nodes(value, path)
     if isinstance(value, tuple):
-        transformed = tuple(replace_magic_value(item, path) for item in value)
-        unchanged = all(left is right for left, right in zip(value, transformed, strict=True))
-        return value if unchanged else transformed
+        items = cast(tuple[object, ...], value)
+        transformed = tuple(replace_magic_value(item, path) for item in items)
+        unchanged = all(left is right for left, right in zip(items, transformed, strict=True))
+        return items if unchanged else transformed
     return value

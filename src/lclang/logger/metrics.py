@@ -51,7 +51,7 @@ class Counters:
     def __init__(self) -> None:
         """Initialize unitless event counters from zero."""
         self.lock = RLock()
-        self.totals = dict.fromkeys(
+        self.totals: dict[str, int] = dict.fromkeys(
             ("records_enqueued", "records_written", "writer_errors", "rollover_count"),
             0,
         )

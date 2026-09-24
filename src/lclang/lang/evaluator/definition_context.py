@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from contextvars import ContextVar
 
@@ -19,7 +19,7 @@ ACTIVE_DEFINITION_STACK: ContextVar[tuple[str, ...]] = ContextVar(
 
 
 @contextmanager
-def definition_scope(name: str) -> Iterator[None]:
+def definition_scope(name: str) -> Generator[None]:
     """Select one definition name for the duration of its evaluation.
 
     :param name: Non-empty definition name owned by the active Frame.

@@ -18,4 +18,3 @@ class DayType(Enum):
     Holiday = "Holiday"
     # The calendar has no classification for the date.
     Undefined = "Undefined"
-

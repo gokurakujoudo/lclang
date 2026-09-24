@@ -2,9 +2,8 @@
 
 from dataclasses import fields, is_dataclass
 from functools import reduce
-from operator import or_
 from types import UnionType
-from typing import Any, Union, get_args, get_origin, get_type_hints
+from typing import Any, Union, cast, get_args, get_origin, get_type_hints
 
 
 def specialize(annotation: Any, substitutions: dict[object, object]) -> Any:
@@ -17,7 +16,7 @@ def specialize(annotation: Any, substitutions: dict[object, object]) -> Any:
     if not substitutions:
         return annotation
     if isinstance(annotation, list):
-        return [specialize(item, substitutions) for item in annotation]
+        return [specialize(item, substitutions) for item in cast(list[object], annotation)]
     if annotation in substitutions:
         return substitutions[annotation]
     arguments = get_args(annotation)
@@ -26,7 +25,7 @@ def specialize(annotation: Any, substitutions: dict[object, object]) -> Any:
     resolved = tuple(specialize(item, substitutions) for item in arguments)
     origin = get_origin(annotation)
     if origin in (Union, UnionType):
-        return reduce(or_, resolved)
+        return reduce(lambda left, right: left | right, resolved)
     return annotation.copy_with(resolved) if hasattr(annotation, "copy_with") else origin[resolved]
 
 
@@ -44,6 +43,8 @@ def record_annotations(annotation: object) -> dict[str, Any]:
         hints = get_type_hints(cls)
     except Exception as error:
         raise TypeError("workflow dataclass annotations cannot be resolved") from error
-    parameters = getattr(cls, "__type_params__", ()) or getattr(cls, "__parameters__", ())
-    substitutions = dict(zip(parameters, get_args(annotation), strict=False))
+    parameters: tuple[object, ...] = getattr(cls, "__type_params__", ()) or getattr(
+        cls, "__parameters__", ()
+    )
+    substitutions: dict[object, object] = dict(zip(parameters, get_args(annotation), strict=False))
     return {item.name: specialize(hints[item.name], substitutions) for item in fields(cls)}

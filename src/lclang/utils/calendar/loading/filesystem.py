@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, final
+from typing import TYPE_CHECKING, cast, final
 
 from lclang.stdlib.dates import parse_ymd
 from lclang.utils.calendar.base import BDCalendar
@@ -28,14 +28,23 @@ def read_calendar_json(path: Path, calendar_id: CalendarID) -> HardcodedBDCalend
     :raises ValueError: If JSON content violates the strict schema.
     """
     raw = json.loads(path.read_bytes().decode("utf-8-sig"))
-    if not isinstance(raw, dict) or set(raw) != {"business_days", "holidays"}:
+    if not isinstance(raw, dict) or set(cast(dict[object, object], raw)) != {
+        "business_days",
+        "holidays",
+    }:
         raise ValueError("calendar JSON requires exactly business_days and holidays")
-    business = raw["business_days"]
-    holidays = raw["holidays"]
+    data = cast(dict[str, object], raw)
+    business = data["business_days"]
+    holidays = data["holidays"]
     if not isinstance(business, list) or not isinstance(holidays, list):
         raise ValueError("calendar JSON fields must be arrays")
-    if any(not isinstance(value, str) for value in (*business, *holidays)):
+    if any(
+        not isinstance(value, str)
+        for value in (*cast(list[object], business), *cast(list[object], holidays))
+    ):
         raise ValueError("calendar JSON dates must be YYYYMMDD strings")
+    business = cast(list[str], business)
+    holidays = cast(list[str], holidays)
     if len(set(business)) != len(business) or len(set(holidays)) != len(holidays):
         raise ValueError("calendar JSON dates cannot repeat")
     if set(business) & set(holidays):
@@ -80,9 +89,7 @@ class FileSystemHardcodedBDCalendarLoader(BDCalendarLoader):
         del manager
         if Path(str(calendar_id)).name != str(calendar_id):
             return None
-        path = (self.hardcoded_calendar_dir / f"{calendar_id}.calendar.json").resolve(
-            strict=False
-        )
+        path = (self.hardcoded_calendar_dir / f"{calendar_id}.calendar.json").resolve(strict=False)
         if not path.is_relative_to(self.hardcoded_calendar_dir):
             return None
         if not path.exists():

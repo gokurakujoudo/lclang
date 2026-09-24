@@ -24,9 +24,7 @@ def _targets(frame: Frame, name: str) -> tuple[VarName, ...]:
 @pytest.mark.asyncio
 async def test_snapshot_moves_static_occurrences_from_inactive_to_confirmed() -> None:
     """Conditional execution publishes only the name occurrences actually used."""
-    frame = _frame(
-        {"value": "left if flag else right"}, flag=False, left=1, right=2
-    )
+    frame = _frame({"value": "left if flag else right"}, flag=False, left=1, right=2)
     before = frame.dependency_snapshot("value")
     assert before.dynamic_edges == ()
     assert before.reconciliation.inactive == before.static_edges
@@ -87,9 +85,7 @@ async def test_successful_recalculation_atomically_replaces_trace() -> None:
             await release.wait()
         return calls == 2
 
-    frame = _frame(
-        {"value": "left if choose() else right"}, choose=choose, left=1, right=2
-    )
+    frame = _frame({"value": "left if choose() else right"}, choose=choose, left=1, right=2)
     assert await frame.get("value") == 2
     old = frame.dependency_snapshot("value")
     refresh = asyncio.create_task(frame.recalculate("value"))
@@ -113,9 +109,7 @@ async def test_failed_recalculation_replaces_and_cancellation_preserves_trace() 
             raise asyncio.CancelledError
         return calls == 2
 
-    frame = _frame(
-        {"value": "missing if choose() else right"}, choose=choose, right=2
-    )
+    frame = _frame({"value": "missing if choose() else right"}, choose=choose, right=2)
     assert await frame.get("value") == 2
     with pytest.raises(LclNameError):
         await frame.recalculate("value")

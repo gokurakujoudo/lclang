@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import fields, is_dataclass
 from enum import Enum
+from typing import cast
 
 from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy
@@ -47,7 +48,7 @@ def ast_shape(value: object) -> object:
     if isinstance(value, Enum):
         return value.value
     if isinstance(value, tuple):
-        return tuple(ast_shape(item) for item in value)
+        return tuple(ast_shape(item) for item in cast(tuple[object, ...], value))
     if isinstance(value, LclAstNode) and is_dataclass(value):
         members = tuple(
             (field.name, ast_shape(getattr(value, field.name)))

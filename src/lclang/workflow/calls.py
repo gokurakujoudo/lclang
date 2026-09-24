@@ -1,7 +1,10 @@
+# Shared implementation modules intentionally access owner state.
+# pyright: reportPrivateUsage=false
+
 """Action-owned dynamic workflow calls with explicit Frame lifetime."""
 
 import asyncio
-from collections.abc import AsyncIterator, Mapping
+from collections.abc import AsyncGenerator, Mapping
 from contextlib import asynccontextmanager
 
 from lclang.api import define_frame
@@ -40,9 +43,13 @@ async def close_call_frame(frame: Frame) -> BaseException | None:
 
 @asynccontextmanager
 async def execute_workflow_in_task(
-    workflow: Workflow, context: TaskContext, parent: ExecutionStatusManager, *,
-    name: str, preset: Mapping[str, object] | None,
-) -> AsyncIterator[WorkflowExecutionResult]:
+    workflow: Workflow,
+    context: TaskContext,
+    parent: ExecutionStatusManager,
+    *,
+    name: str,
+    preset: Mapping[str, object] | None,
+) -> AsyncGenerator[WorkflowExecutionResult]:
     """Execute an isolated workflow before yielding its live borrowed-frame result.
 
     :param workflow: Reusable child definition, retaining normal mixin precedence.
@@ -78,20 +85,32 @@ async def execute_workflow_in_task(
     result: WorkflowExecutionResult | None = None
     pending: BaseException | None = None
     try:
-        context.logger.info("workflow call start: [%s] %s%s", branch, workflow.title,
-                            " (dryrun)" if context.is_dryrun else "")
+        context.logger.info(
+            "workflow call start: [%s] %s%s",
+            branch,
+            workflow.title,
+            " (dryrun)" if context.is_dryrun else "",
+        )
         frame = define_frame()
         frame.mixin(values)
         execution = WorkflowExecutionContext(
-            context.is_dryrun, context.as_of_date, context.verbose_mode, context.logger, frame,
+            context.is_dryrun,
+            context.as_of_date,
+            context.verbose_mode,
+            context.logger,
+            frame,
         )
         try:
             result = await workflow.execute(execution)
         except Exception as error:
             context.logger.error("workflow call error: [%s]", branch, exc_info=True)
             result = WorkflowExecutionResult(
-                ExecutionStatusTree(ExecutionStatus.ERROR, ExecutionTaskType.TASK,
-                                    workflow.title, str(error)), frame, {}, {},
+                ExecutionStatusTree(
+                    ExecutionStatus.ERROR, ExecutionTaskType.TASK, workflow.title, str(error)
+                ),
+                frame,
+                {},
+                {},
             )
         attach_call_status(manager, result.execution_status, workflow.root_task)
         propagate_call_status(parent, result.execution_status.status)
@@ -109,11 +128,18 @@ async def execute_workflow_in_task(
         if pending is not None:
             manager.update(ExecutionStatus.ERROR, str(pending))
             propagate_call_status(parent, ExecutionStatus.ERROR)
-            context.logger.error("workflow call error: [%s]", branch,
-                                 exc_info=(type(pending), pending, pending.__traceback__))
+            context.logger.error(
+                "workflow call error: [%s]",
+                branch,
+                exc_info=(type(pending), pending, pending.__traceback__),
+            )
         finalize_manager(manager)
-        context.logger.log(status_level(manager.current.status),
-                           "workflow call complete: [%s] %s %s",
-                           branch, workflow.title, manager.current.status.value)
+        context.logger.log(
+            status_level(manager.current.status),
+            "workflow call complete: [%s] %s %s",
+            branch,
+            workflow.title,
+            manager.current.status.value,
+        )
     if pending is not None:
         raise pending

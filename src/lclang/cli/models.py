@@ -72,7 +72,7 @@ class CliParams:
     config_file_path: str | None
     overrides: Mapping[str, str | bool]
     verbose: bool = False
-    masked_names: frozenset[str] = field(default_factory=frozenset, kw_only=True)
+    masked_names: frozenset[str] = field(default_factory=frozenset[str], kw_only=True)
     script_path: str = field(default="script.py", kw_only=True)
     raw_argv: Sequence[str] | None = field(default=None, kw_only=True)
 
@@ -92,9 +92,7 @@ class CliParams:
         if not self.script_path:
             raise ValueError("script path cannot be empty")
         raw_argv = None if self.raw_argv is None else tuple(self.raw_argv)
-        if raw_argv is not None and any(
-            not isinstance(item, str) or not item for item in raw_argv
-        ):
+        if raw_argv is not None and any(not isinstance(item, str) or not item for item in raw_argv):
             raise ValueError("raw argv tokens must be non-empty text")
         command = tuple(self.command)
         if not command or any(not isinstance(item, str) or not item for item in command):

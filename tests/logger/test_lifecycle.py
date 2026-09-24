@@ -36,8 +36,9 @@ async def test_caller_levels_options_and_scope_reuse() -> None:
         direct.debug("debug")
         direct.exception("no traceback", exc_info=False)
         for kwargs in ({"name": 1}, {"prefix": 1}, {"emit_level": -1}, {"emit_level": True}):
+            # Invalid arguments intentionally exercise the untyped caller boundary.
             with pytest.raises((TypeError, ValueError)):
-                await use_logger(**kwargs)
+                await use_logger(**kwargs)  # pyright: ignore[reportArgumentType]
     assert "test_caller_levels_options_and_scope_reuse [P] critical" in stream.getvalue()
     assert "test_caller_levels_options_and_scope_reuse direct" in stream.getvalue()
     async with use_logger_handler(config):

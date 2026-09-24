@@ -31,8 +31,10 @@ def expand_record_parameters(parameters: tuple[ParameterDoc, ...]) -> tuple[Para
         """
         cls = get_origin(parent.value_type) or parent.value_type
         if (
-            not isinstance(cls, type) or not is_dataclass(cls)
-            or get_box_type(parent.value_type) is not None or cls in active
+            not isinstance(cls, type)
+            or not is_dataclass(cls)
+            or get_box_type(parent.value_type) is not None
+            or cls in active
         ):
             return
         annotations = record_annotations(parent.value_type)
@@ -47,8 +49,13 @@ def expand_record_parameters(parameters: tuple[ParameterDoc, ...]) -> tuple[Para
                 default = DefaultBinding(factory=item.default_factory)
             description = item.metadata.get("help", "NO HELP MESSAGE PROVIDED")
             inferred: ParameterDoc = DerivedParameterDoc(
-                name, annotations[item.name], parent.required and default is None,
-                description, masked=parent.masked, root_name=root, help_default=default,
+                name,
+                annotations[item.name],
+                parent.required and default is None,
+                description,
+                masked=parent.masked,
+                root_name=root,
+                help_default=default,
             )
             if name in explicit:
                 if explicit[name].value_type != inferred.value_type:

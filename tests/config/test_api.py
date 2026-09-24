@@ -34,10 +34,7 @@ async def test_using_flattens_cross_file_dependencies_into_one_module() -> None:
         )
         assert tuple(str(name) for name in graph.definitions) == ("x", "z", "w", "y")
         assert graph.external_names == ()
-        assert [
-            (str(edge.source), str(edge.target), edge.kind)
-            for edge in graph.edges
-        ] == [
+        assert [(str(edge.source), str(edge.target), edge.kind) for edge in graph.edges] == [
             ("w", "x", DependencyKind.EAGER),
             ("y", "z", DependencyKind.EAGER),
             ("y", "w", DependencyKind.EAGER),
@@ -125,9 +122,7 @@ async def test_config_frames_use_lhs_dates_and_static_hierarchy_analysis() -> No
     with TemporaryDirectory(prefix="lclang-config-context-") as directory:
         path = Path(directory) / "context.lclcfg"
         path.write_text(
-            'k: {"name": lhs()}\n'
-            'day: parse_ymd("20240229")\n'
-            "roundtrip: to_ymd(day)\n",
+            'k: {"name": lhs()}\n' 'day: parse_ymd("20240229")\n' "roundtrip: to_ymd(day)\n",
             encoding="utf-8",
         )
         config = await load_config(path)

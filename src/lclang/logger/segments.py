@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+# Existing uppercase names denote mutable process state, not constants.
+# pyright: reportConstantRedefinition=false
 import json
 import multiprocessing
 import os

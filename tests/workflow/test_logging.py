@@ -1,7 +1,7 @@
 """Behavioural tests for workflow lifecycle and mapping logs."""
 
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import date
@@ -56,7 +56,7 @@ async def test_task_context_lifecycle_branch_and_verbose_mappings(
         context: wf.TaskContext,
         args: LoggedArgs,
         status_mgr: wf.ExecutionStatusManager,
-    ) -> AsyncIterator[LoggedOutputs]:
+    ) -> AsyncGenerator[LoggedOutputs]:
         del status_mgr
         observed.append(str(await context.frame.get("__task_id_branch__")))
         yield LoggedOutputs(3, args.source)
@@ -128,6 +128,7 @@ async def test_task_error_keeps_traceback_and_still_completes(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """An originating error record and finalized completion are both observable."""
+
     async def fail(
         context: wf.TaskContext,
         args: LoggedArgs,
@@ -151,16 +152,11 @@ async def test_task_error_keeps_traceback_and_still_completes(
 
     assert result.execution_status.status is wf.ExecutionStatus.ERROR
     error = next(
-        record
-        for record in caplog.records
-        if record.getMessage().startswith("task error:")
+        record for record in caplog.records if record.getMessage().startswith("task error:")
     )
     assert error.getMessage() == "task error: [root] ERROR"
     assert error.exc_info is not None
-    assert any(
-        record.getMessage() == "task complete: [root] ERROR"
-        for record in caplog.records
-    )
+    assert any(record.getMessage() == "task complete: [root] ERROR" for record in caplog.records)
 
 
 @pytest.mark.asyncio
@@ -209,7 +205,7 @@ async def test_context_output_mapping_error_uses_context_lifecycle(
         context: wf.TaskContext,
         args: LoggedArgs,
         status_mgr: wf.ExecutionStatusManager,
-    ) -> AsyncIterator[LoggedOutputs]:
+    ) -> AsyncGenerator[LoggedOutputs]:
         del context, args, status_mgr
         yield cast(LoggedOutputs, object())
 

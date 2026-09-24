@@ -34,6 +34,7 @@ def rewrite_links(text: str, source: Path, root: Path, ref: str) -> str:
     :returns: Markdown with only local prose link destinations replaced.
     :raises ValueError: If a local destination is absent or outside the repository.
     """
+
     def replace(match: re.Match[str]) -> str:
         if match[1]:
             return match[0]

@@ -98,8 +98,4 @@ class SnowflakeGenerator:
                 raise OverflowError("Snowflake sequence exhausted; retry after the clock advances")
             self._last_timestamp_ms = timestamp_ms
             self._sequence = sequence
-            return (
-                (timestamp_ms << TIMESTAMP_SHIFT)
-                | (self._worker_id << WORKER_SHIFT)
-                | sequence
-            )
+            return (timestamp_ms << TIMESTAMP_SHIFT) | (self._worker_id << WORKER_SHIFT) | sequence

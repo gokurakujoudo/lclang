@@ -15,7 +15,7 @@ class Endpoint:
 
     host: str
     port: int = 443
-    tags: list[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list[str])
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,8 +86,7 @@ async def test_proxy_index_names_and_records_share_scoped_lookup() -> None:
         assert await endpoints["blue"].port == 9443
         assert await child.evaluate('endpoints["blue"].port') == 9443
         records = [
-            await endpoints[name].as_record(Endpoint)
-            for name in await endpoints.field_names()
+            await endpoints[name].as_record(Endpoint) for name in await endpoints.field_names()
         ]
         assert records == [
             Endpoint("blue.example", 9443),
@@ -166,9 +165,7 @@ def test_scoped_real_prefix_conflicts_are_eager_and_atomic() -> None:
     """Real ancestors conflict while placeholders and exact overrides work."""
     with pytest.raises(ValueError, match="conflict"):
         lclang.define_module("bad", {"A": "1", "A.x": "2"})
-    module = lclang.define_module(
-        "good", {"A": lclang.FRAME_PROXY, "A.x": "1", "A.y": "2"}
-    )
+    module = lclang.define_module("good", {"A": lclang.FRAME_PROXY, "A.x": "1", "A.y": "2"})
     parent = lclang.define_frame(module)
     parent.derive(lclang.define_module("child", {"A.x": "3"}))
     with pytest.raises(ValueError, match="conflict"):
@@ -190,6 +187,7 @@ async def test_closed_descendants_do_not_block_atomic_parent_mixins() -> None:
 @pytest.mark.asyncio
 async def test_scoped_external_awaitable_is_resolved_lazily() -> None:
     """Host leaves retain the ordinary recursive auto-await boundary."""
+
     async def value() -> int:
         return 42
 
@@ -200,9 +198,7 @@ async def test_scoped_external_awaitable_is_resolved_lazily() -> None:
 @pytest.mark.asyncio
 async def test_scoped_dependencies_and_inspection_use_qualified_leaf() -> None:
     """Static, dynamic, and inspection evidence names the terminal binding."""
-    module = lclang.define_module(
-        "evidence", {"A.x": "40", "result": "A.x + 2"}
-    )
+    module = lclang.define_module("evidence", {"A.x": "40", "result": "A.x + 2"})
     async with lclang.define_frame(module) as frame:
         before = frame.dependency_snapshot("result")
         assert [str(edge.target) for edge in before.static_edges] == ["A.x"]

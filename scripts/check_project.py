@@ -78,12 +78,13 @@ def documented_nodes(tree: ast.Module) -> list[DocumentedNode]:
     .. note::
        Source ordering keeps diagnostics deterministic across platforms.
     """
-    declarations = [
+    declarations: list[ast.ClassDef | CallableNode] = [
         node
         for node in ast.walk(tree)
         if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
     ]
-    return [tree, *sorted(declarations, key=lambda node: node.lineno)]
+    declarations.sort(key=lambda node: node.lineno)
+    return [tree, *declarations]
 
 
 def callable_parameters(node: CallableNode) -> list[str]:
@@ -104,7 +105,7 @@ def exception_names(expression: ast.expr | None) -> set[str]:
     if isinstance(expression, ast.Call):
         expression = expression.func
     if isinstance(expression, ast.Tuple):
-        return set().union(*(exception_names(item) for item in expression.elts))
+        return set[str]().union(*(exception_names(item) for item in expression.elts))
     if isinstance(expression, ast.Name):
         return {expression.id} if expression.id[:1].isupper() else set()
     if isinstance(expression, ast.Attribute):
@@ -141,13 +142,15 @@ def raised_exception_names(node: CallableNode) -> set[str]:
                 }
             )
         if isinstance(current, (ast.Try, ast.TryStar)):
-            handled = set().union(*(exception_names(item.type) for item in current.handlers))
-            protected = set().union(*(visit(child, caught | handled) for child in current.body))
+            handled = set[str]().union(*(exception_names(item.type) for item in current.handlers))
+            protected = set[str]().union(
+                *(visit(child, caught | handled) for child in current.body)
+            )
             remaining = [*current.handlers, *current.orelse, *current.finalbody]
-            return protected | set().union(*(visit(child, caught) for child in remaining))
-        return set().union(*(visit(child, caught) for child in ast.iter_child_nodes(current)))
+            return protected | set[str]().union(*(visit(child, caught) for child in remaining))
+        return set[str]().union(*(visit(child, caught) for child in ast.iter_child_nodes(current)))
 
-    return set().union(*(visit(child, set()) for child in node.body))
+    return set[str]().union(*(visit(child, set()) for child in node.body))
 
 
 def class_fields(node: ast.ClassDef) -> list[str]:
@@ -268,9 +271,7 @@ def constant_failures(source: str, tree: ast.Module, path: Path) -> Iterator[str
             targets = (
                 statement.targets
                 if isinstance(statement, ast.Assign)
-                else [statement.target]
-                if isinstance(statement, ast.AnnAssign)
-                else []
+                else [statement.target] if isinstance(statement, ast.AnnAssign) else []
             )
             names = [
                 target.id

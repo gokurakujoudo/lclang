@@ -1,7 +1,7 @@
 """Whole-record variables across task and context mapping boundaries."""
 
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import date
@@ -22,7 +22,9 @@ class Record[T]:
 
 
 async def echo(
-    context: wf.TaskContext, args: Record[int], status_mgr: wf.ExecutionStatusManager,
+    context: wf.TaskContext,
+    args: Record[int],
+    status_mgr: wf.ExecutionStatusManager,
 ) -> Record[int]:
     """Echo the entire materialized argument."""
     return args
@@ -30,8 +32,10 @@ async def echo(
 
 @asynccontextmanager
 async def resource(
-    context: wf.TaskContext, args: Record[int], status_mgr: wf.ExecutionStatusManager,
-) -> AsyncIterator[Record[int]]:
+    context: wf.TaskContext,
+    args: Record[int],
+    status_mgr: wf.ExecutionStatusManager,
+) -> AsyncGenerator[Record[int]]:
     """Yield one whole-record context resource."""
     yield args
 
@@ -39,7 +43,11 @@ async def resource(
 def execution_context(frame: lclang.Frame, verbose: bool = False) -> wf.WorkflowExecutionContext:
     """Build isolated execution metadata without file logging."""
     return wf.WorkflowExecutionContext(
-        False, date(2026, 9, 21), verbose, logging.getLogger("record-mappings"), frame,
+        False,
+        date(2026, 9, 21),
+        verbose,
+        logging.getLogger("record-mappings"),
+        frame,
     )
 
 
@@ -47,18 +55,25 @@ def execution_context(frame: lclang.Frame, verbose: bool = False) -> wf.Workflow
 @pytest.mark.parametrize("scoped_input", [False, True])
 @pytest.mark.parametrize("scoped_output", [False, True])
 async def test_whole_records_read_and_publish(
-    scoped_input: bool, scoped_output: bool, caplog: pytest.LogCaptureFixture,
+    scoped_input: bool,
+    scoped_output: bool,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Concrete values preserve identity; existing scopes receive direct fields."""
     source = wf.define_variable[Record[int]]("source", "Source")
     target = wf.define_variable[Record[int]]("target", "Target", is_masked=True)
     task = wf.define_task(
-        "root", "Root", task_action=echo,
-        args_mapping=source.quote, outputs_mapping=target.quote,
+        "root",
+        "Root",
+        task_action=echo,
+        args_mapping=source.quote,
+        outputs_mapping=target.quote,
     )
     workflow = wf.define_workflow("Records", task)
     assert [item.name for item in workflow.to_cli("run", "Run").parameter_docs] == [
-        "source", "source.value", "source.count",
+        "source",
+        "source.value",
+        "source.count",
     ]
     assert "Record[int] <- $source" in "\n".join(workflow.to_lines())
     assert "Record[int] -> $target!" in "\n".join(workflow.to_lines())
@@ -95,11 +110,17 @@ async def test_whole_context_records_remain_local() -> None:
     local = wf.define_variable[Record[int]]("local")
     context = wf.define_context_task("resource", "Resource", resource, source.quote, local.quote)
     task = wf.define_task(
-        "root", "Root", task_action=echo, args_mapping=local.quote, context_tasks=[context],
+        "root",
+        "Root",
+        task_action=echo,
+        args_mapping=local.quote,
+        context_tasks=[context],
     )
     workflow = wf.define_workflow("Records", task)
     assert [item.name for item in workflow.to_cli("run", "Run").parameter_docs] == [
-        "source", "source.value", "source.count",
+        "source",
+        "source.value",
+        "source.count",
     ]
     async with lclang.define_frame(preset={"source": Record(7), "local.value": -1}) as frame:
         result = await workflow.execute(execution_context(frame))
@@ -122,7 +143,11 @@ def test_whole_mapping_requires_exact_dataclass_annotation(kind: str, annotation
             wf.define_context_task("context", "Context", resource, args, output)
         else:
             wf.define_task(
-                "root", "Root", task_action=echo, args_mapping=args, outputs_mapping=output,
+                "root",
+                "Root",
+                task_action=echo,
+                args_mapping=args,
+                outputs_mapping=output,
             )
 
 
@@ -143,16 +168,23 @@ async def test_whole_argument_failures_use_normal_workflow_errors(
 @pytest.mark.asyncio
 async def test_wrong_whole_context_output_is_rejected() -> None:
     """Context output annotations do not replace validation of the yielded object."""
+
     @asynccontextmanager
     async def wrong_resource(
-        context: wf.TaskContext, args: Record[int], status_mgr: wf.ExecutionStatusManager,
-    ) -> AsyncIterator[Record[int]]:
+        context: wf.TaskContext,
+        args: Record[int],
+        status_mgr: wf.ExecutionStatusManager,
+    ) -> AsyncGenerator[Record[int]]:
         yield cast(Record[int], object())
 
     source = wf.define_variable[Record[int]]("source")
     target = wf.define_variable[Record[int]]("target")
     context = wf.define_context_task(
-        "resource", "Resource", wrong_resource, source.quote, target.quote,
+        "resource",
+        "Resource",
+        wrong_resource,
+        source.quote,
+        target.quote,
     )
     task = wf.define_task("root", "Root", context_tasks=[context])
     async with lclang.define_frame(preset={"source": Record(1)}) as frame:
@@ -164,8 +196,11 @@ async def test_wrong_whole_context_output_is_rejected() -> None:
 @pytest.mark.asyncio
 async def test_non_record_action_return_retains_boundary_error() -> None:
     """An action with no output mapping must still return a dataclass."""
+
     async def scalar(
-        context: wf.TaskContext, args: Record[int], status_mgr: wf.ExecutionStatusManager,
+        context: wf.TaskContext,
+        args: Record[int],
+        status_mgr: wf.ExecutionStatusManager,
     ) -> int:
         return args.value
 
@@ -186,7 +221,9 @@ class Empty:
 
 
 async def empty_action(
-    context: wf.TaskContext, args: Empty, status_mgr: wf.ExecutionStatusManager,
+    context: wf.TaskContext,
+    args: Empty,
+    status_mgr: wf.ExecutionStatusManager,
 ) -> Empty:
     """Return the empty record."""
     return args
@@ -198,8 +235,11 @@ async def test_empty_records_support_verbose_scope_publication() -> None:
     source = wf.define_variable[Empty]("source")
     target = wf.define_variable[Empty]("target")
     task = wf.define_task(
-        "root", "Root", task_action=empty_action,
-        args_mapping=source.quote, outputs_mapping=target.quote,
+        "root",
+        "Root",
+        task_action=empty_action,
+        args_mapping=source.quote,
+        outputs_mapping=target.quote,
     )
     async with lclang.define_frame(
         preset={"source": Empty(), "target": lclang.FRAME_PROXY},
@@ -219,8 +259,11 @@ async def test_scope_field_masks_and_target_failures(
     source = wf.define_variable[Record[int]]("source")
     target = wf.define_variable[Record[int]]("target")
     task = wf.define_task(
-        "root", "Root", task_action=echo,
-        args_mapping=source.quote, outputs_mapping=target.quote,
+        "root",
+        "Root",
+        task_action=echo,
+        args_mapping=source.quote,
+        outputs_mapping=target.quote,
     )
     module = lclang.define_module("records", {"source.value!": "314159", "target": "1 / 0"})
     workflow = wf.define_workflow("Records", task)

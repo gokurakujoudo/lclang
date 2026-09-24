@@ -76,9 +76,7 @@ def test_finalization_handles_pending_running_and_issue_severity() -> None:
     assert tree.sub_tasks[1].status is ExecutionStatus.PENDING
     assert tree.sub_tasks[2].status is ExecutionStatus.FAILURE
     assert tree.sub_tasks[2].task_description == "started (did not finish)"
-    assert tree.sub_tasks[3].task_description == (
-        "nested (sub-task 'boom' ended with ERROR)"
-    )
+    assert tree.sub_tasks[3].task_description == ("nested (sub-task 'boom' ended with ERROR)")
 
 
 def test_explicit_failures_are_sticky_but_errors_escalate() -> None:
@@ -121,13 +119,9 @@ def test_covered_failure_is_visible_below_failure_and_sticky_on_its_scope() -> N
     covered.add_step("recovered", "handled", ExecutionStatus.FAILURE_COVERED)
     covered_tree = covered.finalize()
     assert covered_tree.status is ExecutionStatus.FAILURE_COVERED
-    assert covered_tree.task_description == (
-        " (sub-task 'recovered' ended with FAILURE_COVERED)"
-    )
+    assert covered_tree.task_description == (" (sub-task 'recovered' ended with FAILURE_COVERED)")
 
-    sticky = ExecutionStatusManager(
-        "scope", "handled", status=ExecutionStatus.FAILURE_COVERED
-    )
+    sticky = ExecutionStatusManager("scope", "handled", status=ExecutionStatus.FAILURE_COVERED)
     sticky.add_step("original", "unexpected", ExecutionStatus.ERROR)
     sticky_tree = sticky.finalize()
     assert sticky_tree.status is ExecutionStatus.FAILURE_COVERED

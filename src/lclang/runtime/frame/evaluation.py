@@ -1,3 +1,6 @@
+# Shared implementation modules intentionally access owner state.
+# pyright: reportPrivateUsage=false
+
 """Lazy Frame lookup, evaluation, and cache publication."""
 
 from __future__ import annotations
@@ -139,7 +142,10 @@ async def get_resolved(requester: Frame, name: str, span: SourceSpan | None) -> 
 
 
 async def read_selected_binding(
-    requester: Frame, name: str, span: SourceSpan | None, selected: BindingSelection,
+    requester: Frame,
+    name: str,
+    span: SourceSpan | None,
+    selected: BindingSelection,
 ) -> object:
     """Read a selected binding without repeating hierarchy classification.
 

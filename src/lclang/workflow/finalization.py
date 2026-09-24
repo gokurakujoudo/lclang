@@ -14,7 +14,7 @@ class SharedExecutionState:
     :param locked_nodes: Identity values of finalized tree nodes.
     """
 
-    locked_nodes: set[int] = field(default_factory=set)
+    locked_nodes: set[int] = field(default_factory=set[int])
 
 
 def ensure_unlocked(state: SharedExecutionState, node: ExecutionStatusTree) -> None:
@@ -84,11 +84,7 @@ def aggregate_children(node: ExecutionStatusTree) -> None:
         node.status = ExecutionStatus.FAILURE
         append_child_issue(node, failures[0])
         return
-    covered = [
-        child
-        for child in node.sub_tasks
-        if child.status is ExecutionStatus.FAILURE_COVERED
-    ]
+    covered = [child for child in node.sub_tasks if child.status is ExecutionStatus.FAILURE_COVERED]
     if covered:
         node.status = ExecutionStatus.FAILURE_COVERED
         append_child_issue(node, covered[0])

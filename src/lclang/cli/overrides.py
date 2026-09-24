@@ -40,9 +40,7 @@ def forced_override_expression(value: str, *, masked: bool = False) -> LclAstNod
             token = f"RESULT={value}"
             underline = " " * (len("RESULT=") + start) + "^" * (end - start)
             excerpt = f"{token}\n{underline}"
-        raise LclCliUsageError(
-            f"forced RESULT parse failed: {error}\n{excerpt}"
-        ) from error
+        raise LclCliUsageError(f"forced RESULT parse failed: {error}\n{excerpt}") from error
 
 
 def partition_overrides(

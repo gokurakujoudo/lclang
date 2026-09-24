@@ -21,11 +21,7 @@ def test_standard_manifests_and_preset_have_stable_reviewed_order() -> None:
         "json",
     )
     assert tuple(STANDARD_PRESET.values) == ("iter", "text", "data", "json")
-    summaries = (
-        entry.summary.strip()
-        for item in STANDARD_MANIFESTS
-        for entry in item.entries
-    )
+    summaries = (entry.summary.strip() for item in STANDARD_MANIFESTS for entry in item.entries)
     assert all(summaries)
 
 

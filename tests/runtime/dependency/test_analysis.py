@@ -57,8 +57,7 @@ def test_function_defaults_are_eager_and_bound_body_is_deferred() -> None:
 def test_materialized_comprehension_tracks_clause_scopes_and_paths() -> None:
     """Targets bind after iterable lookup and output remains conditional."""
     source = (
-        "[combine(item, other, outer) for item in items "
-        "if predicate(item) for other in others]"
+        "[combine(item, other, outer) for item in items " "if predicate(item) for other in others]"
     )
     assert _summary(source) == [
         ("items", DependencyKind.EAGER),
@@ -86,10 +85,7 @@ def test_generator_dependencies_are_all_deferred() -> None:
 
 def test_try_assert_and_with_apply_precise_control_and_binding_scopes() -> None:
     """Handler/message paths weaken while finalization and with stay eager."""
-    tried = (
-        "try: operation() except Error as error: recover(error, fallback) "
-        "finally: cleanup()"
-    )
+    tried = "try: operation() except Error as error: recover(error, fallback) " "finally: cleanup()"
     assert _summary(tried) == [
         ("operation", DependencyKind.EAGER),
         ("Error", DependencyKind.CONDITIONAL),

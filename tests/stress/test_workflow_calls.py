@@ -20,7 +20,10 @@ async def test_repeated_workflow_calls_release_frames_and_keep_detached_results(
     async def parent(context: wf.TaskContext, manager: wf.ExecutionStatusManager) -> Value:
         for index in range(150):
             async with child.execute_in_task(
-                context, manager, name=f"item-{index}", preset={"input": index},
+                context,
+                manager,
+                name=f"item-{index}",
+                preset={"input": index},
             ) as result:
                 frames.append(weakref.ref(result.execution_frame))
                 outputs.append(result.task_outputs[wf.TaskID("child")])

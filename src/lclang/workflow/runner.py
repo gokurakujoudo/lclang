@@ -1,3 +1,6 @@
+# Shared implementation modules intentionally access owner state.
+# pyright: reportPrivateUsage=false
+
 """Context unwinding and task lifecycle for workflow execution."""
 
 from __future__ import annotations
@@ -201,7 +204,9 @@ async def execute_task(
         pending = error
     if pending is not None or not completed:
         add_unexecuted_statuses(
-            manager, task, omit_children=context._child_execution.children_skipped,
+            manager,
+            task,
+            omit_children=context._child_execution.children_skipped,
         )
     try:
         await frame.close()
@@ -246,9 +251,7 @@ async def execute_workflow(
     state = WorkflowRunState(context, {}, {})
     with suppress(Exception):
         async with execution_defaults(workflow, context.frame):
-            await execute_task(
-                state, workflow.root_task, manager, (workflow.root_task.task_id,)
-            )
+            await execute_task(state, workflow.root_task, manager, (workflow.root_task.task_id,))
     finalize_manager(manager)
     return WorkflowExecutionResult(
         manager.current, context.frame, dict(state.task_args), dict(state.task_outputs)

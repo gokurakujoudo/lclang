@@ -12,7 +12,7 @@ from lclang.utils import flatten_to_dict
 class Leaf:
     """Ordinary shared container leaf."""
 
-    items: list[str] = field(default_factory=list)
+    items: list[str] = field(default_factory=list[str])
 
 
 @dataclass
@@ -43,15 +43,25 @@ def test_flattening_modes_and_relative_selection() -> None:
     assert full["csv.branch.a.items"] is value.branch.a.items
     selected = flatten_to_dict(value, "csv", {"branch.a"})
     assert selected == {
-        "csv.branch.a.items": [], "csv.branch.b": value.branch.b, "csv.label": "root",
+        "csv.branch.a.items": [],
+        "csv.branch.b": value.branch.b,
+        "csv.label": "root",
     }
     assert selected["csv.branch.b"] is value.branch.b
     assert flatten_to_dict(value, nested={"branch"})["branch.a"] is value.branch.a
 
 
-@pytest.mark.parametrize("path", [
-    "missing", "branch.missing", "label", "branch.a.items", "", "a..b",
-])
+@pytest.mark.parametrize(
+    "path",
+    [
+        "missing",
+        "branch.missing",
+        "label",
+        "branch.a.items",
+        "",
+        "a..b",
+    ],
+)
 def test_invalid_selected_paths_fail(path: str) -> None:
     """Typos and scalar targets cannot silently change the requested shape."""
     with pytest.raises(ValueError):
@@ -73,6 +83,7 @@ def test_invalid_argument_types_fail() -> None:
 
 def test_cycles_shared_records_empty_records_and_class_values() -> None:
     """Only cycles on expanded paths fail; empty records remain meaningful leaves."""
+
     @dataclass
     class Empty:
         pass

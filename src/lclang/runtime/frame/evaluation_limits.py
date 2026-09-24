@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     pass
 
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 
@@ -79,7 +79,7 @@ class InternalEvaluationBudget:
 
 
 @contextmanager
-def internal_budget_scope(limits: EvaluationLimits) -> Iterator[None]:
+def internal_budget_scope(limits: EvaluationLimits) -> Generator[None]:
     """Install a budget only for the outermost Frame evaluation.
 
     :param limits: Ceilings used when a new guard is required.

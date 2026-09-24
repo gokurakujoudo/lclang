@@ -62,13 +62,11 @@ async def test_nested_using_expands_in_place_with_history_and_magic(tmp_path: Pa
     root = tmp_path / "root.lclcfg"
     shared.write_text("value: 2\n", encoding="utf-8")
     child.write_text(
-        "using \"__dir__/../shared.lclcfg\"\n"
-        "origin: __file__\n"
-        "value: 3\n",
+        'using "__dir__/../shared.lclcfg"\n' "origin: __file__\n" "value: 3\n",
         encoding="utf-8",
     )
     root.write_text(
-        "value: 1\nusing \"nested/child.lclcfg\"\nresult: value + 1\nvalue: 4\n",
+        'value: 1\nusing "nested/child.lclcfg"\nresult: value + 1\nvalue: 4\n',
         encoding="utf-8",
     )
 
@@ -152,8 +150,8 @@ async def test_dynamic_using_supports_env_and_reports_position_failures(
 
     for source, message in (
         ('using f"{later}.lclcfg"\nlater: "chosen"\n', "unknown variable"),
-        ('using f"{\'\'}"\n', "non-empty"),
-        ('using f"{\'chosen.txt\'}"\n', ".lclcfg"),
+        ("using f\"{''}\"\n", "non-empty"),
+        ("using f\"{'chosen.txt'}\"\n", ".lclcfg"),
     ):
         with pytest.raises(LclConfigUsingError, match=message) as caught:
             await ConfigLoader(MappingResolver({root: source})).load(root)
@@ -202,13 +200,13 @@ async def test_cycles_missing_files_and_limits_are_structured(tmp_path: Path) ->
     """Rainy loading paths report stable configuration failures."""
     first = tmp_path / "first.lclcfg"
     second = tmp_path / "second.lclcfg"
-    first.write_text("using \"second.lclcfg\"\n", encoding="utf-8")
-    second.write_text("using \"first.lclcfg\"\n", encoding="utf-8")
+    first.write_text('using "second.lclcfg"\n', encoding="utf-8")
+    second.write_text('using "first.lclcfg"\n', encoding="utf-8")
     with pytest.raises(LclConfigCycleError):
         await load_config(first)
 
     missing = tmp_path / "missing-root.lclcfg"
-    missing.write_text("using \"absent.lclcfg\"\n", encoding="utf-8")
+    missing.write_text('using "absent.lclcfg"\n', encoding="utf-8")
     with pytest.raises(LclConfigUsingError):
         await load_config(missing)
 

@@ -71,9 +71,7 @@ def is_frame_proxy(value: object) -> bool:
     """
     from lclang.ast import LclConstant
 
-    return value is FRAME_PROXY or (
-        isinstance(value, LclConstant) and value.value is FRAME_PROXY
-    )
+    return value is FRAME_PROXY or (isinstance(value, LclConstant) and value.value is FRAME_PROXY)
 
 
 def scoped_proxy_factory(value: object) -> ScopedProxyFactory | None:
@@ -97,8 +95,7 @@ def validate_qualified_name(name: str) -> tuple[str, ...]:
         raise TypeError("binding name must be a string")
     parts = tuple(name.split("."))
     if not parts or any(
-        not part or not part.isidentifier() or part in LCL_RESERVED_NAMES
-        for part in parts
+        not part or not part.isidentifier() or part in LCL_RESERVED_NAMES for part in parts
     ):
         raise ValueError(f"invalid qualified binding name: {name}")
     return parts
@@ -153,6 +150,4 @@ def validate_real_conflicts(names: Iterable[str]) -> None:
         for index in range(1, len(parts)):
             ancestor = ".".join(parts[:index])
             if ancestor in selected:
-                raise ValueError(
-                    f"scoped binding conflict between {ancestor!r} and {name!r}"
-                )
+                raise ValueError(f"scoped binding conflict between {ancestor!r} and {name!r}")

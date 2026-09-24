@@ -54,9 +54,7 @@ def test_create_defaults_the_frame_id_from_the_module_name() -> None:
 def test_factory_routes_parent_and_limit_precedence_without_ownership() -> None:
     """Create forwards parent and chooses call, factory, then Frame defaults."""
     parent = FrameFactory(_module("1")).create(FrameId("parent"))
-    default_limits = EvaluationLimits(
-        max_depth=2, max_steps=3, max_collection_items=4
-    )
+    default_limits = EvaluationLimits(max_depth=2, max_steps=3, max_collection_items=4)
     override = EvaluationLimits(max_depth=5, max_steps=6, max_collection_items=7)
     factory = FrameFactory(_module(), limits=default_limits)
     inherited = factory.create(FrameId("one"), parent=parent)

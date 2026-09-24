@@ -41,7 +41,10 @@ reference documentation before changing the project.
   units (or their absence), source, purpose, and choice rationale. A coherent
   group may share its explanation. Do not invent external sources or annotate
   every ordinary control-flow literal. These production policies apply only to
-  `src/lclang`; scripts and tests still follow Ruff and strict mypy.
+  `src/lclang`; source, scripts and tests follow Black, Ruff, strict mypy and
+  the shared strict Pyright/Pylance configuration in `pyrightconfig.json`.
+  Preserve runtime validation for untyped callers; document narrow checker
+  exceptions instead of disabling unknown-type diagnostics project-wide.
 - Unit tests mock external connectivity and isolate file input/output in a
   separate `TemporaryDirectory`.
 - CLI test configuration sources are static fixtures declared with their cases.

@@ -105,14 +105,13 @@ async def test_nested_failure_reports_direct_to_failing_variable_stack() -> None
 
     assert first.value is second.value
     assert first.value.variable_stack == ("RESULT", "middle", "failing")
-    assert str(first.value).endswith(
-        "[variable evaluation stack: RESULT -> middle -> failing]"
-    )
+    assert str(first.value).endswith("[variable evaluation stack: RESULT -> middle -> failing]")
 
 
 @pytest.mark.asyncio
 async def test_concurrent_failures_keep_independent_variable_stacks() -> None:
     """Parallel owner tasks cannot leak their diagnostic paths to each other."""
+
     async def fail(label: str) -> None:
         await asyncio.sleep(0)
         raise ValueError(label)

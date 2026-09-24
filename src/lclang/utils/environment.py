@@ -56,9 +56,7 @@ class Environment(ScopedProxyFactory):
         :returns: Alphabetically sorted valid LCL identifiers.
         """
         return sorted(
-            name
-            for name in os.environ
-            if name.isidentifier() and name not in LCL_RESERVED_NAMES
+            name for name in os.environ if name.isidentifier() and name not in LCL_RESERVED_NAMES
         )
 
     def bind(self, frame: object, path: tuple[str, ...]) -> ScopedProxyValue:

@@ -27,7 +27,7 @@ class Module:
 
     name: ModuleName
     definitions: Mapping[str, LclAstNode]
-    masked_names: frozenset[str] = field(default_factory=frozenset, kw_only=True)
+    masked_names: frozenset[str] = field(default_factory=frozenset[str], kw_only=True)
 
     def __post_init__(self) -> None:
         """Validate identifiers and detach definitions from caller mutation.

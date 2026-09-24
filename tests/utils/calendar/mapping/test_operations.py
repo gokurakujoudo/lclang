@@ -88,9 +88,10 @@ async def test_primitive_mappings_shift_cache_and_reverse_ranges() -> None:
     with pytest.raises(ValueError):
         ShiftNDaysMapOperation(101, ALL_DAYS)
     point = date(2024, 1, 8)
-    assert await ALL_DAYS.map_this_or_next(
-        PointDomainCalendar(point)
-    ).map_date_reverse(point) == (point, point)
+    assert await ALL_DAYS.map_this_or_next(PointDomainCalendar(point)).map_date_reverse(point) == (
+        point,
+        point,
+    )
 
 
 @pytest.mark.asyncio

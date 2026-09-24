@@ -1,3 +1,6 @@
+# This signal integration test exercises Uvicorn's worker entry point directly.
+# pyright: reportPrivateUsage=false
+
 """Exercise the exact worker example's signal replay without a POSIX-only master."""
 
 import asyncio

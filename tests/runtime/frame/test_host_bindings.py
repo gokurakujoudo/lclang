@@ -61,9 +61,7 @@ async def test_definition_precedence_and_child_fallback_survive_mixin() -> None:
     parent = lclang.define_frame(
         lclang.define_module("parent", {"defined": "7"}),
     )
-    child = parent.derive(
-        lclang.define_module("child", {"answer": "defined + mixed"})
-    )
+    child = parent.derive(lclang.define_module("child", {"answer": "defined + mixed"}))
 
     parent.mixin({"defined": 100, "mixed": 5})
 

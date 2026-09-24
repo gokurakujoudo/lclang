@@ -88,4 +88,3 @@ class HardcodedBDCalendar(BDCalendar):
         """
         next(year_dates(year), None)
         return {d: value for d, value in self._defined_dates.items() if d.year == year}
-

@@ -11,7 +11,10 @@ from lclang.utils.calendar.mapping.base import BDCalendarMapOperation
 
 
 async def adjust_business_day(
-    operation: BDCalendarMapOperation, base_date: date, *, forward: bool,
+    operation: BDCalendarMapOperation,
+    base_date: date,
+    *,
+    forward: bool,
 ) -> date:
     """Reuse successful mappings before adjusting through the selected calendar.
 
@@ -60,8 +63,6 @@ class ThisOrNextMapOperation(BDCalendarMapOperation):
         :returns: Stable operation representation.
         """
         return f".map_this_or_next({self.base_calendar!r})"
-
-
 
 
 @final

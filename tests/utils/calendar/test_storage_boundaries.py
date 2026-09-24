@@ -46,14 +46,10 @@ async def test_core_validation_and_boundary_search_failures() -> None:
         await ALL_WEEKDAYS.next_bd(date.max)
     with pytest.raises(DateOperationOutOfScopeException):
         await ALL_WEEKDAYS.prev_bd(date.min)
-    assert await ALL_WEEKDAYS.map_this_or_prev().map_date(date(2024, 1, 7)) == date(
-        2024, 1, 5
-    )
+    assert await ALL_WEEKDAYS.map_this_or_prev().map_date(date(2024, 1, 7)) == date(2024, 1, 5)
     assert len(await ALL_DAYS.gen_year(9999)) == 365
 
-    total_holiday = def_functional_calendar(
-        CalendarID("TOTAL_HOLIDAY"), lambda d: DayType.Holiday
-    )
+    total_holiday = def_functional_calendar(CalendarID("TOTAL_HOLIDAY"), lambda d: DayType.Holiday)
     with pytest.raises(DateOperationOutOfScopeException):
         await total_holiday.next_bd(date(2024, 1, 1))
     with pytest.raises(DateOperationOutOfScopeException):
@@ -98,9 +94,7 @@ async def test_forward_and_year_batch_reject_malformed_generation() -> None:
         await undefined.next_bd(date.max)
     with pytest.raises(DateOperationOutOfScopeException):
         await undefined.prev_bd(date.min)
-    propagated_batch = InvalidBatchCalendar(
-        CalendarCannotLoadException(CalendarID("BATCH"))
-    )
+    propagated_batch = InvalidBatchCalendar(CalendarCannotLoadException(CalendarID("BATCH")))
     with pytest.raises(CalendarCannotLoadException):
         await propagated_batch.loaded_year(2024)
     empty_batch = InvalidBatchCalendar({})

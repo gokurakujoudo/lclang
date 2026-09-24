@@ -1,6 +1,5 @@
 """Boundary-aware character reading for lexical recognizers."""
 
-
 # Unitless ASCII digit characters come from the numeric literal grammar. A set
 # rejects the empty boundary sentinel, unlike substring membership in a string.
 ASCII_DIGITS = frozenset("0123456789")

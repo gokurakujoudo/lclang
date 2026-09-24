@@ -96,7 +96,7 @@ class FrameFactory:
         if parent is not None and not isinstance(parent, Frame):
             raise TypeError("Frame parent must be a Frame")
         bindings = {} if self.preset is None else dict(self.preset.values)
-        masked_names = frozenset() if self.preset is None else self.preset.masked_names
+        masked_names = frozenset[str]() if self.preset is None else self.preset.masked_names
         if values is not None:
             updates, update_masks = normalize_masked_mapping(values)
             bindings.update(updates)

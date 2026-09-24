@@ -56,7 +56,7 @@ class ExecutionStatusTree:
     task_type: ExecutionTaskType
     task_name: str
     task_description: str = ""
-    sub_tasks: list[ExecutionStatusTree] = field(default_factory=list)
+    sub_tasks: list[ExecutionStatusTree] = field(default_factory=list["ExecutionStatusTree"])
 
     def __post_init__(self) -> None:
         """Validate scalar fields and detach the child container.

@@ -20,7 +20,7 @@ async def iterate_values(value: object) -> AsyncIterator[object]:
        Every yielded item is recursively resolved before reaching its consumer.
     """
     if isinstance(value, AsyncIterable):
-        async for item in value:
+        async for item in cast(AsyncIterable[object], value):
             yield await resolve_awaitable(item)
         return
     for item in cast(Iterable[object], value):

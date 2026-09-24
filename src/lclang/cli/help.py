@@ -109,11 +109,13 @@ def render_command_help(script: str, command: Command, path: tuple[str, ...]) ->
         type_name = inspect.formatannotation(parameter.value_type).replace("collections.abc.", "")
         has_default = parameter.default is not None or parameter.name in command.preset
         value = (
-            parameter.default if parameter.default is not None
+            parameter.default
+            if parameter.default is not None
             else command.preset.get(parameter.name)
         )
         binding = command.default_bindings.get(
-            parameter.name, command.default_bindings.get(parameter.name + "!"),
+            parameter.name,
+            command.default_bindings.get(parameter.name + "!"),
         )
         if binding is None and isinstance(parameter, DerivedParameterDoc):
             binding = parameter.help_default
@@ -124,7 +126,8 @@ def render_command_help(script: str, command: Command, path: tuple[str, ...]) ->
             factory = binding.factory is not None
         required = "required" if parameter.required and not has_default else "optional"
         default_value = safe_repr(
-            value, masked=parameter.masked or parameter.name in command.masked_names,
+            value,
+            masked=parameter.masked or parameter.name in command.masked_names,
         )
         if factory:
             default_value = "<factory>"
@@ -136,14 +139,17 @@ def render_command_help(script: str, command: Command, path: tuple[str, ...]) ->
         lines.extend(["", f"{scope or '(global)'}:", *format_rows(scopes[scope])])
     if not scopes:
         lines.append("  (none)")
-    lines.extend([
-        "", "Logger configuration:",
-        "  -o logger.console.level DEBUG",
-        '  -o logger.file.default.enabled "LCL[False]"',
-        '  -o logger.file.audit.enabled "LCL[True]"',
-        "  logger.file.<sink> inherits missing fields from logger.file.default.",
-        "  Explicit sink fields override the template; default never creates a file.",
-    ])
+    lines.extend(
+        [
+            "",
+            "Logger configuration:",
+            "  -o logger.console.level DEBUG",
+            '  -o logger.file.default.enabled "LCL[False]"',
+            '  -o logger.file.audit.enabled "LCL[True]"',
+            "  logger.file.<sink> inherits missing fields from logger.file.default.",
+            "  Explicit sink fields override the template; default never creates a file.",
+        ]
+    )
     lines.extend(["", "Options:"])
     lines.extend(format_rows(common_option_rows()))
     return "\n".join(lines) + "\n"

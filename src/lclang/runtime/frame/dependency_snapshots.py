@@ -1,3 +1,6 @@
+# Shared implementation modules intentionally access owner state.
+# pyright: reportPrivateUsage=false
+
 """Frame-owned dependency graph, trace staging, and snapshot publication."""
 
 from __future__ import annotations

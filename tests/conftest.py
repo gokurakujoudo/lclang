@@ -21,10 +21,14 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     """
     for item in items:
         path = item.path.as_posix()
-        if ("/tests/tutorials/" in f"/{path}" or "/tests/documentation/" in f"/{path}"
-                or item.path.name in {
-            "test_documentation.py",
-            "test_tutorial.py",
-            "test_calendar_documentation.py",
-        }):
+        if (
+            "/tests/tutorials/" in f"/{path}"
+            or "/tests/documentation/" in f"/{path}"
+            or item.path.name
+            in {
+                "test_documentation.py",
+                "test_tutorial.py",
+                "test_calendar_documentation.py",
+            }
+        ):
             item.add_marker(pytest.mark.docs)

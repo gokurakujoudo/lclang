@@ -99,8 +99,14 @@ class VariableDefinition[ValueT](TaskVar[ValueT]):
             raise TypeError("default_factory must be callable")
         factory = default_factory if callable(default_factory) else None
         DefaultBinding(default, factory)
-        super().__init__(name, " ".join(description.split()), is_masked, value_type,
-                         default=default, default_factory=factory)
+        super().__init__(
+            name,
+            " ".join(description.split()),
+            is_masked,
+            value_type,
+            default=default,
+            default_factory=factory,
+        )
 
     @classmethod
     def __class_getitem__(cls, value_type: object) -> Callable[..., VariableDefinition[Any]]:

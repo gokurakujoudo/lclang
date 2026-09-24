@@ -55,7 +55,7 @@ class NthBusinessDayOfMonthBDCalendar(FunctionalBDCalendar):
         cached = self._selected_months.get(key)
         if cached is not None:
             return cached
-        business = []
+        business: list[date] = []
         for day in range(1, monthrange(year, month)[1] + 1):
             candidate = date(year, month, day)
             if await dependency_day_type(self.base_calendar, candidate) is DayType.BusinessDay:

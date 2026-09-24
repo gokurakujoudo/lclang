@@ -14,7 +14,7 @@ def tutorial_chapters() -> list[tuple[str, str]]:
 def test_series_directory_titles_and_navigation_match_the_toc() -> None:
     """The TOC lists every real chapter once, in its numbered reading order."""
     chapters = tutorial_chapters()
-    paths = [filename for title, filename in chapters]
+    paths = [filename for _title, filename in chapters]
     directory = ROOT / "docs/tutorials"
     assert paths
     assert len(paths) == len(set(paths))

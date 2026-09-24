@@ -1,6 +1,6 @@
 """Workflow definition and static rendering contracts."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
@@ -60,7 +60,7 @@ async def resource_context(
     context: wf.TaskContext,
     args: ContextArgs,
     status_mgr: wf.ExecutionStatusManager,
-) -> AsyncIterator[ContextOutputs]:
+) -> AsyncGenerator[ContextOutputs]:
     """Yield one unused rendering resource.
 
     :param context: Current task context.
@@ -100,14 +100,14 @@ def test_workflow_to_lines_renders_context_scope_and_field_flows() -> None:
     assert workflow.to_lines() == [
         'Workflow "Example workflow"',
         '└─ task root "Root task" args=RootArgs{source <- $source!, literal <- 100} '
-        'outputs=RootOutputs{result -> $result, ignored -> <unmapped>}',
+        "outputs=RootOutputs{result -> $result, ignored -> <unmapped>}",
         '   └─ enter context resource_context "Provide resource" '
-        'args=ContextArgs{seed <- $source!} '
-        'outputs=ContextOutputs{resource -> $resource}',
+        "args=ContextArgs{seed <- $source!} "
+        "outputs=ContextOutputs{resource -> $resource}",
         '      ├─ task child "Child task" args=<none> outputs=<none>',
         '      └─ exit context resource_context "Provide resource" '
-        'args=ContextArgs{seed <- $source!} '
-        'outputs=ContextOutputs{resource -> $resource}',
+        "args=ContextArgs{seed <- $source!} "
+        "outputs=ContextOutputs{resource -> $resource}",
     ]
 
 

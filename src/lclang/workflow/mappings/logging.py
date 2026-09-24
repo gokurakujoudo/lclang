@@ -2,7 +2,7 @@
 
 from dataclasses import MISSING, fields, is_dataclass
 from inspect import formatannotation
-from typing import Any, get_origin
+from typing import Any, cast, get_origin
 
 from lclang.diagnostics import internal_render_value
 from lclang.masking import MASKED_VALUE
@@ -13,8 +13,14 @@ from lclang.workflow.variables import TaskVar
 
 
 def mapping_rows(
-    mapping: Any, value: Any, frame: Frame, *, output: bool,
-    path: str = "", source: str = "", inherited_mask: bool = False,
+    mapping: Any,
+    value: Any,
+    frame: Frame,
+    *,
+    output: bool,
+    path: str = "",
+    source: str = "",
+    inherited_mask: bool = False,
     annotation: Any = None,
 ) -> list[tuple[str, str, str]]:
     """Build field rows after checking masks at every selected location.
@@ -31,7 +37,7 @@ def mapping_rows(
     """
     if not is_dataclass(value) or isinstance(value, type):
         return []
-    marker = mapping if isinstance(mapping, TaskVar) else None
+    marker = cast(TaskVar[object], mapping) if isinstance(mapping, TaskVar) else None
     if marker is not None:
         source = reference_name(marker)
         inherited_mask |= (
@@ -44,8 +50,12 @@ def mapping_rows(
     for item in sorted(fields(cls), key=lambda item: item.name):
         field_path = f"{path}.{item.name}".lstrip(".")
         field_source = f"{source}.{item.name}" if source else ""
-        declared = None if mapping is None or marker is not None else getattr(mapping, item.name)
-        reference = declared if isinstance(declared, TaskVar) else None
+        declared = (
+            None
+            if mapping is None or marker is not None
+            else getattr(cast(object, mapping), item.name)
+        )
+        reference = cast(TaskVar[object], declared) if isinstance(declared, TaskVar) else None
         target = source
         masked = inherited_mask or bool(field_source and frame.is_masked(field_source))
         if reference is not None:
@@ -66,10 +76,17 @@ def mapping_rows(
         else:
             current = getattr(value, item.name)
             if is_dataclass(current) and not isinstance(current, type):
-                rows.extend(mapping_rows(
-                    reference or declared, current, frame, output=output, path=field_path,
-                    source=field_source, annotation=expected,
-                ))
+                rows.extend(
+                    mapping_rows(
+                        reference or declared,
+                        current,
+                        frame,
+                        output=output,
+                        path=field_path,
+                        source=field_source,
+                        annotation=expected,
+                    )
+                )
                 continue
             rendered = internal_render_value(current)
         rows.append((field_path, label, rendered))

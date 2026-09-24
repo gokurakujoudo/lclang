@@ -74,7 +74,7 @@ class Workflow:
 
     title: str
     root_task: TaskNode
-    lcl_mixin: Mapping[str, object] = field(default_factory=dict)
+    lcl_mixin: Mapping[str, object] = field(default_factory=dict[str, object])
 
     def __post_init__(self) -> None:
         """Detach host bindings while preserving their values by reference.
@@ -108,8 +108,12 @@ class Workflow:
         return render_workflow(self)
 
     def execute_in_task(
-        self, context: TaskContext, status_mgr: ExecutionStatusManager, *,
-        name: str, preset: Mapping[str, object] | None = None,
+        self,
+        context: TaskContext,
+        status_mgr: ExecutionStatusManager,
+        *,
+        name: str,
+        preset: Mapping[str, object] | None = None,
     ) -> AbstractAsyncContextManager[WorkflowExecutionResult]:
         """Execute a child workflow in an action-owned asynchronous scope.
 

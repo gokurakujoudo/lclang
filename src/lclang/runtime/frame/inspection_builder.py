@@ -1,3 +1,6 @@
+# Shared implementation modules intentionally access owner state.
+# pyright: reportPrivateUsage=false
+
 """Pure construction of name-deduplicated variable inspection trees."""
 
 from __future__ import annotations
@@ -20,10 +23,6 @@ from lclang.types import VarName
 
 if TYPE_CHECKING:
     from lclang.runtime.frame.frame import Frame
-
-
-
-
 
 
 def build_inspection_tree(
@@ -116,9 +115,6 @@ def build_inspection_tree(
         dependencies,
         masked,
     )
-
-
-
 
 
 def inspect_cache(

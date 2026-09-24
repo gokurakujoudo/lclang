@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import random
+from typing import cast
 
 from lclang.logger import Logger
 from lclang.runtime import Frame
@@ -29,9 +30,7 @@ def status_lines(tree: ExecutionStatusTree) -> list[str]:
         """
         connector = "└─ " if last else "├─ "
         description = f": {node.task_description}" if node.task_description else ""
-        lines.append(
-            f"{prefix}{connector}[{node.status.value}] {node.task_name}{description}"
-        )
+        lines.append(f"{prefix}{connector}[{node.status.value}] {node.task_name}{description}")
         child_prefix = prefix + ("   " if last else "│  ")
         for index, child in enumerate(node.sub_tasks):
             visit(child, child_prefix, index == len(node.sub_tasks) - 1)
@@ -52,9 +51,8 @@ def log_status_tree(
     :param tree: Finalized status tree.
     :param workflow_id: Dot-connected routed command path.
     """
-    message = (
-        f"workflow complete: [{workflow_id}] {tree.status.value}:\n"
-        + "\n".join(status_lines(tree))
+    message = f"workflow complete: [{workflow_id}] {tree.status.value}:\n" + "\n".join(
+        status_lines(tree)
     )
     logger.log(status_level(tree.status), "%s", message)
 
@@ -80,9 +78,13 @@ async def log_lunch_option(
         options = await frame.get("lunch.options", fallback=[])
         if not isinstance(options, list) or not options:
             return
-        if any(not isinstance(item, str) for item in options):
+        if any(not isinstance(item, str) for item in cast(list[object], options)):
             return
-        selected = random.choice(options) if status is ExecutionStatus.SUCCESS else "no lunch!"
+        selected = (
+            random.choice(cast(list[str], options))
+            if status is ExecutionStatus.SUCCESS
+            else "no lunch!"
+        )
         logger.info("lunch option: %s", selected)
     except Exception:
         return

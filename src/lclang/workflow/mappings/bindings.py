@@ -32,8 +32,8 @@ def require_mapping(value: object, field: str) -> object:
         record_type(value.value_type)
     elif isinstance(value, type) or not is_dataclass(value):
         raise TypeError(f"{field} must be a dataclass instance")
-    validate_mapping(value, output="output" in field)
-    return value
+    validate_mapping(cast(object, value), output="output" in field)
+    return cast(object, value)
 
 
 def mapping_variables(mapping: object | None) -> tuple[TaskVar[object], ...]:
@@ -44,11 +44,16 @@ def mapping_variables(mapping: object | None) -> tuple[TaskVar[object], ...]:
     """
     if mapping is None:
         return ()
-    return tuple(
-        node.value.root if isinstance(node.value, TaskProjection) else node.value
-        for node in mapping_nodes(mapping_structure(mapping))
-        if isinstance(node.value, TaskVar)
-    )
+    variables: list[TaskVar[object]] = []
+    for node in mapping_nodes(mapping_structure(mapping)):
+        value: object = node.value
+        if isinstance(value, TaskVar):
+            variables.append(
+                cast(TaskProjection[object], value).root
+                if isinstance(value, TaskProjection)
+                else cast(TaskVar[object], value)
+            )
+    return tuple(variables)
 
 
 async def materialize_args(mapping: object, frame: Frame) -> object:
@@ -98,7 +103,9 @@ async def output_updates(node: MappingNode, output: object, frame: Frame) -> dic
         updates: dict[str, object] = {}
         for child in node.children:
             incoming = await output_updates(
-                child, getattr(output, cast(Any, child.field).name), frame,
+                child,
+                getattr(output, cast(Any, child.field).name),
+                frame,
             )
             existing = {key.rstrip("!") for key in updates}
             if existing & {key.rstrip("!") for key in incoming}:
@@ -109,7 +116,9 @@ async def output_updates(node: MappingNode, output: object, frame: Frame) -> dic
 
 
 async def mapped_outputs(
-    mapping: object | None, output: object, frame: Frame,
+    mapping: object | None,
+    output: object,
+    frame: Frame,
 ) -> dict[str, object]:
     """Extract the complete publication set before the caller's atomic mixin.
 
@@ -136,14 +145,17 @@ def mapping_text(mapping: object | None, output: bool) -> str:
     arrow = "->" if output else "<-"
     if isinstance(mapping, TaskVar):
         label = formatannotation(mapping.value_type).replace("collections.abc.", "")
-        return f"{label} {arrow} ${reference_name(mapping)}{'!' if mapping.is_masked else ''}"
+        name = reference_name(cast(TaskVar[object], mapping))
+        return f"{label} {arrow} ${name}{'!' if mapping.is_masked else ''}"
     parts: list[str] = []
     for node in mapping_nodes(mapping_structure(mapping)):
         if not node.path or node.children:
             continue
         value = node.value
         if isinstance(value, TaskVar):
-            text = f"${reference_name(value)}{'!' if value.is_masked else ''}"
+            text = (
+                f"${reference_name(cast(TaskVar[object], value))}{'!' if value.is_masked else ''}"
+            )
         else:
             text = "<unmapped>" if output else safe_repr(value)
         parts.append(f"{node.path} {arrow} {text}")

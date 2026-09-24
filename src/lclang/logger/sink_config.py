@@ -8,6 +8,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from string import Formatter
+from typing import cast
 
 from lclang.logger.rotation import RotationConfig, rotation_config
 from lclang.logger.validation import boolean, fields, level, names, positive
@@ -134,7 +135,7 @@ def file_config(name: str, value: Mapping[str, object], *, template: bool = Fals
         raise ValueError(f"{path}.encoding: {error}") from error
     return FileConfig(
         enabled,
-        None if directory is None else Path(directory),
+        None if directory is None else Path(cast(str | os.PathLike[str], directory)),
         leaf_filename(data.get("filename", f"lclang.{name}.{{pid}}.log"), f"{path}.filename"),
         level(data.get("level", "INFO"), f"{path}.level"),
         encoding,

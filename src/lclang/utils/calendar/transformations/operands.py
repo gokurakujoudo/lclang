@@ -1,4 +1,5 @@
 """Validated operand ordering for calendar composition."""
+
 from collections.abc import Iterable
 
 from lclang.utils.calendar.base import BDCalendar
@@ -14,6 +15,7 @@ def canonical_calendars(values: Iterable[BDCalendar]) -> tuple[BDCalendar, ...]:
     :raises ValueError: If no operands are supplied.
     """
     return tuple(sorted(ordered_calendars(values), key=lambda item: item.calendar_id))
+
 
 def ordered_calendars(values: Iterable[BDCalendar]) -> tuple[BDCalendar, ...]:
     """Return calendars deduplicated by ID in encounter order.

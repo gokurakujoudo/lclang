@@ -99,11 +99,15 @@ class TracingResolver:
             self.trace.record(name, span)
             raise
         if isinstance(result, ScopedProxyValue):
-            return cast(Any, result).with_trace(
-                lambda target, target_span: self.trace.record(
-                    VarName(target),
-                    target_span,
-                )
-            )
+
+            def record_target(target: str, target_span: SourceSpan) -> None:
+                """Record a scoped target using its nominal variable name.
+
+                :param target: Qualified target name supplied by the proxy.
+                :param target_span: Source location of the scoped lookup.
+                """
+                self.trace.record(VarName(target), target_span)
+
+            return cast(Any, result).with_trace(record_target)
         self.trace.record(name, span)
         return result

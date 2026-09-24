@@ -13,7 +13,7 @@ def test_local_document_links_resolve() -> None:
         text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
         text = re.sub(r"`[^`]*`", "", text)
         for target in re.findall(r"\[[^\]\n]+\]\(([^)\n]+)\)", text):
-            parsed = urlsplit(target)
+            parsed = urlsplit(str(target))
             if parsed.scheme or not parsed.path:
                 continue
             destination = (path.parent / unquote(parsed.path)).resolve()

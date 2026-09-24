@@ -29,8 +29,11 @@ class MappingNode:
 
 
 def mapping_structure(
-    value: object, path: str = "", annotation: Any = None,
-    active: frozenset[int] = frozenset(), field: Field[Any] | None = None,
+    value: object,
+    path: str = "",
+    annotation: Any = None,
+    active: frozenset[int] = frozenset(),
+    field: Field[Any] | None = None,
 ) -> MappingNode:
     """Build an acyclic field tree shared by evaluation and diagnostics.
 
@@ -56,8 +59,11 @@ def mapping_structure(
         annotations = record_annotations(declared)
         children = tuple(
             mapping_structure(
-                getattr(value, item.name), f"{path}.{item.name}".lstrip("."),
-                annotations[item.name], active | {id(value)}, item,
+                getattr(value, item.name),
+                f"{path}.{item.name}".lstrip("."),
+                annotations[item.name],
+                active | {id(value)},
+                item,
             )
             for item in fields(value)
         )
@@ -87,7 +93,9 @@ def validate_mapping(value: object, *, output: bool) -> None:
         if output and isinstance(node.value, TaskProjection):
             raise TypeError(f"{node.path}: workflow output projections are read-only")
         if (
-            not output and isinstance(node.value, TaskVar)
-            and node.field is not None and not node.field.init
+            not output
+            and isinstance(node.value, TaskVar)
+            and node.field is not None
+            and not node.field.init
         ):
             raise TypeError(f"{node.path}: input quote requires an init field")

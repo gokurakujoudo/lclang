@@ -43,15 +43,19 @@ async def test_sync_async_callable_objects_and_arguments() -> None:
 @pytest.mark.asyncio
 async def test_nested_awaitables_errors_and_cancellation() -> None:
     """Awaitable recursion and original failures follow the existing resolver."""
+
     async def nested() -> Awaitable[int]:
         async def inner() -> int:
             return 4
+
         return inner()
 
     assert cast(object, await invoke(nested)) == 4
     for error in (ValueError("broken"), asyncio.CancelledError("cancelled")):
+
         def fail(failure: BaseException = error) -> None:
             raise failure
+
         with pytest.raises(type(error)) as caught:
             await invoke(fail)
         assert caught.value is error

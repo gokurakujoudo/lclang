@@ -1,7 +1,7 @@
 """Workflow CLI inference and status logging contracts."""
 
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import date
@@ -34,7 +34,7 @@ async def local_value_context(
     context: wf.TaskContext,
     args: ValueArgs,
     status_mgr: wf.ExecutionStatusManager,
-) -> AsyncIterator[ValueOutputs]:
+) -> AsyncGenerator[ValueOutputs]:
     """Yield one task-local value.
 
     :param context: Current task context.
@@ -116,12 +116,12 @@ async def test_to_cli_infers_external_values_and_logs_tree_last(
     ]
     logger = logging.getLogger("workflow-cli-test")
     params = CliParams("python", ("admin", "run"), date(2026, 8, 27), False, None, {})
-    monkeypatch.setattr(
-        "lclang.workflow.cli_logging.random.choice", lambda values: values[0]
-    )
-    async with lclang.define_frame(
-        preset={"source": 5, "lunch.options": ["noodles"]}
-    ) as frame:
+
+    def choose_first(values: list[str]) -> str:
+        return values[0]
+
+    monkeypatch.setattr("lclang.workflow.cli_logging.random.choice", choose_first)
+    async with lclang.define_frame(preset={"source": 5, "lunch.options": ["noodles"]}) as frame:
         context = CliContext(date(2026, 8, 27), False, frame, logger, params)
         with caplog.at_level(logging.INFO, logger=logger.name):
             result = await command.handler(context)
@@ -239,9 +239,7 @@ async def test_lunch_options_are_optional_and_never_change_status(
         with caplog.at_level(logging.INFO, logger=logger.name):
             result = await command.handler(context)
 
-    assert result.result_status is (
-        CliResultStatus.FAILURE if failure else CliResultStatus.SUCCESS
-    )
+    assert result.result_status is (CliResultStatus.FAILURE if failure else CliResultStatus.SUCCESS)
     lunch = [
         record.getMessage()
         for record in caplog.records
@@ -284,9 +282,7 @@ async def test_failing_lunch_expression_is_ignored(
             result = await command.handler(context)
 
     assert result.result_status is CliResultStatus.SUCCESS
-    assert not any(
-        record.getMessage().startswith("lunch option:") for record in caplog.records
-    )
+    assert not any(record.getMessage().startswith("lunch option:") for record in caplog.records)
 
 
 @pytest.mark.asyncio

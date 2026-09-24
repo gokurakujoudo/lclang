@@ -124,21 +124,15 @@ def test_named_constants_and_enum_groups_require_explanation() -> None:
         '"""Module."""\nfrom enum import Enum\n'
         'class Kind(Enum):\n    """Kind."""\n    First = "first"\n'
     )
-    assert (
-        failures('''"""Module."""
+    assert failures('''"""Module."""
 # Measured in code lines; project policy uses 200 to keep modules reviewable.
 LIMIT = 200
-''')
-        == []
-    )
-    assert (
-        failures('''"""Module."""
+''') == []
+    assert failures('''"""Module."""
 from enum import Enum
 # Unitless protocol labels; both outcomes are explicit for deterministic routing.
 class Outcome(Enum):
     """Protocol outcomes."""
     SUCCESS = "success"
     FAILURE = "failure"
-''')
-        == []
-    )
+''') == []

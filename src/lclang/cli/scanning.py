@@ -29,12 +29,9 @@ def scan_commands(
     package_path = getattr(module, "__path__", None)
     if package_path is not None:
         names = sorted(
-            item.name
-            for item in pkgutil.walk_packages(package_path, module.__name__ + ".")
+            item.name for item in pkgutil.walk_packages(package_path, module.__name__ + ".")
         )
-        modules.extend(
-            cast(ModuleType, pkgutil.resolve_name(module_name)) for module_name in names
-        )
+        modules.extend(cast(ModuleType, pkgutil.resolve_name(module_name)) for module_name in names)
     commands: list[Command] = []
     seen_objects: set[int] = set()
     seen_names: set[str] = set()

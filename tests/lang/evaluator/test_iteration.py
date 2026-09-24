@@ -49,9 +49,7 @@ async def test_iterate_values_resolves_sync_and_async_awaitable_items() -> None:
         yield lowered("C")
         yield lowered("D")
 
-    sync_result = [
-        value async for value in iterate_values(map(lowered, ["A", "B"]))
-    ]
+    sync_result = [value async for value in iterate_values(map(lowered, ["A", "B"]))]
     async_result = [value async for value in iterate_values(asynchronous())]
     for value in (*sync_result, *async_result):
         if isawaitable(value):

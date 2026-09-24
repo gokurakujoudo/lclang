@@ -15,6 +15,7 @@ async def unused(context: CliContext) -> CliResult:
 
 def test_help_protects_default_representations() -> None:
     """A masked default is never rendered, while long defaults remain bounded."""
+
     class Unprintable:
         def __repr__(self) -> str:
             raise AssertionError("must not render masked value")
@@ -23,7 +24,8 @@ def test_help_protects_default_representations() -> None:
         parameter_docs=[
             ParameterDoc("secret", object, True, "Secret", masked=True),
             ParameterDoc("long", str, True, "Long"),
-        ], preset={"secret": Unprintable(), "long": "x" * 300},
+        ],
+        preset={"secret": Unprintable(), "long": "x" * 300},
     )(unused)
     rendered = render_command_help("tool.py", command, ("unused",))
     assert "default=*masked*" in rendered
@@ -60,9 +62,11 @@ def test_scopes_annotations_defaults_and_masks() -> None:
 
 @pytest.mark.asyncio
 async def test_entrance_help_merges_defaults_without_loading_config(
-    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Help sees entrance defaults but does not load even an invalid config path."""
+
     def forbidden(*args: object, **kwargs: object) -> None:
         raise AssertionError("help loaded configuration")
 
@@ -72,7 +76,8 @@ async def test_entrance_help_merges_defaults_without_loading_config(
             ParameterDoc("value", int, True, "Value"),
             ParameterDoc("token", str, True, "Token"),
             ParameterDoc("empty", str | None, True, "Empty"),
-        ], preset={"value": 2},
+        ],
+        preset={"value": 2},
     )(unused)
     entrance = CliEntrance(
         CommandGroup("root", "Root", [command]),

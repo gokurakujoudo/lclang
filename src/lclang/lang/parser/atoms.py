@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any, cast
 
 from lclang.ast import LclAstNode, LclConstant, LclName
 from lclang.errors import LclSyntaxError
@@ -84,7 +85,7 @@ def internal_parse_literal(stream: TokenStream) -> LclConstant:
     if first.kind in {TokenKind.STRING, TokenKind.BYTES}:
         while stream.current.kind is first.kind:
             last = stream.advance()
-            value = value + last.value  # type: ignore[operator]
+            value = cast(Any, value) + last.value
         opposite = TokenKind.BYTES if first.kind is TokenKind.STRING else TokenKind.STRING
         if stream.current.kind is opposite:
             raise LclSyntaxError(
