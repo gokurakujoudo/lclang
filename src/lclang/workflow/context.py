@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator, Iterable
+from collections.abc import AsyncGenerator, Iterable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import date
@@ -82,12 +82,21 @@ class TaskContext:
     task_node: TaskNode
     task_id_stack: list[TaskID]
     _child_execution: TaskChildExecution = field(
-        default_factory=TaskChildExecution, init=False, repr=False, compare=False,
+        default_factory=TaskChildExecution,
+        init=False,
+        repr=False,
+        compare=False,
     )
 
     def log_event(
-        self, event: str, *, level: int = logging.INFO, record: object | None = None,
-        fields: Iterable[str] = (), masked_fields: Iterable[str] = (), **values: object,
+        self,
+        event: str,
+        *,
+        level: int = logging.INFO,
+        record: object | None = None,
+        fields: Iterable[str] = (),
+        masked_fields: Iterable[str] = (),
+        **values: object,
     ) -> None:
         """Log a business event with explicit fields and pre-read masking.
 
@@ -194,7 +203,7 @@ class FailureCoveringContextTask[ArgsT, ResourceT]:
         context: TaskContext,
         args: ArgsT,
         status_mgr: ExecutionStatusManager,
-    ) -> AsyncIterator[ResourceT]:
+    ) -> AsyncGenerator[ResourceT]:
         """Run acquisition, optional covering, and release.
 
         :param context: Current task context.

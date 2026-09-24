@@ -81,7 +81,9 @@ def test_idle_dispatcher_rotates_without_records() -> None:
                 }
             ) as runtime:
                 async with asyncio.timeout(5):
-                    while runtime.metrics.rollover_count == 0:  # noqa: ASYNC110 -- observe a real worker timer
+                    while (  # noqa: ASYNC110 -- observe a real worker timer
+                        runtime.metrics.rollover_count == 0
+                    ):
                         await asyncio.sleep(0.02)
                 assert runtime.metrics.records_enqueued == 0
 

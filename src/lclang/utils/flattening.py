@@ -8,7 +8,9 @@ __all__ = ["flatten_to_dict"]
 
 
 def flatten_to_dict(
-    instance: object, prefix: str = "", nested: bool | set[str] = True,
+    instance: object,
+    prefix: str = "",
+    nested: bool | set[str] = True,
 ) -> dict[str, object]:
     """Expand a dataclass into dotted keys without copying ordinary leaf values.
 
@@ -29,7 +31,7 @@ def flatten_to_dict(
         raise TypeError("flattening prefix must be text")
     if not isinstance(nested, (bool, set)):
         raise TypeError("nested must be a bool or set of relative paths")
-    selected = set(nested) if isinstance(nested, set) else set()
+    selected: set[str] = set(nested) if isinstance(nested, set) else set()
     expand: set[str] = set()
     for path in selected:
         if not isinstance(path, str):

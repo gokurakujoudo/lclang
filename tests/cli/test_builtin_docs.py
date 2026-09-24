@@ -38,9 +38,7 @@ def test_builtin_docs_render_complete_deterministic_nested_inventory() -> None:
     assert "- abs: Return the absolute value." in lines
     assert "- lhs: Return the active definition name." in lines
     assert "- recursive: Build a variadic eager fixed point." in lines
-    iter_index = lines.index(
-        "- iter: Synchronous and asynchronous iterable helpers."
-    )
+    iter_index = lines.index("- iter: Synchronous and asynchronous iterable helpers.")
     assert lines[iter_index + 1 : iter_index + 3] == [
         "  - collect: Collect sync or async items.",
         "  - first: Return the first item or a default.",
@@ -62,11 +60,7 @@ def test_builtin_doc_metadata_exactly_covers_safe_single_line_names() -> None:
         *ROOT_BUILTIN_DESCRIPTIONS.values(),
         *NAMESPACE_DESCRIPTIONS.values(),
         *CALENDAR_DESCRIPTIONS.values(),
-        *(
-            entry.summary
-            for manifest in STANDARD_MANIFESTS
-            for entry in manifest.entries
-        ),
+        *(entry.summary for manifest in STANDARD_MANIFESTS for entry in manifest.entries),
     )
     assert all(value.strip() == value and value for value in descriptions)
     assert all("\n" not in value and "\r" not in value for value in descriptions)

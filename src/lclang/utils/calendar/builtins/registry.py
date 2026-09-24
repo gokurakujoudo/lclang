@@ -41,4 +41,3 @@ BUILTIN_CALENDARS: dict[CalendarID, BDCalendar] = {
         END_OF_YEARS,
     )
 }
-

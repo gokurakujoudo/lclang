@@ -71,7 +71,7 @@ async def test_truthy_exit_suppresses_body_failure() -> None:
         raise ValueError("suppressed")
 
     source = "with manager: fail()"
-    assert await evaluate(parse_expression(source), locals()) is None
+    assert await evaluate(parse_expression(source), {"manager": manager, "fail": fail}) is None
     assert isinstance(manager.seen_error, LclEvaluationError)
 
 
@@ -85,7 +85,7 @@ async def test_falsey_exit_preserves_wrapped_body_failure() -> None:
         raise ValueError("visible")
 
     with pytest.raises(LclEvaluationError) as caught:
-        await evaluate(parse_expression("with manager: fail()"), locals())
+        await evaluate(parse_expression("with manager: fail()"), {"manager": manager, "fail": fail})
     assert manager.seen_error is caught.value
     assert isinstance(caught.value.__cause__, ValueError)
 
@@ -96,7 +96,7 @@ async def test_exit_failure_replaces_successful_body_result() -> None:
     events: list[str] = []
     manager = SyncManager("manager", events, exit_error=RuntimeError("cleanup"))
     with pytest.raises(LclEvaluationError) as caught:
-        await evaluate(parse_expression("with manager: 42"), locals())
+        await evaluate(parse_expression("with manager: 42"), {"manager": manager})
     assert isinstance(caught.value.__cause__, RuntimeError)
 
 
@@ -124,7 +124,7 @@ async def test_sync_protocol_results_are_auto_awaited() -> None:
 
     manager = AwaitingManager()
     source = "with manager as value: value"
-    assert await evaluate(parse_expression(source), locals()) == "value"
+    assert await evaluate(parse_expression(source), {"manager": manager, **locals()}) == "value"
     assert events == ["entered", "exited"]
 
 
@@ -138,6 +138,8 @@ async def test_cancellation_unwinds_and_is_not_wrapped() -> None:
         raise asyncio.CancelledError
 
     with pytest.raises(asyncio.CancelledError):
-        await evaluate(parse_expression("with manager: cancel()"), locals())
+        await evaluate(
+            parse_expression("with manager: cancel()"), {"manager": manager, "cancel": cancel}
+        )
     assert isinstance(manager.seen_error, asyncio.CancelledError)
     assert events == ["enter manager", "exit manager"]

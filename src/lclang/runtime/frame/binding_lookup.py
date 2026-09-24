@@ -1,3 +1,6 @@
+# Shared implementation modules intentionally access owner state.
+# pyright: reportPrivateUsage=false
+
 """Scoped Frame binding discovery and hierarchy validation."""
 
 from __future__ import annotations
@@ -130,12 +133,12 @@ def select_binding(frame: object, name: str) -> BindingSelection:
         prefixes = [".".join(name.split(".")[:index]) for index in range(1, len(name.split(".")))]
         blocked = any(
             local_binding_kind(owner, prefix) in {"real", "factory"}
-            for owner in walk_hierarchy(frame) for prefix in prefixes
+            for owner in walk_hierarchy(frame)
+            for prefix in prefixes
         )
         if not blocked and (kind := local_binding_kind(defaults, name)) is not None:
             return BindingSelection(defaults, kind, (*path, defaults.frame_id))
     return BindingSelection(None, None, tuple(path))
-
 
 
 def find_scoped_factory(frame: object, name: str) -> ScopedProxyFactory | None:
@@ -185,7 +188,8 @@ def hierarchy_binding_names(frame: object) -> tuple[str, ...]:
     defaults = default_frame_for(cast("Frame", frame))
     if defaults is not None:
         result.extend(
-            name for name in (*defaults.module.definitions, *defaults.values)
+            name
+            for name in (*defaults.module.definitions, *defaults.values)
             if name not in result and select_binding(frame, name).owner is not None
         )
     return tuple(result)

@@ -49,8 +49,10 @@ class ConfigLoader:
     resolver: ConfigSourceResolver
     limits: ConfigLoadLimits = field(default_factory=ConfigLoadLimits)
     loop: asyncio.AbstractEventLoop | None = None
-    tasks: dict[Path, asyncio.Task[LoadedConfigSource]] = field(default_factory=dict)
-    identities: dict[str, LoadedConfigSource] = field(default_factory=dict)
+    tasks: dict[Path, asyncio.Task[LoadedConfigSource]] = field(
+        default_factory=dict[Path, asyncio.Task[LoadedConfigSource]]
+    )
+    identities: dict[str, LoadedConfigSource] = field(default_factory=dict[str, LoadedConfigSource])
     characters: int = 0
     declarations: int = 0
 

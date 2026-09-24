@@ -1,7 +1,7 @@
 """Recursive mapping behavior through the public workflow boundary."""
 
 import logging
-from collections.abc import Callable, Mapping
+from collections.abc import AsyncGenerator, Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, assert_type, cast
@@ -29,7 +29,9 @@ class Arguments:
 
 
 async def echo(
-    context: wf.TaskContext, args: Arguments, status_mgr: wf.ExecutionStatusManager,
+    context: wf.TaskContext,
+    args: Arguments,
+    status_mgr: wf.ExecutionStatusManager,
 ) -> Arguments:
     """Return the materialized grouped arguments."""
     return args
@@ -43,7 +45,10 @@ async def test_nested_quotes_materialize_publish_and_infer() -> None:
     shared: list[str] = []
     template = Arguments(Options(encoding.quote, shared))
     task = wf.define_task(
-        "transform", "Transform", task_action=echo, args_mapping=template,
+        "transform",
+        "Transform",
+        task_action=echo,
+        args_mapping=template,
         outputs_mapping=Arguments(Options(output.quote, shared)),
     )
     workflow = wf.define_workflow("Nested", task)
@@ -51,9 +56,15 @@ async def test_nested_quotes_materialize_publish_and_infer() -> None:
         "csv.encoding",
     ]
     async with lclang.define_frame(preset={"csv.encoding": "utf-8"}) as frame:
-        result = await workflow.execute(wf.WorkflowExecutionContext(
-            False, date(2026, 9, 22), True, logging.getLogger("nested"), frame,
-        ))
+        result = await workflow.execute(
+            wf.WorkflowExecutionContext(
+                False,
+                date(2026, 9, 22),
+                True,
+                logging.getLogger("nested"),
+                frame,
+            )
+        )
         actual = result.task_args[wf.TaskID("transform")]
         assert isinstance(actual, Arguments)
         assert actual.options.encoding == "utf-8"
@@ -68,17 +79,28 @@ async def test_nested_projection_reads_concrete_record() -> None:
     source = wf.define_variable[Arguments]("source")
     projection = source.field("options", Options).field("encoding", str)
     task = wf.define_task(
-        "project", "Project", task_action=echo,
+        "project",
+        "Project",
+        task_action=echo,
         args_mapping=Arguments(Options(projection.quote, [])),
     )
     workflow = wf.define_workflow("Projection", task)
     assert [item.name for item in workflow.to_cli("run", "Run").parameter_docs] == [
-        "source", "source.options", "source.options.encoding", "source.options.shared",
+        "source",
+        "source.options",
+        "source.options.encoding",
+        "source.options.shared",
     ]
     async with lclang.define_frame(preset={"source": Arguments(Options("utf-8", []))}) as frame:
-        result = await workflow.execute(wf.WorkflowExecutionContext(
-            False, date(2026, 9, 22), True, logging.getLogger("nested"), frame,
-        ))
+        result = await workflow.execute(
+            wf.WorkflowExecutionContext(
+                False,
+                date(2026, 9, 22),
+                True,
+                logging.getLogger("nested"),
+                frame,
+            )
+        )
     assert result.task_outputs[wf.TaskID("project")] == Arguments(Options("utf-8", []))
 
 
@@ -111,9 +133,12 @@ class Deferred:
 async def test_nested_scope_records_and_generic_projection() -> None:
     """Workflow recursively materializes scope records without changing proxy APIs."""
     source = wf.define_variable[Arguments]("source")
-    async with lclang.define_frame(preset={
-        "source.options.encoding": "utf-8", "source.options.shared": [],
-    }) as frame:
+    async with lclang.define_frame(
+        preset={
+            "source.options.encoding": "utf-8",
+            "source.options.shared": [],
+        }
+    ) as frame:
         actual = await materialize_args(source.quote, frame)
         assert actual == Arguments(Options("utf-8", []))
         proxy = cast(lclang.FrameProxy, await frame.get("source"))
@@ -142,10 +167,12 @@ async def test_nested_whole_quote_and_shared_template_identity() -> None:
         actual = cast(Flexible, await materialize_args(template, frame))
         assert actual.value is template.value
         assert await materialize_args(Deferred(), frame) == Deferred()
+
     @dataclass
     class Twice:
         first: Options
         second: Options
+
     twice_template = Twice(options, options)
     async with lclang.define_frame() as frame:
         actual_twice = cast(Twice, await materialize_args(twice_template, frame))
@@ -202,14 +229,18 @@ async def test_nested_output_failures_publish_nothing() -> None:
     async with lclang.define_frame() as frame:
         with pytest.raises(ValueError, match="duplicate"):
             await mapped_outputs(
-                Options(one.quote, duplicate.quote), Options("a", []), frame,
+                Options(one.quote, duplicate.quote),
+                Options("a", []),
+                frame,
             )
         with pytest.raises(TypeError, match="read-only"):
-            await mapped_outputs(Options(source.field("encoding", str).quote, []),
-                                 Options("a", []), frame)
+            await mapped_outputs(
+                Options(source.field("encoding", str).quote, []), Options("a", []), frame
+            )
         with pytest.raises(TypeError, match="mapping dataclass"):
-            await mapped_outputs(Arguments(Options(one.quote, [])),
-                                 Arguments(cast(Options, 3)), frame)
+            await mapped_outputs(
+                Arguments(Options(one.quote, [])), Arguments(cast(Options, 3)), frame
+            )
         assert not frame.has("result.value")
 
 
@@ -230,17 +261,26 @@ async def test_nested_logs_mask_before_reading_and_show_projection(
     source = wf.define_variable[Options]("source")
     async with lclang.define_frame(preset={"source.encoding!": "secret"}) as frame:
         context = wf.WorkflowExecutionContext(
-            False, date(2026, 9, 22), True, logging.getLogger("nested"), frame,
+            False,
+            date(2026, 9, 22),
+            True,
+            logging.getLogger("nested"),
+            frame,
         )
-        message = mapping_message(context, (wf.TaskID("task"),), source.quote,
-                                  GuardedOptions("secret", []), output=False)
+        message = mapping_message(
+            context, (wf.TaskID("task"),), source.quote, GuardedOptions("secret", []), output=False
+        )
         assert "*masked*" in message and "secret" not in message
         projection = source.field("encoding", str)
         text = mapping_text(Arguments(Options(projection.quote, [])), False)
         assert "options.encoding <- $source.encoding" in text
-        message = mapping_message(context, (wf.TaskID("task"),),
-                                  Arguments(Options(projection.quote, [])),
-                                  Arguments(Options("secret", [])), output=False)
+        message = mapping_message(
+            context,
+            (wf.TaskID("task"),),
+            Arguments(Options(projection.quote, [])),
+            Arguments(Options("secret", [])),
+            output=False,
+        )
         assert "options.encoding" in message and "secret" not in message
     assert "Options <- $source" in mapping_text(source.quote, False)
     assert "str <- $source.encoding" in mapping_text(projection.quote, False)
@@ -253,17 +293,26 @@ async def test_opaque_optional_projection_types_and_unresolved_annotations() -> 
 
     variable = wf.define_variable[Flexible]("flexible")
     generic = wf.define_variable[Generic[int]]("generic")
-    async with lclang.define_frame(preset={
-        "flexible": Flexible(object()), "generic": Generic(1, [], {}, abs),
-    }) as frame:
-        assert isinstance(await materialize_args(
-            Flexible(variable.field("value", Any).quote), frame,
-        ), Flexible)
+    async with lclang.define_frame(
+        preset={
+            "flexible": Flexible(object()),
+            "generic": Generic(1, [], {}, abs),
+        }
+    ) as frame:
+        assert isinstance(
+            await materialize_args(
+                Flexible(cast(Any, variable).field("value", Any).quote),
+                frame,
+            ),
+            Flexible,
+        )
         optional = generic.field("optional", cast(Any, int | None))
         assert await materialize_args(Flexible(optional.quote), frame) == Flexible(None)
+
     @dataclass
     class Unresolved:
         value: int
+
     Unresolved.__annotations__["value"] = "MissingMappingType"
     with pytest.raises(TypeError, match="annotations cannot be resolved"):
         require_mapping(Unresolved(1), "argument")
@@ -272,22 +321,29 @@ async def test_opaque_optional_projection_types_and_unresolved_annotations() -> 
 @pytest.mark.asyncio
 async def test_invalid_verbose_resource_keeps_original_error() -> None:
     """Verbose output reporting cannot replace an invalid resource error."""
-    from collections.abc import AsyncIterator
     from contextlib import asynccontextmanager
 
     @asynccontextmanager
     async def wrong(
-        context: wf.TaskContext, args: Options, status_mgr: wf.ExecutionStatusManager,
-    ) -> AsyncIterator[Options]:
+        context: wf.TaskContext,
+        args: Options,
+        status_mgr: wf.ExecutionStatusManager,
+    ) -> AsyncGenerator[Options]:
         yield cast(Options, object())
 
     target = wf.define_variable[Options]("target")
     scope = wf.define_context_task("scope", "Scope", wrong, Options("utf-8", []), target.quote)
     workflow = wf.define_workflow("Invalid", wf.define_task("root", "Root", context_tasks=[scope]))
     async with lclang.define_frame() as frame:
-        result = await workflow.execute(wf.WorkflowExecutionContext(
-            False, date(2026, 9, 22), True, logging.getLogger("nested"), frame,
-        ))
+        result = await workflow.execute(
+            wf.WorkflowExecutionContext(
+                False,
+                date(2026, 9, 22),
+                True,
+                logging.getLogger("nested"),
+                frame,
+            )
+        )
         assert result.execution_status.status is wf.ExecutionStatus.ERROR
         failure = cast(wf.WorkflowException, await frame.get("__exception__"))
         assert "mapping dataclass" in str(failure.exception)

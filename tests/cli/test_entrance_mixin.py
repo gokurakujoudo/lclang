@@ -36,7 +36,9 @@ async def test_entrance_defaults_reach_all_commands_configs_and_tasks() -> None:
         return CliResult.success("")
 
     async def action(
-        context: wf.TaskContext, args: Value, status_mgr: wf.ExecutionStatusManager,
+        context: wf.TaskContext,
+        args: Value,
+        status_mgr: wf.ExecutionStatusManager,
     ) -> Value:
         del status_mgr
         assert await context.frame.get("helper") is abs
@@ -47,17 +49,27 @@ async def test_entrance_defaults_reach_all_commands_configs_and_tasks() -> None:
     workflow = wf.define_workflow(
         "Workflow",
         wf.define_task(
-            "task", "Task", task_action=action,
+            "task",
+            "Task",
+            task_action=action,
             args_mapping=Value(wf.define_variable[int]("value").quote),
         ),
         lcl_mixin={"seed": -5},
     )
     workflow_command = workflow.to_cli("work", "Work")
-    group = CommandGroup("root", "Root", [
-        plain_command, CommandGroup("nested", "Nested", [workflow_command]),
-    ])
+    group = CommandGroup(
+        "root",
+        "Root",
+        [
+            plain_command,
+            CommandGroup("nested", "Nested", [workflow_command]),
+        ],
+    )
     supplied: dict[str, object] = {
-        "helper": abs, "seed!": -7, "value": 1, "console_on": False,
+        "helper": abs,
+        "seed!": -7,
+        "value": 1,
+        "console_on": False,
     }
     entrance = CliEntrance(group, lcl_mixin=supplied)
     supplied["value"] = 100

@@ -72,7 +72,7 @@ class InternalScanner:
     offset: int = 0
     line: int = 1
     column: int = 1
-    tokens: list[Token] = field(default_factory=list)
+    tokens: list[Token] = field(default_factory=list[Token])
 
     def scan(self) -> list[Token]:
         """Scan all remaining source characters and append an EOF token.

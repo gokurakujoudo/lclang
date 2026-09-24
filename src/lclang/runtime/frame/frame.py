@@ -92,7 +92,7 @@ class Frame:
         effective_id = FrameId(f"frame-{module.name}") if frame_id is None else FrameId(frame_id)
         if not effective_id:
             raise ValueError("frame identifier cannot be empty")
-        raw_values = {} if values is None else values
+        raw_values: Mapping[str, object] = {} if values is None else values
         if any(not isinstance(name, str) for name in raw_values):
             raise TypeError("host binding names must be strings")
         snapshot, value_masks = normalize_masked_mapping(raw_values)
@@ -152,7 +152,10 @@ class Frame:
         if name not in owner.module.definitions:
             raise LclEvaluationError(f"host binding cannot be recalculated: {name}")
         return await internal_refresh_definition(
-            name, owner._inflight, owner._refreshes, owner.evaluate_definition,
+            name,
+            owner._inflight,
+            owner._refreshes,
+            owner.evaluate_definition,
             lambda: owner._lifecycle.ensure_open(None),
         )
 

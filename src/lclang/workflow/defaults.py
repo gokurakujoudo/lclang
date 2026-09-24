@@ -1,6 +1,6 @@
 """Collect variable defaults and own their per-execution lookup environment."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from lclang.defaults import NO_DEFAULT, DefaultBinding
@@ -29,9 +29,13 @@ def workflow_defaults(workflow: Workflow) -> dict[str, DefaultBinding]:
                 for variable in mapping_variables(mapping):
                     if variable.default is not NO_DEFAULT or variable.default_factory is not None:
                         name = variable.name + ("!" if variable.is_masked else "")
-                        bindings.setdefault(name, DefaultBinding(
-                            variable.default, variable.default_factory,
-                        ))
+                        bindings.setdefault(
+                            name,
+                            DefaultBinding(
+                                variable.default,
+                                variable.default_factory,
+                            ),
+                        )
         for child in task.children:
             visit(child)
 
@@ -40,7 +44,7 @@ def workflow_defaults(workflow: Workflow) -> dict[str, DefaultBinding]:
 
 
 @asynccontextmanager
-async def execution_defaults(workflow: Workflow, frame: Frame) -> AsyncIterator[None]:
+async def execution_defaults(workflow: Workflow, frame: Frame) -> AsyncGenerator[None]:
     """Own missing fallback bindings for exactly one workflow execution.
 
     :param workflow: Reusable variable declarations.
@@ -48,7 +52,8 @@ async def execution_defaults(workflow: Workflow, frame: Frame) -> AsyncIterator[
     :returns: Async scope isolating factory caches and retaining existing snapshots.
     """
     bindings = {
-        name: binding for name, binding in workflow_defaults(workflow).items()
+        name: binding
+        for name, binding in workflow_defaults(workflow).items()
         if not frame.has(name.removesuffix("!"))
     }
     if not bindings:

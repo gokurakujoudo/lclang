@@ -24,4 +24,3 @@ class AllWeekdaysBDCalendar(FunctionalBDCalendar):
 # Unitless singleton ID follows the builtin calendar registry. One shared ALL_WEEKDAYS object
 # expresses the Monday-Friday policy and preserves canonical repr and identity.
 ALL_WEEKDAYS = AllWeekdaysBDCalendar(CalendarID("ALL_WEEKDAYS"))
-

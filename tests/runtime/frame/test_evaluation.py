@@ -45,4 +45,3 @@ async def test_frame_evaluate_validates_input_and_lifecycle() -> None:
     await frame.close()
     with pytest.raises(lclang.LclClosedFrameError):
         await frame.evaluate("1")
-

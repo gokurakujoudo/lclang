@@ -91,14 +91,8 @@ async def test_concurrent_calls_have_independent_recursion_state() -> None:
     assert list(await asyncio.gather(first, second)) == [1, 2]
 
 
-Y_SOURCE = (
-    "(f) -> ((x) -> f((value) -> x(x)(value)))"
-    "((x) -> f((value) -> x(x)(value)))"
-)
-Z_SOURCE = (
-    "(f) -> ((x) -> f((*args) -> x(x)(*args)))"
-    "((x) -> f((*args) -> x(x)(*args)))"
-)
+Y_SOURCE = "(f) -> ((x) -> f((value) -> x(x)(value)))" "((x) -> f((value) -> x(x)(value)))"
+Z_SOURCE = "(f) -> ((x) -> f((*args) -> x(x)(*args)))" "((x) -> f((*args) -> x(x)(*args)))"
 
 
 async def _recursive_numeric_results(combinator_source: str, name: str) -> tuple[int, int]:
@@ -110,14 +104,11 @@ async def _recursive_numeric_results(combinator_source: str, name: str) -> tuple
     )
     fibonacci = await evaluate(
         parse_expression(
-            f"{name}((again) -> (n) -> n if n <= 1 else "
-            "again(n - 1) + again(n - 2))"
+            f"{name}((again) -> (n) -> n if n <= 1 else " "again(n - 1) + again(n - 2))"
         ),
         {name: fixed_point},
     )
-    factorial_result = await evaluate(
-        parse_expression("factorial(6)"), {"factorial": factorial}
-    )
+    factorial_result = await evaluate(parse_expression("factorial(6)"), {"factorial": factorial})
     fibonacci_result = await evaluate(parse_expression("fib(10)"), {"fib": fibonacci})
     return cast(int, factorial_result), cast(int, fibonacci_result)
 

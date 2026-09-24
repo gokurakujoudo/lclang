@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator, Awaitable, Mapping
+from collections.abc import AsyncGenerator, Awaitable, Mapping
 from contextlib import asynccontextmanager
 
 from lclang.logger.config import LoggerHandlerConfig, handler_config
@@ -33,7 +33,7 @@ async def finish_cleanup(operation: Awaitable[None]) -> None:
 @asynccontextmanager
 async def use_logger_handler(
     config: LoggerHandlerConfig | Mapping[str, object],
-) -> AsyncIterator[LoggerRuntime]:
+) -> AsyncGenerator[LoggerRuntime]:
     """Own one process-wide queue writer and restore logging after complete drain.
 
     :param config: Validated object or configuration mapping.

@@ -24,21 +24,22 @@ _UNARY: dict[UnaryOperator, UnaryFunction] = {
     UnaryOperator.INVERT: operator.invert,
 }
 # Unitless dispatch tables map grammar operators to Python operator functions; explicit entries
-# restrict evaluation to supported operations.
+# restrict evaluation to supported operations. Typeshed leaves several dynamic operator
+# operand types unspecified; the dispatch signature above describes our runtime boundary.
 _BINARY: dict[BinaryOperator, BinaryFunction] = {
     BinaryOperator.ADD: operator.add,
     BinaryOperator.SUBTRACT: operator.sub,
     BinaryOperator.MULTIPLY: operator.mul,
-    BinaryOperator.MATRIX_MULTIPLY: operator.matmul,
-    BinaryOperator.TRUE_DIVIDE: operator.truediv,
-    BinaryOperator.FLOOR_DIVIDE: operator.floordiv,
+    BinaryOperator.MATRIX_MULTIPLY: operator.matmul,  # pyright: ignore[reportUnknownMemberType]
+    BinaryOperator.TRUE_DIVIDE: operator.truediv,  # pyright: ignore[reportUnknownMemberType]
+    BinaryOperator.FLOOR_DIVIDE: operator.floordiv,  # pyright: ignore[reportUnknownMemberType]
     BinaryOperator.MODULO: operator.mod,
-    BinaryOperator.POWER: operator.pow,
-    BinaryOperator.LEFT_SHIFT: operator.lshift,
-    BinaryOperator.RIGHT_SHIFT: operator.rshift,
-    BinaryOperator.BIT_AND: operator.and_,
-    BinaryOperator.BIT_XOR: operator.xor,
-    BinaryOperator.BIT_OR: operator.or_,
+    BinaryOperator.POWER: operator.pow,  # pyright: ignore[reportUnknownMemberType]
+    BinaryOperator.LEFT_SHIFT: operator.lshift,  # pyright: ignore[reportUnknownMemberType]
+    BinaryOperator.RIGHT_SHIFT: operator.rshift,  # pyright: ignore[reportUnknownMemberType]
+    BinaryOperator.BIT_AND: operator.and_,  # pyright: ignore[reportUnknownMemberType]
+    BinaryOperator.BIT_XOR: operator.xor,  # pyright: ignore[reportUnknownMemberType]
+    BinaryOperator.BIT_OR: operator.or_,  # pyright: ignore[reportUnknownMemberType]
 }
 # Unitless dispatch tables map grammar operators to Python operator functions; explicit entries
 # restrict evaluation to supported operations.

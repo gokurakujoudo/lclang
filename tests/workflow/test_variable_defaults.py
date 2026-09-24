@@ -16,16 +16,27 @@ async def test_default_is_visible_to_lcl_and_is_below_explicit_bindings() -> Non
     """LCL and dataclass mappings resolve one common default binding."""
     value = wf.define_variable[object]("value", default=3)
     calculated = wf.define_variable[object]("calculated")
-    workflow = wf.define_workflow("Default", wf.define_task(
-        "root", "Root", task_action=echo, args_mapping=Value(value.quote), children=[
-            wf.define_task(
-                "child", "Child", task_action=echo, args_mapping=Value(calculated.quote),
-            ),
-        ],
-    ))
+    workflow = wf.define_workflow(
+        "Default",
+        wf.define_task(
+            "root",
+            "Root",
+            task_action=echo,
+            args_mapping=Value(value.quote),
+            children=[
+                wf.define_task(
+                    "child",
+                    "Child",
+                    task_action=echo,
+                    args_mapping=Value(calculated.quote),
+                ),
+            ],
+        ),
+    )
     for explicit, expected in [({}, 3), ({"value": 8}, 8)]:
         async with lclang.define_frame(
-            lclang.define_module("config", {"calculated": "value * 2"}), preset=dict(explicit),
+            lclang.define_module("config", {"calculated": "value * 2"}),
+            preset=dict(explicit),
         ) as frame:
             parent = frame.parent
             result = await workflow.execute(execution_context(frame))
@@ -46,11 +57,20 @@ async def test_factory_is_lazy_and_independent_between_runs() -> None:
         return value
 
     variable = wf.define_variable[object]("value", default_factory=factory)
-    workflow = wf.define_workflow("Factory", wf.define_task(
-        "root", "Root", task_action=echo, args_mapping=Value(variable.quote), children=[
-            wf.define_task("child", "Child", task_action=echo, args_mapping=Value(variable.quote)),
-        ],
-    ))
+    workflow = wf.define_workflow(
+        "Factory",
+        wf.define_task(
+            "root",
+            "Root",
+            task_action=echo,
+            args_mapping=Value(variable.quote),
+            children=[
+                wf.define_task(
+                    "child", "Child", task_action=echo, args_mapping=Value(variable.quote)
+                ),
+            ],
+        ),
+    )
     command = workflow.to_cli("run", "Run")
     assert not command.parameter_docs[0].required
     assert not calls
@@ -89,9 +109,10 @@ async def test_none_identity_field_fallback_and_failed_definition() -> None:
 @pytest.mark.asyncio
 async def test_field_factory_and_required_occurrences() -> None:
     """Constructor factories apply per mapping; one required occurrence keeps CLI required."""
+
     @dataclass
     class Collection:
-        value: object = field(default_factory=list)
+        value: object = field(default_factory=list[object])
 
     @dataclass
     class Required:
@@ -121,9 +142,9 @@ async def test_concurrent_and_repeated_borrowed_frame_runs_are_isolated() -> Non
 
     workflow = workflow_for(wf.define_variable[object]("value", default_factory=factory))
     async with lclang.define_frame() as frame:
-        results = await asyncio.gather(*(
-            workflow.execute(execution_context(frame)) for _ in range(20)
-        ))
+        results = await asyncio.gather(
+            *(workflow.execute(execution_context(frame)) for _ in range(20))
+        )
         results.append(await workflow.execute(execution_context(frame)))
         assert len({id(cast(Value, r.task_args[wf.TaskID("root")]).value) for r in results}) == 21
         assert calls == 21

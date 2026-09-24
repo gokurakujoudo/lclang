@@ -81,4 +81,3 @@ def nth_day_of_month(*n: int) -> NthDayOfMonthBDCalendar:
     :returns: Canonical nth-day calendar.
     """
     return NthDayOfMonthBDCalendar(canonical_nth(n))
-

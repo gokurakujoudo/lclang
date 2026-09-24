@@ -12,8 +12,7 @@ from lclang.lang.lexer.tokens import TokenKind
 # Unitless reserved attribute names come from record inspection methods. Excluding these exact
 # names prevents user fields from shadowing the record interface.
 RECORD_RESERVED_NAMES = frozenset(
-    [kind.value for kind in TokenKind if kind.name.startswith("KW_")]
-    + ["True", "False", "None"]
+    [kind.value for kind in TokenKind if kind.name.startswith("KW_")] + ["True", "False", "None"]
 )
 
 
@@ -48,11 +47,7 @@ class LclRecord:
         for name in snapshot:
             if not isinstance(name, str):
                 raise TypeError("record field names must be strings")
-            if (
-                not name.isidentifier()
-                or name.startswith("__")
-                or name in RECORD_RESERVED_NAMES
-            ):
+            if not name.isidentifier() or name.startswith("__") or name in RECORD_RESERVED_NAMES:
                 raise ValueError(f"invalid record field name: {name!r}")
         object.__setattr__(self, "_fields", MappingProxyType(snapshot))
 

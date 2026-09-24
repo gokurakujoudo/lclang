@@ -1,4 +1,5 @@
 """Text rendering for detached Frame inspection values."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -30,9 +31,7 @@ def render_inspection(self: VariableInspectionTree) -> str:
     """
     path = "/".join(str(frame_id) for frame_id in self.definition_path)
     if self.masked:
-        return (
-            f"{self.var_name}@{path}: ({self.status.value}) {MASKED_VALUE}"
-        )
+        return f"{self.var_name}@{path}: ({self.status.value}) {MASKED_VALUE}"
     if self.definition is None:
         definition = (
             ""
@@ -61,6 +60,7 @@ def render_inspection(self: VariableInspectionTree) -> str:
         )
     return f"{self.var_name}@{path}: {definition}({self.status.value}) {payload}"
 
+
 def canonical_value_repr(value: object) -> str:
     """Return one physical line for an arbitrary current value.
 
@@ -77,6 +77,7 @@ def canonical_value_repr(value: object) -> str:
             pass
     return repr(value)
 
+
 def native_value_payload(name: str, value: object) -> str:
     """Return the uniform dependency-tree payload for a canonical native value.
 
@@ -91,6 +92,7 @@ def native_value_payload(name: str, value: object) -> str:
     if callable(value):
         return f"Builtin Function: {name}"
     return f"{type(value).__name__}: {compact_repr(value)}"
+
 
 def compact_repr(value: object) -> str:
     """Render canonical values safely without truncating inspection output.

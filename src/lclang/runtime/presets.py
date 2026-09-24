@@ -25,7 +25,7 @@ class Preset:
 
     name: str
     values: Mapping[str, object]
-    masked_names: frozenset[str] = field(default_factory=frozenset, kw_only=True)
+    masked_names: frozenset[str] = field(default_factory=frozenset[str], kw_only=True)
 
     def __post_init__(self) -> None:
         """Validate names and detach the mapping from caller mutation.

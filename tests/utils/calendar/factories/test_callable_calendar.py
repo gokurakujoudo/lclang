@@ -15,6 +15,7 @@ from lclang.utils.calendar import (
 @pytest.mark.asyncio
 async def test_callable_factory_supports_async_values_and_wraps_failures() -> None:
     """Callable calendars validate asynchronous classification and dependency values."""
+
     async def classify(d: date) -> DayType:
         return DayType.BusinessDay if d.day == 1 else DayType.Holiday
 

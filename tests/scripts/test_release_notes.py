@@ -23,7 +23,8 @@ def test_release_notes(version: str, section: str, error: str | None) -> None:
     with TemporaryDirectory() as directory:
         root = Path(directory)
         (root / "pyproject.toml").write_text(
-            f'[project]\nversion = "{version}"\n', encoding="utf-8",
+            f'[project]\nversion = "{version}"\n',
+            encoding="utf-8",
         )
         (root / "CHANGELOG.md").write_text(
             "# Changelog\n\n## Unreleased\n- Future.\n\n" + section + "\n## Older\n- Old.\n",

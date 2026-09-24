@@ -14,10 +14,7 @@ async def test_recursive_builtin_evaluates_factorial_in_default_frame() -> None:
     module = lclang.define_module(
         "factorial",
         {
-            "factorial": (
-                "recursive((again) -> (n) -> "
-                "1 if n <= 1 else n * again(n - 1))"
-            ),
+            "factorial": ("recursive((again) -> (n) -> " "1 if n <= 1 else n * again(n - 1))"),
             "result": "factorial(6)",
         },
     )
@@ -26,8 +23,7 @@ async def test_recursive_builtin_evaluates_factorial_in_default_frame() -> None:
         assert await frame.get("result") == 720
         function = await frame.get("factorial")
         assert repr(function) == (
-            "Recursive Function: (again) -> (n) -> "
-            "1 if n <= 1 else n * again(n - 1)"
+            "Recursive Function: (again) -> (n) -> " "1 if n <= 1 else n * again(n - 1)"
         )
         rendered = repr(frame.inspect_variable("factorial"))
         assert "(Cached) Recursive Function: (again) -> (n) ->" in rendered
@@ -72,7 +68,10 @@ async def test_recursive_rejects_noncallable_builder_and_step() -> None:
     with pytest.raises(TypeError, match="builder must be callable"):
         recursive(1)  # type: ignore[arg-type]
 
-    call = recursive(lambda again: 1)
+    def build_invalid_step(again: object) -> int:
+        return 1
+
+    call = recursive(build_invalid_step)
     with pytest.raises(TypeError, match="must return a callable"):
         await call()
 

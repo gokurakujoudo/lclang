@@ -60,9 +60,7 @@ def test_comparison_equals_are_expression_source_not_modifiers() -> None:
 
 def test_debug_field_allows_space_before_conversion() -> None:
     """Whitespace following debug equals is outside preserved expression source."""
-    assert fvalue("f'{value = !s}'").parts == (
-        FStringField("value", conversion="s", debug=True),
-    )
+    assert fvalue("f'{value = !s}'").parts == (FStringField("value", conversion="s", debug=True),)
 
 
 def test_raw_and_triple_quoted_fstrings_preserve_mode() -> None:
@@ -91,7 +89,7 @@ def test_raw_and_triple_quoted_fstrings_preserve_mode() -> None:
         "f'{value:abc'",
         "f'{(value]}'",
         r"f'\q{value}'",
-        "f\"{'unterminated}\"",
+        'f"{\'unterminated}"',
     ],
 )
 def test_invalid_fstring_is_source_aware(source: str) -> None:

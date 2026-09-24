@@ -25,7 +25,11 @@ from tests.workflow.record_cli_support import CsvOptions, Dialect, make_workflow
 def make_context(frame: lclang.Frame) -> WorkflowExecutionContext:
     """Use deterministic metadata and the caller-owned Frame."""
     return WorkflowExecutionContext(
-        False, date(2026, 9, 23), False, logging.getLogger("csv"), frame,
+        False,
+        date(2026, 9, 23),
+        False,
+        logging.getLogger("csv"),
+        frame,
     )
 
 
@@ -35,8 +39,13 @@ def test_inferred_help_and_default_factory_laziness() -> None:
     command = make_workflow(variable.quote).to_cli("convert", "Convert")
     docs = {item.name: item for item in command.parameter_docs}
     assert set(docs) == {
-        "csv", "csv.encoding", "csv.dialect", "csv.dialect.delimiter", "csv.dialect.quote",
-        "csv.headers", "csv.null",
+        "csv",
+        "csv.encoding",
+        "csv.dialect",
+        "csv.dialect.delimiter",
+        "csv.dialect.quote",
+        "csv.headers",
+        "csv.null",
     }
     text = render_command_help("tool", command, ("convert",))
     assert "Input encoding" in text and "Input separator" in text
@@ -91,7 +100,11 @@ async def test_flattened_presets_and_unknown_override_paths() -> None:
     preset.pop("csv.computed")
     command = workflow.to_cli("convert", "Convert", preset=preset)
     params = CliParams(
-        "python", ("convert",), date(2026, 9, 23), False, None,
+        "python",
+        ("convert",),
+        date(2026, 9, 23),
+        False,
+        None,
         {"csv.dialect.delimiter": ";"},
     )
     binding = await build_binding(command, params, CliConfig())
@@ -110,10 +123,17 @@ async def test_flattened_presets_and_unknown_override_paths() -> None:
 async def test_entity_and_child_paths_remain_mutually_exclusive() -> None:
     """Field inference does not turn Frame bindings into a deep-merge engine."""
     command = make_workflow(define_variable[CsvOptions]("csv").quote).to_cli(
-        "convert", "Convert", preset={"csv": CsvOptions()},
+        "convert",
+        "Convert",
+        preset={"csv": CsvOptions()},
     )
     params = CliParams(
-        "python", ("convert",), date(2026, 9, 23), False, None, {"csv.encoding": "ascii"},
+        "python",
+        ("convert",),
+        date(2026, 9, 23),
+        False,
+        None,
+        {"csv.encoding": "ascii"},
     )
     with pytest.raises(ValueError):
         await build_binding(command, params, CliConfig())
@@ -125,7 +145,9 @@ async def test_root_masks_cover_derived_help_and_override_audits(source: str) ->
     """Exact-name runtime masks expand only over the statically known record fields."""
     variable = define_variable[CsvOptions]("csv", is_masked=source == "declaration")
     command = make_workflow(variable.quote).to_cli(
-        "convert", "Convert", preset={"csv!": CsvOptions()} if source == "preset" else None,
+        "convert",
+        "Convert",
+        preset={"csv!": CsvOptions()} if source == "preset" else None,
     )
     if source != "configuration":
         text = render_command_help("tool", command, ("convert",))
@@ -134,7 +156,10 @@ async def test_root_masks_cover_derived_help_and_override_audits(source: str) ->
         path = Path(directory) / "config.lclcfg"
         path.write_text("csv!: FRAME_PROXY\ncsv.encoding: 'secret'\n", encoding="utf-8")
         params = CliParams(
-            "python", ("convert",), date(2026, 9, 23), False,
+            "python",
+            ("convert",),
+            date(2026, 9, 23),
+            False,
             str(path) if source == "configuration" else None,
             {} if source == "preset" else {"csv.encoding": "secret"},
         )
@@ -148,6 +173,7 @@ async def test_root_masks_cover_derived_help_and_override_audits(source: str) ->
 
 def test_generics_cycles_boxes_and_explicit_field_precedence() -> None:
     """Static expansion is finite and compatible explicit declarations retain their help."""
+
     @dataclass
     class Record[T]:
         value: T
@@ -157,13 +183,19 @@ def test_generics_cycles_boxes_and_explicit_field_precedence() -> None:
     boxed = expand_record_parameters((ParameterDoc("box", ValueBox[str | None], True, "Box"),))
     assert len(boxed) == 1
     explicit = ParameterDoc("csv.encoding", str, False, "Explicit")
-    combined = expand_record_parameters((ParameterDoc("csv", CsvOptions, False, "CSV", masked=True),
-                                         explicit))
+    combined = expand_record_parameters(
+        (ParameterDoc("csv", CsvOptions, False, "CSV", masked=True), explicit)
+    )
     chosen = next(item for item in combined if item.name == "csv.encoding")
     assert chosen.description == "Explicit" and chosen.masked
     with pytest.raises(TypeError, match="conflicting"):
-        expand_record_parameters((ParameterDoc("csv", CsvOptions, False, "CSV"),
-                                  ParameterDoc("csv.encoding", int, False, "Wrong")))
+        expand_record_parameters(
+            (
+                ParameterDoc("csv", CsvOptions, False, "CSV"),
+                ParameterDoc("csv.encoding", int, False, "Wrong"),
+            )
+        )
+
     @dataclass
     class Cycle:
         child: object
@@ -171,6 +203,7 @@ def test_generics_cycles_boxes_and_explicit_field_precedence() -> None:
     Cycle.__annotations__["child"] = Cycle
     recursive = expand_record_parameters((ParameterDoc("cycle", Cycle, True, "Cycle"),))
     assert [item.name for item in recursive] == ["cycle", "cycle.child"]
+
     @dataclass
     class InvalidHelp:
         value: str = field(default="", metadata={"help": 42})
@@ -181,6 +214,7 @@ def test_generics_cycles_boxes_and_explicit_field_precedence() -> None:
 
 def test_required_init_variables_are_not_mistaken_for_optional_records() -> None:
     """Constructor-only inputs remain required even though fields() omits them."""
+
     @dataclass
     class Record:
         required: InitVar[str]

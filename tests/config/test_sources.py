@@ -34,9 +34,10 @@ def test_using_path_modes_are_canonical_and_suffix_checked(tmp_path: Path) -> No
     assert resolve_using_path("child.lclcfg", importer) == importer_path.parent / "child.lclcfg"
     absolute = (tmp_path / "absolute.lclcfg").resolve()
     assert resolve_using_path(str(absolute), importer) == absolute
-    assert resolve_using_path("__dir__/../shared.lclcfg", importer) == (
-        tmp_path / "shared.lclcfg"
-    ).resolve()
+    assert (
+        resolve_using_path("__dir__/../shared.lclcfg", importer)
+        == (tmp_path / "shared.lclcfg").resolve()
+    )
     with pytest.raises(LclConfigUsingError):
         resolve_using_path("__dir__", importer)
     with pytest.raises(LclConfigUsingError):

@@ -56,4 +56,3 @@ FRIDAYS = WeekdayBDCalendar(CalendarID("FRIDAYS"), 4)
 SATURDAYS = WeekdayBDCalendar(CalendarID("SATURDAYS"), 5)
 # Singleton calendar that accepts Sundays.
 SUNDAYS = WeekdayBDCalendar(CalendarID("SUNDAYS"), 6)
-

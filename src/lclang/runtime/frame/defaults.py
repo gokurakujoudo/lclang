@@ -1,6 +1,9 @@
+# Shared implementation modules intentionally access owner state.
+# pyright: reportPrivateUsage=false
+
 """Owned default Frames and task-local fallback lookup scopes."""
 
-from collections.abc import Iterator, Mapping
+from collections.abc import Generator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -44,11 +47,11 @@ def create_default_frame(bindings: Mapping[str, DefaultBinding]) -> Frame:
 
     definitions = {
         name: LclCall(function=LclConstant(value=binding.factory))
-        for name, binding in bindings.items() if binding.factory is not None
+        for name, binding in bindings.items()
+        if binding.factory is not None
     }
     values = {
-        name: binding.value for name, binding in bindings.items()
-        if binding.value is not NO_DEFAULT
+        name: binding.value for name, binding in bindings.items() if binding.value is not NO_DEFAULT
     }
     return Frame(Module(ModuleName("variable_defaults"), definitions), values=values)
 
@@ -63,7 +66,7 @@ def attach_defaults(frame: Frame, defaults: Frame) -> None:
 
 
 @contextmanager
-def default_scope(root: Frame, defaults: Frame) -> Iterator[None]:
+def default_scope(root: Frame, defaults: Frame) -> Generator[None]:
     """Expose fallback bindings for one run without changing borrowed Frames.
 
     :param root: Borrowed workflow execution root.

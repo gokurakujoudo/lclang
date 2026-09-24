@@ -1,6 +1,6 @@
 """ASGI fixture records startup, request, background work, and shutdown."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import BackgroundTasks, FastAPI
@@ -9,7 +9,7 @@ from lclang.logger import use_logger
 
 
 @asynccontextmanager
-async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+async def lifespan(application: FastAPI) -> AsyncGenerator[None]:
     """Exercise factory admission during both lifespan phases."""
     logger = await use_logger(name=__name__)
     logger.info("service-startup")

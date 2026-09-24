@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import cast
 
+from lclang.ast import LclAstNode
 from lclang.diagnostics import internal_masked_scope
 from lclang.lang.evaluator.definition_context import lhs
 from lclang.lang.parser import parse_expression
@@ -73,9 +74,7 @@ LCL_BUILTIN_VALUES: dict[str, object] = {
     "to_ymd": to_ymd,
     "calendars": CALENDARS_NAMESPACE,
     "use_calendar_manager": use_calendar_manager,
-    "use_file_system_hardcoded_calendar_loader": (
-        use_file_system_hardcoded_calendar_loader
-    ),
+    "use_file_system_hardcoded_calendar_loader": (use_file_system_hardcoded_calendar_loader),
     "zip": zip,
 }
 
@@ -145,7 +144,7 @@ def define_module(
     if any(not isinstance(source, str) and source is not FRAME_PROXY for source in exprs.values()):
         raise TypeError("module expressions must be strings or FRAME_PROXY")
     normalized, masked_names = normalize_masked_mapping(exprs)
-    definitions = {}
+    definitions: dict[str, LclAstNode] = {}
     for key, source in normalized.items():
         with internal_masked_scope(key in masked_names):
             definitions[key] = parse_expression(

@@ -31,6 +31,7 @@ def test_cli_values_are_detached_and_statuses_are_exit_codes() -> None:
 
 def test_result_shortcuts_preserve_status_text_and_constructor_validation() -> None:
     """Success and failure constructors retain Unicode, empty text, and typing."""
+
     class DerivedCliResult(CliResult):
         """Identify the classmethod-selected result type."""
 
@@ -50,7 +51,6 @@ def test_parameter_and_log_contracts_reject_invalid_values() -> None:
     assert LoggerHandlerConfig(format="%(message)s").format == "%(message)s"
     with pytest.raises(ValueError, match="identifier"):
         ParameterDoc("bad-key", str, False, "bad")
-
 
 
 def test_parameter_defaults_and_direct_params_accept_mask_markers() -> None:
@@ -110,15 +110,11 @@ def test_parameter_defaults_and_direct_params_accept_mask_markers() -> None:
             TypeError,
         ),
         (
-            lambda: InvalidCliParams(
-                "python", ["run"], date.today(), False, None, {"x": False}
-            ),
+            lambda: InvalidCliParams("python", ["run"], date.today(), False, None, {"x": False}),
             TypeError,
         ),
         (
-            lambda: InvalidCliParams(
-                "python", ["run"], date.today(), False, None, {}, 1
-            ),
+            lambda: InvalidCliParams("python", ["run"], date.today(), False, None, {}, 1),
             TypeError,
         ),
         (lambda: InvalidCliResult(0, "x"), TypeError),

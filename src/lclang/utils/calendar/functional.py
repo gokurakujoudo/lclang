@@ -100,4 +100,3 @@ class FunctionalBDCalendar(BDCalendar):
         :raises ValueError: If *year* is outside the supported range.
         """
         return {d: await self.cached_day_type(d) for d in year_dates(year)}
-

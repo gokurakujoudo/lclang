@@ -96,22 +96,26 @@ async def materialize_node(node: MappingNode, frame: Frame) -> object:
     :returns: Materialized value or detached dataclass template.
     :raises Exception: If a quote cannot be resolved, with a mapping-path note.
     """
-    if isinstance(node.value, TaskVar):
+    value: object = node.value
+    if isinstance(value, TaskVar):
+        variable = cast(TaskVar[object], value)
         try:
-            if not frame.has(node.value.name) and node.field is not None:
+            if not frame.has(variable.name) and node.field is not None:
                 if node.field.default is not MISSING:
                     return node.field.default
                 if node.field.default_factory is not MISSING:
                     return node.field.default_factory()
-            return await resolve_reference(node.value, frame)
+            return await resolve_reference(variable, frame)
         except Exception as error:
-            error.add_note(f"workflow mapping {node.path or '<record>'} <- "
-                           f"{reference_name(node.value)}")
+            error.add_note(
+                f"workflow mapping {node.path or '<record>'} <- " f"{reference_name(variable)}"
+            )
             raise
     if not isinstance(node.value, type) and is_dataclass(node.value):
         updates = {
             child.field.name: await materialize_node(child, frame)
-            for child in node.children if child.field is not None and child.field.init
+            for child in node.children
+            if child.field is not None and child.field.init
         }
         return replace(cast(Any, node.value), **updates)
     return node.value

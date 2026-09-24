@@ -14,18 +14,21 @@ from lclang.utils import SnowflakeGenerator
 async def test_builtin_construction_cache_recalculation_and_composition() -> None:
     """LCL constructs the Python utility and caches IDs independently from its state."""
     assert LCL_BUILTIN_VALUES["SnowflakeGenerator"] is SnowflakeGenerator
-    module = lclang.define_module("snowflake", {
-        "ids": "SnowflakeGenerator(worker_id, epoch_ms=0)",
-        "request_id": "ids.next_id()",
-        "label": 'f"request-{request_id}"',
-        "batch": "[ids.next_id() for item in range(3)]",
-    })
+    module = lclang.define_module(
+        "snowflake",
+        {
+            "ids": "SnowflakeGenerator(worker_id, epoch_ms=0)",
+            "request_id": "ids.next_id()",
+            "label": 'f"request-{request_id}"',
+            "batch": "[ids.next_id() for item in range(3)]",
+        },
+    )
     with patch("lclang.utils.snowflake.time_ns", return_value=1_000_000):
         async with lclang.define_frame(module, preset={"worker_id": 7}) as frame:
             first = (1 << 22) | (7 << 12)
-            assert await asyncio.gather(*(frame.get("request_id") for _ in range(10))) == [
-                first
-            ] * 10
+            assert (
+                await asyncio.gather(*(frame.get("request_id") for _ in range(10))) == [first] * 10
+            )
             assert await frame.get("label") == f"request-{first}"
             await frame.recalculate("request_id")
             assert await frame.get("request_id") == first + 1
@@ -54,13 +57,15 @@ async def test_lcl_reports_invalid_configuration_and_clock_rollback() -> None:
     """Constructor and generation failures remain visible at the language boundary."""
     errors: dict[str, object] = {"ValueError": ValueError, "RuntimeError": RuntimeError}
     async with lclang.define_frame(preset=errors) as frame:
-        assert await frame.evaluate(
-            "try: SnowflakeGenerator(1024) except ValueError: 'invalid'"
-        ) == "invalid"
+        assert (
+            await frame.evaluate("try: SnowflakeGenerator(1024) except ValueError: 'invalid'")
+            == "invalid"
+        )
         generator = SnowflakeGenerator(0, epoch_ms=0)
         frame.mixin({"ids": generator})
         with patch("lclang.utils.snowflake.time_ns", side_effect=[2_000_000, 1_000_000]):
             assert await frame.evaluate("ids.next_id()") == 2 << 22
-            assert await frame.evaluate(
-                "try: ids.next_id() except RuntimeError: 'rollback'"
-            ) == "rollback"
+            assert (
+                await frame.evaluate("try: ids.next_id() except RuntimeError: 'rollback'")
+                == "rollback"
+            )

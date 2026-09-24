@@ -83,8 +83,10 @@ class Command:
     parameter_docs: Sequence[ParameterDoc]
     preset: Mapping[str, object]
     handler: CommandHandler
-    masked_names: frozenset[str] = field(default_factory=frozenset, kw_only=True)
-    default_bindings: Mapping[str, DefaultBinding] = field(default_factory=dict, kw_only=True)
+    masked_names: frozenset[str] = field(default_factory=frozenset[str], kw_only=True)
+    default_bindings: Mapping[str, DefaultBinding] = field(
+        default_factory=dict[str, DefaultBinding], kw_only=True
+    )
 
     def __post_init__(self) -> None:
         """Detach declaration inputs and reject ambiguous metadata.
@@ -183,7 +185,7 @@ class CliFacade:
         :returns: Decorator that validates and snapshots one handler.
         """
         docs = tuple(parameter_docs)
-        values = {} if preset is None else preset
+        values: Mapping[str, object] = {} if preset is None else preset
 
         def decorate(handler: CommandHandler) -> Command:
             """Convert one exactly typed handler into a command.

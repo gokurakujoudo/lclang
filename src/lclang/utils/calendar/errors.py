@@ -66,4 +66,3 @@ class CalendarLogicException(Exception):
 
 class UnappliedCalendarOperationException(Exception):
     """Report an operation chain that has no source calendar."""
-

@@ -30,9 +30,12 @@ async def test_default_scope_names_masks_and_real_prefix_shadowing() -> None:
             assert await scope.get("mode") == "fast"
             assert await scope.get("limit") == 3
         assert not frame.has("settings.limit")
-    async with create_default_frame(bindings) as defaults, lclang.define_frame(
-        preset={"settings": object()},
-    ) as frame:
+    async with (
+        create_default_frame(bindings) as defaults,
+        lclang.define_frame(
+            preset={"settings": object()},
+        ) as frame,
+    ):
         with default_scope(frame, defaults):
             assert not frame.has("settings.limit")
             with pytest.raises(lclang.LclNameError):
@@ -55,7 +58,9 @@ async def test_factory_failure_shared_and_new_execution_retries() -> None:
             async with create_default_frame({"value": DefaultBinding(factory=fail)}) as defaults:
                 with default_scope(frame, defaults):
                     errors = await asyncio.gather(
-                        frame.get("value"), frame.get("value"), return_exceptions=True,
+                        frame.get("value"),
+                        frame.get("value"),
+                        return_exceptions=True,
                     )
                     assert isinstance(errors[0], Exception) and errors[0] is errors[1]
                     with pytest.raises(type(errors[0])) as caught:

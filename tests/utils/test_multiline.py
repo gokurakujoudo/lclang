@@ -20,10 +20,16 @@ def test_record_sequences_keep_duplicates_and_stable_order() -> None:
     """Mixed one-shot input aligns all records without merging names."""
     records = [Record(), {"a": 3, "longer": 4}]
     assert make_repr_lines(iter(records)) == [
-        "zebra : 1", "a     : 2", "a     : 3", "longer: 4",
+        "zebra : 1",
+        "a     : 2",
+        "a     : 3",
+        "longer: 4",
     ]
     assert make_repr_lines(records, sort_keys=True, key_column_length=8) == [
-        "a       : 2", "a       : 3", "longer  : 4", "zebra   : 1",
+        "a       : 2",
+        "a       : 3",
+        "longer  : 4",
+        "zebra   : 1",
     ]
     assert make_repr_lines(Record(), key_column_length=1) == ["zebra: 1", "a    : 2"]
     assert make_repr_lines({}) == make_repr_lines(iter(())) == []
@@ -31,6 +37,7 @@ def test_record_sequences_keep_duplicates_and_stable_order() -> None:
 
 def test_masking_precedes_record_and_dictionary_reads() -> None:
     """Getters and dictionary hooks cannot observe masked value reads."""
+
     @dataclass
     class Guarded:
         secret: object = None
@@ -45,7 +52,8 @@ def test_masking_precedes_record_and_dictionary_reads() -> None:
             raise AssertionError("dictionary read")
 
     assert make_repr_lines([Guarded(), GuardedDict(secret=object())], masked_keys={"secret"}) == [
-        "secret: *masked*", "secret: *masked*",
+        "secret: *masked*",
+        "secret: *masked*",
     ]
 
 
@@ -65,6 +73,7 @@ def test_width_is_validated_even_for_empty_input(width: object) -> None:
 
 def test_body_indentation_and_safe_value_rendering() -> None:
     """Body newlines indent literally while represented value newlines stay escaped."""
+
     class Broken:
         def __repr__(self) -> str:
             raise ValueError("cannot render")
@@ -72,7 +81,8 @@ def test_body_indentation_and_safe_value_rendering() -> None:
     assert make_multi_log_lines("title", ["a\n\nb", ""], "> ") == "title\n> a\n> \n> b\n> "
     assert make_multi_log_lines("title", []) == "title"
     assert make_repr_lines({"a": "x\ny", "b": Broken()}) == [
-        "a: 'x\\ny'", "b: <repr failed: ValueError>",
+        "a: 'x\\ny'",
+        "b: <repr failed: ValueError>",
     ]
     assert make_repr_lines({"a": "x" * 300})[0].endswith("...<truncated>")
 

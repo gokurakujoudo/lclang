@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import date
@@ -74,7 +74,7 @@ async def test_nested_siblings_publish_outputs_and_scope_context_resources() -> 
         context: wf.TaskContext,
         args: NumberArgs,
         status_mgr: wf.ExecutionStatusManager,
-    ) -> AsyncIterator[NumberOutputs]:
+    ) -> AsyncGenerator[NumberOutputs]:
         """Provide one task-local resource.
 
         :param context: Current task context.
@@ -171,9 +171,7 @@ async def test_nested_siblings_publish_outputs_and_scope_context_resources() -> 
     )
 
     async with lclang.define_frame(preset={"source": 2}) as frame:
-        result = await wf.define_workflow("Composite", root).execute(
-            execution_context(frame)
-        )
+        result = await wf.define_workflow("Composite", root).execute(execution_context(frame))
         assert events == [
             "context-enter",
             "parent",
@@ -215,7 +213,7 @@ async def test_unhandled_action_error_records_failure_and_skips_full_branch() ->
         context: wf.TaskContext,
         args: NumberArgs,
         status_mgr: wf.ExecutionStatusManager,
-    ) -> AsyncIterator[NumberOutputs]:
+    ) -> AsyncGenerator[NumberOutputs]:
         """Define a context that must be materialized as skipped.
 
         :param context: Current task context.
@@ -230,9 +228,7 @@ async def test_unhandled_action_error_records_failure_and_skips_full_branch() ->
         "skipped_context", "Skipped context", skipped_context, NumberArgs(source.quote)
     )
     grandchild = wf.define_task("grandchild", "Grandchild")
-    child = wf.define_task(
-        "child", "Child", context_tasks=[skipped], children=[grandchild]
-    )
+    child = wf.define_task("child", "Child", context_tasks=[skipped], children=[grandchild])
     root = wf.define_task(
         "root",
         "Root",
@@ -382,9 +378,7 @@ async def test_covering_context_wraps_failure_but_still_skips_sibling() -> None:
     root = wf.define_task("root", "Root", children=[failed, sibling])
 
     async with lclang.define_frame(preset={"source": 3}) as frame:
-        result = await wf.define_workflow("Covered", root).execute(
-            execution_context(frame)
-        )
+        result = await wf.define_workflow("Covered", root).execute(execution_context(frame))
 
     assert events == ["acquire", "handle", "release"]
     assert result.execution_status.status is wf.ExecutionStatus.FAILURE_COVERED
@@ -422,9 +416,7 @@ async def test_explicit_failure_creates_synthetic_exception_and_stops() -> None:
         children=[wf.define_task("child", "Skipped")],
     )
     async with lclang.define_frame(preset={"source": 4}) as frame:
-        result = await wf.define_workflow("Rejected", root).execute(
-            execution_context(frame)
-        )
+        result = await wf.define_workflow("Rejected", root).execute(execution_context(frame))
         failure = await frame.get("__exception__")
 
     assert result.execution_status.status is wf.ExecutionStatus.FAILURE
@@ -443,7 +435,7 @@ async def test_context_enter_exit_and_unsuppressed_failures_are_recorded() -> No
         context: wf.TaskContext,
         args: NumberArgs,
         status_mgr: wf.ExecutionStatusManager,
-    ) -> AsyncIterator[NumberOutputs]:
+    ) -> AsyncGenerator[NumberOutputs]:
         del context, args, status_mgr
         raise ValueError("enter failed")
         yield NumberOutputs(0)  # type: ignore[unreachable]
@@ -453,7 +445,7 @@ async def test_context_enter_exit_and_unsuppressed_failures_are_recorded() -> No
         context: wf.TaskContext,
         args: NumberArgs,
         status_mgr: wf.ExecutionStatusManager,
-    ) -> AsyncIterator[NumberOutputs]:
+    ) -> AsyncGenerator[NumberOutputs]:
         del context, status_mgr
         try:
             yield NumberOutputs(args.value)
@@ -465,7 +457,7 @@ async def test_context_enter_exit_and_unsuppressed_failures_are_recorded() -> No
         context: wf.TaskContext,
         args: NumberArgs,
         status_mgr: wf.ExecutionStatusManager,
-    ) -> AsyncIterator[NumberOutputs]:
+    ) -> AsyncGenerator[NumberOutputs]:
         del context, status_mgr
         yield NumberOutputs(args.value)
 
@@ -507,9 +499,7 @@ async def test_context_enter_exit_and_unsuppressed_failures_are_recorded() -> No
             context_tasks=context_tasks,
         )
         async with lclang.define_frame(preset={"source": 1}) as frame:
-            result = await wf.define_workflow("Workflow", task).execute(
-                execution_context(frame)
-            )
+            result = await wf.define_workflow("Workflow", task).execute(execution_context(frame))
             failure = cast(wf.WorkflowException, await frame.get("__exception__"))
         assert str(failure.exception) == message
         assert result.execution_status.status is wf.ExecutionStatus.ERROR
@@ -554,9 +544,7 @@ async def test_wrong_action_outputs_and_duplicate_publication_fail_cleanly() -> 
     )
     for task in tasks:
         async with lclang.define_frame(preset={"source": 1}) as frame:
-            result = await wf.define_workflow("Workflow", task).execute(
-                execution_context(frame)
-            )
+            result = await wf.define_workflow("Workflow", task).execute(execution_context(frame))
             failure = cast(wf.WorkflowException, await frame.get("__exception__"))
         assert isinstance(failure.exception, (TypeError, ValueError))
         assert result.execution_status.status is wf.ExecutionStatus.ERROR
@@ -594,13 +582,9 @@ async def test_defensive_execution_validation_and_task_frame_close_failure(
         await original_close(frame)
 
     monkeypatch.setattr(lclang.Frame, "close", selective_close)
-    structural = wf.TaskNode(
-        wf.TaskID("invalid"), "Invalid", None, None, None, (), ()
-    )
+    structural = wf.TaskNode(wf.TaskID("invalid"), "Invalid", None, None, None, (), ())
     async with lclang.define_frame() as frame:
-        result = await wf.Workflow("Workflow", structural).execute(
-            execution_context(frame)
-        )
+        result = await wf.Workflow("Workflow", structural).execute(execution_context(frame))
         failure = cast(wf.WorkflowException, await frame.get("__exception__"))
     assert str(failure.exception) == "close failed"
     assert result.execution_status.status is wf.ExecutionStatus.ERROR

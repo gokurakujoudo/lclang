@@ -55,4 +55,3 @@ class FallbackBDCalendar(FunctionalBDCalendar):
         :returns: Ordered operand tuple.
         """
         return self.base_calendars
-

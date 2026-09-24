@@ -12,13 +12,18 @@ def copy_status_tree(node: ExecutionStatusTree) -> ExecutionStatusTree:
     :returns: Detached recursive copy retaining scalar descriptions and order.
     """
     return ExecutionStatusTree(
-        node.status, node.task_type, node.task_name, node.task_description,
+        node.status,
+        node.task_type,
+        node.task_name,
+        node.task_description,
         [copy_status_tree(child) for child in node.sub_tasks],
     )
 
 
 def attach_call_status(
-    manager: ExecutionStatusManager, status: ExecutionStatusTree, root: TaskNode,
+    manager: ExecutionStatusManager,
+    status: ExecutionStatusTree,
+    root: TaskNode,
 ) -> None:
     """Attach completed children while omitting an empty-behavior grouping root.
 

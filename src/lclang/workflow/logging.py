@@ -111,8 +111,7 @@ def mapping_message(
     width = max((len(path) for path, _, _ in items), default=0)
     arrow = "->" if output else "<-"
     rows = [
-        f"    {path.ljust(width)} {arrow} {target}: {rendered}"
-        for path, target, rendered in items
+        f"    {path.ljust(width)} {arrow} {target}: {rendered}" for path, target, rendered in items
     ]
     kind = "outputs" if output else "args"
     header = f"{kind} mapping: [{branch_text(branch)}] {type(value).__name__}"

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import cast
 
 from lclang.cli import CliContext, CliResult, CliResultStatus, Command, ParameterDoc
 from lclang.cli.logger_config import logger_parameter
@@ -35,7 +36,12 @@ def external_variables(workflow: Workflow) -> tuple[TaskVar[object], ...]:
     """
     external: dict[str, TaskVar[object]] = {}
     for node in external_uses(workflow):
-        variable = node.value.root if isinstance(node.value, TaskProjection) else node.value
+        value: object = node.value
+        variable = (
+            cast(TaskProjection[object], value).root
+            if isinstance(value, TaskProjection)
+            else cast(TaskVar[object], value)
+        )
         external.setdefault(variable.name, variable)
     return tuple(external.values())
 
@@ -83,17 +89,20 @@ def workflow_command(
     required_names = {
         node.value.name for node in external_uses(workflow) if not has_field_default(node)
     }
-    docs = expand_record_parameters(tuple(
-        ParameterDoc(
-            item.name,
-            item.value_type,
-            item.name in required_names and item.name not in values.keys() | default_names
-            and not can_construct_record(item.value_type),
-            item.description or NO_HELP_MESSAGE,
-            masked=item.is_masked or item.name in preset_masks,
+    docs = expand_record_parameters(
+        tuple(
+            ParameterDoc(
+                item.name,
+                item.value_type,
+                item.name in required_names
+                and item.name not in values.keys() | default_names
+                and not can_construct_record(item.value_type),
+                item.description or NO_HELP_MESSAGE,
+                masked=item.is_masked or item.name in preset_masks,
+            )
+            for item in variables
         )
-        for item in variables
-    ))
+    )
     allowed = {item.name for item in docs}
     if supplied_names - allowed:
         raise ValueError("workflow preset contains non-external variable")

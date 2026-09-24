@@ -25,4 +25,3 @@ class BuiltinBDCalendarLoader(BDCalendarLoader):
         """
         del manager
         return BUILTIN_CALENDARS.get(calendar_id)
-

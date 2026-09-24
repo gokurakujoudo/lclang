@@ -78,11 +78,7 @@ class BDCalendarMapOperation(ABC):
         :raises DateOperationOutOfScopeException: If the target has no preimage.
         """
         anchor = next(
-            (
-                source
-                for source, mapped in self._mapped_dates.items()
-                if mapped == target_date
-            ),
+            (source for source, mapped in self._mapped_dates.items() if mapped == target_date),
             None,
         )
         if anchor is None:
@@ -122,9 +118,7 @@ class BDCalendarMapOperation(ABC):
         lower = anchor
         upper = safe_add_days(target_date, MAX_BUSINESS_DAY_SHIFT_DAYS) or date.max
         while lower < upper:
-            middle = date.fromordinal(
-                (lower.toordinal() + upper.toordinal() + 1) // 2
-            )
+            middle = date.fromordinal((lower.toordinal() + upper.toordinal() + 1) // 2)
             try:
                 mapped = await self.map_date(middle)
             except DateOperationOutOfScopeException:

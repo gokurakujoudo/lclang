@@ -37,8 +37,7 @@ class UnionBDCalendar(FunctionalBDCalendar):
         :returns: Union classification.
         """
         values = [
-            await dependency_day_type(calendar, d)
-            for calendar in self.base_union_calendars()
+            await dependency_day_type(calendar, d) for calendar in self.base_union_calendars()
         ]
         if DayType.BusinessDay in values:
             return DayType.BusinessDay

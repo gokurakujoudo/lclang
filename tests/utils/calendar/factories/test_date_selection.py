@@ -72,18 +72,14 @@ async def test_factories_cover_invalid_values_boundaries_and_cached_months() -> 
     assert await ends.get_dependency_ids() == {CalendarID("ALL_WEEKDAYS")}
 
     with pytest.raises(TypeError):
-        def_functional_calendar(
-            CalendarID("BAD"), cast(Callable[[date], DayType], 1)
-        )
+        def_functional_calendar(CalendarID("BAD"), cast(Callable[[date], DayType], 1))
     with pytest.raises(TypeError):
         def_functional_calendar(
             CalendarID("BAD"),
             lambda d: DayType.BusinessDay,
             cast(Callable[[], Set[CalendarID]], 1),
         )
-    no_dependencies = def_functional_calendar(
-        CalendarID("NONE"), lambda d: DayType.BusinessDay
-    )
+    no_dependencies = def_functional_calendar(CalendarID("NONE"), lambda d: DayType.BusinessDay)
     assert await no_dependencies.get_dependency_ids() == set()
     invalid_dependencies = def_functional_calendar(
         CalendarID("BAD_DEPS"),

@@ -16,9 +16,7 @@ from lclang.types import VarName
 
 def _evidence() -> tuple[DependencyEdge, DependencyEdge]:
     span = parse_expression("target").span
-    static = DependencyEdge(
-        VarName("source"), VarName("target"), DependencyKind.EAGER, span
-    )
+    static = DependencyEdge(VarName("source"), VarName("target"), DependencyKind.EAGER, span)
     dynamic = replace(static, kind=DependencyKind.DYNAMIC)
     return static, dynamic
 

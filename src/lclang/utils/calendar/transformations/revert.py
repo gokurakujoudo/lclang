@@ -54,4 +54,3 @@ class RevertBDCalendar(FunctionalBDCalendar):
         :returns: Original base calendar.
         """
         return self.base_calendar
-

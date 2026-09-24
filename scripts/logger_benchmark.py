@@ -46,7 +46,7 @@ async def measure(threads: int, records: int, mode: str) -> dict[str, object]:
                 batches = [future.result() for future in futures]
                 finish = max(end for _, end in batches)
             samples = sorted(sample for batch, _ in batches for sample in batch)
-            result = {
+            result: dict[str, object] = {
                 "mode": mode,
                 "threads": threads,
                 "records": len(samples),

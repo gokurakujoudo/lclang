@@ -90,9 +90,5 @@ async def test_lcl_salary_calendar_classifies_every_date_in_2026() -> None:
         first = date(2026, 1, 1)
         for offset in range(365):
             current = first + timedelta(days=offset)
-            expected = (
-                DayType.BusinessDay
-                if current in expected_salary_days
-                else DayType.Holiday
-            )
+            expected = DayType.BusinessDay if current in expected_salary_days else DayType.Holiday
             assert await salary_calendar.get_day_type(current) is expected

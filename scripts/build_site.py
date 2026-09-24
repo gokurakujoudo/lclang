@@ -5,7 +5,9 @@ import subprocess
 from pathlib import Path
 
 from mkdocs.commands.build import build
-from mkdocs.config import load_config
+
+# MkDocs leaves keyword override types unspecified in its public loader.
+from mkdocs.config import load_config  # pyright: ignore[reportUnknownVariableType]
 
 from scripts.export_wiki import ROOT
 from scripts.site_navigation import documentation_groups
@@ -17,16 +19,21 @@ def build_site(root: Path, output: Path, ref: str) -> list[Path]:
     if not output.is_relative_to(root / "build") or output == root / "build":
         raise ValueError("Site output must be a subdirectory of the repository build directory")
     config = load_config(
-        str(root / "mkdocs.yml"), site_dir=str(output), extra={"revision": ref},
+        str(root / "mkdocs.yml"),
+        site_dir=str(output),
+        extra={"revision": ref},
     )
     config.plugins.on_startup(command="build", dirty=False)
     try:
         build(config)
     finally:
         config.plugins.on_shutdown()
-    return [output / (page.with_name("index.html") if page.name == "README.md"
-                      else page.with_suffix(".html"))
-            for pages in documentation_groups(root).values() for page in pages]
+    return [
+        output
+        / (page.with_name("index.html") if page.name == "README.md" else page.with_suffix(".html"))
+        for pages in documentation_groups(root).values()
+        for page in pages
+    ]
 
 
 def main() -> None:

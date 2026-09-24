@@ -12,8 +12,13 @@ if TYPE_CHECKING:
 
 
 def emit_event(
-    context: TaskContext, event: str, level: int, record: object | None,
-    fields: Iterable[str], masked_fields: Iterable[str], values: Mapping[str, object],
+    context: TaskContext,
+    event: str,
+    level: int,
+    record: object | None,
+    fields: Iterable[str],
+    masked_fields: Iterable[str],
+    values: Mapping[str, object],
 ) -> None:
     """Render explicitly selected values after level admission and mask checks.
 
@@ -34,9 +39,10 @@ def emit_event(
     masked = frozenset(masked_fields)
     if record is not None and (not is_dataclass(record) or isinstance(record, type)):
         raise TypeError("event record must be a dataclass instance")
-    declared = set() if record is None else {item.name for item in record_fields(record)}
+    declared: set[str] = set() if record is None else {item.name for item in record_fields(record)}
     if (
-        set(selected) - declared or len(set(selected)) != len(selected)
+        set(selected) - declared
+        or len(set(selected)) != len(selected)
         or set(selected) & values.keys()
     ):
         raise ValueError("event fields must be declared, unique, and separate from keyword values")
@@ -51,6 +57,13 @@ def emit_event(
     dryrun = " (dryrun)" if context.is_dryrun else ""
     message = f"event {safe_repr(event)}: [{branch}]{dryrun}"
     message = make_multi_log_lines(message, align_repr_fields(rendered))
-    context.logger.log(level, message, stacklevel=3, extra={
-        "lclang_event": event, "lclang_task_branch": branch, "lclang_dryrun": context.is_dryrun,
-    })
+    context.logger.log(
+        level,
+        message,
+        stacklevel=3,
+        extra={
+            "lclang_event": event,
+            "lclang_task_branch": branch,
+            "lclang_dryrun": context.is_dryrun,
+        },
+    )

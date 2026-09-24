@@ -17,7 +17,12 @@ def combine_failures(pending: BaseException | None, cleanup: BaseException) -> B
     previous = pending.__cause__
     if cleanup.__context__ is pending:
         cleanup.__context__ = None
-    pending.__cause__ = cleanup if previous is None else BaseExceptionGroup(
-        "workflow cleanup failures", [previous, cleanup],
+    pending.__cause__ = (
+        cleanup
+        if previous is None
+        else BaseExceptionGroup(
+            "workflow cleanup failures",
+            [previous, cleanup],
+        )
     )
     return pending

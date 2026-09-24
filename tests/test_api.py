@@ -29,9 +29,7 @@ async def test_shortcuts_use_the_complete_default_hierarchy() -> None:
     assert lclang.LCL_RUNTIME.native_values is False
     assert lclang.LCL_IMPORTS.native_values is False
     assert tuple(lclang.LCL_ROOT.values) == ("lhs",)
-    assert {"iter", "text", "data", "json", "calendars"} <= set(
-        lclang.LCL_BUILTINS.values
-    )
+    assert {"iter", "text", "data", "json", "calendars"} <= set(lclang.LCL_BUILTINS.values)
     assert lclang.to_source(module.definitions["result"]) != expressions["result"]
 
 

@@ -1,3 +1,6 @@
+# Shared implementation modules intentionally access owner state.
+# pyright: reportPrivateUsage=false
+
 """Controlled updates for Frame host-value bindings."""
 
 from __future__ import annotations

@@ -28,4 +28,3 @@ class BDCalendarLoader(ABC):
         :returns: Loaded calendar, or ``None`` when this loader does not handle it.
         :raises CalendarCannotLoadException: If handled content cannot be loaded.
         """
-

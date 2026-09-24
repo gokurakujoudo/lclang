@@ -47,9 +47,11 @@ class BDCalendarMapping(BDCalendarMapOperation):
             raise TypeError("mapping operations must be BDCalendarMapOperation values")
         if base_calendar is not SELF_CALENDAR:
             values = tuple(
-                item.with_base_calendar(base_calendar)
-                if item.base_calendar is SELF_CALENDAR
-                else item
+                (
+                    item.with_base_calendar(base_calendar)
+                    if item.base_calendar is SELF_CALENDAR
+                    else item
+                )
                 for item in values
             )
         self.operations = values
@@ -98,9 +100,7 @@ class BDCalendarMapping(BDCalendarMapOperation):
             current = first
             while True:
                 try:
-                    operation_first, operation_last = await operation.map_date_reverse(
-                        current
-                    )
+                    operation_first, operation_last = await operation.map_date_reverse(current)
                 except DateOperationOutOfScopeException:
                     pass
                 else:

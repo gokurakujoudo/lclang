@@ -25,13 +25,15 @@ class CsvOptions:
 
     encoding: str = field(default="utf-8", metadata={"help": "Input encoding"})
     dialect: Dialect = field(default_factory=Dialect)
-    headers: list[str] = field(default_factory=list)
+    headers: list[str] = field(default_factory=list[str])
     null: str | None = None
     computed: int = field(default=3, init=False)
 
 
 async def echo_csv(
-    context: TaskContext, args: CsvOptions, status_mgr: ExecutionStatusManager,
+    context: TaskContext,
+    args: CsvOptions,
+    status_mgr: ExecutionStatusManager,
 ) -> CsvOptions:
     """Return materialized options for CLI and direct execution comparisons."""
     return args
@@ -39,6 +41,12 @@ async def echo_csv(
 
 def make_workflow(mapping: CsvOptions) -> Workflow:
     """Use one mapping through the real workflow executor."""
-    return define_workflow("CSV", define_task(
-        "convert", "Convert", task_action=echo_csv, args_mapping=mapping,
-    ))
+    return define_workflow(
+        "CSV",
+        define_task(
+            "convert",
+            "Convert",
+            task_action=echo_csv,
+            args_mapping=mapping,
+        ),
+    )

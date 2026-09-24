@@ -22,7 +22,9 @@ class TaskProjection[ValueT](TaskVar[ValueT]):
 
 
 def project_field[FieldT](
-    source: TaskVar[object], name: str, field_type: type[FieldT],
+    source: TaskVar[object],
+    name: str,
+    field_type: type[FieldT],
 ) -> TaskProjection[FieldT]:
     """Validate and append one declared field to a reference.
 
@@ -43,8 +45,12 @@ def project_field[FieldT](
     root = source.root if isinstance(source, TaskProjection) else source
     path = (*source.path, name) if isinstance(source, TaskProjection) else (name,)
     return TaskProjection(
-        root.name, root.description, root.is_masked, field_type,
-        root, path,
+        root.name,
+        root.description,
+        root.is_masked,
+        field_type,
+        root,
+        path,
     )
 
 
@@ -54,6 +60,11 @@ def reference_name(variable: TaskVar[object]) -> str:
     :param variable: Root or projected workflow variable.
     :returns: Qualified diagnostic path, without a masking suffix.
     """
-    return ".".join((variable.name, *variable.path)) if isinstance(
-        variable, TaskProjection,
-    ) else variable.name
+    return (
+        ".".join((variable.name, *variable.path))
+        if isinstance(
+            variable,
+            TaskProjection,
+        )
+        else variable.name
+    )

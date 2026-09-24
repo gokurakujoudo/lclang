@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Enable project-wide strict Pyright/Pylance checks and pinned Black formatting,
+  with VS Code format-on-save and formatting verification in the local/CI gate.
+
 ## 1.0.14 - 2026-09-24
 
 - Add scoped `Workflow.execute_in_task` calls with isolated Frames, native

@@ -10,7 +10,8 @@ from tests.documentation.examples import ROOT, marked_blocks
     "source",
     marked_blocks(
         (ROOT / "docs/reference/configuration.md").read_text(encoding="utf-8"),
-        "<!-- lclang-config-parse -->", "lclcfg",
+        "<!-- lclang-config-parse -->",
+        "lclcfg",
     ),
 )
 def test_documented_configuration_source_parses(source: str) -> None:

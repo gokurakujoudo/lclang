@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from dataclasses import dataclass
 from typing import Any, cast
@@ -44,7 +44,7 @@ async def valid_context(
     context: wf.TaskContext,
     args: Pair,
     status_mgr: wf.ExecutionStatusManager,
-) -> AsyncIterator[Pair]:
+) -> AsyncGenerator[Pair]:
     """Yield the supplied mapping.
 
     :param context: Current task context.
@@ -99,9 +99,7 @@ def test_factories_reject_inconsistent_mappings_and_callables() -> None:
     with pytest.raises(ValueError, match="required"):
         wf.define_task("task", "Task", task_action=valid_action)
     with pytest.raises(TypeError, match="dataclass"):
-        wf.define_task(
-            "task", "Task", task_action=valid_action, args_mapping=cast(Any, 1)
-        )
+        wf.define_task("task", "Task", task_action=valid_action, args_mapping=cast(Any, 1))
     with pytest.raises(TypeError, match="dataclass"):
         wf.define_task(
             "task",
@@ -148,16 +146,12 @@ def test_factories_reject_inconsistent_mappings_and_callables() -> None:
         (unresolved, "resolved"),
     ):
         with pytest.raises(TypeError, match=message):
-            wf.define_task(
-                "task", "Task", task_action=cast(Any, action), args_mapping=Pair(1)
-            )
+            wf.define_task("task", "Task", task_action=cast(Any, action), args_mapping=Pair(1))
 
     with pytest.raises(TypeError, match="context task"):
         wf.define_context_task("context", "Context", cast(Any, 1), Pair(1))
     with pytest.raises(TypeError, match="context output"):
-        wf.define_context_task(
-            "context", "Context", valid_context, Pair(1), cast(Any, Pair)
-        )
+        wf.define_context_task("context", "Context", valid_context, Pair(1), cast(Any, Pair))
     assert wf.define_context_task(
         "context", "Context", cast(Any, CallableContext()), Pair(1)
     ).task_id == wf.TaskID("context")

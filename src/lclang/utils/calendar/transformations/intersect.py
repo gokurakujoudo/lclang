@@ -37,8 +37,7 @@ class IntersectBDCalendar(FunctionalBDCalendar):
         :returns: Intersection classification.
         """
         values = [
-            await dependency_day_type(calendar, d)
-            for calendar in self.base_intersect_calendars()
+            await dependency_day_type(calendar, d) for calendar in self.base_intersect_calendars()
         ]
         if all(value is DayType.Undefined for value in values):
             return DayType.Undefined

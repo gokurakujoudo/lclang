@@ -99,9 +99,7 @@ def test_help_handles_empty_rows_and_wraps_usage_errors() -> None:
     command_help = render_command_help("tool.py", empty_command, ("empty",))
     assert "(none)" in command_help
 
-    @cli.command(
-        parameter_docs=[ParameterDoc("token!", str, False, "Secret token", "secret")]
-    )
+    @cli.command(parameter_docs=[ParameterDoc("token!", str, False, "Secret token", "secret")])
     async def masked_command(context: CliContext) -> CliResult:
         """Return a command with one masked documented default.
 

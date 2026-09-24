@@ -220,9 +220,11 @@ def test_application_info_and_verbose_debug_logs_print_to_stderr(
                 CommandGroup("root", "Logging", [logged_handler]),
                 cli_config=CliConfig(
                     LoggerHandlerConfig(
-                        file={}
-                        if log_dir is None
-                        else {"app": {"directory": log_dir, "level": "ERROR"}}
+                        file=(
+                            {}
+                            if log_dir is None
+                            else {"app": {"directory": log_dir, "level": "ERROR"}}
+                        )
                     )
                 ),
             )

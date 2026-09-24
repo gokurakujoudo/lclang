@@ -28,7 +28,7 @@ def test_parse_colon_definitions_comments_continuation_and_duplicates(tmp_path: 
         "total: (base + \\ # continued\r\n"
         "  2) # result\r\n"
         "base: 3\r\n"
-        "using \"child.lclcfg\" # expand\r\n"
+        'using "child.lclcfg" # expand\r\n'
         "\r\n",
         source_name="main",
         source_path=path,

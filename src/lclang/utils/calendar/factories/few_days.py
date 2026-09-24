@@ -63,4 +63,3 @@ def at(*values: date | str | int) -> FewBusinessDaysBDCalendar:
     """
     dates = tuple(sorted({coerce_calendar_date(value) for value in values}))
     return FewBusinessDaysBDCalendar(dates)
-

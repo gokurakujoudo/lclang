@@ -43,8 +43,7 @@ async def test_multilayer_comprehension_filters_nested_comprehension() -> None:
         "zs": [2, 3, 4, 6],
     }
     node = parse_expression(
-        "[[x * y + z for z in zs if z % y == 0] "
-        "for x in xs if x % 2 == 1 for y in ys if y > x]"
+        "[[x * y + z for z in zs if z % y == 0] " "for x in xs if x % 2 == 1 for y in ys if y > x]"
     )
 
     assert await evaluate(node, values) == [[4, 6, 8], [8], [16]]

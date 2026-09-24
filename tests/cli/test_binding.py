@@ -60,6 +60,7 @@ def test_default_binding_is_lazy_and_closes_idempotently() -> None:
 
 def test_marked_command_defaults_and_presets_reach_effective_frame_policy() -> None:
     """Every declared CLI binding source retains normalized sticky masking."""
+
     @cli.command(
         parameter_docs=[ParameterDoc("token!", str, True, "secret", "default-secret")],
         preset={"imported!": "preset-secret"},
@@ -170,12 +171,8 @@ async def test_cli_overrides_select_dynamic_using_targets() -> None:
             'choice: "blue"\nusing f"{choice}.lclcfg"\n',
             encoding="utf-8",
         )
-        (root / "blue.lclcfg").write_text(
-            'required_value: "blue"\n', encoding="utf-8"
-        )
-        (root / "green.lclcfg").write_text(
-            'required_value: "green"\n', encoding="utf-8"
-        )
+        (root / "blue.lclcfg").write_text('required_value: "blue"\n', encoding="utf-8")
+        (root / "green.lclcfg").write_text('required_value: "green"\n', encoding="utf-8")
         params = CliParams(
             "python",
             ("bound",),

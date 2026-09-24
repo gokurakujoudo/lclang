@@ -74,9 +74,6 @@ def range_start_days(calendar: BDCalendar) -> RangeStartDaysBDCalendar:
     return RangeStartDaysBDCalendar(calendar)
 
 
-
-
-
 @final
 class RangeEndDaysBDCalendar(FunctionalBDCalendar):
     """Select last dates of contiguous base-calendar business ranges.

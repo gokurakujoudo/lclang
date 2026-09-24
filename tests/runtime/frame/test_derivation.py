@@ -13,9 +13,7 @@ async def test_derive_creates_a_detached_independent_child() -> None:
     module = lclang.define_module("child", {"answer": "base + offset"})
     values: dict[str, object] = {"offset": 2}
 
-    async with lclang.define_frame(
-        lclang.define_module("parent", {"base": "40"})
-    ) as parent:
+    async with lclang.define_frame(lclang.define_module("parent", {"base": "40"})) as parent:
         async with parent.derive(module, values) as child:
             values["offset"] = 100
 
@@ -64,7 +62,6 @@ async def test_derive_default_values_are_empty_and_independent() -> None:
     ):
         assert first.values == second.values == {}
         assert first.values is not second.values
-
 
 
 @pytest.mark.parametrize(

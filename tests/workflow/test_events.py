@@ -30,8 +30,13 @@ async def test_business_event_fields_metadata_and_caller(caplog: pytest.LogCaptu
     logger = logging.getLogger("workflow-events")
     async with lclang.define_frame() as frame:
         context = wf.TaskContext(
-            True, date(2026, 9, 22), False, logger, frame,
-            wf.define_task("root", "Root"), [wf.TaskID("root"), wf.TaskID("child")],
+            True,
+            date(2026, 9, 22),
+            False,
+            logger,
+            frame,
+            wf.define_task("root", "Root"),
+            [wf.TaskID("root"), wf.TaskID("child")],
         )
         with caplog.at_level(logging.INFO, logger=logger.name):
             line = inspect.currentframe()
@@ -76,14 +81,22 @@ async def test_disabled_and_masked_events_do_not_read_or_format(
     logger = logging.getLogger("workflow-guarded-events")
     async with lclang.define_frame(preset={"secret!": "same-object"}) as frame:
         context = wf.TaskContext(
-            False, date(2026, 9, 22), False, logger, frame,
-            wf.define_task("root", "Root"), [wf.TaskID("root")],
+            False,
+            date(2026, 9, 22),
+            False,
+            logger,
+            frame,
+            wf.define_task("root", "Root"),
+            [wf.TaskID("root")],
         )
         with caplog.at_level(logging.INFO, logger=logger.name):
             context.log_event("disabled", level=logging.DEBUG, record=Value(), value=Value())
             context.log_event(
-                "masked", record=Guarded(Value()), fields=("secret",),
-                masked_fields=("secret", "value"), value=Value(),
+                "masked",
+                record=Guarded(Value()),
+                fields=("secret",),
+                masked_fields=("secret", "value"),
+                value=Value(),
             )
             context.log_event("identity", value=await frame.get("secret"))
             context.log_event("empty")
@@ -102,8 +115,13 @@ async def test_event_selection_errors_are_explicit() -> None:
     try:
         async with lclang.define_frame() as frame:
             context = wf.TaskContext(
-                False, date(2026, 9, 22), False, logger, frame,
-                wf.define_task("root", "Root"), [wf.TaskID("root")],
+                False,
+                date(2026, 9, 22),
+                False,
+                logger,
+                frame,
+                wf.define_task("root", "Root"),
+                [wf.TaskID("root")],
             )
             for record in ({"visible": "value"}, EventRecord):
                 with pytest.raises(TypeError, match="dataclass instance"):
@@ -123,14 +141,24 @@ async def test_event_selection_errors_are_explicit() -> None:
 async def test_lclang_logger_keeps_business_caller_and_configuration() -> None:
     """The existing logger queue receives one event with the application's source line."""
     stream = io.StringIO()
-    async with use_logger_handler({
-        "format": "%(filename)s:%(lineno)d %(levelname)s %(message)s",
-        "console": {"stream": stream},
-    }), lclang.define_frame() as frame:
+    async with (
+        use_logger_handler(
+            {
+                "format": "%(filename)s:%(lineno)d %(levelname)s %(message)s",
+                "console": {"stream": stream},
+            }
+        ),
+        lclang.define_frame() as frame,
+    ):
         logger = await use_logger(prefix="[APP]")
         context = wf.TaskContext(
-            False, date(2026, 9, 22), False, logger, frame,
-            wf.define_task("root", "Root"), [wf.TaskID("root")],
+            False,
+            date(2026, 9, 22),
+            False,
+            logger,
+            frame,
+            wf.define_task("root", "Root"),
+            [wf.TaskID("root")],
         )
         line = inspect.currentframe()
         assert line is not None
@@ -147,14 +175,25 @@ async def test_multiline_events_reach_console_and_files(standard: bool) -> None:
     """Both logger entry points retain exactly the same complete message body."""
     stream = io.StringIO()
     with TemporaryDirectory() as directory:
-        async with use_logger_handler({
-            "format": "%(message)s", "console": {"stream": stream},
-            "file": {"events": {"directory": directory}},
-        }), lclang.define_frame() as frame:
+        async with (
+            use_logger_handler(
+                {
+                    "format": "%(message)s",
+                    "console": {"stream": stream},
+                    "file": {"events": {"directory": directory}},
+                }
+            ),
+            lclang.define_frame() as frame,
+        ):
             logger = logging.getLogger("multiline") if standard else await use_logger("multiline")
             context = wf.TaskContext(
-                False, date(2026, 9, 23), False, logger, frame,
-                wf.define_task("root", "Root"), [wf.TaskID("root")],
+                False,
+                date(2026, 9, 23),
+                False,
+                logger,
+                frame,
+                wf.define_task("root", "Root"),
+                [wf.TaskID("root")],
             )
             context.log_event("saved", first=1, longer=2)
         expected = "event 'saved': [root]\n    first : 1\n    longer: 2"
@@ -167,6 +206,7 @@ async def test_multiline_events_reach_console_and_files(standard: bool) -> None:
 @pytest.mark.asyncio
 async def test_disabled_event_does_not_consume_selection_iterators() -> None:
     """No iteration or validation occurs before a disabled severity is admitted."""
+
     def fail_iteration() -> list[str]:
         raise AssertionError("selection consumed")
 
@@ -176,11 +216,17 @@ async def test_disabled_event_does_not_consume_selection_iterators() -> None:
     try:
         async with lclang.define_frame() as frame:
             context = wf.TaskContext(
-                False, date(2026, 9, 23), False, logger, frame,
-                wf.define_task("root", "Root"), [wf.TaskID("root")],
+                False,
+                date(2026, 9, 23),
+                False,
+                logger,
+                frame,
+                wf.define_task("root", "Root"),
+                [wf.TaskID("root")],
             )
             context.log_event(
-                "ignored", fields=(name for _ in range(1) for name in fail_iteration()),
+                "ignored",
+                fields=(name for _ in range(1) for name in fail_iteration()),
                 masked_fields=(name for _ in range(1) for name in fail_iteration()),
             )
     finally:

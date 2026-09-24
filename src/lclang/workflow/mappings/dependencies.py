@@ -1,6 +1,7 @@
 """Scope-aware mapping dependencies and dataclass field fallback metadata."""
 
 from dataclasses import MISSING
+from typing import cast
 
 from lclang.workflow.definitions import TaskNode, Workflow
 from lclang.workflow.mappings.bindings import mapping_variables
@@ -35,7 +36,8 @@ def external_uses(workflow: Workflow) -> tuple[MappingNode, ...]:
         :param visible: Names assigned in the current scope.
         """
         for node in mapping_nodes(mapping_structure(mapping)):
-            if isinstance(node.value, TaskVar) and node.value.name not in visible:
+            value: object = node.value
+            if isinstance(value, TaskVar) and cast(TaskVar[object], value).name not in visible:
                 external.append(node)
 
     def visit(task: TaskNode, inherited: frozenset[str] = frozenset()) -> None:

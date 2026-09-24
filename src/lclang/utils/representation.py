@@ -2,6 +2,7 @@
 
 from collections.abc import Callable, Iterable, Set
 from dataclasses import fields, is_dataclass
+from typing import cast
 
 from lclang.masking import MASKED_VALUE
 
@@ -52,12 +53,14 @@ def safe_repr(
     payload = payload.replace("\r", "\\r").replace("\n", "\\n")
     if max_length is not None and len(payload) > max_length:
         marker = TRUNCATION_MARKER[:max_length]
-        return payload[:max_length - len(marker)] + marker
+        return payload[: max_length - len(marker)] + marker
     return payload
 
 
 def make_multi_log_lines(
-    title: str, lines: Iterable[str], line_indent: str = "    ",
+    title: str,
+    lines: Iterable[str],
+    line_indent: str = "    ",
 ) -> str:
     """Join a title and indented body into one message.
 
@@ -71,7 +74,8 @@ def make_multi_log_lines(
 
 
 def align_repr_fields(
-    items: Iterable[tuple[str, str]], key_column_length: int | None = None,
+    items: Iterable[tuple[str, str]],
+    key_column_length: int | None = None,
 ) -> list[str]:
     """Align previously represented values without inspecting the original objects.
 
@@ -93,8 +97,10 @@ def align_repr_fields(
 
 
 def make_repr_lines(
-    instances: object, key_column_length: int | None = None,
-    sort_keys: bool = False, masked_keys: Set[str] | None = None,
+    instances: object,
+    key_column_length: int | None = None,
+    sort_keys: bool = False,
+    masked_keys: Set[str] | None = None,
 ) -> list[str]:
     """Represent dataclass instances and dictionaries with pre-read masking.
 
@@ -109,16 +115,16 @@ def make_repr_lines(
     """
     align_repr_fields((), key_column_length)
     if is_dataclass(instances) or isinstance(instances, dict):
-        records: Iterable[object] = (instances,)
+        records: Iterable[object] = (cast(object, instances),)
     elif isinstance(instances, Iterable) and not isinstance(instances, (str, bytes)):
-        records = instances
+        records = cast(Iterable[object], instances)
     else:
         raise TypeError("representations require dataclass instances or dictionaries")
-    masked = frozenset() if masked_keys is None else masked_keys
+    masked = frozenset[str]() if masked_keys is None else masked_keys
     rendered: list[tuple[str, str]] = []
     for record in records:
         if isinstance(record, dict):
-            names = list(record)
+            names = list(cast(dict[object, object], record))
         elif is_dataclass(record) and not isinstance(record, type):
             names = [item.name for item in fields(record)]
         else:
@@ -129,7 +135,11 @@ def make_repr_lines(
             if name in masked:
                 value = None
             else:
-                value = record[name] if isinstance(record, dict) else getattr(record, name)
+                value = (
+                    cast(dict[object, object], record)[name]
+                    if isinstance(record, dict)
+                    else getattr(record, name)
+                )
             rendered.append((name, safe_repr(value, masked=name in masked)))
     if sort_keys:
         rendered.sort(key=lambda item: item[0])

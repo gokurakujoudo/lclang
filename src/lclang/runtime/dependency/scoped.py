@@ -35,13 +35,15 @@ def qualify_dependency_references(
         if current is None or len(parts) > current[0].count(".") + 1:
             replacements[root.span] = (".".join(parts), item.span)
     return tuple(
-        DependencyReference(
-            VarName(replacements[reference.span][0]),
-            reference.kind,
-            replacements[reference.span][1],
+        (
+            DependencyReference(
+                VarName(replacements[reference.span][0]),
+                reference.kind,
+                replacements[reference.span][1],
+            )
+            if reference.span in replacements
+            else reference
         )
-        if reference.span in replacements
-        else reference
         for reference in references
     )
 

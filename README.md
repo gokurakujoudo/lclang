@@ -459,6 +459,7 @@ clearer as a normal function than as configuration policy.
 - Custom lexer, parser, immutable AST, and async interpreter.
 - No Python `eval`, `exec`, AST compilation, Java, or generated parser runtime.
 - 100% branch coverage enforced by the project quality gate.
+- Black formatting and strict mypy/Pyright checks, with shared Pylance editor settings.
 - Parser differential and property tests, concurrency and dependency stress
   tests, lifecycle leak checks, and executable documentation.
 - Source integration smoke and default full stress tests.

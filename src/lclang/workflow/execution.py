@@ -1,3 +1,6 @@
+# Shared implementation modules intentionally access owner state.
+# pyright: reportPrivateUsage=false
+
 """Parent-first depth-first workflow execution."""
 
 from __future__ import annotations
@@ -91,9 +94,7 @@ def record_exception(
         manager.update(ExecutionStatus.ERROR, str(error))
     error.add_note(f"workflow task {'.'.join(branch)}")
     log_task_error(state.context, branch, manager.current.status, error)
-    state.context.frame.mixin(
-        {"__exception__": WorkflowException(error, branch[-1])}
-    )
+    state.context.frame.mixin({"__exception__": WorkflowException(error, branch[-1])})
 
 
 def raise_for_status(
@@ -134,9 +135,7 @@ def add_skipped_task(parent: ExecutionStatusManager, task: TaskNode) -> None:
     """
     manager = parent.add_sub_task(task.task_id, task.title, ExecutionStatus.SKIPPED)
     for context in task.context_tasks:
-        manager.add_sub_task(
-            context.task_id, context.title, ExecutionStatus.SKIPPED
-        ).finalize()
+        manager.add_sub_task(context.task_id, context.title, ExecutionStatus.SKIPPED).finalize()
     for child in task.children:
         add_skipped_task(manager, child)
     manager.finalize()
@@ -161,9 +160,7 @@ async def execute_action_and_children(
     """
     if task.task_action is not None:
         if task.args_mapping is None:
-            missing_mapping = RuntimeError(
-                "validated action is missing its argument mapping"
-            )
+            missing_mapping = RuntimeError("validated action is missing its argument mapping")
             record_exception(state, manager, stack, missing_mapping)
             raise missing_mapping
         try:
@@ -173,7 +170,12 @@ async def execute_action_and_children(
             raise
         state.task_args[task.task_id] = args
         log_mapping(
-            state.context, stack, task.args_mapping, args, output=False, frame=context.frame,
+            state.context,
+            stack,
+            task.args_mapping,
+            args,
+            output=False,
+            frame=context.frame,
         )
         context._child_execution.action_active = True
         try:
@@ -189,9 +191,7 @@ async def execute_action_and_children(
         except TypeError:
             valid_output = False
         if not valid_output:
-            wrong_output = TypeError(
-                "workflow action must return its annotated dataclass"
-            )
+            wrong_output = TypeError("workflow action must return its annotated dataclass")
             record_exception(state, manager, stack, wrong_output)
             raise wrong_output
         state.task_outputs[task.task_id] = output

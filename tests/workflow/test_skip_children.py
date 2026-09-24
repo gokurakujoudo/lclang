@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import date
@@ -23,7 +23,11 @@ class Value:
 def execution_context(frame: lclang.Frame) -> wf.WorkflowExecutionContext:
     """Return execution metadata with in-memory logging only."""
     return wf.WorkflowExecutionContext(
-        False, date(2026, 9, 21), False, logging.getLogger("skip-children"), frame,
+        False,
+        date(2026, 9, 21),
+        False,
+        logging.getLogger("skip-children"),
+        frame,
     )
 
 
@@ -33,7 +37,9 @@ def status_names(tree: wf.ExecutionStatusTree) -> list[str]:
 
 
 async def echo(
-    context: wf.TaskContext, args: Value, status_mgr: wf.ExecutionStatusManager,
+    context: wf.TaskContext,
+    args: Value,
+    status_mgr: wf.ExecutionStatusManager,
 ) -> Value:
     """Return the action arguments unchanged."""
     return args
@@ -42,7 +48,8 @@ async def echo(
 @pytest.mark.asyncio
 @pytest.mark.parametrize("omit", [False, True])
 async def test_omission_preserves_outputs_steps_cleanup_and_siblings(
-    omit: bool, caplog: pytest.LogCaptureFixture,
+    omit: bool,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Only the selected subtree disappears; current work and siblings remain."""
     events: list[str] = []
@@ -50,8 +57,10 @@ async def test_omission_preserves_outputs_steps_cleanup_and_siblings(
 
     @asynccontextmanager
     async def resource(
-        context: wf.TaskContext, args: Value, status_mgr: wf.ExecutionStatusManager,
-    ) -> AsyncIterator[Value]:
+        context: wf.TaskContext,
+        args: Value,
+        status_mgr: wf.ExecutionStatusManager,
+    ) -> AsyncGenerator[Value]:
         with pytest.raises(RuntimeError, match="action"):
             context.skip_children()
         events.append(f"enter{args.value}")
@@ -63,7 +72,9 @@ async def test_omission_preserves_outputs_steps_cleanup_and_siblings(
             events.append(f"exit{args.value}")
 
     async def action(
-        context: wf.TaskContext, args: Value, status_mgr: wf.ExecutionStatusManager,
+        context: wf.TaskContext,
+        args: Value,
+        status_mgr: wf.ExecutionStatusManager,
     ) -> Value:
         captured.append(context)
         if omit:
@@ -78,19 +89,30 @@ async def test_omission_preserves_outputs_steps_cleanup_and_siblings(
     nested_context = wf.define_context_task("child_context", "Child context", resource, Value(3))
     descendant = wf.define_task("descendant", "Descendant", task_action=echo, args_mapping=Value())
     child = wf.define_task(
-        "child", "Child", task_action=echo, args_mapping=Value(child_input.quote),
-        context_tasks=[nested_context], children=[descendant],
+        "child",
+        "Child",
+        task_action=echo,
+        args_mapping=Value(child_input.quote),
+        context_tasks=[nested_context],
+        children=[descendant],
     )
     parent = wf.define_task(
-        "parent", "Parent", task_action=action, args_mapping=Value(),
-        outputs_mapping=Value(output.quote), children=[child],
+        "parent",
+        "Parent",
+        task_action=action,
+        args_mapping=Value(),
+        outputs_mapping=Value(output.quote),
+        children=[child],
         context_tasks=[
             wf.define_context_task("outer", "Outer", resource, Value(1)),
             wf.define_context_task("inner", "Inner", resource, Value(2)),
         ],
     )
     sibling = wf.define_task(
-        "sibling", "Sibling", task_action=echo, args_mapping=Value(output.quote),
+        "sibling",
+        "Sibling",
+        task_action=echo,
+        args_mapping=Value(output.quote),
     )
     root = wf.define_task("root", "Root", children=[parent, sibling])
     workflow = wf.define_workflow("Workflow", root)
@@ -120,7 +142,8 @@ async def test_omission_preserves_outputs_steps_cleanup_and_siblings(
 @pytest.mark.asyncio
 @pytest.mark.parametrize("failure", ["raise", "status", "publication", "exit", "covered", "cancel"])
 async def test_omission_survives_failures_and_cancellation(
-    failure: str, caplog: pytest.LogCaptureFixture,
+    failure: str,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Error-path bookkeeping never reinserts a deliberately omitted child."""
     managers: list[wf.ExecutionStatusManager] = []
@@ -129,8 +152,10 @@ async def test_omission_survives_failures_and_cancellation(
 
     @asynccontextmanager
     async def resource(
-        context: wf.TaskContext, args: Value, status_mgr: wf.ExecutionStatusManager,
-    ) -> AsyncIterator[Value]:
+        context: wf.TaskContext,
+        args: Value,
+        status_mgr: wf.ExecutionStatusManager,
+    ) -> AsyncGenerator[Value]:
         try:
             yield args
         except ValueError:
@@ -142,7 +167,9 @@ async def test_omission_survives_failures_and_cancellation(
                 raise RuntimeError("cleanup failed")
 
     async def action(
-        context: wf.TaskContext, args: Value, status_mgr: wf.ExecutionStatusManager,
+        context: wf.TaskContext,
+        args: Value,
+        status_mgr: wf.ExecutionStatusManager,
     ) -> Value:
         managers.append(status_mgr)
         captured.append(context)
@@ -158,7 +185,10 @@ async def test_omission_survives_failures_and_cancellation(
     output = wf.define_variable[Value]("output")
     child = wf.define_task("child", "Child", children=[wf.define_task("descendant", "Descendant")])
     parent = wf.define_task(
-        "parent", "Parent", task_action=action, args_mapping=Value(),
+        "parent",
+        "Parent",
+        task_action=action,
+        args_mapping=Value(),
         outputs_mapping=output.quote if failure == "publication" else None,
         context_tasks=[wf.define_context_task("resource", "Resource", resource, Value())],
         children=[child],
@@ -174,9 +204,13 @@ async def test_omission_survives_failures_and_cancellation(
             else:
                 result = await workflow.execute(execution_context(frame))
                 assert result.execution_status.status is (
-                    wf.ExecutionStatus.FAILURE_COVERED if failure == "covered"
-                    else wf.ExecutionStatus.FAILURE if failure == "status"
-                    else wf.ExecutionStatus.ERROR
+                    wf.ExecutionStatus.FAILURE_COVERED
+                    if failure == "covered"
+                    else (
+                        wf.ExecutionStatus.FAILURE
+                        if failure == "status"
+                        else wf.ExecutionStatus.ERROR
+                    )
                 )
                 sibling_status = result.execution_status.sub_tasks[0].sub_tasks[1].status
                 assert sibling_status is wf.ExecutionStatus.SKIPPED
@@ -192,8 +226,11 @@ async def test_omission_survives_failures_and_cancellation(
 @pytest.mark.asyncio
 async def test_skip_control_is_per_execution_and_allows_leaf_tasks() -> None:
     """Concurrent and repeated runs never mutate the shared task definition."""
+
     async def action(
-        context: wf.TaskContext, args: Value, status_mgr: wf.ExecutionStatusManager,
+        context: wf.TaskContext,
+        args: Value,
+        status_mgr: wf.ExecutionStatusManager,
     ) -> Value:
         if args.value:
             context.skip_children()
@@ -202,7 +239,10 @@ async def test_skip_control_is_per_execution_and_allows_leaf_tasks() -> None:
 
     source = wf.define_variable[int]("source")
     task = wf.define_task(
-        "root", "Root", task_action=action, args_mapping=Value(source.quote),
+        "root",
+        "Root",
+        task_action=action,
+        args_mapping=Value(source.quote),
         children=[wf.define_task("child", "Child")],
     )
     workflow = wf.define_workflow("Concurrent", task)

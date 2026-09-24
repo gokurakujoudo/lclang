@@ -51,8 +51,8 @@ class LoggerHandlerConfig:
 
     level: int | str = logging.NOTSET
     format: str = DEFAULT_FORMAT
-    console: Mapping[str, object] = field(default_factory=dict)
-    file: Mapping[str, object] = field(default_factory=dict)
+    console: Mapping[str, object] = field(default_factory=dict[str, object])
+    file: Mapping[str, object] = field(default_factory=dict[str, object])
     takeover_loggers: tuple[str, ...] = DEFAULT_TAKEOVER
     capture_warnings: bool = False
 
@@ -93,7 +93,7 @@ class LoggerHandlerConfig:
         """
         defaults = mapping(self.file.get("default", {}), "logger.file.default")
         file_config("default", defaults, template=True)
-        result = {}
+        result: dict[str, FileConfig] = {}
         for name, value in self.file.items():
             if not name.isidentifier():
                 raise ValueError(f"logger.file.{name}: expected sink identifier")

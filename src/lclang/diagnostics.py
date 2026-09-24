@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from contextvars import ContextVar
 
@@ -48,7 +48,8 @@ def internal_render_value(
     if masked or ACTIVE_MASKED_VALUE.get():
         return MASKED_VALUE
     payload = safe_repr(
-        value, renderer=None if renderer is None else lambda value: renderer(),
+        value,
+        renderer=None if renderer is None else lambda value: renderer(),
     )
     return f"({type(value).__name__}) {payload}"
 
@@ -66,7 +67,7 @@ def internal_trace(stage: str, message: str) -> None:
 
 
 @contextmanager
-def internal_verbose_scope(logger: logging.Logger | None) -> Iterator[None]:
+def internal_verbose_scope(logger: logging.Logger | None) -> Generator[None]:
     """Activate one logger for the current context and inherited child Tasks.
 
     :param logger: Invocation logger, or ``None`` to retain silent behavior.
@@ -83,7 +84,7 @@ def internal_verbose_scope(logger: logging.Logger | None) -> Iterator[None]:
 
 
 @contextmanager
-def internal_masked_scope(masked: bool = True) -> Iterator[None]:
+def internal_masked_scope(masked: bool = True) -> Generator[None]:
     """Suppress diagnostic payload rendering within one task-local scope.
 
     :param masked: Whether payloads should use the stable masked marker.

@@ -6,7 +6,9 @@ from typing import overload
 
 @overload
 async def invoke[**Params, Result](  # noqa: D418
-    callback: Callable[Params, Awaitable[Result]], *args: Params.args, **kwargs: Params.kwargs,
+    callback: Callable[Params, Awaitable[Result]],
+    *args: Params.args,
+    **kwargs: Params.kwargs,
 ) -> Result:
     """Retain parameters and the awaited result of an asynchronous callback.
 
@@ -20,7 +22,9 @@ async def invoke[**Params, Result](  # noqa: D418
 
 @overload
 async def invoke[**Params, Result](  # noqa: D418
-    callback: Callable[Params, Result], *args: Params.args, **kwargs: Params.kwargs,
+    callback: Callable[Params, Result],
+    *args: Params.args,
+    **kwargs: Params.kwargs,
 ) -> Result:
     """Retain parameters and the return type of a synchronous callback.
 
@@ -33,7 +37,9 @@ async def invoke[**Params, Result](  # noqa: D418
 
 
 async def invoke[**Params](
-    callback: Callable[Params, object], *args: Params.args, **kwargs: Params.kwargs,
+    callback: Callable[Params, object],
+    *args: Params.args,
+    **kwargs: Params.kwargs,
 ) -> object:
     """Call once and recursively resolve awaitables in the current task.
 

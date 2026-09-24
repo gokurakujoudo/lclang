@@ -25,10 +25,7 @@ def _module() -> Module:
 
 
 def _edges(graph: DependencyGraph) -> list[tuple[str, str, DependencyKind]]:
-    return [
-        (str(edge.source), str(edge.target), edge.kind)
-        for edge in graph.edges
-    ]
+    return [(str(edge.source), str(edge.target), edge.kind) for edge in graph.edges]
 
 
 def test_build_preserves_definition_and_occurrence_order() -> None:

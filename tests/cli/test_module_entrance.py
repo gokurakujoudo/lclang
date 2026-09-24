@@ -18,10 +18,7 @@ from lclang.cli.builtin_docs import render_builtin_docs
 MODULE_ARGV = ("python", "__main__.py")
 
 # Valid fixed-point combinator used by the screenshot-shaped regression.
-Z_OVERRIDE = (
-    "LCL[(f) -> ((x) -> f((*args) -> x(x)(*args)))"
-    "((x) -> f((*args) -> x(x)(*args)))]"
-)
+Z_OVERRIDE = "LCL[(f) -> ((x) -> f((*args) -> x(x)(*args)))" "((x) -> f((*args) -> x(x)(*args)))]"
 # Deliberately incomplete quicksort marker: the final Z-call parenthesis is absent.
 MALFORMED_QUICKSORT_OVERRIDE = (
     "LCL[Z((again) -> (items) -> [] if not items else "
@@ -35,9 +32,7 @@ def test_parse_lcl_renders_a_non_evaluating_static_result_tree(
 ) -> None:
     """Static inspection preserves ordered literal leaves and unsafe expressions."""
     literal_status = asyncio.run(
-        LCLANG_CLI_ENTRANCE.run(
-            [*MODULE_ARGV, "parse_lcl", "-o", "RESULT", "100"]
-        )
+        LCLANG_CLI_ENTRANCE.run([*MODULE_ARGV, "parse_lcl", "-o", "RESULT", "100"])
     )
     assert literal_status == 0
     assert capsys.readouterr().out == (
@@ -45,9 +40,7 @@ def test_parse_lcl_renders_a_non_evaluating_static_result_tree(
     )
 
     malformed_status = asyncio.run(
-        LCLANG_CLI_ENTRANCE.run(
-            [*MODULE_ARGV, "parse_lcl", "-o", "RESULT", "LCL[bad +]"]
-        )
+        LCLANG_CLI_ENTRANCE.run([*MODULE_ARGV, "parse_lcl", "-o", "RESULT", "LCL[bad +]"])
     )
     assert malformed_status == 0
     assert capsys.readouterr().out == (
@@ -55,9 +48,7 @@ def test_parse_lcl_renders_a_non_evaluating_static_result_tree(
     )
 
     lazy_constant_status = asyncio.run(
-        LCLANG_CLI_ENTRANCE.run(
-            [*MODULE_ARGV, "parse_lcl", "-o", "RESULT", "LCL['100']"]
-        )
+        LCLANG_CLI_ENTRANCE.run([*MODULE_ARGV, "parse_lcl", "-o", "RESULT", "LCL['100']"])
     )
     assert lazy_constant_status == 0
     assert "'100' (NotEvaluated) NoneType: None" in capsys.readouterr().out
@@ -87,9 +78,7 @@ def test_parse_lcl_renders_a_non_evaluating_static_result_tree(
     assert "b@cli_overrides: (ExternalProvided) str: '200'" in lines[2]
 
     unsafe_status = asyncio.run(
-        LCLANG_CLI_ENTRANCE.run(
-            [*MODULE_ARGV, "parse_lcl", "-o", "RESULT", "LCL[1 / 0 + missing]"]
-        )
+        LCLANG_CLI_ENTRANCE.run([*MODULE_ARGV, "parse_lcl", "-o", "RESULT", "LCL[1 / 0 + missing]"])
     )
     assert unsafe_status == 0
     unsafe_output = capsys.readouterr().out
@@ -130,9 +119,7 @@ def test_builtins_command_prints_the_reviewed_inventory(
     captured = capsys.readouterr()
     assert captured.out == f"{render_builtin_docs()}\n"
     assert captured.err == ""
-    assert asyncio.run(
-        LCLANG_CLI_ENTRANCE.run([*MODULE_ARGV, "builtins", "-h"])
-    ) == 0
+    assert asyncio.run(LCLANG_CLI_ENTRANCE.run([*MODULE_ARGV, "builtins", "-h"])) == 0
     help_output = capsys.readouterr().out
     assert "List canonical LCL builtins" in help_output
 
@@ -163,11 +150,12 @@ def test_eval_lcl_returns_string_values_and_maps_usage_and_evaluation_errors(
 
     assert asyncio.run(LCLANG_CLI_ENTRANCE.run([*MODULE_ARGV, "eval_lcl"])) == 2
     assert "missing required parameter: RESULT" in capsys.readouterr().err
-    assert asyncio.run(
-        LCLANG_CLI_ENTRANCE.run(
-            [*MODULE_ARGV, "eval_lcl", "-o", "RESULT", "LCL[1 / 0]"]
+    assert (
+        asyncio.run(
+            LCLANG_CLI_ENTRANCE.run([*MODULE_ARGV, "eval_lcl", "-o", "RESULT", "LCL[1 / 0]"])
         )
-    ) == 2
+        == 2
+    )
     assert "division by zero" in capsys.readouterr().err
 
 
@@ -253,9 +241,7 @@ def test_parse_lcl_eval_flag_renders_success_and_failure_cache_trees(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Valueless EVAL opts into cached inspection without losing failed trees."""
-    assert asyncio.run(
-        LCLANG_CLI_ENTRANCE.run([*MODULE_ARGV, "parse_lcl", "-h"])
-    ) == 0
+    assert asyncio.run(LCLANG_CLI_ENTRANCE.run([*MODULE_ARGV, "parse_lcl", "-h"])) == 0
     eval_help = capsys.readouterr().out
     assert "EVAL" in eval_help
     assert "FORCE" in eval_help
@@ -304,9 +290,7 @@ def test_parse_lcl_eval_flag_renders_success_and_failure_cache_trees(
     assert "[variable evaluation stack: RESULT]" in failure_output
 
     eval_status = asyncio.run(
-        LCLANG_CLI_ENTRANCE.run(
-            [*MODULE_ARGV, "eval_lcl", "-o", "RESULT", "100", "-o", "EVAL"]
-        )
+        LCLANG_CLI_ENTRANCE.run([*MODULE_ARGV, "eval_lcl", "-o", "RESULT", "100", "-o", "EVAL"])
     )
     assert eval_status == 0
     assert capsys.readouterr().out == "100\n"

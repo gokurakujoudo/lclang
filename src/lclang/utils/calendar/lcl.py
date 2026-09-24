@@ -55,4 +55,3 @@ CALENDARS_NAMESPACE = StdlibNamespace(
         "END_OF_YEARS": END_OF_YEARS,
     },
 )
-

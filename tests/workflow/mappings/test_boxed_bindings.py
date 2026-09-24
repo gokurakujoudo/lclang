@@ -2,6 +2,7 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import cast
 
 import pytest
 
@@ -30,10 +31,12 @@ async def test_boxed_bindings_retain_payload_identity_and_publish_raw_values(wra
     shared: list[object] = [ValueBox(3)]
     template = Inputs(rule.quote, convert.quote, shared)
     original = Inputs(OptionalRule(None), CallableBox(int), shared)
-    async with lclang.define_frame(preset={
-        "rule": original.rule if wrapped else None,
-        "convert": original.convert if wrapped else int,
-    }) as frame:
+    async with lclang.define_frame(
+        preset={
+            "rule": original.rule if wrapped else None,
+            "convert": original.convert if wrapped else int,
+        }
+    ) as frame:
         result = await materialize_args(template, frame)
         assert isinstance(result, Inputs)
         assert result.rule.value is None and result.convert("17") == 17
@@ -89,6 +92,7 @@ async def test_wrong_boxes_and_unboxed_outputs_are_rejected() -> None:
 @pytest.mark.asyncio
 async def test_callback_box_preserves_awaitables_and_errors() -> None:
     """Forwarding is synchronous and returns the callback's awaitable unchanged."""
+
     async def callback(value: int) -> int:
         return value + 1
 
@@ -113,5 +117,5 @@ async def test_repeated_boxing_is_shallow_and_leaves_ordinary_callbacks_untouche
     async with lclang.define_frame(preset={"value": payload, "callback": int}) as frame:
         for _ in range(1000):
             boxed = await materialize_args(value.quote, frame)
-            assert isinstance(boxed, ValueBox) and boxed.value is payload
+            assert isinstance(boxed, ValueBox) and cast(ValueBox[object], boxed).value is payload
         assert await materialize_args(callback.quote, frame) is int

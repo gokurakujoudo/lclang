@@ -94,8 +94,7 @@ class ForwardStepBDCalendar(BDCalendar):
         index = bisect_left(self._defined_business_days, d)
         return (
             DayType.BusinessDay
-            if index < len(self._defined_business_days)
-            and self._defined_business_days[index] == d
+            if index < len(self._defined_business_days) and self._defined_business_days[index] == d
             else DayType.Undefined
         )
 
@@ -125,6 +124,4 @@ class ForwardStepBDCalendar(BDCalendar):
         if end >= self.first_bd:
             after = safe_add_days(end, 1)
             await self.cache_through(end if after is None else after)
-        return {
-            d: DayType.BusinessDay for d in self._defined_business_days if d.year == year
-        }
+        return {d: DayType.BusinessDay for d in self._defined_business_days if d.year == year}

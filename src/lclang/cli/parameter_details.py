@@ -34,8 +34,11 @@ def get_parameter_masks(parameters: Sequence[ParameterDoc], frame: Frame) -> fro
     :returns: Exact names to mask, including descendants of masked record paths.
     """
     return frozenset(
-        item.name for item in parameters
-        if item.masked or isinstance(item, DerivedParameterDoc) and any(
+        item.name
+        for item in parameters
+        if item.masked
+        or isinstance(item, DerivedParameterDoc)
+        and any(
             frame.is_masked(".".join(item.name.split(".")[:index]))
             for index in range(1, len(item.name.split(".")))
         )

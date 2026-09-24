@@ -38,8 +38,7 @@ def test_evaluation_error_renders_an_immutable_variable_stack() -> None:
     )
     assert error.variable_stack == ("RESULT", "middle", "failing")
     assert str(error) == (
-        "[LCL3001] division by zero "
-        "[variable evaluation stack: RESULT -> middle -> failing]"
+        "[LCL3001] division by zero " "[variable evaluation stack: RESULT -> middle -> failing]"
     )
     error.attach_variable_stack(("replacement",))
     assert error.variable_stack == ("RESULT", "middle", "failing")

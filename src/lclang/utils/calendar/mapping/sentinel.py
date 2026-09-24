@@ -54,4 +54,3 @@ class SelfCalendar(BDCalendar):
 # contract. A distinct SELF_CALENDAR object postpones binding without confusing a real input
 # calendar with an omitted one.
 SELF_CALENDAR = SelfCalendar(CalendarID("SELF_CALENDAR"))
-

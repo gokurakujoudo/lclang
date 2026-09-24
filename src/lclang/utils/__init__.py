@@ -21,4 +21,3 @@ __all__ = [
     "make_multi_log_lines",
     "make_repr_lines",
 ]
-

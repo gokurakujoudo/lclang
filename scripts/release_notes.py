@@ -19,7 +19,7 @@ def release_notes(root: Path) -> tuple[str, str]:
     matches = list(re.finditer(heading, changelog, re.MULTILINE))
     if len(matches) != 1:
         raise ValueError(f"Expected one dated changelog section for {version}")
-    remainder = changelog[matches[0].end():]
+    remainder = changelog[matches[0].end() :]
     notes = re.split(r"^## ", remainder, maxsplit=1, flags=re.MULTILINE)[0].strip()
     if not notes:
         raise ValueError(f"Release notes are empty for {version}")

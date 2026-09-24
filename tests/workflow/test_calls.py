@@ -1,7 +1,7 @@
 """Dynamic calls isolate Frames while retaining native results and status snapshots."""
 
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import replace
 from typing import cast
@@ -17,7 +17,8 @@ from tests.workflow.call_support import Value, make_child, run_parent
 @pytest.mark.asyncio
 @pytest.mark.parametrize("grouped", [False, True])
 async def test_call_results_live_frame_isolation_and_detached_status(
-    grouped: bool, caplog: pytest.LogCaptureFixture,
+    grouped: bool,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """The child frame is usable only inside the scope and parent nodes share no status."""
     child = make_child(grouped=grouped)
@@ -26,7 +27,10 @@ async def test_call_results_live_frame_isolation_and_detached_status(
     async def parent(context: wf.TaskContext, manager: wf.ExecutionStatusManager) -> Value:
         for index in range(2):
             async with child.execute_in_task(
-                context, manager, name=f"call-{index}", preset={"input": index},
+                context,
+                manager,
+                name=f"call-{index}",
+                preset={"input": index},
             ) as result:
                 assert await result.execution_frame.get("output") == index + 1
                 assert not result.execution_frame.has("parent_only")
@@ -51,23 +55,33 @@ async def test_call_results_live_frame_isolation_and_detached_status(
     assert native_leaf.task_description == "Child"
     calls = result.execution_status.sub_tasks[0].sub_tasks
     assert [node.sub_tasks[0].task_name for node in calls] == ["child", "child"]
-    assert any("workflow call start: [parent.call-0] Child workflow (dryrun)" in m
-               for m in caplog.messages)
-    assert any("workflow call complete: [parent.call-0] Child workflow SUCCESS" in m
-               for m in caplog.messages)
+    assert any(
+        "workflow call start: [parent.call-0] Child workflow (dryrun)" in m for m in caplog.messages
+    )
+    assert any(
+        "workflow call complete: [parent.call-0] Child workflow SUCCESS" in m
+        for m in caplog.messages
+    )
 
 
 @pytest.mark.asyncio
 async def test_parent_retains_severity_and_publishes_summary_before_stopping_children() -> None:
     """Batch actions can continue after business failures while declared dependants stop."""
-    statuses = [wf.ExecutionStatus.FAILURE_COVERED, wf.ExecutionStatus.FAILURE,
-                wf.ExecutionStatus.ERROR, wf.ExecutionStatus.SUCCESS]
+    statuses = [
+        wf.ExecutionStatus.FAILURE_COVERED,
+        wf.ExecutionStatus.FAILURE,
+        wf.ExecutionStatus.ERROR,
+        wf.ExecutionStatus.SUCCESS,
+    ]
     observed: list[wf.ExecutionStatus] = []
 
     async def parent(context: wf.TaskContext, manager: wf.ExecutionStatusManager) -> Value:
         for index, status in enumerate(statuses):
             async with make_child(status).execute_in_task(
-                context, manager, name=f"item-{index}", preset={"input": index},
+                context,
+                manager,
+                name=f"item-{index}",
+                preset={"input": index},
             ) as result:
                 assert result.execution_status.status is status
             observed.append(manager.current.status)
@@ -75,8 +89,12 @@ async def test_parent_retains_severity_and_publishes_summary_before_stopping_chi
 
     async with lclang.define_frame() as frame:
         result = await run_parent(parent, frame, [wf.define_task("after", "Must not run")])
-    assert observed == [wf.ExecutionStatus.FAILURE, wf.ExecutionStatus.FAILURE,
-                        wf.ExecutionStatus.ERROR, wf.ExecutionStatus.ERROR]
+    assert observed == [
+        wf.ExecutionStatus.FAILURE,
+        wf.ExecutionStatus.FAILURE,
+        wf.ExecutionStatus.ERROR,
+        wf.ExecutionStatus.ERROR,
+    ]
     assert result.execution_status.status is wf.ExecutionStatus.ERROR
     assert result.task_outputs[wf.TaskID("parent")] == Value(4)
     assert result.execution_status.sub_tasks[0].sub_tasks[-1].status is wf.ExecutionStatus.SKIPPED
@@ -89,8 +107,10 @@ async def test_metadata_shared_explicit_objects_and_context_root_retention() -> 
 
     @asynccontextmanager
     async def resource(
-        context: wf.TaskContext, args: Value, status_mgr: wf.ExecutionStatusManager,
-    ) -> AsyncIterator[Value]:
+        context: wf.TaskContext,
+        args: Value,
+        status_mgr: wf.ExecutionStatusManager,
+    ) -> AsyncGenerator[Value]:
         values = cast(list[str], await context.frame.get("shared"))
         assert values is shared
         assert context.is_dryrun and context.verbose_mode
@@ -101,15 +121,22 @@ async def test_metadata_shared_explicit_objects_and_context_root_retention() -> 
         finally:
             values.append("exit")
 
-    root = wf.define_task("resource_root", "Resource root", context_tasks=[
-        wf.define_context_task("resource", "Resource", resource, Value(1)),
-    ])
+    root = wf.define_task(
+        "resource_root",
+        "Resource root",
+        context_tasks=[
+            wf.define_context_task("resource", "Resource", resource, Value(1)),
+        ],
+    )
     workflow = wf.define_workflow("Resource workflow", root, lcl_mixin={"own": 9})
 
     async def parent(context: wf.TaskContext, manager: wf.ExecutionStatusManager) -> Value:
         for index in range(2):
             async with workflow.execute_in_task(
-                context, manager, name=f"resource-{index}", preset={"shared": shared, "own": 1},
+                context,
+                manager,
+                name=f"resource-{index}",
+                preset={"shared": shared, "own": 1},
             ) as result:
                 assert await result.execution_frame.get("own") == 9
                 assert len(shared) == 2 * (index + 1)
@@ -135,7 +162,8 @@ async def test_call_preflight_rejects_invalid_names_and_parents_before_execution
         for bad_context, bad_manager in ((None, manager), (context, None)):
             with pytest.raises(TypeError):
                 async with child.execute_in_task(
-                    cast(wf.TaskContext, bad_context), cast(wf.ExecutionStatusManager, bad_manager),
+                    cast(wf.TaskContext, bad_context),
+                    cast(wf.ExecutionStatusManager, bad_manager),
                     name="invalid",
                 ):
                     pytest.fail("entered")

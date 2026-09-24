@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import fields
+from typing import cast
 
 from lclang.ast import LclAstNode, LclConstant
 from lclang.logger import LoggerHandlerConfig
@@ -46,7 +47,7 @@ def logger_definitions(config: LoggerHandlerConfig) -> dict[str, LclAstNode]:
         :param value: Frozen configuration field or mapping.
         """
         if isinstance(value, Mapping):
-            for key, item in value.items():
+            for key, item in cast(Mapping[object, object], value).items():
                 flatten(f"{path}.{key}", item)
             if not value and path.startswith("logger.file."):
                 result[path] = LclConstant(value={})

@@ -30,9 +30,6 @@ class BeginOfMonthCalendar(FunctionalBDCalendar):
 BEGIN_OF_MONTHS = BeginOfMonthCalendar(CalendarID("BEGIN_OF_MONTHS"))
 
 
-
-
-
 @final
 class EndOfMonthCalendar(FunctionalBDCalendar):
     """Classify the last calendar day of every month as business."""
@@ -50,9 +47,6 @@ class EndOfMonthCalendar(FunctionalBDCalendar):
 END_OF_MONTHS = EndOfMonthCalendar(CalendarID("END_OF_MONTHS"))
 
 
-
-
-
 @final
 class BeginOfYearCalendar(FunctionalBDCalendar):
     """Classify January first as business."""
@@ -68,9 +62,6 @@ class BeginOfYearCalendar(FunctionalBDCalendar):
 
 # Singleton calendar for first calendar days of years.
 BEGIN_OF_YEARS = BeginOfYearCalendar(CalendarID("BEGIN_OF_YEARS"))
-
-
-
 
 
 @final

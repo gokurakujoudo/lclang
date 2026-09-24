@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from typing import Protocol
@@ -70,7 +70,7 @@ def internal_has_guard() -> bool:
 
 
 @contextmanager
-def internal_install_guard(guard: InternalEvaluationGuard) -> Iterator[None]:
+def internal_install_guard(guard: InternalEvaluationGuard) -> Generator[None]:
     """Install a guard for the dynamic extent of a context manager.
 
     :param guard: Callback object receiving node and collection events.

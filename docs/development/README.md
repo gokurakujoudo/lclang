@@ -19,8 +19,8 @@ Run the complete project gate:
 venv\Scripts\python -m scripts.quality
 ```
 
-The gate fails fast in this order: Git whitespace, Ruff, production source
-policies, static architecture and capability constraints, strict mypy,
+The gate fails fast in this order: Git whitespace, Black formatting, Ruff, production source
+policies, static architecture and capability constraints, strict mypy and Pyright,
 documentation checks without coverage, then all behavioral tests with 100%
 production branch coverage. Source smoke, property and stress tests run by
 default. A focused test can be run directly:
@@ -48,9 +48,35 @@ The `CI` GitHub Actions workflow verifies pushes and pull requests using the
 same `scripts.quality` gate as local development. All runs build distributions
 after verification; test reports, coverage and distributions are retained for seven days.
 
-The gate runs strict mypy over source, scripts and tests, and strict Pyright over
-the focused public typing contracts in `tests/typing`. Both are development tools;
+The gate runs strict mypy and strict Pyright over source, scripts and tests,
+including the public typing contracts in `tests/typing`. Both are development tools;
 the installed library retains zero third-party runtime dependencies.
+
+### Editor and formatting
+
+Install the workspace's recommended Python, Pylance and Black Formatter VS Code
+extensions, then select the project's `venv` interpreter. Pylance uses the root
+`pyrightconfig.json` strict settings for workspace diagnostics; the same configuration
+runs through Pyright in CI. See the [Pylance configuration guide](https://github.com/microsoft/pylance-release/blob/main/docs/settings/python_analysis_typeCheckingMode.md).
+
+Strict mode retains runtime `isinstance` validation for untyped callers by disabling
+only `reportUnnecessaryIsInstance` in the shared configuration. Implementation modules
+that share private owner state declare a local `reportPrivateUsage` exception.
+Existing mutable uppercase logger state and incomplete third-party/operator stubs
+have narrowly documented exceptions; unknown types elsewhere still fail the gate.
+The runner passes its own interpreter to Pyright so dependency resolution matches
+the environment used by tests.
+
+Python files are formatted on save using the environment's pinned Black version.
+Black and Ruff share a 100-character line length. Format all maintained Python files:
+
+```console
+venv\Scripts\python -m black src scripts tests
+```
+
+The quality gate uses `black --check` and never rewrites files. CI invokes the same
+gate, so formatting drift fails before tests. Generated output and virtual environments
+are excluded. See [Black configuration](https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html).
 
 The quality gate writes `reports/tests-docs.xml` and `reports/tests-behavior.xml`
 in JUnit XML format for test-result consumers. Behavioral tests also write
