@@ -78,6 +78,8 @@ runtime dependencies.
   rotation, permanent linked segments, diagnostics and reversible stdlib takeover;
   public logger/runtime/configuration/metric types and async Frame configuration
   resolution for standalone applications; a live Python environment utility.
+- Configurable log-line timestamps: server local time with numeric offsets by
+  default, or explicit UTC, shared by Python, Frame and CLI configuration.
 - Async three-state business-day calendars with canonical composition, bounded
   mappings, strict JSON loading, and dependency-aware cache retirement.
 - Validated tree workflows with typed dataclass mappings, named variables,

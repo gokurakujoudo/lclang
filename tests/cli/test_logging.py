@@ -9,7 +9,7 @@ from tempfile import TemporaryDirectory
 import pytest
 
 from lclang import parse_expression
-from lclang.cli import CliConfig, CliContext, CliParams, CliResult, cli
+from lclang.cli import CliConfig, CliContext, CliEntrance, CliParams, CliResult, CommandGroup, cli
 from lclang.cli.binding import build_binding
 from lclang.cli.logger_config import logger_parameter
 from lclang.diagnostics import internal_verbose_scope
@@ -112,6 +112,7 @@ def test_direct_sink_override_closes_explicit_exception(capsys: pytest.CaptureFi
         "logger.console.enabled",
         "logger.file.audit.enabled",
         "logger.level",
+        "logger.timezone",
         "logger.file.default.rotation.interval",
     ],
 )
@@ -157,3 +158,41 @@ def test_runtime_parsing_retains_verbose_diagnostics() -> None:
     """Parsing performed after scope setup can still produce internal trace records."""
     with internal_verbose_scope(logging.getLogger(__name__)):
         assert parse_expression("1 + 2") is not None
+
+
+# Static file declaration participates in the ordinary -c/-o precedence chain.
+TIMEZONE_SOURCE = '__LCL_VERSION__: 1\nlogger.timezone: "local"\n'
+
+
+@pytest.mark.parametrize("verbose", [False, True])
+@pytest.mark.parametrize("source", ["default", "file", "override"])
+def test_cli_timezone_layering(
+    source: str, verbose: bool, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Real CLI routing applies defaults, files and explicit timezone overrides."""
+    config = CliConfig(LoggerHandlerConfig(timezone="utc"))
+    entrance = CliEntrance(
+        CommandGroup("root", "Timezone test", [logger_command]), cli_config=config
+    )
+    with TemporaryDirectory() as directory:
+        path = Path(directory) / "timezone.lclcfg"
+        path.write_text(TIMEZONE_SOURCE, encoding="utf-8")
+        argv = ["python", "tool.py", logger_command.name]
+        if source != "default":
+            argv.extend(["-c", str(path)])
+        if source == "override":
+            argv.extend(["-o", "logger.timezone", "utc"])
+        if verbose:
+            argv.append("--verbose")
+        assert asyncio.run(entrance.run(argv)) == 0
+    lines = capsys.readouterr().err.splitlines()
+    timestamp = next(line.split(" | ")[0] for line in lines if "command-record" in line)
+    assert timestamp.endswith("Z") == (source != "file")
+
+
+def test_cli_invalid_timezone_reports_source(capsys: pytest.CaptureFixture[str]) -> None:
+    """CLI errors identify the rejected logger leaf and its override source."""
+    status = asyncio.run(logger_command.run(["python", "tool.py", "-o", "logger.timezone", "UTC"]))
+    assert status != 0
+    output = capsys.readouterr().err
+    assert "logger.timezone" in output and "source:" in output

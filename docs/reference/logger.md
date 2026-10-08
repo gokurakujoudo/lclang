@@ -8,12 +8,29 @@ process scope, and reject use outside a scope. Initialize after worker creation.
 
 ## Configuration
 
-Python objects and mappings share the `level`, `format`, `console`, `file`,
+Python objects and mappings share the `level`, `format`, `timezone`, `console`, `file`,
 `takeover_loggers`, and `capture_warnings` fields. No configuration files are
 read by this package. Applications load `.lclcfg` files with `lclang.config`,
 then call `await resolve_logger_config(frame, verbose=False)` to materialize
 `logger.*` from their ordinary Frame. CLI/Workflow use the same resolver after
 their `-c`/`-o` layering, before entering the handler scope.
+
+`timezone` accepts exactly `"local"` (the default) or `"utc"`. It applies to
+`%(asctime)s` in every console and file sink. Timestamps retain microseconds:
+local time includes the server operating system's numeric offset, for example
+`2026-10-08T15:30:00.123456+08:00`; UTC ends in `Z`, for example
+`2026-10-08T07:30:00.123456Z`. Local zero offset remains `+00:00`.
+Conversion uses the record's creation instant and the local rules at that instant,
+including daylight-saving transitions, rather than the writer's current time.
+Formats without `%(asctime)s` do not show a timestamp.
+
+Set `LoggerHandlerConfig(timezone="utc")`, pass `{"timezone": "utc"}` to the
+handler scope, declare `logger.timezone: "utc"` in LCL, or use CLI
+`-o logger.timezone utc` to retain the previous UTC-only behavior. The default
+has changed to local time. Non-text values raise `TypeError`; other strings,
+including `"UTC"` and named zones, raise `ValueError` before sink initialization.
+Verbose mode preserves the timezone. Segment filenames and aligned rotation
+continue to use UTC; CLI execution-time variables retain their existing meaning.
 
 `file` is a mapping of sink names. `file.default` supplies missing leaf fields
 and never creates a sink. Explicit sink fields always take precedence over
@@ -86,6 +103,7 @@ async def main() -> None:
         path = Path(directory) / "service.lclcfg"
         path.write_text('''
 __LCL_VERSION__: 1
+logger.timezone: "utc"
 logger.console.enabled: False
 logger.file.default.directory: log_directory
 logger.file.service.filename: f"{service}.log"
@@ -96,6 +114,7 @@ logger.file.service.level: "INFO"
             values={"service": "catalog", "log_directory": directory}
         ) as frame:
             config = await resolve_logger_config(frame)
+            assert config.timezone == "utc"
             assert config.resolved_files()["service"].filename == "catalog.log"
             async with use_logger_handler(config) as runtime:
                 logger: Logger = await use_logger("catalog")

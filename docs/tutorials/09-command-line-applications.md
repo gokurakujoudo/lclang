@@ -187,6 +187,9 @@ a file. Explicit sink values, including False, override the template.
 All diagnostic console records go to stderr. Command results remain on stdout
 for successful results. The same background writer formats console and file
 records using `logger.format`; producer threads do no output I/O.
+Log lines default to server local time with a numeric offset. Set
+`logger.timezone: "utc"` or pass `-o logger.timezone utc` to use UTC with a `Z`
+suffix for both console and files, including verbose execution.
 
 ```lclcfg
 logger.file.default.enabled: False
