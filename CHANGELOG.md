@@ -2,25 +2,39 @@
 
 ## Unreleased
 
-- Add `Config.to_frame(preset=...)` as a lazy, caller-owned shortcut for
-  `define_frame(config.to_module(), preset=preset)`. Preserve canonical lookup,
-  precedence, provenance, masking, validation, and independent Frame snapshots.
-  Update application examples to use explicit symbol imports.
+## 1.0.15 - 2026-10-08
 
-- Remove the standalone `evaluate` and `evaluate_sync` APIs from public
-  package exports and delete the synchronous convenience wrapper. Use
-  `define_module`, `define_frame`, and awaited `Frame.get` results for a shared
-  builtin hierarchy, explicit input precedence, caching, and owned cleanup.
-  This intentionally breaks imports of the removed entry points;
-  `Frame.evaluate` remains available within an existing Frame.
+### Compatibility changes
 
-- Add `logger.timezone` (`"local"` or `"utc"`) across Python, Frame and CLI
-  configuration. Log lines now default to server local time with microseconds
-  and a numeric offset; select `"utc"` to retain the previous `Z` timestamps.
-  Verbose preserves this setting; UTC segment naming and rotation are unchanged.
+- Remove standalone `evaluate` and `evaluate_sync` from `lclang`,
+  `lclang.lang`, and `lclang.lang.evaluator`. Move expressions into
+  `define_module`, supply host inputs through `define_frame(..., preset=...)`,
+  and await named `Frame.get` results inside an async context manager.
+  Synchronous applications use `asyncio.run` at their outer boundary.
+  `Frame.evaluate` remains available for unnamed expressions in an existing Frame.
+- Log timestamps now default to server local time with microseconds and a
+  numeric offset. Set `LoggerHandlerConfig(timezone="utc")`,
+  `logger.timezone: "utc"`, or CLI `-o logger.timezone utc` to retain UTC
+  timestamps ending in `Z`. Verbose preserves the selected timezone;
+  file segment names and rotation continue to use UTC.
 
-- Enable project-wide strict Pyright/Pylance checks and pinned Black formatting,
-  with VS Code format-on-save and formatting verification in the local/CI gate.
+### Configuration and documentation
+
+- Add synchronous, lazy `Config.to_frame(preset=...)`, equivalent to
+  `define_frame(config.to_module(), preset=preset)`. Each call creates a fresh,
+  caller-owned Frame with independent snapshots; configuration definitions
+  take precedence over preset inputs. Provenance, masking, canonical lookup,
+  validation, and cleanup follow the same Module/Frame rules.
+- Update application examples to use explicit symbol imports and the
+  `Config.to_frame` shortcut for direct loaded-configuration execution.
+
+### Development
+
+- Enforce strict Pyright/Pylance across source, scripts, and tests, and pinned
+  Black formatting in the local and CI quality gates. Add shared VS Code
+  diagnostics and format-on-save settings.
+- Reconcile the self-contained engineering, quality, and packaging requirements
+  in `AGENTS.md` with the project's existing GitHub delivery and release workflow.
 
 ## 1.0.14 - 2026-09-24
 
