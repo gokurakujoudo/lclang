@@ -167,13 +167,12 @@ async def test_frame_caches_and_reraises_same_failure() -> None:
 @pytest.mark.asyncio
 async def test_frame_unknown_name_retains_resolver_span() -> None:
     """Missing definitions report the requesting expression location."""
-    from lclang import evaluate
     from lclang.runtime import Frame, Module
 
     node = parse_expression("missing")
     frame = Frame(Module(ModuleName("app"), {}), FrameId("frame:1"))
     with pytest.raises(LclNameError) as caught:
-        await evaluate(node, frame)
+        await frame.evaluate("missing")
     assert caught.value.span == node.span
 
 
@@ -249,7 +248,6 @@ async def test_child_definition_can_combine_local_and_parent_values() -> None:
 @pytest.mark.asyncio
 async def test_missing_parent_chain_keeps_original_request_span() -> None:
     """Hierarchical fallback does not replace the requesting name-node span."""
-    from lclang import evaluate
     from lclang.runtime import Frame, Module
 
     empty = Module(ModuleName("empty"), {})
@@ -257,5 +255,5 @@ async def test_missing_parent_chain_keeps_original_request_span() -> None:
     child = parent.derive(empty)
     node = parse_expression("missing")
     with pytest.raises(LclNameError) as caught:
-        await evaluate(node, child)
+        await child.evaluate("missing")
     assert caught.value.span == node.span

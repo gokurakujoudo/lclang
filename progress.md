@@ -20,8 +20,8 @@ runtime dependencies.
 
 ## Evaluation and runtime
 
-- Async-first custom AST interpreter plus the `evaluate_sync` convenience
-  boundary.
+- Async-first custom AST interpreter with public evaluation through
+  `define_module`, `define_frame`, and named Frame results.
 - Immutable Modules, Presets, standard hierarchy, Frame factories, child Frames,
   and controlled host-value overlays.
 - Exact-name trailing-bang masking metadata across binding sources, hierarchy

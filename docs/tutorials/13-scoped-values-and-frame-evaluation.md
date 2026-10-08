@@ -408,7 +408,7 @@ without copying or replacing an aggregate collection.
 
 ## Choose the right boundary
 
-- Use `evaluate` or `evaluate_sync` for one standalone expression and mapping.
+- Use `define_module` and `define_frame` for a calculation with explicit inputs.
 - Use `frame.evaluate` for an unnamed expression over an existing context.
 - Use `frame.get` for a named definition whose outcome should be cached.
 - Use `FrameProxy.field_names()` and indexed `as_record()` calls for a dynamic,

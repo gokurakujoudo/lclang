@@ -20,10 +20,10 @@ from lclang.diagnostics import (
     internal_verbose_enabled,
 )
 from lclang.errors import LclNameError
-from lclang.lang.evaluator import evaluate as evaluate_lcl
 from lclang.lang.evaluator.awaitables import resolve_awaitable
 from lclang.lang.evaluator.context import Resolver
 from lclang.lang.evaluator.definition_context import definition_scope
+from lclang.lang.evaluator.dispatch import interpret_expression
 from lclang.lang.parser import parse_expression
 from lclang.runtime.frame.binding_lookup import (
     BindingSelection,
@@ -101,7 +101,7 @@ async def evaluate_expression(requester: Frame, expr: str) -> object:
         raise TypeError("Frame expression must be a string")
     node = parse_expression(expr)
     with definition_scope("<expr>"), internal_budget_scope(frame.limits):
-        return await evaluate_lcl(node, cast(Resolver, requester))
+        return await interpret_expression(node, cast(Resolver, requester))
 
 
 async def resolve_name(requester: Frame, name: VarName, *, span: SourceSpan) -> object:
@@ -262,7 +262,7 @@ async def evaluate_definition(requester: Frame, name: str) -> object:
                 internal_budget_scope(frame.limits),
                 internal_masked_scope(is_name_masked(frame, name)),
             ):
-                result = await evaluate_lcl(frame.module.definitions[name], resolver)
+                result = await interpret_expression(frame.module.definitions[name], resolver)
         except Exception as error:
             frame._lifecycle.commit_failure(name, error)
             frame._dependencies.publish(name, trace)

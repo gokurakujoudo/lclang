@@ -1,88 +1,22 @@
 # Expressions and values
 
-An LCL expression is the smallest useful unit in lclang. It receives named
-values, performs one explicit calculation, and produces one value. Start here
-when you want LCL's expression rules without the reusable runtime structure of
-a Module and Frame.
+An LCL expression calculates a value from named inputs. Give that expression a
+name with `define_module`, create its context with `define_frame`, and request
+the result with `frame.get`. This is the same path for one arithmetic result
+and a larger configuration.
 
 ## What you will learn
 
-- when to use `evaluate_sync` and when to use async `evaluate`;
-- how Python parameters become named LCL inputs;
-- how to grow one calculation from arithmetic into structured output;
-- how parsing once separates validation from repeated evaluation.
+- how to define and request one calculated value;
+- how Python values become named LCL inputs through a preset;
+- how to grow arithmetic into structured output;
+- how to reuse validated expressions with fresh inputs and independent snapshots.
 
 ## Start with arithmetic
 
-Pass the expression and a dictionary of host values to `evaluate_sync`.
-
-<!-- lclang-doc-exec -->
-```python
-import lclang
-
-result = lclang.evaluate_sync(
-    "unit_price * quantity",
-    {"unit_price": 6, "quantity": 4},
-)
-
-assert result == 24
-```
-
-The resolver supplies `6` for `unit_price` and `4` for `quantity`. LCL applies
-the multiplication operator to those two values, so the assertion receives
-`24`.
-
-Names are required inputs, not implicit globals. Removing `quantity` produces
-an `LclNameError`. Adding an unused parameter is harmless, but a narrow input
-dictionary makes the policy easier to understand and audit.
-
-## Add policy and structured output
-
-Now keep the same inputs but add a discount, a threshold comparison, and a
-dictionary result. LCL dictionary values are ordinary expressions, so related
-results can be returned together without inventing a Python result class.
-
-<!-- lclang-doc-exec -->
-```python
-import lclang
-
-order = lclang.evaluate_sync(
-    "{"
-    "'subtotal': unit_price * quantity, "
-    "'discount': unit_price * quantity * discount_rate, "
-    "'total': unit_price * quantity * (1 - discount_rate), "
-    "'large_order': quantity >= large_order_quantity"
-    "}",
-    {
-        "unit_price": 12,
-        "quantity": 5,
-        "discount_rate": 0.10,
-        "large_order_quantity": 10,
-    },
-)
-
-assert order == {
-    "subtotal": 60,
-    "discount": 6.0,
-    "total": 54.0,
-    "large_order": False,
-}
-```
-
-Each dictionary value is evaluated from the same four inputs. The subtotal is
-`12 * 5 = 60`; the discount is `60 * 0.10 = 6`; and the total applies the
-remaining `0.90` factor to get `54`. Finally, `5 >= 10` is false, producing the
-four fields checked by the assertion.
-
-Change `quantity` to `12` and the same expression returns a subtotal of `144`,
-a total of `129.6`, and `large_order: True`. The expression defines the shape
-and relationship; parameters provide the flexibility.
-
-## Parse once for async repeated evaluation
-
-Async applications should parse stable source during setup, then await
-`evaluate` with a resolver for each run. This example adds filtering, a
-comprehension, and a per-run multiplier.
+A Module names the calculation. A Frame supplies the inputs and owns the
+calculated result. Use `asyncio.run` at a synchronous script's outer boundary;
+inside an async application, await its coroutine in the existing event loop.
 
 <!-- lclang-doc-exec -->
 ```python
@@ -91,49 +25,141 @@ import asyncio
 import lclang
 
 
-EXPRESSION = lclang.parse_expression(
-    "[value * factor for value in values if value > minimum]"
-)
+CALCULATION = lclang.define_module("calculation", {"total": "unit_price * quantity"})
 
 
 async def main() -> None:
-    first = await lclang.evaluate(
-        EXPRESSION,
-        {"values": [1, 2, 3, 4], "factor": 10, "minimum": 2},
-    )
-    second = await lclang.evaluate(
-        EXPRESSION,
-        {"values": [-2, 0, 2, 5], "factor": 3, "minimum": 0},
-    )
-    assert first == [30, 40]
-    assert second == [6, 15]
+    async with lclang.define_frame(
+        CALCULATION,
+        preset={"unit_price": 6, "quantity": 4},
+    ) as frame:
+        assert await frame.get("total") == 24
+        assert await frame.get("total") == 24
 
 
 asyncio.run(main())
 ```
 
-In the first run the filter removes `1` and `2`, then multiplies `3` and `4` by
-`10`. In the second run it removes the non-positive values, then multiplies `2`
-and `5` by `3`. The AST is shared, but its resolver inputs lead to the two
-different asserted lists.
+The preset supplies `6` for `unit_price` and `4` for `quantity`. The first
+`get("total")` multiplies them and stores `24` as a named snapshot. The second
+lookup reuses that snapshot. Leaving the `async with` block closes the Frame
+and settles its owned asynchronous work.
 
-Parsing validates the syntax once. Each evaluation still gets independent
-values. Use a Module next when expressions need stable names and dependencies
-such as `total -> subtotal -> unit_price`.
+Application input names are explicit bindings. Removing `quantity` produces an
+`LclNameError`; an unused input is harmless. Canonical Frames also provide
+reviewed builtins such as `int`, `len`, and `sum`, so ordinary builtins need no
+manual injection into the preset.
 
-## Choose the boundary deliberately
+## Add policy and structured output
+
+Keep the same input model, then add a discount, a threshold comparison, and a
+dictionary result. Separate named expressions let related results reuse their
+dependencies.
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+
+import lclang
+
+
+ORDER = lclang.define_module(
+    "order",
+    {
+        "subtotal": "unit_price * quantity",
+        "discount": "subtotal * discount_rate",
+        "total": "subtotal - discount",
+        "large_order": "quantity >= large_order_quantity",
+        "summary": (
+            "{'subtotal': subtotal, 'discount': discount, "
+            "'total': total, 'large_order': large_order}"
+        ),
+    },
+)
+
+
+async def main() -> None:
+    async with lclang.define_frame(
+        ORDER,
+        preset={
+            "unit_price": 12,
+            "quantity": 5,
+            "discount_rate": 0.10,
+            "large_order_quantity": 10,
+        },
+    ) as frame:
+        assert await frame.get("summary") == {
+            "subtotal": 60,
+            "discount": 6.0,
+            "total": 54.0,
+            "large_order": False,
+        }
+        assert await frame.get("total") == 54.0
+
+
+asyncio.run(main())
+```
+
+Requesting `summary` follows its named dependencies. The subtotal is
+`12 * 5 = 60`; the discount is `60 * 0.10 = 6`; and subtracting that discount
+gives `54`. The comparison `5 >= 10` is false. Each definition becomes a
+snapshot in the same Frame, so the final `total` lookup reuses `54.0`.
+
+Definition order does not control evaluation order. Creating the Module
+validates every expression; requesting a result evaluates only the names it
+needs.
+
+## Reuse a Module with new inputs
+
+A Module has no per-run cache. Reuse it for a second run by creating a fresh
+Frame with a new preset. This example combines filtering, a comprehension,
+and a per-run multiplier.
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+
+import lclang
+
+
+TRANSFORM = lclang.define_module(
+    "transform",
+    {"selected": "[value * factor for value in values if value > minimum]"},
+)
+
+
+async def main() -> None:
+    async with lclang.define_frame(
+        TRANSFORM,
+        preset={"values": [1, 2, 3, 4], "factor": 10, "minimum": 2},
+    ) as first:
+        assert await first.get("selected") == [30, 40]
+    async with lclang.define_frame(
+        TRANSFORM,
+        preset={"values": [-2, 0, 2, 5], "factor": 3, "minimum": 0},
+    ) as second:
+        assert await second.get("selected") == [6, 15]
+
+
+asyncio.run(main())
+```
+
+The first Frame removes `1` and `2`, then multiplies `3` and `4` by `10`. The
+second removes the non-positive values and multiplies `2` and `5` by `3`.
+Both Frames use the same validated expressions, but each owns its inputs and
+result snapshots. Changing host inputs does not silently invalidate an
+existing Frame's calculated results; use a fresh Frame for an independent run.
+
+## Choose the next step
 
 | Situation | Use |
 | --- | --- |
-| One result in synchronous code | `evaluate_sync(source, values)` |
-| One parsed expression in async code | `await evaluate(ast, resolver)` |
-| Several related named definitions | Module plus Frame |
+| One calculation or related named definitions | `define_module`, `define_frame`, and `frame.get` |
+| An unnamed expression over an existing Frame | `await frame.evaluate(source)` |
 | File-backed definitions with provenance | `load_config` |
 | Syntax tooling without evaluation | `parse_expression` and `to_source` |
 
-`evaluate_sync` owns a temporary event loop and rejects use inside an already
-running loop. Direct async evaluation has no Frame cache or hierarchy. These
-are useful constraints: choose the smallest boundary that owns exactly the
-state your calculation needs.
+The next chapter develops Module reuse, lookup hierarchy, and Frame ownership.
+Every calculation keeps the same named definition and context boundary.
 
 [Next: Modules and Frames](02-modules-and-frames.md) | [Return to the series introduction](README.md)

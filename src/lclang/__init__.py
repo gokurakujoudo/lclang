@@ -21,7 +21,7 @@ from lclang.errors import (
     LclNameError,
     LclSyntaxError,
 )
-from lclang.lang import evaluate, evaluate_sync, parse_expression, to_source
+from lclang.lang import parse_expression, to_source
 from lclang.records import LclRecord
 from lclang.runtime import (
     FRAME_PROXY,
@@ -81,8 +81,6 @@ __all__ = [
     "SourceSpan",
     "VarName",
     "__version__",
-    "evaluate",
-    "evaluate_sync",
     "define_frame",
     "define_module",
     "parse_expression",

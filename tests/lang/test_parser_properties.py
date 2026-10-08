@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
 import lclang
 from lclang.ast import LclAstNode
 from lclang.errors import LclSyntaxError
+from lclang.lang.evaluator.dispatch import interpret_expression
 from tests.support.property_strategies import AST_VALUES, ast_shape
 
 
@@ -20,7 +23,7 @@ def test_generated_ast_round_trip_preserves_shape_value_and_canonical_source(
     parsed = lclang.parse_expression(source)
     assert ast_shape(parsed) == ast_shape(node)
     assert lclang.to_source(parsed) == source
-    assert lclang.evaluate_sync(parsed) == lclang.evaluate_sync(node)
+    assert asyncio.run(interpret_expression(parsed)) == asyncio.run(interpret_expression(node))
     for descendant in parsed.walk():
         assert 0 <= descendant.span.start.offset <= descendant.span.end.offset <= len(source)
 

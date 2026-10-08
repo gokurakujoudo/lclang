@@ -4,11 +4,10 @@ import asyncio
 
 import pytest
 
-from lclang import evaluate
 from lclang.errors import LclClosedFrameError, LclEvaluationError
 from lclang.lang.parser import parse_expression
 from lclang.runtime import Frame, Module
-from lclang.types import FrameId, ModuleName
+from lclang.types import FrameId, ModuleName, VarName
 from tests.runtime.frame.lifecycle_support import (
     AsyncResource,
     BlockingResource,
@@ -37,7 +36,7 @@ async def test_close_rejects_all_evaluation_boundaries() -> None:
         await frame.recalculate("value")
     node = parse_expression("value")
     with pytest.raises(LclClosedFrameError) as caught:
-        await evaluate(node, frame)
+        await frame.resolve(VarName("value"), span=node.span)
     assert caught.value.span == node.span
     await frame.close()
 

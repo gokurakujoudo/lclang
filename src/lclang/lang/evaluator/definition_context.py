@@ -47,7 +47,7 @@ def lhs() -> str:
     :raises LclEvaluationError: If no Frame definition evaluation is active.
 
     .. note::
-       Direct expression evaluation has no left-hand definition context.
+       Unnamed Frame expressions use ``<expr>`` as their lexical owner.
     """
     stack = ACTIVE_DEFINITION_STACK.get()
     if not stack:

@@ -36,23 +36,32 @@ missing object, `??` supplies a fallback, and an f-string formats the result.
 
 <!-- lclang-doc-exec -->
 ```python
+import asyncio
 from types import SimpleNamespace
 
 import lclang
 
-expression = 'f"Hello, {profile?.display_name ?? fallback}!"'
 
-known = lclang.evaluate_sync(
-    expression,
-    {"profile": SimpleNamespace(display_name="Ada"), "fallback": "friend"},
-)
-anonymous = lclang.evaluate_sync(
-    expression,
-    {"profile": None, "fallback": "friend"},
+GREETING = lclang.define_module(
+    "greeting",
+    {"message": 'f"Hello, {profile?.display_name ?? fallback}!"'},
 )
 
-assert known == "Hello, Ada!"
-assert anonymous == "Hello, friend!"
+
+async def main() -> None:
+    async with lclang.define_frame(
+        GREETING,
+        preset={"profile": SimpleNamespace(display_name="Ada"), "fallback": "friend"},
+    ) as known:
+        assert await known.get("message") == "Hello, Ada!"
+    async with lclang.define_frame(
+        GREETING,
+        preset={"profile": None, "fallback": "friend"},
+    ) as anonymous:
+        assert await anonymous.get("message") == "Hello, friend!"
+
+
+asyncio.run(main())
 ```
 
 For `known`, safe access obtains `Ada`, so `??` never evaluates the fallback.
@@ -67,31 +76,42 @@ false, zero, and empty text remain valid values.
 ## Build an immutable record with transformed values
 
 This example filters even values, calls a local arrow function, sorts the
-result through a supplied host function, and returns both details and a total
+result through canonical builtins, and returns both details and a total
 as named fields.
 
 <!-- lclang-doc-exec -->
 ```python
+import asyncio
+
 import lclang
 
-result = lclang.evaluate_sync(
-    "{"
-    "squares=sorted([(value -> value * value)(item) "
-    "for item in values if item % 2 == 0]), "
-    "total=sum([(value -> value * value)(item) "
-    "for item in values if item % 2 == 0])"
-    "}",
+
+SUMMARY = lclang.define_module(
+    "summary",
     {
-        "values": [5, 2, 4, 3],
-        "sorted": sorted,
-        "sum": sum,
+        "result": (
+            "{"
+            "squares=sorted([(value -> value * value)(item) "
+            "for item in values if item % 2 == 0]), "
+            "total=sum([(value -> value * value)(item) "
+            "for item in values if item % 2 == 0])"
+            "}"
+        ),
+        "record_total": "{value=result.total}.value",
     },
 )
 
-assert isinstance(result, lclang.LclRecord)
-assert result.squares == [4, 16]
-assert result.total == 20
-assert lclang.evaluate_sync("{value=total}.value", {"total": result.total}) == 20
+
+async def main() -> None:
+    async with lclang.define_frame(SUMMARY, preset={"values": [5, 2, 4, 3]}) as frame:
+        result = await frame.get("result")
+        assert isinstance(result, lclang.LclRecord)
+        assert result.squares == [4, 16]
+        assert result.total == 20
+        assert await frame.get("record_total") == 20
+
+
+asyncio.run(main())
 ```
 
 The comprehension rejects `5` and `3` because they are odd. The arrow function
@@ -99,7 +119,8 @@ squares `2` and `4`, `sorted` orders those values as `[4, 16]`, and the second
 comprehension feeds the same values to `sum`, producing `20`. The LCL record
 creates both fields eagerly; Python reads them through `result.squares` and
 `result.total`, while the final assertion demonstrates the same dotted access
-inside LCL.
+inside LCL. `sorted` and `sum` come from the Frame's canonical builtin layer;
+the preset contains only the application's input list.
 
 Arrow functions use `() -> expression`, `name -> expression`, or
 `(parameters) -> expression`. They support defaults, keyword calls, lexical
@@ -112,21 +133,34 @@ Canonical printing is useful for formatters, diagnostics, and code review.
 
 <!-- lclang-doc-exec -->
 ```python
+import asyncio
+
 import lclang
 
 node = lclang.parse_expression("(base+tax)*quantity")
 source = lclang.to_source(node)
 
 assert source == "(base + tax) * quantity"
-assert lclang.evaluate_sync(
-    node,
-    {"base": 8, "tax": 2, "quantity": 3},
-) == 30
+
+CALCULATION = lclang.define_module("calculation", {"total": source})
+
+
+async def main() -> None:
+    async with lclang.define_frame(
+        CALCULATION,
+        preset={"base": 8, "tax": 2, "quantity": 3},
+    ) as frame:
+        assert await frame.get("total") == 30
+
+
+asyncio.run(main())
 ```
 
 The printer retains the parentheses because addition must occur before
-multiplication. During evaluation, `base + tax` becomes `10`, then `quantity`
-scales it to `30`; both the normalized syntax and the value are asserted.
+multiplication. Parsing and printing need no Frame. To calculate the rendered
+source, the Module gives it a name and the Frame supplies the three inputs.
+`base + tax` becomes `10`, then `quantity` scales it to `30`; both the
+normalized syntax and the value are asserted.
 
 ## Deliberate boundaries
 

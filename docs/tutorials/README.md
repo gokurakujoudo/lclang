@@ -26,16 +26,16 @@ tutorial to read next.
 > shapes, parameters, host capabilities, and outputs. The result is expressive
 > configuration that remains recognizable, inspectable, and testable.
 
-Every chapter is published, and every executable example has a matching unit
-test in its own file under `tests/tutorials`.
+Every chapter is published, and the documentation tests execute each marked
+example directly from its Markdown source.
 
 ## The tutorial series
 
 0. **Start here: mental model and first application** (this page) -- decide when
    lclang is useful, then follow the path from one expression to a configuration
    file.
-1. **[Expressions and values](01-expressions-and-values.md)** -- calculate with host values and choose the
-   smallest synchronous or asynchronous evaluation API.
+1. **[Expressions and values](01-expressions-and-values.md)** -- name calculations in a Module and evaluate
+   them with host inputs and canonical builtins in a Frame.
 2. **[Modules and Frames](02-modules-and-frames.md)** -- define policy once, evaluate it in many independent
    contexts, and manage each context's lifecycle.
 3. **[The LCL language](03-language.md)** -- build expressions with collections, conditionals,
@@ -127,32 +127,41 @@ was correct.
 
 ## Example 1: calculate one expression
 
-For a small synchronous calculation, `evaluate_sync` is the shortest useful
-entry point.
+Name the result in a Module, then create a Frame with inputs for one run.
 
 <!-- lclang-doc-exec -->
 ```python
+import asyncio
+
 import lclang
 
-total = lclang.evaluate_sync(
-    "unit_price * quantity",
-    {"unit_price": 6, "quantity": 4},
-)
 
-assert total == 24
+TOTAL = lclang.define_module("total", {"result": "unit_price * quantity"})
+
+
+async def main() -> None:
+    async with lclang.define_frame(
+        TOTAL,
+        preset={"unit_price": 6, "quantity": 4},
+    ) as frame:
+        assert await frame.get("result") == 24
+
+
+asyncio.run(main())
 ```
 
-`unit_price` resolves to `6` and `quantity` resolves to `4`. The multiplication
-therefore produces `24`, which is checked directly by the final assertion.
+`unit_price` resolves to `6` and `quantity` resolves to `4` from the Frame's
+`preset`. Requesting `result` follows those lookups and multiplies them to
+produce `24`. Leaving the context closes the Frame and its owned work.
 
 lclang parses the source into its own immutable abstract syntax tree and then
-interprets it with the supplied values. Names are explicit: if `quantity` is
-missing, evaluation raises `LclNameError` instead of silently inventing a
-default.
+interprets it in the Frame with the supplied values and canonical builtins.
+Names are explicit: if `quantity` is missing, evaluation raises `LclNameError`
+instead of silently inventing a default.
 
-Use this boundary in synchronous scripts that need one result. Do not call
-`evaluate_sync` while an event loop is already running; the async-first APIs in
-the next example fit servers, workers, and modern CLI applications.
+`asyncio.run(main())` starts the event loop at a synchronous application's
+outer boundary. Servers, workers, and other async applications await their
+coroutine in the existing loop. The Module and Frame APIs stay the same.
 
 ## Example 2: define once, evaluate in context
 
@@ -328,15 +337,15 @@ values.
 import asyncio
 from pathlib import Path
 
-from lclang.config import evaluate_config, load_config
+import lclang
+from lclang.config import load_config
 
 
 async def main(config_path: Path) -> None:
     config = await load_config(config_path)
-    message = await evaluate_config(
-        config,
-        "message",
-        values={
+    async with lclang.define_frame(
+        config.to_module(),
+        preset={
             "unit_price": 25,
             "quantity": 4,
             "discount_rate": 0.10,
@@ -344,8 +353,8 @@ async def main(config_path: Path) -> None:
             "customer": "Ada",
             "currency": "USD",
         },
-    )
-    assert message == "Ada: USD 90.00"
+    ) as frame:
+        assert await frame.get("message") == "Ada: USD 90.00"
 
 
 if __name__ == "__main__":
@@ -359,12 +368,12 @@ two-decimal value into the asserted `Ada: USD 90.00` message.
 
 This example uses no dynamic `using` target, so `load_config` does not evaluate
 its definitions. Dynamic targets can evaluate earlier definitions in temporary
-Frames to choose an included file. The immutable
-result keeps source provenance for diagnostics and can be reused.
-`evaluate_config` is convenient when you need one result: it creates and closes
-a temporary Frame even when evaluation fails. When one run needs several
-values that must share snapshots, create a Frame from `config.frame_factory()`
-and manage it with `async with`.
+Frames to choose an included file. The immutable result keeps source provenance
+for diagnostics and can be reused. Conversion
+with `config.to_module()` preserves that source information. `define_frame`
+then supplies the same canonical lookup, caching, and lifecycle as a Module
+defined in Python. Request further names from the same Frame when they should
+share snapshots in one run.
 
 Larger configurations can compose files with source-ordered `using`
 declarations. That belongs in the focused configuration tutorial; the important

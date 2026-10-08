@@ -129,7 +129,6 @@ def benchmark_operations(workload: int) -> dict[str, Callable[[], object]]:
         "canonical_round_trip": lambda: [
             lclang.parse_expression(lclang.to_source(parsed)) for _ in range(workload)
         ],
-        "standalone_evaluate": lambda: [lclang.evaluate_sync(parsed) for _ in range(workload)],
         "frame_cold_lookup": lambda: asyncio.run(cold_lookup()),
         "frame_hot_lookup": lambda: asyncio.run(hot_lookup()),
         "frame_recalculate": lambda: asyncio.run(recalculate()),

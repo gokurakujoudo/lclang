@@ -6,9 +6,9 @@ from typing import cast
 
 import pytest
 
-from lclang import evaluate
 from lclang.ast import LclConstant, LclDictComprehension
 from lclang.errors import LclEvaluationError
+from lclang.lang.evaluator.dispatch import interpret_expression
 from lclang.lang.parser import parse_expression
 
 
@@ -30,7 +30,7 @@ async def test_nested_list_comprehension_has_isolated_targets() -> None:
     """Nested clauses and conditions see locals without changing caller values."""
     values: dict[str, object] = {"x": "outer", "xs": [0, 1, 2], "ys": [10, 20]}
     node = parse_expression("[x + y for x in xs if x for y in ys]")
-    assert await evaluate(node, values) == [11, 21, 12, 22]
+    assert await interpret_expression(node, values) == [11, 21, 12, 22]
     assert values["x"] == "outer"
 
 
@@ -46,7 +46,7 @@ async def test_multilayer_comprehension_filters_nested_comprehension() -> None:
         "[[x * y + z for z in zs if z % y == 0] " "for x in xs if x % 2 == 1 for y in ys if y > x]"
     )
 
-    assert await evaluate(node, values) == [[4, 6, 8], [8], [16]]
+    assert await interpret_expression(node, values) == [[4, 6, 8], [8], [16]]
 
 
 @pytest.mark.asyncio
@@ -75,7 +75,7 @@ async def test_multilayer_clauses_filter_nested_data_structures() -> None:
         'for z in y if z["kind"] == "keep" if z["value"] % 2 == 0]'
     )
 
-    assert await evaluate(node, values) == [4, 10]
+    assert await interpret_expression(node, values) == [4, 10]
 
 
 @pytest.mark.asyncio
@@ -90,15 +90,15 @@ async def test_nested_starred_comprehensions_flatten_multiple_layers() -> None:
     }
     node = parse_expression("[*[*c for c in b] for b in a]")
 
-    assert await evaluate(node, values) == [1, 2, 3, 4, 5, 6, 7, 8]
+    assert await interpret_expression(node, values) == [1, 2, 3, 4, 5, 6, 7, 8]
 
 
 @pytest.mark.asyncio
 async def test_set_and_dict_comprehensions_materialize() -> None:
     """Set and dictionary heads retain their collection semantics."""
     values = {"xs": [1, 2, 2]}
-    assert await evaluate(parse_expression("{x * 2 for x in xs}"), values) == {2, 4}
-    assert await evaluate(parse_expression("{x: x * 2 for x in xs}"), values) == {
+    assert await interpret_expression(parse_expression("{x * 2 for x in xs}"), values) == {2, 4}
+    assert await interpret_expression(parse_expression("{x: x * 2 for x in xs}"), values) == {
         1: 2,
         2: 4,
     }
@@ -108,15 +108,15 @@ async def test_set_and_dict_comprehensions_materialize() -> None:
 async def test_comprehension_accepts_async_iterable() -> None:
     """Async-only sources are consumed without a blocking adapter."""
     values = {"xs": AsyncValues([1, 2, 3])}
-    assert await evaluate(parse_expression("[x * 2 for x in xs]"), values) == [2, 4, 6]
+    assert await interpret_expression(parse_expression("[x * 2 for x in xs]"), values) == [2, 4, 6]
 
 
 @pytest.mark.asyncio
 async def test_pep798_heads_expand_values() -> None:
     """Starred sequence and double-star mapping heads flatten each iteration."""
     values = {"groups": [[1, 2], [3]], "mappings": [{"a": 1}, {"b": 2}]}
-    listed = await evaluate(parse_expression("[*group for group in groups]"), values)
-    mapping = await evaluate(
+    listed = await interpret_expression(parse_expression("[*group for group in groups]"), values)
+    mapping = await interpret_expression(
         parse_expression("{**mapping for mapping in mappings}"),
         values,
     )
@@ -128,7 +128,7 @@ async def test_pep798_heads_expand_values() -> None:
 async def test_dictionary_comprehension_rejects_non_mapping_unpack() -> None:
     """Every accepted binding must still produce a mapping for double-star expansion."""
     with pytest.raises(LclEvaluationError, match="requires a mapping") as caught:
-        await evaluate(
+        await interpret_expression(
             parse_expression("{**value for value in values}"),
             {"values": [{"ok": 1}, ["not", "mapping"]]},
         )
@@ -146,7 +146,7 @@ async def test_dictionary_comprehension_rejects_invalid_ast_entry() -> None:
         span=valid.span,
     )
     with pytest.raises(LclEvaluationError, match="unsupported dictionary comprehension entry"):
-        await evaluate(malformed, {"values": [1]})
+        await interpret_expression(malformed, {"values": [1]})
 
 
 @pytest.mark.asyncio
@@ -160,7 +160,7 @@ async def test_generator_is_lazy_and_returns_async_iterator() -> None:
             yield 1
             yield 2
 
-    generator = await evaluate(
+    generator = await interpret_expression(
         parse_expression("(x * 2 for x in xs)"),
         {"xs": LazyValues()},
     )
@@ -173,7 +173,7 @@ async def test_generator_is_lazy_and_returns_async_iterator() -> None:
 @pytest.mark.asyncio
 async def test_starred_comprehension_awaits_mapped_lcl_results() -> None:
     """PEP 798 flattening resolves every async function result from Python map."""
-    result = await evaluate(
+    result = await interpret_expression(
         parse_expression("[*map((x) -> x.lower(), group) for group in groups]"),
         {"map": map, "groups": [["A"], ["B", "C"]]},
     )

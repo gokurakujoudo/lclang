@@ -110,21 +110,31 @@ Definition order is not evaluation order. Every expression is parsed and
 validated when the Module is created, while evaluation follows name lookups
 from the requested result.
 
-For a single expression in synchronous code, use the smaller boundary:
+For a single expression, give its result a name and use the same workflow:
 
 <!-- lclang-doc-exec -->
 ```python
+import asyncio
+
 import lclang
 
-total = lclang.evaluate_sync(
-    "unit_price * quantity",
-    {"unit_price": 6, "quantity": 4},
-)
-assert total == 24
+
+TOTAL = lclang.define_module("total", {"result": "unit_price * quantity"})
+
+
+async def main() -> None:
+    async with lclang.define_frame(
+        TOTAL,
+        preset={"unit_price": 6, "quantity": 4},
+    ) as frame:
+        assert await frame.get("result") == 24
+
+
+asyncio.run(main())
 ```
 
-Do not call `evaluate_sync()` from a running event loop. Async applications
-should use Frames or await `evaluate()`.
+`asyncio.run()` is the outer boundary for a synchronous application. In an
+async application, await your coroutine in the application's existing loop.
 
 ## The Module and Frame model
 
@@ -204,8 +214,9 @@ try primary() except ServiceError: fallback()
 
 Arrow functions provide defaults, keyword arguments, lexical closures, and
 recursive-program support. `parse_expression()` returns immutable syntax,
-`to_source()` renders canonical source, `evaluate()` is the async evaluation
-boundary, and `evaluate_sync()` is the synchronous convenience boundary.
+`to_source()` renders canonical source. Public evaluation uses `define_module()`,
+`define_frame()`, and `await frame.get(name)` so calculations share one lookup
+and ownership model.
 
 ### Configuration files with provenance
 
@@ -233,18 +244,19 @@ is discarded before final runtime winners are built.
 ```python
 from pathlib import Path
 
-from lclang.config import evaluate_config, load_config
+import lclang
+from lclang.config import load_config
 
 
 async def address_for(environment: str) -> str:
     config = await load_config(Path("settings.lclcfg"))
-    result = await evaluate_config(
-        config,
-        "address",
-        values={"environment": environment},
-    )
-    assert isinstance(result, str)
-    return result
+    async with lclang.define_frame(
+        config.to_module(),
+        preset={"environment": environment},
+    ) as frame:
+        result = await frame.get("address")
+        assert isinstance(result, str)
+        return result
 ```
 
 Loading is asynchronous, UTF-8, bounded by configurable limits, cycle-aware,
@@ -282,7 +294,7 @@ variable evaluation stack so application boundaries can report useful context.
 
 ### Async-first evaluation
 
-Resolver values, host callables, call results, iterators, and context-manager
+Frame inputs, host callables, call results, iterators, and context-manager
 protocols may be synchronous or asynchronous. lclang awaits them when needed
 and keeps cancellation isolated between the owner of a calculation and other
 tasks waiting for it.
@@ -410,15 +422,13 @@ The calendar layer works as a Python utility in its own right and also gives LCL
 configuration a precise vocabulary for settlement dates, processing windows,
 and scheduling policy.
 
-## Choose the smallest entry point
+## Choose the integration for your policy
 
 | Need | Preferred API | Ownership model |
 | --- | --- | --- |
-| One expression in synchronous code | `evaluate_sync(source, values)` | lclang owns the temporary event loop |
-| One parsed expression asynchronously | `parse_expression()` then `await evaluate()` | caller supplies resolver values |
-| Related named definitions | `define_module()` and `async with define_frame()` | reuse the Module; close each Frame |
+| One or more named expressions | `define_module()` and `async with define_frame()` | reuse the Module; close each Frame |
 | One unnamed expression in an existing context | `await frame.evaluate(source)` | Frame supplies lookup; caller owns the uncached result |
-| One value from a config file | `load_config()` then `evaluate_config()` | the temporary Frame is closed for you |
+| Definitions from a config file | `load_config()`, `config.to_module()`, and `define_frame()` | reuse the Module; close each Frame |
 | Many runs with the same policy | `FrameFactory` or `Config.frame_factory()` | each created Frame is caller-owned |
 | A typed multi-step operation | `define_workflow()` then `await workflow.execute()` | caller owns the shared execution Frame |
 | Syntax printing or analysis | `parse_expression()` and analysis APIs | no evaluation state is created |
@@ -448,7 +458,8 @@ clearer as a normal function than as configuration policy.
 4. Request only the output names the application needs.
 5. Treat cached values as snapshots and recalculate explicitly.
 6. Use caller-owned Frames as async context managers.
-7. Use `evaluate_config()` when only one file-backed value is required.
+7. Convert loaded configuration with `config.to_module()` and use the same
+   Frame lookup and lifecycle as definitions written in Python.
 8. Catch `LclError` at the application boundary and preserve its diagnostic
    context.
 

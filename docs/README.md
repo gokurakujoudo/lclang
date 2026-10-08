@@ -19,18 +19,30 @@ python -m pip install lclang
 
 <!-- lclang-doc-exec -->
 ```python
+import asyncio
+
 import lclang
 
-total = lclang.evaluate_sync(
-    "unit_price * quantity",
-    {"unit_price": 6, "quantity": 4},
-)
-assert total == 24
+
+TOTAL = lclang.define_module("total", {"result": "unit_price * quantity"})
+
+
+async def main() -> None:
+    async with lclang.define_frame(
+        TOTAL,
+        preset={"unit_price": 6, "quantity": 4},
+    ) as frame:
+        assert await frame.get("result") == 24
+
+
+asyncio.run(main())
 ```
 
 Python supplies `unit_price` and `quantity`; LCL owns their relationship. The
-expression multiplies 6 by 4 and returns 24. In an async application, use
-`await evaluate()` or an async Frame instead of `evaluate_sync()`.
+definition named `result` multiplies 6 by 4 and returns 24. The Frame supplies canonical
+builtins and host inputs, caches the requested value, and closes when the
+`async with` block ends. `asyncio.run()` starts the loop at a synchronous
+application's boundary; async applications await their existing coroutine.
 
 ## Define once. Evaluate in context.
 

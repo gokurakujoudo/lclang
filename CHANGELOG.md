@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Remove the standalone `evaluate` and `evaluate_sync` APIs from public
+  package exports and delete the synchronous convenience wrapper. Use
+  `define_module`, `define_frame`, and awaited `Frame.get` results for a shared
+  builtin hierarchy, explicit input precedence, caching, and owned cleanup.
+  This intentionally breaks imports of the removed entry points;
+  `Frame.evaluate` remains available within an existing Frame.
+
 - Add `logger.timezone` (`"local"` or `"utc"`) across Python, Frame and CLI
   configuration. Log lines now default to server local time with microseconds
   and a numeric offset; select `"utc"` to retain the previous `Z` timestamps.
