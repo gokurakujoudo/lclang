@@ -11,9 +11,24 @@ reference documentation before changing the project.
 - License: MIT.
 - Release line: stable 1.0.
 - Security model: trusted configuration language, not a hostile-code sandbox.
+- Platform support: OS-independent pure Python, with platform-specific behavior
+  verified in the applicable environment.
+- Version sources: `pyproject.toml` and `src/lclang/_version.py`; keep them equal.
+- GitHub remote: `origin` in `gokurakujoudo/lclang`; default branch `main`,
+  persistent publishing branch `release`.
+- Documentation home: `docs/README.md`; development commands: `docs/development/README.md`.
 
 ## Non-negotiable architecture
 
+- Prefer the standard library and existing mechanisms. Keep development,
+  documentation, build, and publishing dependencies separate from runtime.
+  Dependencies flow toward core types; adapters depend on the core. Avoid
+  cross-layer shortcuts and cyclic imports and initialization. Package `__init__.py` files
+  curate exports without behavioral initialization.
+- Preserve typed public input, result, and error contracts, runtime validation,
+  useful exception causes, and `src/lclang/py.typed`. Specify resource ownership,
+  cleanup order, cancellation behavior, concurrency scope, and cache consistency
+  for APIs that own asynchronous work or state.
 - The parser is a pure-Python lexer plus Pratt/recursive-descent parser.
 - Execution uses the custom AST interpreter only. Do not add ANTLR, Java,
   `eval`, `exec`, Python-AST compilation, or a bytecode backend.
@@ -54,6 +69,28 @@ reference documentation before changing the project.
 Runtime packages and tests follow `docs/development/architecture.md`. Tests
 mirror production subsystem boundaries; reusable fixtures live in dedicated
 support modules.
+
+## Quality and packaging integrity
+
+- Use one Python 3.14-or-newer environment with the pinned `dev` dependency
+  group. The authoritative gate is `python -m scripts.quality`: whitespace,
+  Black, Ruff, production policies, architecture/capabilities, strict mypy,
+  strict Pyright, documentation without coverage, then the complete behavioral
+  suite including deterministic stress tests and 100% production branch coverage.
+- Assert observable behavior, state, and meaningful diagnostics. Cover relevant
+  sunny, rainy, boundary, composite, concurrency, cancellation, and lifecycle
+  cases; mock connectivity, clocks, randomness, and other nondeterminism as needed.
+  Do not lower coverage, add exclusions or skips, or weaken assertions solely to
+  pass. Report genuine platform/dependency skips and the tested revision.
+- Keep generated reports ignored. The gate writes JUnit to
+  `reports/tests-docs.xml` and `reports/tests-behavior.xml`, and coverage to
+  `reports/coverage.xml`, `reports/coverage.json`, and `reports/htmlcov/`.
+  Record actual results; configured requirements alone do not prove compliance.
+- Build from the verified revision with the pinned Hatchling backend through
+  `python -m scripts.build_package --output dist`. Wheel and source archives
+  contain downstream source, required resources, typing data, package metadata,
+  the MIT license, and README. Exclude secrets, reports, environments, scratch
+  files, and unrelated artifacts; preserve the declared Python and dependency policy.
 
 ## Required workflow
 
@@ -141,6 +178,8 @@ Use this lifecycle when a version release is requested:
    full quality gate and builds, publishes the built wheel and source archive
    to PyPI with Trusted Publishing, then creates the matching GitHub tag and
    Release with changelog notes and those same distribution artifacts.
+   Retain least-privilege job permissions, the `pypi` publishing environment,
+   and serialized uploads.
 5. Tags use the exact package version without a `v` prefix. The version tag,
    GitHub Release, and PyPI artifacts must identify the same publishing commit
    and version. Let CI create the tag and Release after PyPI succeeds; do not
@@ -152,6 +191,8 @@ Use this lifecycle when a version release is requested:
    If PyPI succeeds but GitHub Release creation fails, rerun only the failed
    job; do not repeat the successful upload. Published PyPI versions are
    immutable, so changed artifacts require a new version.
+   After an uncertain publication outcome, inspect remote registry and Release
+   state before retrying any stage.
 7. Fetch the published tag, retain the persistent `main` and `release` branches,
    remove the completed implementation branch locally and remotely, and return
    to `main`. Report the version, PR, Release/PyPI links, checks, and cleanup.
@@ -197,12 +238,18 @@ Trusted Publishing setup, and supported manual recovery procedures.
 
 ## Sources of truth
 
+Keep public documentation in English.
+
 - `docs/reference/`: language and public API contracts.
 - `docs/tutorials/`: executable user workflows and examples.
 - `tests/`: behavioral, source smoke, and executable documentation contracts.
 - `progress.md`: concise inventory of the stable 1.0 feature set.
 - `README.md`: user-visible implemented capability only.
 - `pyproject.toml`: supported Python and tool configuration.
+- `CHANGELOG.md`: user-visible changes and dated release notes.
+- `docs/development/`: verified quality, build, delivery, and recovery commands.
+- Site and Wiki output is generated from canonical Markdown; preserve exact
+  examples, navigation, links, and assets rather than maintaining competing copies.
 
 Do not advertise planned behavior as implemented. Preserve unrelated user
 changes. Update this file only when durable architecture or workflow changes.
