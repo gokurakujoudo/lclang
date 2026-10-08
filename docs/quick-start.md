@@ -32,16 +32,8 @@ independent cache. Asking for `result` evaluates `greeting` first; the second
 lookup returns its cached snapshot. Leaving the `async with` block closes the
 Frame and releases its owned tasks and resources.
 
-For one expression in synchronous code:
-
-<!-- lclang-doc-exec -->
-```python
-import lclang
-
-assert lclang.evaluate_sync("(value -> value * 2)(21)") == 42
-```
-
-Async code can parse once and evaluate with an explicit resolver:
+For one expression, name its result in a Module. The canonical Frame includes
+reviewed builtins such as `int` and `len`, alongside your supplied inputs:
 
 <!-- lclang-doc-exec -->
 ```python
@@ -50,13 +42,25 @@ import asyncio
 import lclang
 
 
-async def evaluate() -> None:
-    expression = lclang.parse_expression("subtotal + tax")
-    assert await lclang.evaluate(expression, {"subtotal": 40, "tax": 2}) == 42
+TOTAL = lclang.define_module("total", {"result": "int(subtotal) + len(taxes)"})
 
 
-asyncio.run(evaluate())
+async def main() -> None:
+    async with lclang.define_frame(
+        TOTAL,
+        preset={"subtotal": "40", "taxes": ["state", "local"]},
+    ) as frame:
+        assert await frame.get("result") == 42
+
+
+asyncio.run(main())
 ```
+
+`int` converts the host string `"40"`, and `len` counts the two supplied taxes.
+The same Module and Frame APIs handle both a single calculation and a set of
+related definitions. Use `asyncio.run` once at the outer boundary of a
+synchronous application; async applications await their coroutine in the
+existing loop.
 
 Next, use the [tutorials and examples](tutorials/README.md), or consult the
 [reference index](reference/README.md).

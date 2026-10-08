@@ -2,8 +2,8 @@
 
 import pytest
 
-from lclang import evaluate
 from lclang.errors import LclEvaluationError
+from lclang.lang.evaluator.dispatch import interpret_expression
 from lclang.lang.parser import parse_expression
 from lclang.source import SourceSpan
 from lclang.types import VarName
@@ -16,17 +16,17 @@ from lclang.types import VarName
 )
 async def test_logical_not_returns_boolean(value: object, expected: bool) -> None:
     """Logical negation uses the resolved operand's ordinary truth value."""
-    assert await evaluate(parse_expression("not value"), {"value": value}) is expected
+    assert await interpret_expression(parse_expression("not value"), {"value": value}) is expected
 
 
 @pytest.mark.asyncio
 async def test_boolean_operations_preserve_operand_values() -> None:
     """And/or return selected operands instead of coercing them to booleans."""
     values = {"truthy": "yes", "falsey": "", "final": 42}
-    assert await evaluate(parse_expression("truthy and final"), values) == 42
-    assert await evaluate(parse_expression("falsey and final"), values) == ""
-    assert await evaluate(parse_expression("truthy or final"), values) == "yes"
-    assert await evaluate(parse_expression("falsey or final"), values) == 42
+    assert await interpret_expression(parse_expression("truthy and final"), values) == 42
+    assert await interpret_expression(parse_expression("falsey and final"), values) == ""
+    assert await interpret_expression(parse_expression("truthy or final"), values) == "yes"
+    assert await interpret_expression(parse_expression("falsey or final"), values) == 42
 
 
 @pytest.mark.asyncio
@@ -42,7 +42,7 @@ async def test_boolean_operations_skip_unselected_operands() -> None:
             return {"first": False}[str(name)]
 
     resolver = RecordingResolver()
-    assert await evaluate(parse_expression("first and skipped"), resolver) is False
+    assert await interpret_expression(parse_expression("first and skipped"), resolver) is False
     assert resolver.names == [VarName("first")]
 
 
@@ -66,9 +66,9 @@ async def test_conditional_evaluates_condition_then_one_branch() -> None:
     truthy = RecordingResolver(True)
     falsey = RecordingResolver(False)
     source = "when_true if condition else when_false"
-    assert await evaluate(parse_expression(source), truthy) == "yes"
+    assert await interpret_expression(parse_expression(source), truthy) == "yes"
     assert truthy.names == [VarName("condition"), VarName("when_true")]
-    assert await evaluate(parse_expression(source), falsey) == "no"
+    assert await interpret_expression(parse_expression(source), falsey) == "no"
     assert falsey.names == [VarName("condition"), VarName("when_false")]
 
 
@@ -76,7 +76,7 @@ async def test_conditional_evaluates_condition_then_one_branch() -> None:
 @pytest.mark.parametrize("value", [False, 0, "", (), []])
 async def test_coalesce_retains_non_null_falsey_values(value: object) -> None:
     """Only None selects the coalescing fallback expression."""
-    result = await evaluate(
+    result = await interpret_expression(
         parse_expression("value ?? fallback"),
         {"value": value, "fallback": "fallback"},
     )
@@ -87,7 +87,7 @@ async def test_coalesce_retains_non_null_falsey_values(value: object) -> None:
 async def test_coalesce_evaluates_fallback_for_none() -> None:
     """A resolved null left value selects and resolves the right side."""
     values = {"value": None, "fallback": 42}
-    assert await evaluate(parse_expression("value ?? fallback"), values) == 42
+    assert await interpret_expression(parse_expression("value ?? fallback"), values) == 42
 
 
 @pytest.mark.asyncio
@@ -100,5 +100,5 @@ async def test_truth_protocol_failure_becomes_structured_cause() -> None:
             raise failure
 
     with pytest.raises(LclEvaluationError) as caught:
-        await evaluate(parse_expression("not value"), {"value": BrokenTruth()})
+        await interpret_expression(parse_expression("not value"), {"value": BrokenTruth()})
     assert caught.value.__cause__ is failure

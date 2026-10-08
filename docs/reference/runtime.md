@@ -13,13 +13,21 @@ dynamic tracing, reconciliation values, and standard runtime types. Use
 `lclang.stdlib` for manifests, namespace assembly, individual reviewed helpers,
 `STANDARD_MANIFESTS`, and `STANDARD_PRESET`.
 
-## Direct expression evaluation
+## Public evaluation boundary
 
-`lclang.evaluate_sync(source, resolver=None)` is the preferred synchronous
-one-expression boundary: string source is parsed with `parse_expression` and
-then evaluated on a private event loop. It also accepts an already parsed AST
-for tools that need to reuse syntax. It rejects calls made inside a running
-event loop. Async code should parse explicitly and await `lclang.evaluate`.
+Define named expressions with `define_module`, create their runtime context
+with `define_frame`, and request results with `await frame.get(name)`. Even a
+single calculation uses this path, so it receives the same canonical builtins,
+host bindings, caching, diagnostics, and cleanup as a larger configuration.
+Use `asyncio.run` once at a synchronous application's outer boundary; async
+applications await their existing coroutine instead.
+
+The standalone `evaluate` and `evaluate_sync` functions have been removed from
+the public API. Migrate source expressions to named Module definitions and
+resolver mappings to the Frame's `preset` bindings. For an unnamed expression
+within an existing context, use `await frame.evaluate(source)`.
+
+## Record values
 
 `{a=expression, b=expression}` evaluates to `lclang.LclRecord`. LCL and Python
 both read fields with ordinary attributes, such as `record.a`. The public
@@ -116,8 +124,8 @@ parameter shorthand. Canonical source always parenthesizes the signature.
 the same for host bindings; `overlay` is shallow and right-biased. A single
 trailing `!` on a binding key marks its normalized exact name as masked, so
 `{"token!": value}` creates the runtime name `token`. Modules, Presets, Frames,
-direct resolver mappings, Frame mixins, and CLI binding sources share this
-spelling. Their immutable `masked_names` metadata retains the policy, and
+Frame mixins, and CLI binding sources share this spelling. Their immutable
+`masked_names` metadata retains the policy, and
 `frame.is_masked(name)` checks it without evaluating the name. Once marked in
 an effective Frame hierarchy, a same-name override stays masked; unrelated or
 derived names do not inherit the flag. Direct `Frame(..., masked_names=...)` and
@@ -158,8 +166,10 @@ Structured errors raised while evaluating Frame definitions expose
 text appends the same route, for example
 `[variable evaluation stack: RESULT -> intermediate -> failing]`. Lazy child
 definitions and LCL closure calls add their lexical owner; propagation and
-cached failures retain the first, deepest stack. Errors created by direct
-expression evaluation outside a Frame have an empty stack.
+cached failures retain the first, deepest stack. An unnamed `frame.evaluate`
+expression uses `"<expr>"` as its owner. Fresh errors include that owner, and
+failures reached through named definitions add their owners; previously cached
+failures retain their original stack.
 
 All synchronous and asynchronous iterable items pass through the recursive
 auto-await boundary before comprehensions, starred expansion, or reviewed

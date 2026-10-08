@@ -1,4 +1,4 @@
-"""Public async evaluation dispatch and synchronous convenience boundary."""
+"""Async AST interpretation used by the Frame runtime."""
 
 from __future__ import annotations
 
@@ -66,8 +66,8 @@ from lclang.lang.printer import to_source
 type ResolverSource = Resolver | Mapping[str, object] | None
 
 
-async def evaluate(node: LclAstNode, resolver: ResolverSource = None) -> object:
-    """Evaluate one AST using an async resolver boundary.
+async def interpret_expression(node: LclAstNode, resolver: ResolverSource = None) -> object:
+    """Interpret one AST for the Frame runtime and language subsystem.
 
     :param node: Semantic AST root to evaluate.
     :param resolver: Optional resolver or string-keyed value mapping.

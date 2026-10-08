@@ -4,8 +4,8 @@ from dataclasses import dataclass
 
 import pytest
 
-from lclang import evaluate
 from lclang.errors import LclEvaluationError
+from lclang.lang.evaluator.dispatch import interpret_expression
 from lclang.lang.parser import parse_expression
 from lclang.source import SourceSpan
 from lclang.types import VarName
@@ -29,15 +29,15 @@ class Root:
 async def test_attribute_chains_and_safe_none_access() -> None:
     """Ordinary chains resolve while a null-safe receiver returns None."""
     values = {"root": Root(Leaf(42)), "missing": None}
-    assert await evaluate(parse_expression("root.child.value"), values) == 42
-    assert await evaluate(parse_expression("missing?.child?.value"), values) is None
+    assert await interpret_expression(parse_expression("root.child.value"), values) == 42
+    assert await interpret_expression(parse_expression("missing?.child?.value"), values) is None
 
 
 @pytest.mark.asyncio
 async def test_safe_attribute_does_not_hide_non_null_failure() -> None:
     """Null safety structures rather than suppresses a descriptor failure."""
     with pytest.raises(LclEvaluationError) as caught:
-        await evaluate(parse_expression("value?.missing"), {"value": object()})
+        await interpret_expression(parse_expression("value?.missing"), {"value": object()})
     assert isinstance(caught.value.__cause__, AttributeError)
 
 
@@ -50,9 +50,9 @@ async def test_subscript_slice_and_tuple_index_values() -> None:
             return index
 
     values = {"items": [0, 1, 2, 3, 4], "recorder": IndexRecorder()}
-    assert await evaluate(parse_expression("items[1]"), values) == 1
-    assert await evaluate(parse_expression("items[1:4:2]"), values) == [1, 3]
-    assert await evaluate(parse_expression("recorder[1, 2]"), values) == (1, 2)
+    assert await interpret_expression(parse_expression("items[1]"), values) == 1
+    assert await interpret_expression(parse_expression("items[1:4:2]"), values) == [1, 3]
+    assert await interpret_expression(parse_expression("recorder[1, 2]"), values) == (1, 2)
 
 
 @pytest.mark.asyncio
@@ -68,5 +68,5 @@ async def test_receiver_precedes_index_evaluation() -> None:
             return {"receiver": [42], "index": 0}[str(name)]
 
     resolver = RecordingResolver()
-    assert await evaluate(parse_expression("receiver[index]"), resolver) == 42
+    assert await interpret_expression(parse_expression("receiver[index]"), resolver) == 42
     assert resolver.names == [VarName("receiver"), VarName("index")]

@@ -6,15 +6,15 @@ from typing import cast
 
 import pytest
 
-from lclang import evaluate
 from lclang.errors import LclEvaluationError
+from lclang.lang.evaluator.dispatch import interpret_expression
 from lclang.lang.parser import parse_expression
 
 
 @pytest.mark.asyncio
 async def test_function_defaults_and_body_evaluate() -> None:
     """A function value binds a supplied argument and its created default."""
-    function = await evaluate(parse_expression("(x, y=1) -> x + y"))
+    function = await interpret_expression(parse_expression("(x, y=1) -> x + y"))
     call = cast(Callable[..., Awaitable[object]], function)
     assert await call(2) == 3
     assert await call(2, 3) == 5
@@ -24,7 +24,7 @@ async def test_function_defaults_and_body_evaluate() -> None:
 async def test_defaults_evaluate_once_when_function_is_created() -> None:
     """Later resolver updates do not recompute an already bound default."""
     values: dict[str, object] = {"base": 1}
-    function = await evaluate(parse_expression("(x=base) -> x"), values)
+    function = await interpret_expression(parse_expression("(x=base) -> x"), values)
     values["base"] = 2
     call = cast(Callable[..., Awaitable[object]], function)
     assert await call() == 1
@@ -33,11 +33,11 @@ async def test_defaults_evaluate_once_when_function_is_created() -> None:
 @pytest.mark.asyncio
 async def test_function_uses_defining_lexical_resolver() -> None:
     """Call-site values cannot replace names captured from definition scope."""
-    function = await evaluate(
+    function = await interpret_expression(
         parse_expression("(x) -> x + outer"),
         {"outer": 40},
     )
-    result = await evaluate(
+    result = await interpret_expression(
         parse_expression("function(2)"),
         {"function": function, "outer": 100},
     )
@@ -48,8 +48,8 @@ async def test_function_uses_defining_lexical_resolver() -> None:
 async def test_all_parameter_kinds_bind_to_local_values() -> None:
     """Positional, defaults, variadics, and keyword-only values bind together."""
     source = "(a, b=2, *args, option=3, **kwargs) -> [a, b, args, option, kwargs]"
-    function = await evaluate(parse_expression(source))
-    result = await evaluate(
+    function = await interpret_expression(parse_expression(source))
+    result = await interpret_expression(
         parse_expression("function(1, *items, option=5, extra=6)"),
         {"function": function, "items": [3, 4]},
     )
@@ -68,9 +68,9 @@ async def test_all_parameter_kinds_bind_to_local_values() -> None:
 )
 async def test_invalid_argument_bindings_raise_public_error(call_source: str) -> None:
     """Invalid bindings are structured before body evaluation begins."""
-    function = await evaluate(parse_expression("(a) -> a"))
+    function = await interpret_expression(parse_expression("(a) -> a"))
     with pytest.raises(LclEvaluationError) as caught:
-        await evaluate(parse_expression(call_source), {"function": function})
+        await interpret_expression(parse_expression(call_source), {"function": function})
     assert isinstance(caught.value.__cause__, TypeError)
 
 
@@ -82,12 +82,12 @@ async def test_concurrent_calls_have_independent_recursion_state() -> None:
         await asyncio.sleep(0)
         return value
 
-    function = await evaluate(
+    function = await interpret_expression(
         parse_expression("(value) -> delayed(value)"),
         {"delayed": delayed},
     )
-    first = evaluate(parse_expression("function(1)"), {"function": function})
-    second = evaluate(parse_expression("function(2)"), {"function": function})
+    first = interpret_expression(parse_expression("function(1)"), {"function": function})
+    second = interpret_expression(parse_expression("function(2)"), {"function": function})
     assert list(await asyncio.gather(first, second)) == [1, 2]
 
 
@@ -97,19 +97,21 @@ Z_SOURCE = "(f) -> ((x) -> f((*args) -> x(x)(*args)))" "((x) -> f((*args) -> x(x
 
 async def _recursive_numeric_results(combinator_source: str, name: str) -> tuple[int, int]:
     """Define factorial and Fibonacci with one named LCL fixed-point value."""
-    fixed_point = await evaluate(parse_expression(combinator_source))
-    factorial = await evaluate(
+    fixed_point = await interpret_expression(parse_expression(combinator_source))
+    factorial = await interpret_expression(
         parse_expression(f"{name}((again) -> (n) -> 1 if n <= 1 else n * again(n - 1))"),
         {name: fixed_point},
     )
-    fibonacci = await evaluate(
+    fibonacci = await interpret_expression(
         parse_expression(
             f"{name}((again) -> (n) -> n if n <= 1 else " "again(n - 1) + again(n - 2))"
         ),
         {name: fixed_point},
     )
-    factorial_result = await evaluate(parse_expression("factorial(6)"), {"factorial": factorial})
-    fibonacci_result = await evaluate(parse_expression("fib(10)"), {"fib": fibonacci})
+    factorial_result = await interpret_expression(
+        parse_expression("factorial(6)"), {"factorial": factorial}
+    )
+    fibonacci_result = await interpret_expression(parse_expression("fib(10)"), {"fib": fibonacci})
     return cast(int, factorial_result), cast(int, fibonacci_result)
 
 
@@ -128,8 +130,8 @@ async def test_variadic_z_defines_factorial_and_fibonacci() -> None:
 @pytest.mark.asyncio
 async def test_recursive_quicksort_is_a_separate_lcl_program() -> None:
     """Quicksort recursively partitions duplicates and negative integers."""
-    fixed_point = await evaluate(parse_expression(Z_SOURCE))
-    quicksort = await evaluate(
+    fixed_point = await interpret_expression(parse_expression(Z_SOURCE))
+    quicksort = await interpret_expression(
         parse_expression(
             "Z((again) -> (items) -> [] if not items else "
             "again([item for item in items[1:] if item < items[0]]) + "
@@ -138,7 +140,7 @@ async def test_recursive_quicksort_is_a_separate_lcl_program() -> None:
         ),
         {"Z": fixed_point},
     )
-    assert await evaluate(
+    assert await interpret_expression(
         parse_expression("sort(values)"),
         {"sort": quicksort, "values": [7, 2, 9, 2, -1, 5]},
     ) == [-1, 2, 2, 5, 7, 9]
@@ -148,7 +150,7 @@ async def test_recursive_quicksort_is_a_separate_lcl_program() -> None:
 async def test_same_task_direct_recursion_is_rejected() -> None:
     """A function cannot directly re-enter itself through its captured resolver."""
     values: dict[str, object] = {}
-    function = await evaluate(parse_expression("() -> self()"), values)
+    function = await interpret_expression(parse_expression("() -> self()"), values)
     values["self"] = function
     call = cast(Callable[..., Awaitable[object]], function)
     with pytest.raises(LclEvaluationError, match="recursion"):

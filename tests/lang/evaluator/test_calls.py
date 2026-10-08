@@ -4,9 +4,9 @@ from collections.abc import AsyncIterator
 
 import pytest
 
-from lclang import evaluate
 from lclang.ast import LclCall, LclConstant
 from lclang.errors import LclEvaluationError
+from lclang.lang.evaluator.dispatch import interpret_expression
 from lclang.lang.parser import parse_expression
 from lclang.source import SourceSpan
 from lclang.types import VarName
@@ -27,7 +27,7 @@ async def test_all_argument_wrappers_build_one_call() -> None:
         "options": {"other": 4},
     }
     source = "function(1, *items, key=2, **options)"
-    assert await evaluate(parse_expression(source), values) == "called"
+    assert await interpret_expression(parse_expression(source), values) == "called"
     assert calls == [((1, 2, 3), {"key": 2, "other": 4})]
 
 
@@ -38,7 +38,7 @@ async def test_keyword_unpack_can_be_followed_by_an_explicit_keyword() -> None:
     def function(**values: object) -> dict[str, object]:
         return values
 
-    result = await evaluate(
+    result = await interpret_expression(
         parse_expression("function(**options, final=3)"),
         {"function": function, "options": {"first": 1, "second": 2}},
     )
@@ -58,7 +58,7 @@ async def test_star_argument_accepts_async_iterable() -> None:
         return sum(values)
 
     values = {"add": add, "items": AsyncItems()}
-    assert await evaluate(parse_expression("add(*items)"), values) == 42
+    assert await interpret_expression(parse_expression("add(*items)"), values) == 42
 
 
 @pytest.mark.asyncio
@@ -68,7 +68,7 @@ async def test_awaitable_call_result_is_resolved() -> None:
     async def answer() -> int:
         return 42
 
-    assert await evaluate(parse_expression("answer()"), {"answer": answer}) == 42
+    assert await interpret_expression(parse_expression("answer()"), {"answer": answer}) == 42
 
 
 @pytest.mark.asyncio
@@ -85,7 +85,7 @@ async def test_callable_and_arguments_evaluate_left_to_right() -> None:
             return {"function": function, "first": 1, "second": 2}[str(name)]
 
     source = "function(first, named=second)"
-    assert await evaluate(parse_expression(source), RecordingResolver()) == (1, 2)
+    assert await interpret_expression(parse_expression(source), RecordingResolver()) == (1, 2)
     assert names == [VarName("function"), VarName("first"), VarName("second")]
 
 
@@ -99,19 +99,19 @@ async def test_duplicate_and_non_string_keywords_are_rejected() -> None:
         called = True
 
     with pytest.raises(LclEvaluationError, match="duplicate keyword") as duplicate:
-        await evaluate(
+        await interpret_expression(
             parse_expression("function(key=1, **options)"),
             {"function": function, "options": {"key": 2}},
         )
     assert isinstance(duplicate.value.__cause__, TypeError)
     with pytest.raises(LclEvaluationError, match="string keys") as invalid_key:
-        await evaluate(
+        await interpret_expression(
             parse_expression("function(**options)"),
             {"function": function, "options": {1: 2}},
         )
     assert isinstance(invalid_key.value.__cause__, TypeError)
     with pytest.raises(LclEvaluationError, match="requires a mapping") as invalid_mapping:
-        await evaluate(
+        await interpret_expression(
             parse_expression("function(**options)"),
             {"function": function, "options": [1, 2]},
         )
@@ -123,7 +123,7 @@ async def test_duplicate_and_non_string_keywords_are_rejected() -> None:
 async def test_non_callable_value_retains_type_error() -> None:
     """A non-callable protocol failure is preserved as the public error cause."""
     with pytest.raises(LclEvaluationError) as caught:
-        await evaluate(parse_expression("value()"), {"value": 42})
+        await interpret_expression(parse_expression("value()"), {"value": 42})
     assert isinstance(caught.value.__cause__, TypeError)
 
 
@@ -135,5 +135,5 @@ async def test_call_rejects_invalid_ast_argument_wrapper() -> None:
         (LclConstant(value="invalid"),),  # type: ignore[arg-type]
     )
     with pytest.raises(LclEvaluationError, match="unsupported call argument") as caught:
-        await evaluate(malformed)
+        await interpret_expression(malformed)
     assert isinstance(caught.value.__cause__, TypeError)

@@ -4,8 +4,8 @@ from dataclasses import dataclass
 
 import pytest
 
-from lclang import evaluate
 from lclang.errors import LclEvaluationError
+from lclang.lang.evaluator.dispatch import interpret_expression
 from lclang.lang.parser import parse_expression
 from lclang.source import SourceSpan
 from lclang.types import VarName
@@ -46,14 +46,14 @@ class MatrixValue:
 )
 async def test_arithmetic_and_bitwise_operators(source: str, expected: object) -> None:
     """Every ordinary numeric operator follows Python data-model semantics."""
-    assert await evaluate(parse_expression(source), {"value": 3}) == expected
+    assert await interpret_expression(parse_expression(source), {"value": 3}) == expected
 
 
 @pytest.mark.asyncio
 async def test_matrix_multiplication_uses_value_protocol() -> None:
     """Matrix multiplication delegates to the trusted operand implementation."""
     values = {"left": MatrixValue(6), "right": MatrixValue(7)}
-    assert await evaluate(parse_expression("left @ right"), values) == 42
+    assert await interpret_expression(parse_expression("left @ right"), values) == 42
 
 
 @pytest.mark.asyncio
@@ -83,7 +83,7 @@ async def test_comparison_operator_families(source: str, expected: bool) -> None
         "alias": shared,
         "other": object(),
     }
-    assert await evaluate(parse_expression(source), values) is expected
+    assert await interpret_expression(parse_expression(source), values) is expected
 
 
 @pytest.mark.asyncio
@@ -99,7 +99,7 @@ async def test_comparison_chain_is_ordered_once_and_short_circuits() -> None:
             return {"first": 3, "middle": 2}[str(name)]
 
     resolver = RecordingResolver()
-    result = await evaluate(parse_expression("first < middle < skipped"), resolver)
+    result = await interpret_expression(parse_expression("first < middle < skipped"), resolver)
     assert result is False
     assert resolver.names == [VarName("first"), VarName("middle")]
 
@@ -114,7 +114,7 @@ async def test_descending_comparison_chain_uses_adjacent_values(
     expected: bool,
 ) -> None:
     """A descending chain compares both bounds to the shared middle value."""
-    assert await evaluate(parse_expression("10 > x > 2"), {"x": value}) is expected
+    assert await interpret_expression(parse_expression("10 > x > 2"), {"x": value}) is expected
 
 
 @pytest.mark.asyncio
@@ -127,7 +127,7 @@ async def test_operation_operands_are_awaited_left_to_right() -> None:
         return value
 
     values = {"left": deferred("left", 20), "right": deferred("right", 22)}
-    assert await evaluate(parse_expression("left + right"), values) == 42
+    assert await interpret_expression(parse_expression("left + right"), values) == 42
     assert events == ["left", "right"]
 
 
@@ -135,5 +135,5 @@ async def test_operation_operands_are_awaited_left_to_right() -> None:
 async def test_data_model_failure_becomes_structured_cause() -> None:
     """Operator protocol failures retain their type beneath a public error."""
     with pytest.raises(LclEvaluationError) as caught:
-        await evaluate(parse_expression("1 + 'x'"))
+        await interpret_expression(parse_expression("1 + 'x'"))
     assert isinstance(caught.value.__cause__, TypeError)

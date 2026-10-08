@@ -104,19 +104,24 @@ class Session:
 
 async def main() -> None:
     events: list[str] = []
-    node = lclang.parse_expression(
-        "with open_session() as session: session.fetch(key) * requested"
-    )
-    result = await lclang.evaluate(
-        node,
+    module = lclang.define_module(
+        "inventory",
         {
+            "total": (
+                "with open_session() as session: session.fetch(key) * requested"
+            ),
+        },
+    )
+    async with lclang.define_frame(
+        module,
+        preset={
             "open_session": lambda: Session(events),
             "key": "inventory",
             "requested": 3,
         },
-    )
-    assert result == 21
-    assert events == ["open", "fetch inventory", "close"]
+    ) as frame:
+        assert await frame.get("total") == 21
+        assert events == ["open", "fetch inventory", "close"]
 
 
 asyncio.run(main())
@@ -126,6 +131,8 @@ The `with` expression awaits `__aenter__`, binds the returned Session, and then
 awaits `fetch("inventory")`. That call returns `7`, the body multiplies it by
 the requested `3`, and cleanup runs before the result `21` is returned. The
 event assertion verifies the exact open, use, close sequence.
+The named `total` snapshot belongs to the Frame; the Session's expression-form
+`with` has already closed the resource before that snapshot is published.
 
 If acquisition or the body fails, previously entered managers unwind in reverse
 order. Ordinary host exceptions become source-aware `LclEvaluationError`

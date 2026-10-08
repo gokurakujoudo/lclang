@@ -2,8 +2,8 @@
 
 import pytest
 
-from lclang import evaluate
 from lclang.errors import LclEvaluationError
+from lclang.lang.evaluator.dispatch import interpret_expression
 from lclang.lang.parser import parse_expression
 
 
@@ -11,7 +11,7 @@ from lclang.lang.parser import parse_expression
 async def test_text_and_values_join_in_source_order() -> None:
     """Literal and evaluated parts concatenate without separators."""
     node = parse_expression("f'hello {name}!'")
-    assert await evaluate(node, {"name": "LCL"}) == "hello LCL!"
+    assert await interpret_expression(node, {"name": "LCL"}) == "hello LCL!"
 
 
 @pytest.mark.asyncio
@@ -22,14 +22,14 @@ async def test_text_and_values_join_in_source_order() -> None:
 async def test_explicit_conversions(conversion: str, expected: str) -> None:
     """The three V1 conversion flags run before final formatting."""
     node = parse_expression(f"f'{{value!{conversion}}}'")
-    assert await evaluate(node, {"value": "é"}) == expected
+    assert await interpret_expression(node, {"value": "é"}) == expected
 
 
 @pytest.mark.asyncio
 async def test_nested_format_spec_is_evaluated_semantically() -> None:
     """Replacement fields inside a format spec determine its final text."""
     node = parse_expression("f'{value:0{width}d}'")
-    assert await evaluate(node, {"value": 42, "width": 5}) == "00042"
+    assert await interpret_expression(node, {"value": 42, "width": 5}) == "00042"
 
 
 @pytest.mark.asyncio
@@ -37,8 +37,8 @@ async def test_debug_field_uses_canonical_label_and_python_defaults() -> None:
     """Debug output distinguishes repr default from explicit formatting."""
     plain = parse_expression("f'{value=}'")
     aligned = parse_expression("f'{value=:>4}'")
-    assert await evaluate(plain, {"value": "x"}) == "value='x'"
-    assert await evaluate(aligned, {"value": "x"}) == "value=   x"
+    assert await interpret_expression(plain, {"value": "x"}) == "value='x'"
+    assert await interpret_expression(aligned, {"value": "x"}) == "value=   x"
 
 
 @pytest.mark.asyncio
@@ -53,7 +53,7 @@ async def test_fields_evaluate_once_left_to_right_and_auto_await() -> None:
         return value
 
     node = parse_expression("f'{next_value()}{next_value()}'")
-    assert await evaluate(node, {"next_value": next_value}) == "12"
+    assert await interpret_expression(node, {"next_value": next_value}) == "12"
     assert events == [1, 2]
 
 
@@ -68,6 +68,6 @@ async def test_format_failure_is_source_aware_and_preserves_cause() -> None:
 
     node = parse_expression("f'{value:>4}'")
     with pytest.raises(LclEvaluationError) as caught:
-        await evaluate(node, {"value": BrokenFormat()})
+        await interpret_expression(node, {"value": BrokenFormat()})
     assert caught.value.span == node.span
     assert isinstance(caught.value.__cause__, ValueError)

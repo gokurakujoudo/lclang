@@ -5,9 +5,9 @@ from typing import cast
 
 import pytest
 
-from lclang import evaluate
 from lclang.errors import LclNameError
 from lclang.lang.evaluator.context import MappingResolver
+from lclang.lang.evaluator.dispatch import interpret_expression
 from lclang.lang.parser import parse_expression
 from lclang.runtime import DependencyKind, DependencyTrace, TracingResolver
 from lclang.types import VarName
@@ -52,7 +52,7 @@ async def test_captured_resolver_traces_later_free_names_not_local_parameters() 
     """A closure extends its defining trace only for delegated free lookups."""
     trace = DependencyTrace(VarName("function"))
     resolver = TracingResolver(trace, MappingResolver({"outer": 40}))
-    function = await evaluate(parse_expression("(x) -> x + outer"), resolver)
+    function = await interpret_expression(parse_expression("(x) -> x + outer"), resolver)
     before_call = trace.edges
     assert before_call == ()
     call = cast(Callable[..., Awaitable[object]], function)

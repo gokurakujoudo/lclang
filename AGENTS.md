@@ -17,8 +17,9 @@ reference documentation before changing the project.
 - The parser is a pure-Python lexer plus Pratt/recursive-descent parser.
 - Execution uses the custom AST interpreter only. Do not add ANTLR, Java,
   `eval`, `exec`, Python-AST compilation, or a bytecode backend.
-- Public evaluation is async-first. `evaluate_sync` is the only synchronous
-  convenience boundary.
+- Public evaluation is async-first and Frame-based. Guide callers through
+  `define_module`, `define_frame`, and named `Frame.get` results; the standalone
+  AST interpreter is an implementation service, not a public evaluation API.
 - Production class and function names must describe their purpose without an
   underscore prefix. Only Python protocol methods may use required dunder
   spellings. Avoid generic `internal` prefixes; curate exports with `__all__`.
