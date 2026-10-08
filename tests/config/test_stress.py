@@ -81,3 +81,31 @@ async def test_one_hundred_waiters_allow_half_to_cancel(tmp_path: Path) -> None:
         assert isinstance(result, Config)
         assert "value" in result.definitions
     assert calls == 1
+
+
+@pytest.mark.asyncio
+async def test_one_hundred_config_frames_keep_concurrent_snapshots_isolated(tmp_path: Path) -> None:
+    """One Config creates separate caches while each Frame shares its own flight."""
+    path = (tmp_path / "frames.lclcfg").resolve()
+    config = await ConfigLoader(MappingResolver({path: "result: int(offset) + produce()\n"})).load(
+        path
+    )
+    calls = [0] * 100
+
+    async def run(index: int) -> object:
+        """Evaluate one input concurrently through its owned context."""
+
+        async def produce() -> int:
+            """Allow peer tasks to join one Frame's lazy computation."""
+            calls[index] += 1
+            await asyncio.sleep(0)
+            return 1
+
+        async with config.to_frame(preset={"offset": str(index), "produce": produce}) as frame:
+            values = await asyncio.gather(*(frame.get("result") for _ in range(10)))
+            assert values == [index + 1] * 10
+        assert frame.closed
+        return values[0]
+
+    assert await asyncio.gather(*(run(index) for index in range(100))) == list(range(1, 101))
+    assert calls == [1] * 100

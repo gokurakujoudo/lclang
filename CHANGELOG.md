@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add `Config.to_frame(preset=...)` as a lazy, caller-owned shortcut for
+  `define_frame(config.to_module(), preset=preset)`. Preserve canonical lookup,
+  precedence, provenance, masking, validation, and independent Frame snapshots.
+  Update application examples to use explicit symbol imports.
+
 - Remove the standalone `evaluate` and `evaluate_sync` APIs from public
   package exports and delete the synchronous convenience wrapper. Use
   `define_module`, `define_frame`, and awaited `Frame.get` results for a shared

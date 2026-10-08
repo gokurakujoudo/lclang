@@ -110,8 +110,8 @@ logger.file.service.filename: f"{service}.log"
 logger.file.service.level: "INFO"
 ''', encoding="utf-8")
         loaded = await load_config(path)
-        async with loaded.frame_factory().create(
-            values={"service": "catalog", "log_directory": directory}
+        async with loaded.to_frame(
+            preset={"service": "catalog", "log_directory": directory}
         ) as frame:
             config = await resolve_logger_config(frame)
             assert config.timezone == "utc"

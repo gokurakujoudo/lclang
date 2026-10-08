@@ -22,14 +22,14 @@ inside an async application, await its coroutine in the existing event loop.
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
-CALCULATION = lclang.define_module("calculation", {"total": "unit_price * quantity"})
+CALCULATION = define_module("calculation", {"total": "unit_price * quantity"})
 
 
 async def main() -> None:
-    async with lclang.define_frame(
+    async with define_frame(
         CALCULATION,
         preset={"unit_price": 6, "quantity": 4},
     ) as frame:
@@ -60,10 +60,10 @@ dependencies.
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
-ORDER = lclang.define_module(
+ORDER = define_module(
     "order",
     {
         "subtotal": "unit_price * quantity",
@@ -79,7 +79,7 @@ ORDER = lclang.define_module(
 
 
 async def main() -> None:
-    async with lclang.define_frame(
+    async with define_frame(
         ORDER,
         preset={
             "unit_price": 12,
@@ -119,22 +119,22 @@ and a per-run multiplier.
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
-TRANSFORM = lclang.define_module(
+TRANSFORM = define_module(
     "transform",
     {"selected": "[value * factor for value in values if value > minimum]"},
 )
 
 
 async def main() -> None:
-    async with lclang.define_frame(
+    async with define_frame(
         TRANSFORM,
         preset={"values": [1, 2, 3, 4], "factor": 10, "minimum": 2},
     ) as first:
         assert await first.get("selected") == [30, 40]
-    async with lclang.define_frame(
+    async with define_frame(
         TRANSFORM,
         preset={"values": [-2, 0, 2, 5], "factor": 3, "minimum": 0},
     ) as second:

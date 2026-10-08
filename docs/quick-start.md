@@ -8,18 +8,18 @@ other definitions as needed.
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
 async def main() -> None:
-    module = lclang.define_module(
+    module = define_module(
         "welcome",
         {
             "greeting": 'f"Hello, {name}!"',
             "result": "greeting + ' Welcome to lclang.'",
         },
     )
-    async with lclang.define_frame(module, preset={"name": "Ada"}) as frame:
+    async with define_frame(module, preset={"name": "Ada"}) as frame:
         assert await frame.get("result") == "Hello, Ada! Welcome to lclang."
         assert await frame.get("greeting") == "Hello, Ada!"
 
@@ -39,14 +39,14 @@ reviewed builtins such as `int` and `len`, alongside your supplied inputs:
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
-TOTAL = lclang.define_module("total", {"result": "int(subtotal) + len(taxes)"})
+TOTAL = define_module("total", {"result": "int(subtotal) + len(taxes)"})
 
 
 async def main() -> None:
-    async with lclang.define_frame(
+    async with define_frame(
         TOTAL,
         preset={"subtotal": "40", "taxes": ["state", "local"]},
     ) as frame:

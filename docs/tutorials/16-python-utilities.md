@@ -81,17 +81,17 @@ owns one generator; named ID results follow ordinary Frame snapshot rules.
 import asyncio
 from unittest.mock import patch
 
-import lclang
+from lclang import define_frame, define_module
 
 
 async def main() -> None:
-    module = lclang.define_module("request", {
+    module = define_module("request", {
         "ids": "SnowflakeGenerator(worker_id, epoch_ms=0)",
         "request_id": "ids.next_id()",
         "label": 'f"request-{request_id}"',
     })
     with patch("lclang.utils.snowflake.time_ns", return_value=1_000_000):
-        async with lclang.define_frame(module, preset={"worker_id": 7}) as frame:
+        async with define_frame(module, preset={"worker_id": 7}) as frame:
             first = (1 << 22) | (7 << 12)
             assert await frame.get("request_id") == first
             assert await frame.get("request_id") == first
@@ -116,17 +116,17 @@ should instead borrow one application-owned Python instance:
 import asyncio
 from unittest.mock import patch
 
-import lclang
+from lclang import define_frame, define_module
 from lclang.utils import SnowflakeGenerator
 
 
 async def main() -> None:
     ids = SnowflakeGenerator(7, epoch_ms=0)
-    module = lclang.define_module("request", {"id": "ids.next_id()"})
+    module = define_module("request", {"id": "ids.next_id()"})
     with patch("lclang.utils.snowflake.time_ns", return_value=1_000_000):
         generated = []
         for _ in range(2):
-            async with lclang.define_frame(module, preset={"ids": ids}) as frame:
+            async with define_frame(module, preset={"ids": ids}) as frame:
                 generated.append(await frame.get("id"))
         assert generated == [(1 << 22) | (7 << 12), (1 << 22) | (7 << 12) | 1]
 
@@ -324,10 +324,19 @@ from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-import lclang
-import lclang.workflow as wf
+from lclang import define_frame
 from lclang.logger import use_logger, use_logger_handler
 from lclang.utils import invoke
+from lclang.workflow import (
+    ExecutionStatus,
+    ExecutionStatusManager,
+    TaskContext,
+    WorkflowExecutionContext,
+    define_context_task,
+    define_task,
+    define_variable,
+    define_workflow,
+)
 
 
 @dataclass
@@ -369,14 +378,14 @@ class Result:
     target: str
 
 
-resource = wf.define_variable[Resources]("resource")
-prefix = wf.define_variable[str]("prefix", default="hello")
+resource = define_variable[Resources]("resource")
+prefix = define_variable[str]("prefix", default="hello")
 opened: list[Connection] = []
 
 
 @asynccontextmanager
 async def acquire(
-    context: wf.TaskContext, args: Directory, status_mgr: wf.ExecutionStatusManager,
+    context: TaskContext, args: Directory, status_mgr: ExecutionStatusManager,
 ) -> AsyncIterator[Resources]:
     connection = Connection("simulated-service")
     opened.append(connection)
@@ -387,7 +396,7 @@ async def acquire(
 
 
 async def save(
-    context: wf.TaskContext, args: Inputs, status_mgr: wf.ExecutionStatusManager,
+    context: TaskContext, args: Inputs, status_mgr: ExecutionStatusManager,
 ) -> Result:
     text = await invoke(args.request.connection.fetch, args.request.prefix)
     written = 0 if context.is_dryrun else args.output.write_bytes(text.encode("utf-8"))
@@ -400,27 +409,27 @@ async def main() -> None:
     stream = io.StringIO()
     with TemporaryDirectory() as directory:
         path = Path(directory)
-        scope = wf.define_context_task(
+        scope = define_context_task(
             "connect", "Acquire connection", acquire, Directory(path), resource.quote,
         )
-        child = wf.define_task(
+        child = define_task(
             "save", "Save result", task_action=save,
             args_mapping=Inputs(
                 Request(resource.field("connection", Connection).quote, prefix.quote),
                 resource.field("output", Path).quote,
             ),
         )
-        workflow = wf.define_workflow("Transfer", wf.define_task(
+        workflow = define_workflow("Transfer", define_task(
             "transfer", "Transfer", context_tasks=[scope], children=[child],
         ))
         command = workflow.to_cli("transfer", "Transfer one document")
         assert [(item.name, item.required) for item in command.parameter_docs] == [("prefix", False)]
-        async with use_logger_handler({"console": {"stream": stream}}), lclang.define_frame() as frame:
+        async with use_logger_handler({"console": {"stream": stream}}), define_frame() as frame:
             logger = await use_logger()
-            result = await workflow.execute(wf.WorkflowExecutionContext(
+            result = await workflow.execute(WorkflowExecutionContext(
                 False, date(2026, 9, 22), False, logger, frame,
             ))
-            assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
+            assert result.execution_status.status is ExecutionStatus.SUCCESS
             assert not frame.has("resource")
         assert opened[0].closed
         assert (path / "result.txt").read_text(encoding="utf-8") == "hello from simulated-service"

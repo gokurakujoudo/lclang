@@ -18,10 +18,10 @@ runs for a particular input.
 
 <!-- lclang-doc-exec -->
 ```python
-import lclang
+from lclang import parse_expression
 from lclang.runtime import analyze_dependencies
 
-node = lclang.parse_expression(
+node = parse_expression(
     "cached if enabled else compute(input_value)"
 )
 references = analyze_dependencies(node)
@@ -51,10 +51,10 @@ reported as external requirements.
 
 <!-- lclang-doc-exec -->
 ```python
-import lclang
+from lclang import define_module
 from lclang.runtime import build_dependency_graph, topological_order
 
-module = lclang.define_module(
+module = define_module(
     "invoice",
     {
         "quantity": "2",
@@ -93,7 +93,7 @@ valid static possibility but is classified as inactive for this run.
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
 async def main() -> None:
@@ -104,11 +104,11 @@ async def main() -> None:
         calls += 1
         return 99
 
-    module = lclang.define_module(
+    module = define_module(
         "choice",
         {"result": "cached if enabled else remote()"},
     )
-    async with lclang.define_frame(
+    async with define_frame(
         module,
         preset={"cached": 42, "enabled": True, "remote": remote},
     ) as frame:

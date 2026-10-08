@@ -131,18 +131,30 @@ all other values are literals.
 ```python
 from pathlib import Path
 
-from lclang.config import evaluate_config, load_config
+from lclang.config import load_config
 
 
 async def read_result() -> object:
     config = await load_config(Path("settings.lclcfg"))
-    return await evaluate_config(config, "result")
+    async with config.to_frame() as frame:
+        return await frame.get("result")
 ```
 
 `Config.definitions` exposes final declarations, `Config.history` exposes
-provenance, `Config.to_module()` creates an immutable Module, and
-`Config.frame_factory()` creates reusable independent-Frame policy. Callers own
-Frames they create and should use them as async context managers;
+provenance, and `Config.to_frame(*, preset=None)` creates a fresh canonical
+Frame for direct execution. It is exactly equivalent to
+`define_frame(config.to_module(), preset=preset)`: creation is synchronous and
+lazy, each call owns independent snapshots, and the optional preset is a
+dictionary of host inputs or `None`. Configuration definitions take precedence
+over preset inputs. Source spans, sticky masking, builtin lookup, and validation
+follow the same Module/Frame rules. Use
+`async with config.to_frame(preset={"environment": environment}) as frame:`
+to share named results within one closed scope.
+
+`Config.to_module()` creates an immutable Module for advanced composition, and
+`Config.frame_factory()` creates reusable independent-Frame policy with presets,
+parents, and evaluation limits. Callers own Frames they create and should use
+them as async context managers;
 `evaluate_config` owns and always closes its temporary Frame.
 
 `Config.masked_names` exposes the immutable exact-name mask policy accumulated

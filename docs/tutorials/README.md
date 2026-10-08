@@ -133,14 +133,14 @@ Name the result in a Module, then create a Frame with inputs for one run.
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
-TOTAL = lclang.define_module("total", {"result": "unit_price * quantity"})
+TOTAL = define_module("total", {"result": "unit_price * quantity"})
 
 
 async def main() -> None:
-    async with lclang.define_frame(
+    async with define_frame(
         TOTAL,
         preset={"unit_price": 6, "quantity": 4},
     ) as frame:
@@ -173,10 +173,10 @@ each run.
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
-SERVICE_POLICY = lclang.define_module(
+SERVICE_POLICY = define_module(
     "service-policy",
     {
         "summary": 'f"{base_url} (timeout={timeout}s)"',
@@ -188,7 +188,7 @@ SERVICE_POLICY = lclang.define_module(
 
 
 async def describe(service: str, environment: str) -> str:
-    async with lclang.define_frame(
+    async with define_frame(
         SERVICE_POLICY,
         preset={"service": service, "environment": environment},
     ) as frame:
@@ -239,10 +239,10 @@ branch calls it.
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
-PRICING = lclang.define_module(
+PRICING = define_module(
     "pricing",
     {
         "subtotal": "unit_price * quantity",
@@ -262,7 +262,7 @@ async def main() -> None:
         calls.append(currency)
         return {"EUR": 0.92}[currency]
 
-    async with lclang.define_frame(
+    async with define_frame(
         PRICING,
         preset={
             "unit_price": 10,
@@ -280,7 +280,7 @@ async def main() -> None:
         assert await euro_frame.get("label") == "EUR 27.60"
         assert calls == ["EUR"]  # The value is a cached snapshot.
 
-    async with lclang.define_frame(
+    async with define_frame(
         PRICING,
         preset={
             "unit_price": 10,
@@ -337,14 +337,12 @@ values.
 import asyncio
 from pathlib import Path
 
-import lclang
 from lclang.config import load_config
 
 
 async def main(config_path: Path) -> None:
     config = await load_config(config_path)
-    async with lclang.define_frame(
-        config.to_module(),
+    async with config.to_frame(
         preset={
             "unit_price": 25,
             "quantity": 4,
@@ -369,11 +367,10 @@ two-decimal value into the asserted `Ada: USD 90.00` message.
 This example uses no dynamic `using` target, so `load_config` does not evaluate
 its definitions. Dynamic targets can evaluate earlier definitions in temporary
 Frames to choose an included file. The immutable result keeps source provenance
-for diagnostics and can be reused. Conversion
-with `config.to_module()` preserves that source information. `define_frame`
-then supplies the same canonical lookup, caching, and lifecycle as a Module
-defined in Python. Request further names from the same Frame when they should
-share snapshots in one run.
+for diagnostics and can be reused. `config.to_frame(preset=...)` preserves that
+source information and supplies the same canonical lookup, caching, and lifecycle
+as `define_frame(config.to_module(), preset=...)`. Request further names from the
+same Frame when they should share snapshots in one run.
 
 Larger configurations can compose files with source-ordered `using`
 declarations. That belongs in the focused configuration tutorial; the important

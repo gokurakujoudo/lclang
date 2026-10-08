@@ -14,7 +14,7 @@ python -m pip install lclang
 Confirm the installed version and import path:
 
 ```console
-python -c "import lclang; print(lclang.__version__); print(lclang.__file__)"
+python -c "from lclang import __file__, __version__; print(__version__); print(__file__)"
 ```
 
 ## Install from a source checkout

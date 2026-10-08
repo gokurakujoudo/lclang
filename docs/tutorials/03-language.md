@@ -39,22 +39,22 @@ missing object, `??` supplies a fallback, and an f-string formats the result.
 import asyncio
 from types import SimpleNamespace
 
-import lclang
+from lclang import define_frame, define_module
 
 
-GREETING = lclang.define_module(
+GREETING = define_module(
     "greeting",
     {"message": 'f"Hello, {profile?.display_name ?? fallback}!"'},
 )
 
 
 async def main() -> None:
-    async with lclang.define_frame(
+    async with define_frame(
         GREETING,
         preset={"profile": SimpleNamespace(display_name="Ada"), "fallback": "friend"},
     ) as known:
         assert await known.get("message") == "Hello, Ada!"
-    async with lclang.define_frame(
+    async with define_frame(
         GREETING,
         preset={"profile": None, "fallback": "friend"},
     ) as anonymous:
@@ -83,10 +83,10 @@ as named fields.
 ```python
 import asyncio
 
-import lclang
+from lclang import LclRecord, define_frame, define_module
 
 
-SUMMARY = lclang.define_module(
+SUMMARY = define_module(
     "summary",
     {
         "result": (
@@ -103,9 +103,9 @@ SUMMARY = lclang.define_module(
 
 
 async def main() -> None:
-    async with lclang.define_frame(SUMMARY, preset={"values": [5, 2, 4, 3]}) as frame:
+    async with define_frame(SUMMARY, preset={"values": [5, 2, 4, 3]}) as frame:
         result = await frame.get("result")
-        assert isinstance(result, lclang.LclRecord)
+        assert isinstance(result, LclRecord)
         assert result.squares == [4, 16]
         assert result.total == 20
         assert await frame.get("record_total") == 20
@@ -135,18 +135,18 @@ Canonical printing is useful for formatters, diagnostics, and code review.
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module, parse_expression, to_source
 
-node = lclang.parse_expression("(base+tax)*quantity")
-source = lclang.to_source(node)
+node = parse_expression("(base+tax)*quantity")
+source = to_source(node)
 
 assert source == "(base + tax) * quantity"
 
-CALCULATION = lclang.define_module("calculation", {"total": source})
+CALCULATION = define_module("calculation", {"total": source})
 
 
 async def main() -> None:
-    async with lclang.define_frame(
+    async with define_frame(
         CALCULATION,
         preset={"base": 8, "tax": 2, "quantity": 3},
     ) as frame:

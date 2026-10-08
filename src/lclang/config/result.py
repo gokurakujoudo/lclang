@@ -83,6 +83,18 @@ class Config:
             masked_names=self.masked_names,
         )
 
+    def to_frame(self, *, preset: dict[str, object] | None = None) -> Frame:
+        """Create a fresh canonical Frame from this configuration.
+
+        :param preset: Optional host bindings copied below configuration definitions.
+        :returns: Caller-owned Frame with independent lazy result snapshots.
+        :raises TypeError: If *preset* is not a dictionary or its keys are not text.
+        :raises ValueError: If preset binding names or scoped conflicts are invalid.
+        """
+        from lclang.api import define_frame
+
+        return define_frame(self.to_module(), preset=preset)
+
     def frame_factory(
         self,
         *,

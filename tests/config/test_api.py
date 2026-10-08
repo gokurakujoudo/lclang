@@ -1,10 +1,13 @@
 """Integration tests for config-to-runtime conversion."""
 
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 
 import pytest
 
+from lclang import LCL_IMPORTS, LCL_RUNTIME, LclNameError
 from lclang.config import evaluate_config, load_config
 from lclang.runtime import DependencyKind, Frame, FrameDependencyGraph, build_dependency_graph
 from lclang.types import FrameId
@@ -137,3 +140,109 @@ async def test_config_frames_use_lhs_dates_and_static_hierarchy_analysis() -> No
             assert await frame.get("roundtrip") == "20240229"
         finally:
             await frame.close()
+
+
+@pytest.mark.asyncio
+async def test_config_to_frame_preserves_canonical_conversion_and_independent_snapshots(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The direct shortcut retains provenance, masks, precedence, and lazy state."""
+    name = "LCLANG_CONFIG_FRAME_PORT"
+    monkeypatch.setenv(name, "99")
+    calls = 0
+
+    def produce() -> int:
+        """Count only requested named computations."""
+        nonlocal calls
+        calls += 1
+        return calls
+
+    with TemporaryDirectory() as directory:
+        child = Path(directory) / "base.lclcfg"
+        path = Path(directory) / "settings.lclcfg"
+        child.write_text('base: 40\ntoken!: "config-secret"\n', encoding="utf-8")
+        path.write_text(
+            'using "base.lclcfg"\n'
+            f"result: base + int(env.{name}) + len(label)\n"
+            "owner: lhs()\ntick: produce()\n",
+            encoding="utf-8",
+        )
+        config = await load_config(path)
+        preset: dict[str, object] = {
+            "base": 0,
+            "token": "host-secret",
+            f"env.{name}": "1",
+            "label": "x",
+            "produce": produce,
+        }
+        frame = config.to_frame(preset=preset)
+        preset.update({f"env.{name}": "9", "label": "changed"})
+        assert calls == 0
+        assert frame.parent is not None and frame.parent.parent is LCL_RUNTIME
+        assert frame.module.definitions["base"] is config.definitions["base"].expression
+        async with frame:
+            assert await frame.get("result") == 42
+            assert await frame.get("tick") == 1
+            assert await frame.get("tick") == 1
+            assert await frame.get("token") == "config-secret"
+            assert frame.is_masked("token")
+            assert await frame.get("owner") == "owner"
+        assert frame.closed
+        async with config.to_frame(preset={"produce": produce}) as second:
+            assert await second.get("tick") == 2
+            assert second is not frame
+        async with config.to_frame() as plain:
+            assert plain.parent is LCL_IMPORTS
+            assert await plain.get("base") == 40
+        assert calls == 2
+        assert os.environ[name] == "99"
+
+
+@pytest.mark.asyncio
+async def test_config_to_frame_closes_owned_results_after_evaluation_failure() -> None:
+    """An async-with shortcut drains cached resources when a later lookup fails."""
+    events: list[str] = []
+
+    async def close_resource() -> None:
+        """Record successful asynchronous cleanup."""
+        events.append("closed")
+
+    resource = SimpleNamespace(aclose=close_resource)
+
+    def create_resource() -> SimpleNamespace:
+        """Return a caller-supplied resource only after its definition is requested."""
+        events.append("created")
+        return resource
+
+    with TemporaryDirectory() as directory:
+        path = Path(directory) / "resources.lclcfg"
+        path.write_text("resource: create_resource()\nfailure: unknown\n", encoding="utf-8")
+        config = await load_config(path)
+        frame = config.to_frame(preset={"create_resource": create_resource})
+        assert events == []
+        with pytest.raises(LclNameError, match="unknown variable: unknown") as failure:
+            async with frame:
+                assert await frame.get("resource") is resource
+                assert await frame.get("resource") is resource
+                await frame.get("failure")
+        assert failure.value.variable_stack == ("failure",)
+        assert frame.closed
+        assert events == ["created", "closed"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("preset", "error"),
+    (([], TypeError), ({1: 2}, TypeError), ({"": 2}, ValueError), ({"A": 1, "A.x": 2}, ValueError)),
+)
+async def test_config_to_frame_retains_preset_validation(
+    preset: object,
+    error: type[Exception],
+) -> None:
+    """Untyped callers receive the same dictionary and binding validation."""
+    with TemporaryDirectory() as directory:
+        path = Path(directory) / "settings.lclcfg"
+        path.write_text("result: 42\n", encoding="utf-8")
+        config = await load_config(path)
+        with pytest.raises(error):
+            config.to_frame(preset=preset)  # type: ignore[arg-type]

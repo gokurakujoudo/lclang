@@ -34,7 +34,13 @@ tasks rather than default factories.
 ```python
 from dataclasses import dataclass
 
-import lclang.workflow as wf
+from lclang.workflow import (
+    ExecutionStatusManager,
+    TaskContext,
+    define_task,
+    define_variable,
+    define_workflow,
+)
 
 
 @dataclass
@@ -47,27 +53,27 @@ class Outputs:
     value: int
 
 
-source = wf.define_variable[int]("source", "Number to double")
-result = wf.define_variable[int]("result")
+source = define_variable[int]("source", "Number to double")
+result = define_variable[int]("result")
 
 
 async def double(
-    context: wf.TaskContext,
+    context: TaskContext,
     args: Inputs,
-    status_mgr: wf.ExecutionStatusManager,
+    status_mgr: ExecutionStatusManager,
 ) -> Outputs:
     del context, status_mgr
     return Outputs(args.value * 2)
 
 
-task = wf.define_task(
+task = define_task(
     "double",
     "Double",
     task_action=double,
     args_mapping=Inputs(source.quote),
     outputs_mapping=Outputs(result.quote),
 )
-workflow = wf.define_workflow("Double workflow", task)
+workflow = define_workflow("Double workflow", task)
 
 assert workflow.to_lines() == [
     'Workflow "Double workflow"',
@@ -102,8 +108,18 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import date
 
-import lclang
-import lclang.workflow as wf
+from lclang import define_frame
+from lclang.workflow import (
+    ExecutionStatus,
+    ExecutionStatusManager,
+    TaskContext,
+    TaskID,
+    WorkflowExecutionContext,
+    define_context_task,
+    define_task,
+    define_variable,
+    define_workflow,
+)
 
 
 @dataclass
@@ -118,16 +134,16 @@ class WorkArgs:
 
 
 events: list[str] = []
-source = wf.define_variable[int]("source", "Starting value")
-session = wf.define_variable[int]("session")
-prepared = wf.define_variable[int]("prepared")
+source = define_variable[int]("source", "Starting value")
+session = define_variable[int]("session")
+prepared = define_variable[int]("prepared")
 
 
 @asynccontextmanager
 async def open_session(
-    context: wf.TaskContext,
+    context: TaskContext,
     args: Values,
-    status_mgr: wf.ExecutionStatusManager,
+    status_mgr: ExecutionStatusManager,
 ) -> AsyncIterator[Values]:
     del context, status_mgr
     events.append("open")
@@ -138,9 +154,9 @@ async def open_session(
 
 
 async def prepare(
-    context: wf.TaskContext,
+    context: TaskContext,
     args: WorkArgs,
-    status_mgr: wf.ExecutionStatusManager,
+    status_mgr: ExecutionStatusManager,
 ) -> Values:
     del context, status_mgr
     events.append("prepare")
@@ -148,29 +164,29 @@ async def prepare(
 
 
 async def finish(
-    context: wf.TaskContext,
+    context: TaskContext,
     args: Values,
-    status_mgr: wf.ExecutionStatusManager,
+    status_mgr: ExecutionStatusManager,
 ) -> Values:
     del context, status_mgr
     events.append("finish")
     return Values(args.value + 1)
 
 
-resource = wf.define_context_task(
+resource = define_context_task(
     "session_scope",
     "Open session",
     open_session,
     Values(source.quote),
     Values(session.quote),
 )
-child = wf.define_task(
+child = define_task(
     "finish",
     "Finish",
     task_action=finish,
     args_mapping=Values(prepared.quote),
 )
-root = wf.define_task(
+root = define_task(
     "prepare",
     "Prepare",
     task_action=prepare,
@@ -179,13 +195,13 @@ root = wf.define_task(
     context_tasks=[resource],
     children=[child],
 )
-workflow = wf.define_workflow("Scoped work", root)
+workflow = define_workflow("Scoped work", root)
 
 
 async def main() -> None:
-    async with lclang.define_frame(preset={"source": 2}) as frame:
+    async with define_frame(preset={"source": 2}) as frame:
         result = await workflow.execute(
-            wf.WorkflowExecutionContext(
+            WorkflowExecutionContext(
                 is_dryrun=False,
                 as_of_date=date(2026, 8, 27),
                 verbose_mode=False,
@@ -195,9 +211,9 @@ async def main() -> None:
         )
         assert await frame.get("prepared") == 22
         assert frame.has("session") is False
-        assert result.task_args[wf.TaskID("finish")] == Values(22)
-        assert result.task_outputs[wf.TaskID("finish")] == Values(23)
-        assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
+        assert result.task_args[TaskID("finish")] == Values(22)
+        assert result.task_outputs[TaskID("finish")] == Values(23)
+        assert result.execution_status.status is ExecutionStatus.SUCCESS
 
 
 asyncio.run(main())

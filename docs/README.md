@@ -21,14 +21,14 @@ python -m pip install lclang
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
-TOTAL = lclang.define_module("total", {"result": "unit_price * quantity"})
+TOTAL = define_module("total", {"result": "unit_price * quantity"})
 
 
 async def main() -> None:
-    async with lclang.define_frame(
+    async with define_frame(
         TOTAL,
         preset={"unit_price": 6, "quantity": 4},
     ) as frame:

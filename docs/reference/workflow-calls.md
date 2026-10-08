@@ -34,8 +34,17 @@ import logging
 from dataclasses import dataclass
 from datetime import date
 
-import lclang
-import lclang.workflow as wf
+from lclang import define_frame
+from lclang.workflow import (
+    ExecutionStatus,
+    ExecutionStatusManager,
+    TaskContext,
+    TaskID,
+    WorkflowExecutionContext,
+    define_task,
+    define_variable,
+    define_workflow,
+)
 
 
 @dataclass
@@ -54,44 +63,44 @@ class Summary:
 
 
 async def increment(
-    context: wf.TaskContext, args: Item, status_mgr: wf.ExecutionStatusManager,
+    context: TaskContext, args: Item, status_mgr: ExecutionStatusManager,
 ) -> Item:
     return Item(args.value + 1)
 
 
-child = wf.define_workflow("Increment one item", wf.define_task(
+child = define_workflow("Increment one item", define_task(
     "increment", "Increment", task_action=increment,
-    args_mapping=Item(wf.define_variable[int]("source").quote),
-    outputs_mapping=Item(wf.define_variable[int]("target").quote),
+    args_mapping=Item(define_variable[int]("source").quote),
+    outputs_mapping=Item(define_variable[int]("target").quote),
 ))
 
 
 async def process_batch(
-    context: wf.TaskContext, args: Batch, status_mgr: wf.ExecutionStatusManager,
+    context: TaskContext, args: Batch, status_mgr: ExecutionStatusManager,
 ) -> Summary:
     total = 0
     for index, value in enumerate(args.values):
         async with child.execute_in_task(
             context, status_mgr, name=f"item-{index}", preset={"source": value},
         ) as result:
-            assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
+            assert result.execution_status.status is ExecutionStatus.SUCCESS
             total += await result.execution_frame.get("target")
         assert result.execution_frame.closed
-        assert result.task_outputs[wf.TaskID("increment")] == Item(value + 1)
+        assert result.task_outputs[TaskID("increment")] == Item(value + 1)
     return Summary(total)
 
 
 async def main() -> None:
-    workflow = wf.define_workflow("Batch", wf.define_task(
+    workflow = define_workflow("Batch", define_task(
         "batch", "Process batch", task_action=process_batch,
         args_mapping=Batch([1, 2, 3]),
-        outputs_mapping=Summary(wf.define_variable[int]("total").quote),
+        outputs_mapping=Summary(define_variable[int]("total").quote),
     ))
-    async with lclang.define_frame() as frame:
-        result = await workflow.execute(wf.WorkflowExecutionContext(
+    async with define_frame() as frame:
+        result = await workflow.execute(WorkflowExecutionContext(
             False, date(2026, 9, 23), False, logging.getLogger("batch-calls"), frame,
         ))
-        assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
+        assert result.execution_status.status is ExecutionStatus.SUCCESS
         assert await frame.get("total") == 9
         assert not frame.has("target")
         assert len(result.execution_status.sub_tasks[0].sub_tasks) == 3

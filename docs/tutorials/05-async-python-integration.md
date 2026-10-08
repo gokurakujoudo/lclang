@@ -20,10 +20,10 @@ whether to call it and how to use its result.
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
-PRICING = lclang.define_module(
+PRICING = define_module(
     "pricing",
     {
         "subtotal": "unit_price * quantity",
@@ -44,7 +44,7 @@ async def main() -> None:
         await asyncio.sleep(0)
         return {"EUR": 0.92, "GBP": 0.79}[currency]
 
-    async with lclang.define_frame(
+    async with define_frame(
         PRICING,
         preset={
             "unit_price": 20,
@@ -81,7 +81,7 @@ available, binds the entered value, evaluates the body, and awaits cleanup.
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
 class Session:
@@ -104,7 +104,7 @@ class Session:
 
 async def main() -> None:
     events: list[str] = []
-    module = lclang.define_module(
+    module = define_module(
         "inventory",
         {
             "total": (
@@ -112,7 +112,7 @@ async def main() -> None:
             ),
         },
     )
-    async with lclang.define_frame(
+    async with define_frame(
         module,
         preset={
             "open_session": lambda: Session(events),

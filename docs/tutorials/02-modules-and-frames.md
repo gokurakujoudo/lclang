@@ -48,10 +48,10 @@ follow only the names required to calculate it.
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
-INVOICE = lclang.define_module(
+INVOICE = define_module(
     "invoice",
     {
         "label": 'f"{customer}: {currency} {total:.2f}"',
@@ -64,7 +64,7 @@ INVOICE = lclang.define_module(
 
 
 async def price(customer: str, quantity: int) -> str:
-    async with lclang.define_frame(
+    async with define_frame(
         INVOICE,
         preset={
             "customer": customer,
@@ -109,17 +109,17 @@ from silently changing the meaning of a parent-owned policy.
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
-ENVIRONMENT = lclang.define_module(
+ENVIRONMENT = define_module(
     "environment",
     {
         "region": '"eu-west"',
         "domain": 'f"{region}.example.com"',
     },
 )
-SERVICE = lclang.define_module(
+SERVICE = define_module(
     "service",
     {
         "endpoint": 'f"https://{service_name}.{domain}/{version}"',
@@ -129,7 +129,7 @@ SERVICE = lclang.define_module(
 
 
 async def main() -> None:
-    async with lclang.define_frame(ENVIRONMENT) as environment:
+    async with define_frame(ENVIRONMENT) as environment:
         async with environment.derive(
             SERVICE,
             values={"service_name": "billing", "version": "v2"},
