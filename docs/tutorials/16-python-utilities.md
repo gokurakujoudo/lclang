@@ -159,6 +159,7 @@ from lclang.logger import LoggerHandlerConfig, use_logger, use_logger_handler
 async def main() -> None:
     with TemporaryDirectory(prefix="lclang-logger-tutorial-") as directory:
         config = LoggerHandlerConfig(
+            timezone="utc",
             console={"enabled": False},
             file={"worker": {"directory": directory}},
         )
@@ -170,6 +171,7 @@ async def main() -> None:
         text = paths[0].read_text(encoding="utf-8")
         assert text.startswith("log file: ")
         assert "[WORKER] processed 3 records" in text
+        assert text.splitlines()[1].split(" | ")[0].endswith("Z")
         assert runtime.metrics.records_written == 1
 
 
@@ -178,6 +180,8 @@ asyncio.run(main())
 
 The producer enqueues the record without file I/O. Scope exit drains it before
 returning, so reading the segment afterwards observes the completed message.
+The explicit `timezone="utc"` gives the log line a UTC timestamp ending in `Z`.
+Omitting it uses server local time with a numeric offset, including microseconds.
 The exclusive filename contains the process ID, UTC creation timestamp, and
 sequence. Closed segments keep that path permanently. Console output can run
 alongside any number of files. The [logger reference](../reference/logger.md)

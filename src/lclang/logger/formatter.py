@@ -1,10 +1,11 @@
-"""UTC formatting without mutating records shared with other handlers."""
+"""Configurable timestamp formatting without mutating shared records."""
 
 from __future__ import annotations
 
 import copy
 import logging
 from datetime import UTC, datetime
+from typing import Literal
 
 # Unitless LogRecord extras shared with wrappers and the CLI result/audit adapter.
 PREFIX_ATTRIBUTE = "lclang_prefix"
@@ -12,20 +13,29 @@ FILE_ONLY_ATTRIBUTE = "lclang_file_only"
 
 
 class RecordFormatter(logging.Formatter):
-    """Format a detached record with a first-line prefix and UTC timestamp."""
+    """Format a detached record with a first-line prefix and zoned timestamp."""
+
+    def __init__(self, fmt: str, *, timezone: Literal["local", "utc"] = "local") -> None:
+        """Attach the validated timestamp policy to the shared percent formatter.
+
+        :param fmt: Percent-style logging format.
+        :param timezone: Validated local or utc timestamp policy.
+        :raises ValueError: If the logging format is invalid.
+        """
+        super().__init__(fmt)
+        self.timezone = timezone
 
     def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
-        """Render the producer timestamp in UTC at microsecond precision.
+        """Render the producer timestamp with its event-time timezone offset.
 
         :param record: Original event record.
-        :param datefmt: Ignored stdlib customization; timestamps always use ISO UTC.
-        :returns: ISO timestamp ending in Z.
+        :param datefmt: Ignored stdlib customization; timestamps always use ISO format.
+        :returns: Microsecond timestamp with a local numeric offset or UTC Z suffix.
         """
-        return (
-            datetime.fromtimestamp(record.created, UTC)
-            .isoformat(timespec="microseconds")
-            .replace("+00:00", "Z")
-        )
+        timestamp = datetime.fromtimestamp(record.created, UTC)
+        if self.timezone == "local":
+            return timestamp.astimezone().isoformat(timespec="microseconds")
+        return timestamp.isoformat(timespec="microseconds").replace("+00:00", "Z")
 
     def format(self, record: logging.LogRecord) -> str:
         """Insert prefix while preserving the incoming message and arguments.

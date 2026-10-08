@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add `logger.timezone` (`"local"` or `"utc"`) across Python, Frame and CLI
+  configuration. Log lines now default to server local time with microseconds
+  and a numeric offset; select `"utc"` to retain the previous `Z` timestamps.
+  Verbose preserves this setting; UTC segment naming and rotation are unchanged.
+
 - Enable project-wide strict Pyright/Pylance checks and pinned Black formatting,
   with VS Code format-on-save and formatting verification in the local/CI gate.
 

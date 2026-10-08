@@ -47,7 +47,9 @@ through command execution, workflow resources, and Frame cleanup. Preparation
 errors go directly to stderr. Normal output drain completes before returning.
 Overlapping CLI entry invocations are rejected because root logging is global.
 All diagnostic console records use stderr; successful command results retain
-stdout. The shared format uses UTC microseconds, level, process, thread, source
+stdout. The shared format uses local time with microseconds and a numeric offset
+by default; `-o logger.timezone utc` selects UTC with a `Z` suffix. The timezone
+setting also applies under `--verbose`. Other fields include level, process, thread, source
 name, file/line, function, prefix and message. Each permanent file segment begins
 with its absolute path. Execution audit records contain the banner, exact
 redacted argv and lazy winning configuration without fixed initial positions.

@@ -327,6 +327,8 @@ Standalone applications use `LoggerHandlerConfig`, `use_logger_handler` and
 `use_logger` from `lclang.logger`, which also exports `Logger`, runtime, resolved
 configuration and metric types. `await resolve_logger_config(frame)` extracts
 `logger.*` from a Frame loaded from `.lclcfg`, without requiring CLI.
+Log lines default to server local time with a numeric offset; set
+`logger.timezone` to `"utc"` for UTC timestamps ending in `Z`.
 One background writer handles stderr and named
 file sinks, with independent UTC time/size rotation and permanent segment paths.
 `logger.file.default` supplies missing sink fields; explicit enabled settings

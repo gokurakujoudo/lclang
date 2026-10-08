@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from typing import Literal
 
 from lclang.logger.sink_config import ConsoleConfig, FileConfig, console_config, file_config
 from lclang.logger.validation import boolean, fields, freeze, level, mapping, names
@@ -15,7 +16,15 @@ DEFAULT_FORMAT = (
     "%(name)s | %(filename)s:%(lineno)d | %(funcName)s | %(message)s"
 )
 DEFAULT_TAKEOVER = ("uvicorn", "uvicorn.error", "uvicorn.access")
-CONFIG_FIELDS = {"level", "format", "console", "file", "takeover_loggers", "capture_warnings"}
+CONFIG_FIELDS = {
+    "level",
+    "format",
+    "console",
+    "file",
+    "takeover_loggers",
+    "capture_warnings",
+    "timezone",
+}
 
 
 def merge_fields(
@@ -42,11 +51,12 @@ class LoggerHandlerConfig:
     """Declare process-wide output without losing template inheritance.
 
     :param level: Global minimum severity; NOTSET admits all normal levels.
-    :param format: Shared percent-style format; UTC and prefix are formatter-owned.
+    :param format: Shared percent-style format; timestamps and prefix are formatter-owned.
     :param console: Borrowed console declaration, enabled on stderr by default.
     :param file: Named file declarations; default supplies absent fields only.
     :param takeover_loggers: Logger names whose handlers and levels are temporarily replaced.
     :param capture_warnings: Whether to redirect warnings during the scope.
+    :param timezone: Log timestamp policy, local with numeric offset or utc with Z.
     """
 
     level: int | str = logging.NOTSET
@@ -55,6 +65,7 @@ class LoggerHandlerConfig:
     file: Mapping[str, object] = field(default_factory=dict[str, object])
     takeover_loggers: tuple[str, ...] = DEFAULT_TAKEOVER
     capture_warnings: bool = False
+    timezone: Literal["local", "utc"] = "local"
 
     def __post_init__(self) -> None:
         """Freeze declaration containers and validate all effective sinks.
@@ -62,6 +73,10 @@ class LoggerHandlerConfig:
         :raises TypeError: If a format or declaration has an invalid type.
         :raises ValueError: If sink names or policies are invalid.
         """
+        if not isinstance(self.timezone, str):
+            raise TypeError("logger.timezone: expected text")
+        if self.timezone not in ("local", "utc"):
+            raise ValueError("logger.timezone: expected local or utc")
         if not isinstance(self.format, str):
             raise TypeError("logger.format: expected text")
         try:

@@ -50,7 +50,7 @@ class Dispatcher:
 
     def initialize(self) -> None:
         """Create all enabled sinks before producer admission begins."""
-        formatter = RecordFormatter(self.config.format)
+        formatter = RecordFormatter(self.config.format, timezone=self.config.timezone)
         console = self.config.resolved_console()
         if console.enabled:
             self.sinks.append(ConsoleSink(console, formatter))
