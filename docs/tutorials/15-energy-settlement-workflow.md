@@ -76,7 +76,7 @@ async def main() -> None:
         )
 
         config = await load_config(config_path)
-        frame = config.frame_factory().create()
+        frame = config.to_frame()
         try:
             assert await frame.get("paths.output_name") == "settlement.txt"
             assert await frame.get("tariff.unit_rate") == 0.18
@@ -126,8 +126,15 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TextIO
 
-import lclang.workflow as wf
 from lclang.cli import CliEntrance, CommandGroup
+from lclang.workflow import (
+    ExecutionStatusManager,
+    TaskContext,
+    define_context_task,
+    define_task,
+    define_variable,
+    define_workflow,
+)
 
 
 @dataclass
@@ -188,45 +195,45 @@ class ReportOutput:
     path: str
 
 
-meter_start = wf.define_variable[float](
+meter_start = define_variable[float](
     "meter.start", "Opening cumulative meter reading in kWh"
 )
-meter_end = wf.define_variable[float](
+meter_end = define_variable[float](
     "meter.end", "Closing cumulative meter reading in kWh"
 )
-unit_rate = wf.define_variable[float](
+unit_rate = define_variable[float](
     "tariff.unit_rate", "Contract energy price in USD per kWh"
 )
-tax_rate = wf.define_variable[float](
+tax_rate = define_variable[float](
     "tariff.tax_rate", "Settlement tax rate as a decimal"
 )
-customer_name = wf.define_variable[str](
+customer_name = define_variable[str](
     "customer.name", "Customer name printed on the settlement"
 )
-output_dir = wf.define_variable[str](
+output_dir = define_variable[str](
     "paths.output_dir", "Directory that receives the settlement file"
 )
-output_name = wf.define_variable[str](
+output_name = define_variable[str](
     "paths.output_name", "Settlement output filename"
 )
-account_token = wf.define_variable[str](
+account_token = define_variable[str](
     "secrets.account_token",
     "Writer credential required before report creation",
     is_masked=True,
 )
 
 # Intermediate variables are assigned before later tasks read them.
-usage = wf.define_variable[float]("usage")
-subtotal = wf.define_variable[float]("subtotal")
-tax = wf.define_variable[float]("tax")
-total = wf.define_variable[float]("total")
-report_stream = wf.define_variable[TextIO]("report_stream")
+usage = define_variable[float]("usage")
+subtotal = define_variable[float]("subtotal")
+tax = define_variable[float]("tax")
+total = define_variable[float]("total")
+report_stream = define_variable[TextIO]("report_stream")
 
 
 async def calculate_usage(
-    context: wf.TaskContext,
+    context: TaskContext,
     args: ReadingArgs,
-    status_mgr: wf.ExecutionStatusManager,
+    status_mgr: ExecutionStatusManager,
 ) -> NumberOutput:
     with status_mgr.add_step("subtract_readings", "Validate and subtract readings"):
         if args.end <= args.start:
@@ -239,9 +246,9 @@ async def calculate_usage(
 
 
 async def calculate_subtotal(
-    context: wf.TaskContext,
+    context: TaskContext,
     args: UsageArgs,
-    status_mgr: wf.ExecutionStatusManager,
+    status_mgr: ExecutionStatusManager,
 ) -> NumberOutput:
     with status_mgr.add_step("price_usage", "Multiply usage by contracted rate"):
         value = round(args.usage * args.unit_rate, 2)
@@ -250,9 +257,9 @@ async def calculate_subtotal(
 
 
 async def calculate_tax(
-    context: wf.TaskContext,
+    context: TaskContext,
     args: TaxArgs,
-    status_mgr: wf.ExecutionStatusManager,
+    status_mgr: ExecutionStatusManager,
 ) -> TaxOutput:
     with status_mgr.add_step("apply_tax", "Apply settlement tax"):
         tax_value = round(args.subtotal * args.tax_rate, 2)
@@ -265,9 +272,9 @@ async def calculate_tax(
 
 @asynccontextmanager
 async def open_report(
-    context: wf.TaskContext,
+    context: TaskContext,
     args: FileArgs,
-    status_mgr: wf.ExecutionStatusManager,
+    status_mgr: ExecutionStatusManager,
 ) -> AsyncIterator[FileOutput]:
     path = Path(args.output_dir) / args.output_name
     if context.is_dryrun:
@@ -289,9 +296,9 @@ async def open_report(
 
 
 async def write_report(
-    context: wf.TaskContext,
+    context: TaskContext,
     args: ReportArgs,
-    status_mgr: wf.ExecutionStatusManager,
+    status_mgr: ExecutionStatusManager,
 ) -> ReportOutput:
     with status_mgr.add_step("render_report", "Render the finance settlement"):
         if not args.account_token:
@@ -314,35 +321,35 @@ async def write_report(
     return ReportOutput(path=path)
 
 
-usage_task = wf.define_task(
+usage_task = define_task(
     "calculate_usage",
     "Calculate metered usage",
     task_action=calculate_usage,
     args_mapping=ReadingArgs(start=meter_start.quote, end=meter_end.quote),
     outputs_mapping=NumberOutput(value=usage.quote),
 )
-subtotal_task = wf.define_task(
+subtotal_task = define_task(
     "calculate_subtotal",
     "Price energy usage",
     task_action=calculate_subtotal,
     args_mapping=UsageArgs(usage=usage.quote, unit_rate=unit_rate.quote),
     outputs_mapping=NumberOutput(value=subtotal.quote),
 )
-tax_task = wf.define_task(
+tax_task = define_task(
     "calculate_tax",
     "Apply settlement tax",
     task_action=calculate_tax,
     args_mapping=TaxArgs(subtotal=subtotal.quote, tax_rate=tax_rate.quote),
     outputs_mapping=TaxOutput(tax=tax.quote, total=total.quote),
 )
-file_context = wf.define_context_task(
+file_context = define_context_task(
     "open_report",
     "Own the settlement output file",
     open_report,
     FileArgs(output_dir=output_dir.quote, output_name=output_name.quote),
     FileOutput(stream=report_stream.quote),
 )
-report_task = wf.define_task(
+report_task = define_task(
     "write_report",
     "Write finance settlement",
     task_action=write_report,
@@ -359,12 +366,12 @@ report_task = wf.define_task(
     ),
     context_tasks=[file_context],
 )
-root_task = wf.define_task(
+root_task = define_task(
     "settlement",
     "Settle one meter period",
     children=[usage_task, subtotal_task, tax_task, report_task],
 )
-workflow = wf.define_workflow("Energy settlement workflow", root_task)
+workflow = define_workflow("Energy settlement workflow", root_task)
 command = workflow.to_cli("settle", "Create one audited energy settlement")
 application = CliEntrance(
     command_group=CommandGroup(

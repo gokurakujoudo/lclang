@@ -21,7 +21,7 @@ one result for later reads.
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
 async def main() -> None:
@@ -34,11 +34,11 @@ async def main() -> None:
         await release.wait()
         return 40
 
-    module = lclang.define_module(
+    module = define_module(
         "quote",
         {"price": "load_price()", "total": "price * quantity"},
     )
-    async with lclang.define_frame(
+    async with define_frame(
         module,
         preset={"load_price": load_price, "quantity": 3},
     ) as frame:
@@ -71,11 +71,11 @@ as they were until explicitly recalculated.
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
 async def main() -> None:
-    module = lclang.define_module(
+    module = define_module(
         "invoice",
         {
             "subtotal": "unit_price * quantity",
@@ -83,7 +83,7 @@ async def main() -> None:
             "label": 'f"USD {total:.2f}"',
         },
     )
-    async with lclang.define_frame(
+    async with define_frame(
         module,
         preset={"unit_price": 10, "quantity": 3, "shipping": 5},
     ) as frame:

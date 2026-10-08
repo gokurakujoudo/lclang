@@ -73,10 +73,10 @@ the values owned by the application, and ask only for the outputs you need.
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
-ORDER = lclang.define_module(
+ORDER = define_module(
     "order",
     {
         "subtotal": "unit_price * quantity",
@@ -88,7 +88,7 @@ ORDER = lclang.define_module(
 
 
 async def main() -> None:
-    async with lclang.define_frame(
+    async with define_frame(
         ORDER,
         preset={"unit_price": 13, "quantity": 3},
     ) as frame:
@@ -116,14 +116,14 @@ For a single expression, give its result a name and use the same workflow:
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
-TOTAL = lclang.define_module("total", {"result": "unit_price * quantity"})
+TOTAL = define_module("total", {"result": "unit_price * quantity"})
 
 
 async def main() -> None:
-    async with lclang.define_frame(
+    async with define_frame(
         TOTAL,
         preset={"unit_price": 6, "quantity": 4},
     ) as frame:
@@ -244,16 +244,12 @@ is discarded before final runtime winners are built.
 ```python
 from pathlib import Path
 
-import lclang
 from lclang.config import load_config
 
 
 async def address_for(environment: str) -> str:
     config = await load_config(Path("settings.lclcfg"))
-    async with lclang.define_frame(
-        config.to_module(),
-        preset={"environment": environment},
-    ) as frame:
+    async with config.to_frame(preset={"environment": environment}) as frame:
         result = await frame.get("address")
         assert isinstance(result, str)
         return result
@@ -428,7 +424,7 @@ and scheduling policy.
 | --- | --- | --- |
 | One or more named expressions | `define_module()` and `async with define_frame()` | reuse the Module; close each Frame |
 | One unnamed expression in an existing context | `await frame.evaluate(source)` | Frame supplies lookup; caller owns the uncached result |
-| Definitions from a config file | `load_config()`, `config.to_module()`, and `define_frame()` | reuse the Module; close each Frame |
+| Definitions from a config file | `load_config()` and `config.to_frame()` | reuse the Config; close each Frame |
 | Many runs with the same policy | `FrameFactory` or `Config.frame_factory()` | each created Frame is caller-owned |
 | A typed multi-step operation | `define_workflow()` then `await workflow.execute()` | caller owns the shared execution Frame |
 | Syntax printing or analysis | `parse_expression()` and analysis APIs | no evaluation state is created |
@@ -458,7 +454,7 @@ clearer as a normal function than as configuration policy.
 4. Request only the output names the application needs.
 5. Treat cached values as snapshots and recalculate explicitly.
 6. Use caller-owned Frames as async context managers.
-7. Convert loaded configuration with `config.to_module()` and use the same
+7. Convert loaded configuration with `config.to_frame()` and use the same
    Frame lookup and lifecycle as definitions written in Python.
 8. Catch `LclError` at the application boundary and preserve its diagnostic
    context.

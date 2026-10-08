@@ -23,11 +23,11 @@ inferred automatically.
 ```python
 import asyncio
 
-import lclang
+from lclang import FrameProxy, define_frame, define_module
 
 
 async def main() -> None:
-    module = lclang.define_module(
+    module = define_module(
         "service",
         {
             "service.host": '"api.example.com"',
@@ -35,10 +35,10 @@ async def main() -> None:
             "service.url": 'f"https://{service.host}:{service.port}"',
         },
     )
-    async with lclang.define_frame(module) as frame:
+    async with define_frame(module) as frame:
         assert await frame.get("service.url") == "https://api.example.com:8443"
         service = await frame.get("service")
-        assert isinstance(service, lclang.FrameProxy)
+        assert isinstance(service, FrameProxy)
         assert await service.port == 8443
 
 
@@ -61,19 +61,19 @@ layout.
 ```python
 import asyncio
 
-import lclang
+from lclang import FRAME_PROXY, define_frame, define_module
 
 
 async def main() -> None:
-    module = lclang.define_module(
+    module = define_module(
         "optional-service",
         {
-            "service": lclang.FRAME_PROXY,
+            "service": FRAME_PROXY,
             "service.required": '"ready"',
             "summary": "service?.optional ?? service.required",
         },
     )
-    async with lclang.define_frame(module) as frame:
+    async with define_frame(module) as frame:
         assert await frame.get("summary") == "ready"
         assert await frame.evaluate("service?.optional ?? 'fallback'") == "fallback"
         assert await frame.evaluate("lhs()") == "<expr>"
@@ -96,7 +96,7 @@ therefore override one scoped leaf while another leaf falls back to its parent.
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
 async def main() -> None:
@@ -105,15 +105,15 @@ async def main() -> None:
     async def read_timeout() -> int:
         return timeout
 
-    parent = lclang.define_frame(
-        lclang.define_module(
+    parent = define_frame(
+        define_module(
             "defaults",
             {"service.timeout": "read_timeout()", "service.retries": "2"},
         ),
         preset={"read_timeout": read_timeout},
     )
     child = parent.derive(
-        lclang.define_module("production", {"service.retries": "4"})
+        define_module("production", {"service.retries": "4"})
     )
     try:
         service = await child.get("service")
@@ -146,7 +146,7 @@ Named dependencies still use ordinary Frame snapshots.
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
 async def main() -> None:
@@ -163,9 +163,9 @@ async def main() -> None:
         root_calls += 1
         return 1
 
-    module = lclang.define_module("calculation", {"scope.value": "produce()"})
+    module = define_module("calculation", {"scope.value": "produce()"})
     preset = {"produce": produce, "tick": tick}
-    async with lclang.define_frame(module, preset=preset) as frame:
+    async with define_frame(module, preset=preset) as frame:
         assert await frame.evaluate("scope.value * 2 + tick()") == 43
         assert await frame.evaluate("scope.value * 2 + tick()") == 43
         assert named_calls == 1
@@ -278,7 +278,14 @@ lifecycle errors. An uncached returned resource belongs to the caller.
 ```python
 import asyncio
 
-import lclang
+from lclang import (
+    LclClosedFrameError,
+    LclEvaluationError,
+    LclNameError,
+    LclSyntaxError,
+    define_frame,
+    define_module,
+)
 
 
 class Resource:
@@ -299,24 +306,24 @@ async def expect(error_type: type[Exception], operation: object) -> None:
 
 async def main() -> None:
     try:
-        lclang.define_module("conflict", {"service": "1", "service.port": "2"})
+        define_module("conflict", {"service": "1", "service.port": "2"})
     except ValueError:
         pass
     else:
         raise AssertionError("a real prefix must conflict with its descendant")
 
     resource = Resource()
-    frame = lclang.define_frame(
-        lclang.define_module("errors", {"broken": "value()"}),
+    frame = define_frame(
+        define_module("errors", {"broken": "value()"}),
         preset={"value": 42, "make": lambda: resource},
     )
-    await expect(lclang.LclSyntaxError, frame.evaluate("1 +"))
-    await expect(lclang.LclNameError, frame.evaluate("missing"))
-    await expect(lclang.LclEvaluationError, frame.evaluate("broken"))
+    await expect(LclSyntaxError, frame.evaluate("1 +"))
+    await expect(LclNameError, frame.evaluate("missing"))
+    await expect(LclEvaluationError, frame.evaluate("broken"))
     assert await frame.evaluate("make()") is resource
     await frame.close()
     assert resource.closed is False
-    await expect(lclang.LclClosedFrameError, frame.evaluate("1"))
+    await expect(LclClosedFrameError, frame.evaluate("1"))
     await resource.aclose()
     assert resource.closed is True
 
@@ -341,7 +348,7 @@ detached view when it needs one.
 import asyncio
 from dataclasses import dataclass
 
-import lclang
+from lclang import define_frame, define_module
 
 
 @dataclass
@@ -352,8 +359,8 @@ class Endpoint:
 
 
 async def main() -> None:
-    parent = lclang.define_frame(
-        lclang.define_module(
+    parent = define_frame(
+        define_module(
             "endpoint-defaults",
             {
                 "endpoints.blue.name": '"blue"',
@@ -365,7 +372,7 @@ async def main() -> None:
         )
     )
     child = parent.derive(
-        lclang.define_module(
+        define_module(
             "deployment-overrides",
             {
                 "endpoints.green.host": '"new-green.example.com"',

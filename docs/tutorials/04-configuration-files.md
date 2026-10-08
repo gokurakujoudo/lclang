@@ -12,7 +12,7 @@ Those evaluations run in temporary Frames and do not seed final runtime caches.
 - how an f-string `using` target selects a file from prior values or `env`;
 - how later definitions win while complete history remains available;
 - how to group and comment configuration definitions for readers;
-- when to use `evaluate_config` or a reusable Frame factory.
+- how to create a fresh Frame directly or share a reusable Frame factory.
 
 ## Parse in-memory text
 
@@ -72,7 +72,8 @@ placeholder, but it adds no value to the usual file layout above.
 
 The next example writes an isolated two-file configuration. `using` inserts the
 shared definitions at its exact position. The later `discount_rate` overrides
-the shared value without losing its history.
+the shared value without losing its history. After loading, `config.to_frame`
+creates the context for named results.
 
 <!-- lclang-doc-exec -->
 ```python
@@ -80,7 +81,7 @@ import asyncio
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from lclang.config import evaluate_config, load_config
+from lclang.config import load_config
 
 
 async def main() -> None:
@@ -116,11 +117,11 @@ async def main() -> None:
             "label",
         )
         assert len(config.history["discount_rate"]) == 2
-        assert await evaluate_config(
-            config,
-            "label",
-            values={"unit_price": 25, "quantity": 4},
-        ) == "USD 98.00"
+        async with config.to_frame(
+            preset={"unit_price": 25, "quantity": 4},
+        ) as frame:
+            assert await frame.get("label") == "USD 98.00"
+            assert await frame.get("total") == 98.0
 
 
 asyncio.run(main())
@@ -130,6 +131,14 @@ Expansion first contributes the shared `0.05` rate, shipping, and currency.
 The root's later `0.10` rate becomes the winner while both occurrences remain
 in history. With a `100` subtotal, the winning rate leaves `90`; adding `8`
 shipping gives `98`, which `label` formats as `USD 98.00`.
+
+`config.to_frame(preset=...)` synchronously returns a fresh canonical Frame,
+equivalent to `define_frame(config.to_module(), preset=...)`. Its optional
+keyword-only `preset` accepts a dictionary or `None`. Creation does not evaluate
+the definitions: `get("label")` follows its dependencies lazily, and the second
+lookup reuses the resulting `total` snapshot. The Frame retains the loaded
+definitions' source origins and masking policy. Use `async with` so leaving the
+block closes the Frame and its owned resources.
 
 Expansion is recursive and deterministic. Relative targets resolve from the
 importing file, not the process working directory. Direct and indirect cycles
@@ -147,7 +156,7 @@ import asyncio
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from lclang.config import evaluate_config, load_config
+from lclang.config import load_config
 
 
 async def main() -> None:
@@ -173,9 +182,10 @@ async def main() -> None:
         )
 
         config = await load_config(application)
-        assert await evaluate_config(config, "summary") == (
-            "production: https://api.example.com"
-        )
+        async with config.to_frame() as frame:
+            assert await frame.get("summary") == (
+                "production: https://api.example.com"
+            )
 
 
 asyncio.run(main())
@@ -204,7 +214,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from lclang.config import evaluate_config, load_config
+from lclang.config import load_config
 
 
 async def main() -> None:
@@ -224,20 +234,23 @@ async def main() -> None:
         with patch.dict(os.environ, {}, clear=False):
             os.environ.pop("LCLANG_TUTORIAL_PROFILE", None)
             local = await load_config(application)
-            assert await evaluate_config(local, "selected") == "local"
+            async with local.to_frame() as frame:
+                assert await frame.get("selected") == "local"
 
             with patch.dict(
                 os.environ,
                 {"LCLANG_TUTORIAL_PROFILE": "blue"},
             ):
                 blue = await load_config(application)
-                assert await evaluate_config(blue, "selected") == "blue"
+                async with blue.to_frame() as frame:
+                    assert await frame.get("selected") == "blue"
 
                 green = await load_config(
                     application,
                     overrides={"env.LCLANG_TUTORIAL_PROFILE": "green"},
                 )
-                assert await evaluate_config(green, "selected") == "green"
+                async with green.to_frame() as frame:
+                    assert await frame.get("selected") == "green"
                 assert os.environ["LCLANG_TUTORIAL_PROFILE"] == "blue"
 
 
@@ -256,8 +269,9 @@ in `.lclcfg`.
 
 ## Share one loaded policy across several runs
 
-Use `evaluate_config` for one result. Use `config.frame_factory()` when several
-lookups in one run should share snapshots or when many runs share the same
+Use `config.to_frame()` for one or several named results in a run. Every call
+creates independent snapshots. Use `config.frame_factory()` when the Frame
+construction policy itself should be reusable across many runs of the same
 loaded configuration.
 
 <!-- lclang-doc-exec -->

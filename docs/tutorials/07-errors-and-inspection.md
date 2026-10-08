@@ -20,13 +20,19 @@ definition route and the original host exception as their cause.
 ```python
 import asyncio
 
-import lclang
+from lclang import (
+    LclEvaluationError,
+    LclSyntaxError,
+    define_frame,
+    define_module,
+    parse_expression,
+)
 
 
 async def main() -> None:
     try:
-        lclang.parse_expression("1 +")
-    except lclang.LclSyntaxError as error:
+        parse_expression("1 +")
+    except LclSyntaxError as error:
         assert error.span is not None
         assert "expected an expression" in str(error)
     else:
@@ -35,17 +41,17 @@ async def main() -> None:
     def divide(left: int, right: int) -> float:
         return left / right
 
-    module = lclang.define_module(
+    module = define_module(
         "calculation",
         {"ratio": "divide(total, count)", "result": "ratio * 100"},
     )
-    async with lclang.define_frame(
+    async with define_frame(
         module,
         preset={"divide": divide, "total": 5, "count": 0},
     ) as frame:
         try:
             await frame.get("result")
-        except lclang.LclEvaluationError as error:
+        except LclEvaluationError as error:
             assert error.variable_stack == ("result", "ratio")
             assert isinstance(error.__cause__, ZeroDivisionError)
         else:
@@ -75,18 +81,18 @@ awaits, caches, or publishes dynamic traces.
 ```python
 import asyncio
 
-import lclang
+from lclang import define_frame, define_module
 
 
 async def main() -> None:
-    module = lclang.define_module(
+    module = define_module(
         "invoice",
         {
             "subtotal": "unit_price * quantity",
             "total": "subtotal + shipping",
         },
     )
-    async with lclang.define_frame(
+    async with define_frame(
         module,
         preset={"unit_price": 8, "quantity": 4, "shipping": 3},
     ) as frame:

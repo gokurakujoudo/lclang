@@ -20,10 +20,10 @@ bindings; `create(values=...)` adds or replaces per-run inputs.
 ```python
 import asyncio
 
-import lclang
+from lclang import EvaluationLimits, FrameFactory, Preset, define_module
 
 
-ORDER = lclang.define_module(
+ORDER = define_module(
     "order",
     {
         "subtotal": "unit_price * quantity",
@@ -32,14 +32,14 @@ ORDER = lclang.define_module(
         "result": 'f"{region}/{currency} {total:.2f}"',
     },
 )
-DEFAULTS = lclang.Preset(
+DEFAULTS = Preset(
     "order-defaults",
     {"discount_rate": 0.10, "region": "global", "currency": "USD"},
 )
-FACTORY = lclang.FrameFactory(
+FACTORY = FrameFactory(
     ORDER,
     DEFAULTS,
-    lclang.EvaluationLimits(
+    EvaluationLimits(
         max_depth=100,
         max_steps=10_000,
         max_collection_items=1_000,
@@ -90,7 +90,7 @@ import asyncio
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-import lclang
+from lclang import EvaluationLimits, LclNameError
 from lclang.config import load_config
 
 
@@ -105,7 +105,7 @@ async def main() -> None:
         )
         config = await load_config(path)
         factory = config.frame_factory(
-            limits=lclang.EvaluationLimits(max_collection_items=100)
+            limits=EvaluationLimits(max_collection_items=100)
         )
 
         scenarios = [
@@ -122,7 +122,7 @@ async def main() -> None:
         ) as missing:
             try:
                 await missing.get("decision")
-            except lclang.LclNameError as error:
+            except LclNameError as error:
                 assert "hard_limit" in str(error)
             else:
                 raise AssertionError("missing host input was accepted")

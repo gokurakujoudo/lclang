@@ -49,7 +49,7 @@ runtime dependencies.
 - Position-sensitive f-string `using` targets evaluated from prior definitions,
   call or CLI overrides, and canonical builtins in disposable Frames.
 - Direct conversion from loaded configuration to runtime Module and Frame
-  values.
+  values, including the caller-owned `Config.to_frame(preset=...)` shortcut.
 
 ## Dependencies and inspection
 

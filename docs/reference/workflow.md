@@ -74,11 +74,11 @@ recursive conversion is specific to workflow mappings.
 Create variables through the subscribed factory:
 
 ```python
-import lclang.workflow as wf
+from lclang.workflow import define_variable
 
-source = wf.define_variable[int]("source", "Required source value")
-secret = wf.define_variable[str]("service.token", "Service token", is_masked=True)
-result = wf.define_variable[float]("result")
+source = define_variable[int]("source", "Required source value")
+secret = define_variable[str]("service.token", "Service token", is_masked=True)
+result = define_variable[float]("result")
 ```
 
 The subscription accepts Python type annotations, including `list[str]`,
@@ -116,8 +116,17 @@ import logging
 from dataclasses import dataclass
 from datetime import date
 
-import lclang
-import lclang.workflow as wf
+from lclang import define_frame
+from lclang.workflow import (
+    ExecutionStatus,
+    ExecutionStatusManager,
+    TaskContext,
+    TaskID,
+    WorkflowExecutionContext,
+    define_task,
+    define_variable,
+    define_workflow,
+)
 
 
 @dataclass
@@ -126,29 +135,29 @@ class Batch[T]:
 
 
 async def copy_batch(
-    context: wf.TaskContext,
+    context: TaskContext,
     args: Batch[str],
-    status_mgr: wf.ExecutionStatusManager,
+    status_mgr: ExecutionStatusManager,
 ) -> Batch[str]:
     return args
 
 
 async def main() -> None:
-    source = wf.define_variable[Batch[str]]("source")
-    target = wf.define_variable[Batch[str]]("target")
-    task = wf.define_task(
+    source = define_variable[Batch[str]]("source")
+    target = define_variable[Batch[str]]("target")
+    task = define_task(
         "copy", "Copy batch", task_action=copy_batch,
         args_mapping=source.quote, outputs_mapping=target.quote,
     )
-    workflow = wf.define_workflow("Batch copy", task)
-    async with lclang.define_frame(
+    workflow = define_workflow("Batch copy", task)
+    async with define_frame(
         preset={"source.items": ["a", "b"], "target.items": []},
     ) as frame:
-        result = await workflow.execute(wf.WorkflowExecutionContext(
+        result = await workflow.execute(WorkflowExecutionContext(
             False, date(2026, 9, 21), False, logging.getLogger("batch-example"), frame,
         ))
-        assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
-        assert result.task_args[wf.TaskID("copy")] == Batch(["a", "b"])
+        assert result.execution_status.status is ExecutionStatus.SUCCESS
+        assert result.task_args[TaskID("copy")] == Batch(["a", "b"])
         assert await frame.get("target.items") == ["a", "b"]
 
 
@@ -182,8 +191,17 @@ import logging
 from dataclasses import dataclass
 from datetime import date
 
-import lclang
-import lclang.workflow as wf
+from lclang import define_frame
+from lclang.workflow import (
+    ExecutionStatus,
+    ExecutionStatusManager,
+    TaskContext,
+    TaskID,
+    WorkflowExecutionContext,
+    define_task,
+    define_variable,
+    define_workflow,
+)
 
 
 @dataclass
@@ -197,29 +215,29 @@ class ConvertArgs:
 
 
 async def convert(
-    context: wf.TaskContext,
+    context: TaskContext,
     args: ConvertArgs,
-    status_mgr: wf.ExecutionStatusManager,
+    status_mgr: ExecutionStatusManager,
 ) -> ConvertArgs:
     return args
 
 
 async def main() -> None:
-    source = wf.define_variable[FormatOptions]("source")
-    target = wf.define_variable[str]("target.encoding")
-    task = wf.define_task(
+    source = define_variable[FormatOptions]("source")
+    target = define_variable[str]("target.encoding")
+    task = define_task(
         "convert", "Resolve grouped options", task_action=convert,
         args_mapping=ConvertArgs(FormatOptions(source.field("encoding", str).quote)),
         outputs_mapping=ConvertArgs(FormatOptions(target.quote)),
     )
-    workflow = wf.define_workflow("Grouped conversion", task)
-    async with lclang.define_frame(preset={"source.encoding": "utf-8"}) as frame:
-        result = await workflow.execute(wf.WorkflowExecutionContext(
+    workflow = define_workflow("Grouped conversion", task)
+    async with define_frame(preset={"source.encoding": "utf-8"}) as frame:
+        result = await workflow.execute(WorkflowExecutionContext(
             False, date(2026, 9, 22), False, logging.getLogger("grouped"), frame,
         ))
-        assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
+        assert result.execution_status.status is ExecutionStatus.SUCCESS
         assert await frame.get("target.encoding") == "utf-8"
-        assert result.task_args[wf.TaskID("convert")] == ConvertArgs(FormatOptions("utf-8"))
+        assert result.task_args[TaskID("convert")] == ConvertArgs(FormatOptions("utf-8"))
 
 
 asyncio.run(main())
@@ -236,10 +254,13 @@ output remains an assigned value.
 An action has the exact async form:
 
 ```python
+from lclang.workflow import ExecutionStatusManager, TaskContext
+
+
 async def action(
-    context: wf.TaskContext,
+    context: TaskContext,
     args: Args,
-    status_mgr: wf.ExecutionStatusManager,
+    status_mgr: ExecutionStatusManager,
 ) -> Outputs:
     ...
 ```
@@ -299,8 +320,15 @@ import logging
 from dataclasses import dataclass
 from datetime import date
 
-import lclang
-import lclang.workflow as wf
+from lclang import define_frame
+from lclang.workflow import (
+    ExecutionStatus,
+    ExecutionStatusManager,
+    TaskContext,
+    WorkflowExecutionContext,
+    define_task,
+    define_workflow,
+)
 
 
 @dataclass
@@ -309,9 +337,9 @@ class Options:
 
 
 async def choose(
-    context: wf.TaskContext,
+    context: TaskContext,
     args: Options,
-    status_mgr: wf.ExecutionStatusManager,
+    status_mgr: ExecutionStatusManager,
 ) -> Options:
     if not args.run_children:
         context.skip_children()
@@ -319,20 +347,20 @@ async def choose(
 
 
 async def main() -> None:
-    child = wf.define_task(
+    child = define_task(
         "child", "Optional child", task_action=choose, args_mapping=Options(True),
     )
-    root = wf.define_task(
+    root = define_task(
         "root", "Choose children", task_action=choose,
         args_mapping=Options(False), children=[child],
     )
-    async with lclang.define_frame() as frame:
-        result = await wf.define_workflow("Conditional work", root).execute(
-            wf.WorkflowExecutionContext(
+    async with define_frame() as frame:
+        result = await define_workflow("Conditional work", root).execute(
+            WorkflowExecutionContext(
                 False, date(2026, 9, 21), False, logging.getLogger("skip-example"), frame,
             )
         )
-    assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
+    assert result.execution_status.status is ExecutionStatus.SUCCESS
     assert result.execution_status.sub_tasks[0].sub_tasks == []
     assert set(result.task_args) == {"root"}
     assert result.task_outputs == {"root": Options(False)}

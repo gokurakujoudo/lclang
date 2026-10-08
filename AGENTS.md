@@ -161,6 +161,10 @@ Trusted Publishing setup, and supported manual recovery procedures.
 
 ## Tutorial maintenance
 
+- User-facing Python examples use explicit `from lclang import ...` or
+  `from lclang.<submodule> import ...` statements for the symbols they need,
+  rather than module imports and qualified calls. For direct loaded-config
+  execution, prefer `async with config.to_frame(preset=...) as frame:`.
 - `docs/tutorials/README.md` is the human-oriented introduction and the single
   ordered table of contents for the series. Keep it useful on its own, keep
   every published chapter linked, and never list planned chapters as available.
