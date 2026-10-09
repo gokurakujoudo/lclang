@@ -46,6 +46,8 @@ runtime dependencies.
   multiline expressions, source origins, and sticky masked-key declarations.
 - Asynchronous in-memory and file loading, source-ordered `using` expansion,
   deterministic precedence, caching, concurrency sharing, and cycle detection.
+- Optional `using?` expansion for missing literal or f-string targets, while
+  preserving errors in existing files and retrying absent sources on reuse.
 - Position-sensitive f-string `using` targets evaluated from prior definitions,
   call or CLI overrides, and canonical builtins in disposable Frames.
 - Direct conversion from loaded configuration to runtime Module and Frame

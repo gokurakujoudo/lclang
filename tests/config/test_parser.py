@@ -65,6 +65,64 @@ def test_using_accepts_only_literal_and_semantic_fstring_targets() -> None:
             parse_config(text)
 
 
+@pytest.mark.parametrize("keyword", ["using", "using?"])
+def test_using_variants_preserve_targets_order_and_positions(keyword: str) -> None:
+    """Optional and required spellings share literal and dynamic target syntax."""
+    document = parse_config(
+        "using_value: 1\n"
+        f'  {keyword} "parts/common.lclcfg" # shared\n'
+        f'\t{keyword}\tf"parts/{{name}}.lclcfg" # selected\n'
+    )
+    definition, literal, dynamic = document.declarations
+    assert isinstance(definition, ConfigDefinition)
+    assert str(definition.name) == "using_value"
+    assert isinstance(literal, ConfigUsing)
+    assert literal.target == "parts/common.lclcfg"
+    assert literal.ordinal == 1
+    assert literal.span.start.line == 2
+    assert literal.optional is (keyword == "using?")
+    assert isinstance(dynamic, ConfigUsing)
+    assert isinstance(dynamic.target, LclJoinedString)
+    assert dynamic.ordinal == 2
+    assert dynamic.optional is literal.optional
+    assert dynamic.target.span.start.line == 3
+    assert dynamic.target.span.start.column == len(keyword) + 3
+
+
+@pytest.mark.parametrize(
+    "target",
+    ["", "name", "1", '""', '"bad.txt"', '"a.lclcfg" + "b.lclcfg"'],
+)
+def test_optional_using_rejects_invalid_targets(target: str) -> None:
+    """Optional absence never relaxes the declaration's target grammar."""
+    with pytest.raises(LclConfigSyntaxError):
+        parse_config(f"  using? {target}\n")
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        'using ? "a.lclcfg"\n',
+        'using?"a.lclcfg"\n',
+        'using?? "a.lclcfg"\n',
+        'using? "a.lclcfg" \\\nvalue: 1\n',
+    ],
+)
+def test_optional_using_requires_attached_marker_and_one_line(source: str) -> None:
+    """The marker belongs to the declaration keyword, which cannot continue."""
+    with pytest.raises(LclConfigSyntaxError):
+        parse_config(source)
+
+
+def test_optional_using_invalid_literal_reports_target_position() -> None:
+    """The added marker does not shift a target's reported source coordinates."""
+    with pytest.raises(LclConfigSyntaxError, match="non-empty") as caught:
+        parse_config('value: 1\n  using? ""\n')
+    assert caught.value.span is not None
+    assert caught.value.span.start.line == 2
+    assert caught.value.span.start.column == 10
+
+
 def test_file_magic_becomes_eager_constants_with_physical_origin(tmp_path: Path) -> None:
     """Magic identifiers disappear from the runtime AST while retaining their spans."""
     path = (tmp_path / "magic.lclcfg").resolve()

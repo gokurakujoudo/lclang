@@ -51,7 +51,7 @@ def parse_using(
     ordinal: int,
     origin: SourceOrigin,
 ) -> ConfigUsing:
-    """Parse one literal or semantic f-string using declaration.
+    """Parse one required or optional literal or f-string using declaration.
 
     :param line: Logical declaration text and span.
     :param leading: Horizontal indentation before `using`.
@@ -65,8 +65,10 @@ def parse_using(
     """
     if line.continued:
         raise LclConfigSyntaxError("using declaration cannot continue", span=line.span)
-    target_text = line.text[leading + 5 :]
-    start = advance_position(line.start, line.text[: leading + 5])
+    optional = line.text[leading:].startswith("using?")
+    keyword_end = leading + (6 if optional else 5)
+    target_text = line.text[keyword_end:]
+    start = advance_position(line.start, line.text[:keyword_end])
     expression = parse_config_expression(target_text, origin=origin, start=start)
     if isinstance(expression, LclConstant) and isinstance(expression.value, str):
         target = expression.value
@@ -74,9 +76,9 @@ def parse_using(
             raise LclConfigSyntaxError("using target must be non-empty text", span=expression.span)
         if Path(target).suffix != ".lclcfg":
             raise LclConfigSyntaxError("using target must end in .lclcfg", span=expression.span)
-        return ConfigUsing(target, line.span, ordinal)
+        return ConfigUsing(target, line.span, ordinal, optional)
     if isinstance(expression, LclJoinedString):
-        return ConfigUsing(expression, line.span, ordinal)
+        return ConfigUsing(expression, line.span, ordinal, optional)
     raise LclConfigSyntaxError(
         "using requires exactly one string literal or f-string",
         span=expression.span,

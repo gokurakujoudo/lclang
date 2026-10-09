@@ -25,6 +25,10 @@ def test_model_values_reject_invalid_scalar_and_origin_state() -> None:
         ConfigUsing(expression, span, 0)  # type: ignore[arg-type]
     with pytest.raises(ValueError):
         ConfigUsing("child.lclcfg", span, -1)
+    assert ConfigUsing("child.lclcfg", span, 0).optional is False
+    assert ConfigUsing("child.lclcfg", span, 0, True).optional is True
+    with pytest.raises(TypeError, match="optional"):
+        ConfigUsing("child.lclcfg", span, 0, 1)  # type: ignore[arg-type]
     with pytest.raises(ValueError):
         ConfigDocument(span.origin, 0, ())
     declaration = ConfigDefinition(VarName("value"), expression, span, 1)

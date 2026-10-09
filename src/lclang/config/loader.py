@@ -188,6 +188,7 @@ class ConfigLoader:
         :returns: ``None`` after appending chronological definitions.
         :raises LclConfigCycleError: If the identity is already active.
         :raises LclConfigLimitError: If depth exceeds policy.
+        :raises LclConfigError: If a required source is missing or any source is invalid.
 
         .. note::
            A cached document is still traversed for each source-order placement.
@@ -207,5 +208,10 @@ class ConfigLoader:
             assert isinstance(declaration, ConfigUsing)
             target_text = await evaluate_using_target(declaration, output, overrides)
             target = resolve_using_path(target_text, loaded.source)
-            child = await self.source_for(target, loaded.source)
+            try:
+                child = await self.source_for(target, loaded.source)
+            except LclConfigUsingError as error:
+                if declaration.optional and isinstance(error.__cause__, FileNotFoundError):
+                    continue
+                raise
             await self.expand(child, active, depth + 1, output, overrides)

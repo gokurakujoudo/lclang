@@ -236,6 +236,8 @@ The application supplies `environment`; the file owns the stable relationship
 between it and the final address. Definitions can refer forward or backward.
 `using` declarations expand other `.lclcfg` files in source order, later
 definitions win, and complete history remains available for diagnostics.
+`using?` skips a directly missing optional file while preserving errors in
+existing files. Both declarations share the same target and expansion rules.
 Targets may be literal paths or position-sensitive LCL f-strings. A dynamic
 target sees definitions already expanded above it, explicit loader or CLI
 overrides, and canonical builtins such as `env`; its temporary evaluation cache

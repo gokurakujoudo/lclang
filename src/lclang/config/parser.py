@@ -79,7 +79,8 @@ def parse_document(text: str, origin: SourceOrigin) -> ConfigDocument:
             meaningful_seen = True
             continue
         meaningful_seen = True
-        if stripped.startswith("using") and following_boundary(stripped, 5):
+        using_end = 6 if stripped.startswith("using?") else 5
+        if stripped.startswith("using") and following_boundary(stripped, using_end):
             declarations.append(parse_using(line, leading, len(declarations), origin))
         else:
             declarations.append(parse_definition(line, leading, len(declarations), origin))

@@ -9,6 +9,7 @@ Those evaluations run in temporary Frames and do not seed final runtime caches.
 
 - the version, definition, comment, and continuation syntax;
 - how `using` expands files in source order;
+- how `using?` adds optional files while keeping errors in existing files visible;
 - how an f-string `using` target selects a file from prior values or `env`;
 - how later definitions win while complete history remains available;
 - how to group and comment configuration definitions for readers;
@@ -143,6 +144,69 @@ block closes the Frame and its owned resources.
 Expansion is recursive and deterministic. Relative targets resolve from the
 importing file, not the process working directory. Direct and indirect cycles
 raise structured configuration errors.
+
+## Add optional local overrides
+
+Use `using?` when deployments may omit a local override file. It skips only a
+directly missing target. The following example first uses its default rate,
+then adds the optional file and loads its override.
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from lclang.config import LclConfigSyntaxError, load_config
+
+
+async def main() -> None:
+    with TemporaryDirectory(prefix="lclang-optional-config-") as directory:
+        root = Path(directory)
+        application = root / "application.lclcfg"
+        application.write_text(
+            "discount_rate: 0.05\n"
+            'using? "local.lclcfg"\n'
+            "total: 100 * (1 - discount_rate)\n",
+            encoding="utf-8",
+        )
+
+        defaults = await load_config(application)
+        assert len(defaults.history["discount_rate"]) == 1
+        async with defaults.to_frame() as frame:
+            assert await frame.get("total") == 95.0
+
+        local = root / "local.lclcfg"
+        local.write_text("discount_rate: 0.10\n", encoding="utf-8")
+        overridden = await load_config(application)
+        assert len(overridden.history["discount_rate"]) == 2
+        async with overridden.to_frame() as frame:
+            assert await frame.get("total") == 90.0
+
+        local.write_text("discount_rate: (\n", encoding="utf-8")
+        try:
+            await load_config(application)
+        except LclConfigSyntaxError as error:
+            assert error.span is not None
+            assert error.span.origin.path == local.resolve()
+        else:
+            raise AssertionError("An existing invalid optional file must fail")
+
+
+asyncio.run(main())
+```
+
+With no local file, the only rate in history is `0.05`, so the total is `95`.
+Once the file exists, its `0.10` rate expands after the default and wins,
+producing `90`. A malformed existing file still raises a syntax error with
+that file's source location. Its permission, decoding, required nested-import,
+and cycle errors also remain errors.
+
+The `?` immediately follows `using`. Optional targets also support f-strings
+with the same earlier-definition and override rules explained below; target
+evaluation errors are never skipped. Each `load_config` call above uses a
+fresh loader. A reused `ConfigLoader` also retries missing files, while keeping
+successfully loaded sources as cached snapshots.
 
 ## Select a file from earlier LCL values
 
