@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.0.16 - 2026-10-10
+
 ### Configuration
 
 - Add `using?` for optional literal or f-string `.lclcfg` targets. Only directly
