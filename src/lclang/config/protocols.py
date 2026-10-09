@@ -26,9 +26,11 @@ class ConfigSourceResolver(Protocol):
         :param path: Canonical absolute `.lclcfg` path requested by the loader.
         :param importer: Source containing the using declaration, or ``None``.
         :returns: Immutable resolved source snapshot.
+        :raises FileNotFoundError: If the directly requested source does not exist.
         :raises Exception: If host retrieval or authorization fails.
 
         .. note::
-           Cancellation must propagate without translation.
+           Only ``FileNotFoundError`` signals optional absence. Cancellation must
+           propagate without translation.
         """
         ...

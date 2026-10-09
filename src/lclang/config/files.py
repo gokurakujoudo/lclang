@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from pathlib import Path
+from stat import S_ISDIR, S_ISREG
 
 from lclang.config.sources import ResolvedConfigSource
 
@@ -63,6 +64,7 @@ def read_file_source(path: Path, allowed_root: Path | None) -> ResolvedConfigSou
     :raises PermissionError: If the path escapes *allowed_root*.
     :raises FileNotFoundError: If the requested path does not exist.
     :raises IsADirectoryError: If the requested path is a directory.
+    :raises OSError: If the path is not a regular file or cannot be read.
     :raises UnicodeDecodeError: If bytes are not UTF-8 with optional BOM.
 
     .. note::
@@ -71,9 +73,10 @@ def read_file_source(path: Path, allowed_root: Path | None) -> ResolvedConfigSou
     normalized = path.resolve(strict=False)
     if allowed_root is not None and not normalized.is_relative_to(allowed_root):
         raise PermissionError("config path is outside the allowed root")
-    if not normalized.is_file():
-        if normalized.is_dir():
-            raise IsADirectoryError(str(normalized))
-        raise FileNotFoundError(str(normalized))
+    status = normalized.stat()
+    if S_ISDIR(status.st_mode):
+        raise IsADirectoryError(str(normalized))
+    if not S_ISREG(status.st_mode):
+        raise OSError(f"config path is not a regular file: {normalized}")
     text = normalized.read_bytes().decode("utf-8-sig")
     return ResolvedConfigSource(str(normalized), str(normalized), normalized, text)

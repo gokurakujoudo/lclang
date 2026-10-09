@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Configuration
+
+- Add `using?` for optional literal or f-string `.lclcfg` targets. Only directly
+  missing files are skipped; target evaluation, file access, decoding, syntax,
+  nested required imports, cycles, limits, and cancellation retain their errors.
+  Missing sources retry on later occurrences or loads without changing
+  successful snapshot caching or concurrent required-file behavior.
+- Add the compatible Boolean `ConfigUsing.optional` field, defaulting to
+  `False`. Custom resolvers use `FileNotFoundError` to signal missing sources;
+  filesystem checks distinguish absence from access and non-regular-file errors.
+- Document optional local overrides with executable configuration examples.
+
 ## 1.0.15 - 2026-10-08
 
 ### Compatibility changes

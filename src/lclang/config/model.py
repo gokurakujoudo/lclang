@@ -55,6 +55,8 @@ class ConfigUsing:
     :param target: Decoded literal path or semantic f-string expression.
     :param span: Complete physical declaration span.
     :param ordinal: Zero-based declaration position in its document.
+    :param optional: Whether a directly missing source is skipped during loading.
+    :raises TypeError: If the target or optional flag has an unsupported type.
     :raises ValueError: If the target is empty or the ordinal is negative.
 
     .. note::
@@ -64,12 +66,13 @@ class ConfigUsing:
     target: str | LclJoinedString
     span: SourceSpan
     ordinal: int
+    optional: bool = False
 
     def __post_init__(self) -> None:
         """Validate the using declaration's scalar invariants.
 
         :returns: ``None``.
-        :raises TypeError: If the target is neither text nor an LCL f-string.
+        :raises TypeError: If the target or optional flag has an unsupported type.
         :raises ValueError: If the target is empty or ordinal is negative.
 
         .. note::
@@ -82,6 +85,8 @@ class ConfigUsing:
             raise TypeError("config using target must be text or an LCL f-string")
         if self.ordinal < 0:
             raise ValueError("config declaration ordinal cannot be negative")
+        if not isinstance(self.optional, bool):
+            raise TypeError("config using optional flag must be Boolean")
 
 
 type ConfigDeclaration = ConfigDefinition | ConfigUsing

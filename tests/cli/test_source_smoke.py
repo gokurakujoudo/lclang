@@ -13,7 +13,13 @@ from lclang.runtime import Frame
 
 # Fixed configuration fixtures exercise inclusion and derived overrides together.
 SHARED_SOURCE = "base: 40\n"
-ENTRY_SOURCE = 'using "shared.lclcfg"\nbase: 41\nanswer: base + 1\n'
+OPTIONAL_SOURCE = 'local_value: "local"\n'
+ENTRY_SOURCE = (
+    'using "shared.lclcfg"\n'
+    'using? "absent.lclcfg"\n'
+    'using? "local.lclcfg"\n'
+    "base: 41\nanswer: base + 1\n"
+)
 
 
 @pytest.mark.asyncio
@@ -28,6 +34,7 @@ async def test_source_cli_configuration_logging_and_cleanup() -> None:
         frames.append(context.frame)
         loggers.append(context.logger)
         assert await context.frame.get("answer") == 43
+        assert await context.frame.get("local_value") == "local"
         assert context.dryrun
         context.logger.info("source-answer=43")
         return CliResult(CliResultStatus.SUCCESS, "")
@@ -36,6 +43,7 @@ async def test_source_cli_configuration_logging_and_cleanup() -> None:
     with TemporaryDirectory() as directory:
         root = Path(directory)
         (root / "shared.lclcfg").write_text(SHARED_SOURCE, encoding="utf-8")
+        (root / "local.lclcfg").write_text(OPTIONAL_SOURCE, encoding="utf-8")
         entry = root / "entry.lclcfg"
         entry.write_text(ENTRY_SOURCE, encoding="utf-8")
         logs = root / "logs"

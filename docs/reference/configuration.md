@@ -22,10 +22,12 @@ total: (base + \ # the next physical line continues
 # The target is a quoted path or semantic f-string.
 using "parts/common.lclcfg"
 using f"parts/{profile}.lclcfg"
+using? "parts/local.lclcfg"
+using? f"parts/{profile}-local.lclcfg"
 ```
 
 Blank lines and full-line comments are ignored. A trailing `#` comment is valid
-after version metadata, a definition, a continuation marker, or `using`. A
+after version metadata, a definition, a continuation marker, `using`, or `using?`. A
 backslash outside literals is the only continuation mechanism; open `()`, `[]`,
 or `{}` never continues a definition by itself. Blank and comment-only lines are
 not valid inside a continuation chain.
@@ -94,6 +96,18 @@ definitions are inserted at the declaration position. Every occurrence expands,
 even when retrieval and parsing use a cached immutable snapshot. Direct and
 indirect cycles are errors.
 
+`using?` has the same target syntax and expansion rules as `using`, but skips
+its declaration when the directly requested file does not exist. The `?` must
+immediately follow `using`. A skipped declaration contributes no definitions
+or history. An existing file still reports retrieval, UTF-8 decoding, syntax,
+version, nested required-file, cycle, and resource-limit errors. Dynamic target
+evaluation and validation failures are never suppressed.
+
+`ConfigUsing.optional` is a Boolean flag defaulting to `False`; parsing
+`using?` sets it to `True`. The unresolved document retains the declaration
+even when later loading skips a missing source. Parsed declarations still
+participate in the loader's existing declaration limits.
+
 A dynamic `using` f-string sees only expanded definitions occurring before its
 declaration, call-supplied loader overrides at higher precedence, and canonical
 builtins such as live `env`. Unresolved forward names, evaluation failures,
@@ -127,6 +141,11 @@ enables file magic without reading that path.
 and magic stay deterministic. `ConfigLoader.load` accepts the same `overrides`
 mapping. LCL AST values are lazy definitions during dynamic target evaluation;
 all other values are literals.
+
+Custom resolvers signal a directly requested source's absence by raising
+`FileNotFoundError`. Other retrieval and authorization exceptions remain load
+errors, including `KeyError`; they do not indicate optional absence. Filesystem
+authorization is checked before retrieval, including for absent paths.
 
 ```python
 from pathlib import Path
@@ -172,6 +191,12 @@ the canonical imports layer.
 and declarations. `ConfigLoader` is safe for concurrent tasks in one event loop,
 uses per-path single-flight, shields owners from waiter cancellation, retries
 failed loads, and rejects cross-loop reuse.
+
+Missing optional sources are not cached. A later occurrence or load retries
+retrieval and can discover a file that has appeared; successful source
+snapshots keep their ordinary cache behavior. Concurrent required and optional
+requests share retrieval while each declaration applies its own missing-file
+policy. Cancellation always propagates.
 
 The language is for trusted application configuration, not hostile-code
 sandboxing. Evaluation retains the ordinary powers of host-provided values and
