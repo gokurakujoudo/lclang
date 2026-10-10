@@ -27,6 +27,9 @@
 
 ### Diagnostics and documentation
 
+- Align behavioral tests with the functional package layout after production
+  validation. Enforce obsolete-path removal, static package exports, module
+  overviews, shared-layer dependencies and declared-field state copying.
 - Add a dedicated exception guide with executable group, workflow, CLI, logger
   and control-signal examples and their actual diagnostic output.
 - Copy declared diagnostic fields through a public hook, preserving subclass
