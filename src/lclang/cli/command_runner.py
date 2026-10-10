@@ -20,6 +20,7 @@ from lclang.cli.option_parser import help_requested, parse_cli_params
 from lclang.common.binding_mask import normalize_masked_mapping
 from lclang.error import CliErrorCode, LclCliError, RouteFailure
 from lclang.error.exception_base import LclStateError
+from lclang.error.native_wrap import is_ordinary_failure, wrap_failure
 from lclang.error.operation_guard import guard_async_failure, guard_failure
 
 
@@ -52,6 +53,9 @@ async def run_command(command: Command, args: Sequence[str] | None = None) -> in
         params = parse_cli_params(parts, (command.name,), tokens)
         return await execute_command(command, params, CliConfig())
     except Exception as error:
+        if not is_ordinary_failure(error):
+            raise
+        error = wrap_failure(error, LclCliError, CliErrorCode.E52_COMMAND_RUNNER_NATIVE_FAILURE)
         label = script_label_from_args(args)
         help_text = render_command_help(label, command, (command.name,))
         print(render_usage_error(str(error), help_text), file=sys.stderr, end="")
@@ -106,6 +110,9 @@ async def run_entrance(entrance: CliEntrance, args: Sequence[str] | None = None)
         print(render_usage_error(str(error), help_text), file=sys.stderr, end="")
         return int(CliResultStatus.EXCEPTION)
     except Exception as error:
+        if not is_ordinary_failure(error):
+            raise
+        error = wrap_failure(error, LclCliError, CliErrorCode.E52_COMMAND_RUNNER_NATIVE_FAILURE)
         label = script_label_from_args(args) if parts is None else parts.script_label
         help_text = render_group_help(label, entrance.command_group, (), True)
         print(render_usage_error(str(error), help_text), file=sys.stderr, end="")

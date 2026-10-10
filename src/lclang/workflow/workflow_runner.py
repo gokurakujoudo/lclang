@@ -8,13 +8,11 @@ Defines ``add_unexecuted_statuses``, ``execute_task``, ``execute_workflow``.
 
 from __future__ import annotations
 
-from contextlib import suppress
-
 from lclang.common.identifiers import ModuleName
 from lclang.error import LclWorkflowError, WorkflowErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.failure_aggregation import combine_failures
-from lclang.error.native_wrap import wrap_failure
+from lclang.error.native_wrap import is_ordinary_failure, wrap_failure
 from lclang.error.operation_guard import guard_async_failure, guard_failure
 from lclang.lang.runtime import Frame, Module
 from lclang.workflow.context_execution import execute_context_scope
@@ -111,14 +109,14 @@ async def execute_task(
     except BaseException as error:
         cleanup = (
             wrap_failure(error, LclWorkflowError, WorkflowErrorCode.E32_FRAME_CLOSE_FAILURE)
-            if isinstance(error, Exception)
+            if is_ordinary_failure(error)
             else error
         )
         pending = combine_failures(pending, cleanup, code=WorkflowErrorCode.E35_COMPOSITE_FAILURE)
-        if isinstance(error, Exception):
+        if is_ordinary_failure(error):
             recorded = (
                 pending
-                if isinstance(pending, Exception)
+                if is_ordinary_failure(pending)
                 else wrap_failure(
                     error, LclWorkflowError, WorkflowErrorCode.E32_FRAME_CLOSE_FAILURE
                 )
@@ -162,9 +160,12 @@ async def execute_workflow(
         context.frame.mixin(dict(workflow.lcl_mixin))
     manager = ExecutionStatusManager(workflow.title, status=ExecutionStatus.RUNNING)
     state = WorkflowRunState(context, {}, {})
-    with suppress(Exception):
+    try:
         async with execution_defaults(workflow, context.frame):
             await execute_task(state, workflow.root_task, manager, (workflow.root_task.task_id,))
+    except Exception as error:
+        if not is_ordinary_failure(error):
+            raise
     finalize_manager(manager)
     return WorkflowExecutionResult(
         manager.current, context.frame, dict(state.task_args), dict(state.task_outputs)

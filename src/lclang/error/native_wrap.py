@@ -3,7 +3,7 @@
 Defines ``is_ordinary_failure``, ``wrap_failure``.
 """
 
-from typing import TYPE_CHECKING, TypeIs, cast
+from typing import TYPE_CHECKING, TypeGuard, cast
 
 from lclang.error.exception_base import LclError
 
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from lclang.common.source_location import SourceSpan
 
 
-def is_ordinary_failure(error: BaseException) -> TypeIs[Exception]:
+def is_ordinary_failure(error: BaseException) -> TypeGuard[Exception]:
     """Identify ordinary failures while retaining native control and iterator signals.
 
     :param error: Exception encountered at an operation or cleanup boundary.

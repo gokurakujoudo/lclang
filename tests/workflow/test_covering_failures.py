@@ -1,18 +1,25 @@
 """Failure-covering hooks retain business, handling and release failures."""
 
 import asyncio
+import logging
 from dataclasses import dataclass
+from datetime import date
 from typing import cast
 
 import pytest
 
 from lclang.error import LclError, LclErrorGroup
 from lclang.error.failure_aggregation import combine_failures
+from lclang.lang import define_frame
 from lclang.workflow import (
     ExecutionStatus,
     ExecutionStatusManager,
     FailureCoveringContextTask,
     TaskContext,
+    WorkflowExecutionContext,
+    define_context_task,
+    define_task,
+    define_workflow,
 )
 
 
@@ -154,3 +161,71 @@ def test_outer_unwind_does_not_repeat_an_already_retained_body() -> None:
     assert combine_failures(body, completed, code="LCL535911") is completed
     assert combine_failures(completed, body, code="LCL535911") is completed
     assert original_leaves(completed) == [body, handling, release]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("grouped", [False, True])
+@pytest.mark.parametrize("recover", [False, True])
+@pytest.mark.parametrize("cleanup_fails", [False, True])
+async def test_workflow_propagates_iteration_signals_and_control_groups(
+    grouped: bool, recover: bool, cleanup_fails: bool
+) -> None:
+    """Neither normal execution nor recovery may swallow an iterator control signal."""
+    signal = StopAsyncIteration("done")
+    original = ExceptionGroup("control", [signal, OSError("business")]) if grouped else signal
+    cleanup = OSError("release")
+    events: list[str] = []
+
+    class Recovery(FailureCoveringContextTask[Value, Value]):
+        async def acquire(
+            self, context: TaskContext, args: Value, status_mgr: ExecutionStatusManager
+        ) -> Value:
+            return args
+
+        async def handle_exception(
+            self,
+            context: TaskContext,
+            args: Value,
+            status_mgr: ExecutionStatusManager,
+            resource: Value,
+            exception: Exception,
+        ) -> None:
+            events.append("handled")
+
+        async def release(
+            self,
+            context: TaskContext,
+            args: Value,
+            status_mgr: ExecutionStatusManager,
+            resource: Value,
+        ) -> None:
+            events.append("release")
+            if cleanup_fails:
+                raise cleanup
+
+    async def action(
+        context: TaskContext, args: Value, status_mgr: ExecutionStatusManager
+    ) -> Value:
+        raise original
+
+    scopes = [define_context_task("recover", "Recover", Recovery(), Value(0))] if recover else []
+    task = define_task(
+        "root", "Root", task_action=action, args_mapping=Value(0), context_tasks=scopes
+    )
+    workflow = define_workflow("Controls", task)
+    async with define_frame() as frame:
+        with pytest.raises(Exception) as caught:
+            await workflow.execute(
+                WorkflowExecutionContext(
+                    False, date(2026, 1, 1), False, logging.getLogger("iterator-controls"), frame
+                )
+            )
+        assert caught.value is original
+        assert "handled" not in events
+        assert events == (["release"] if recover else [])
+        if recover and cleanup_fails:
+            assert isinstance(original.__cause__, LclError)
+            assert (
+                original.__cause__.code == "LCL532812" and original.__cause__.__cause__ is cleanup
+            )
+        assert not frame.closed

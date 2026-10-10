@@ -288,6 +288,9 @@ If handling fails, the original business failure and handling failure are
 retained together. Release still runs, and a release failure joins the pending
 failures under `LCL535911`. Cancellation and other control signals keep their
 native identity with ordinary failures retained in their cause chain.
+Iterator termination signals also propagate through execution and recovery
+boundaries, including native groups that contain them. They are not treated as
+successful workflow execution or as failures covered by a recovery handler.
 Successful handling and cleanup suppress the ordinary exception and mark the
 context `FAILURE_COVERED`. Covered failures remain visible and still stop later
 siblings; covering means the failure was wrapped up, not that execution can be

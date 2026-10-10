@@ -108,11 +108,12 @@ def render_failure(error: BaseException, *, action: str) -> str:
             diagnostic = "\n".join(lines)
         return diagnostic
     from lclang.error.codes.e0_general_error_code import GeneralErrorCode
+    from lclang.error.native_wrap import is_ordinary_failure
 
     reason = safe_repr(error, renderer=str, max_length=None)
     label = (
         f" [{GeneralErrorCode.E22_NATIVE_EXCEPTION_DIAGNOSTIC}]"
-        if isinstance(error, Exception)
+        if is_ordinary_failure(error)
         else ""
     )
     diagnostic = f"Error in {action}{label}:\nCause: {type(error).__name__}: {reason}"

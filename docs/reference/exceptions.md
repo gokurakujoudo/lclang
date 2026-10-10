@@ -2026,3 +2026,204 @@ Cause: host operations: ExceptionGroup: host operations (2 sub-exceptions)
 <!-- /lclang-doc-case -->
 
 The resolver group retains its loading route under LCL323931. The text helper and utility invocation report LCL961890 and LCL771811 with their own leaf types. Their groups preserve the native topology. Handle selected LCL leaves and inspect __cause__ when recovery depends on OSError or ValueError. This example reports every group at its boundary; a reusable adapter should rethrow any unhandled leaves.
+
+## CLI logger setup and invocation cleanup
+
+The configuration creates an owned console stream. Logger startup fails before the command runs, then closing the invocation Frame reports a stream-close failure. Both are reported by the actual CLI runner.
+
+<!-- lclang-doc-case: exceptions-cli-logger-setup -->
+
+<!-- lclang-doc-file: startup.lclcfg -->
+```lclcfg
+__LCL_VERSION__: 1
+logger.console.stream: make_stream()
+```
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+import io
+from contextlib import redirect_stderr
+from threading import Thread
+from unittest.mock import patch
+
+from lclang.cli import CliContext, CliEntrance, CliResult, CommandGroup, cli
+
+streams = []
+original_start = Thread.start
+
+class Stream(io.StringIO):
+    def close(self):
+        super().close()
+        raise OSError("owned stream close")
+
+def make_stream():
+    stream = Stream()
+    streams.append(stream)
+    return stream
+
+def fail_start(thread):
+    if thread.name == "lclang.logger.writer":
+        raise OSError("logger startup")
+    original_start(thread)
+
+@cli.command(preset={"make_stream": make_stream})
+async def unused_command(context: CliContext) -> CliResult:
+    raise AssertionError("handler must not run")
+
+entrance = CliEntrance(CommandGroup("root", "Root", [unused_command]))
+diagnostic = io.StringIO()
+with patch.object(Thread, "start", fail_start), redirect_stderr(diagnostic):
+    status = asyncio.run(entrance.run(["python", "tool.py", "unused", "-c", "startup.lclcfg"]))
+assert status == 2 and len(streams) == 1 and streams[0].closed
+assert all(code in diagnostic.getvalue() for code in ["LCL451911", "LCL625811", "LCL236811"])
+print(diagnostic.getvalue(), end="")
+print("Status:", status)
+print("Owned stream closed:", streams[0].closed)
+```
+
+<!-- lclang-doc-output: stdout -->
+```text
+Error in executing command [LCL451911]:
+Cause: execution and cleanup failed
+  Failure 1:
+    Error in handling failure [LCL625811]:
+    Cause: OSError: logger startup
+  Failure 2:
+    Error in handling failure [LCL236811]:
+    Cause: Frame cleanup failed: OSError: owned stream close
+Status: 2
+Owned stream closed: True
+```
+<!-- /lclang-doc-case -->
+
+LCL451911 combines logger startup code LCL625811 and the retained Frame close code LCL236811. The handler never runs, the stream is closed and the CLI returns status 2. A stream calculated by an LCL definition belongs to its Frame; a stream passed through typed framework configuration remains borrowed, as described in the CLI reference. Do not write another diagnostic to the failed stream.
+
+## Iterator termination inside native groups
+
+An action raises a native ExceptionGroup containing StopAsyncIteration and an ordinary failure. Recovery does not receive the control group, release still runs and its failure remains in the original group cause.
+
+<!-- lclang-doc-case: exceptions-iterator-controls -->
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+import io
+import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from datetime import date
+from unittest.mock import patch
+
+from lclang.error import LclError, LclErrorGroup, WorkflowException
+from lclang.lang import Frame, define_frame, define_module
+from lclang.workflow import ExecutionStatus, ExecutionStatusManager, TaskContext, WorkflowExecutionContext, define_context_task, define_task, define_variable, define_workflow
+
+@dataclass
+class Value:
+    value: int
+
+class DiagnosticOnly(logging.Filter):
+    def filter(self, record):
+        record.exc_info = None
+        record.exc_text = None
+        return True
+
+def leaves(error):
+    if isinstance(error, LclErrorGroup):
+        return [leaf for member in error.exceptions for leaf in leaves(member)]
+    assert isinstance(error, LclError)
+    return [error]
+
+def make_logger(stream):
+    logger = logging.getLogger("workflow-errors-example")
+    logger.setLevel(logging.ERROR)
+    logger.propagate = False
+    handler = logging.StreamHandler(stream)
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    handler.addFilter(DiagnosticOnly())
+    logger.addHandler(handler)
+    return logger, handler
+
+from lclang.error import render_failure
+from lclang.workflow import FailureCoveringContextTask
+
+signal = StopAsyncIteration("done")
+business = OSError("business")
+original = ExceptionGroup("iterator request", [signal, business])
+events = []
+owned = []
+
+class Recovery(FailureCoveringContextTask[Value, Value]):
+    async def acquire(self, context: TaskContext, args: Value, status_mgr: ExecutionStatusManager) -> Value:
+        owned.append(context.frame)
+        return args
+
+    async def handle_exception(self, context: TaskContext, args: Value, status_mgr: ExecutionStatusManager, resource: Value, exception: Exception) -> None:
+        raise AssertionError("controls must not enter ordinary recovery")
+
+    async def release(self, context: TaskContext, args: Value, status_mgr: ExecutionStatusManager, resource: Value) -> None:
+        events.append("release")
+        raise OSError("release")
+
+async def action(context: TaskContext, args: Value, status_mgr: ExecutionStatusManager) -> Value:
+    raise original
+
+async def main():
+    stream = io.StringIO()
+    logger, handler = make_logger(stream)
+    task = define_task("root", "Root", task_action=action, args_mapping=Value(0), context_tasks=[define_context_task("recover", "Recovery", Recovery(), Value(0))])
+    try:
+        async with define_frame() as frame:
+            try:
+                await define_workflow("Iterator", task).execute(WorkflowExecutionContext(False, date(2026, 1, 1), False, logger, frame))
+            except ExceptionGroup as errors:
+                assert errors is original and errors.exceptions == (signal, business)
+                assert isinstance(errors.__cause__, LclError) and errors.__cause__.code == "LCL532812"
+                print(render_failure(errors, action="ending workflow"))
+                completed, remaining = errors.split(StopAsyncIteration)
+                assert completed is not None and completed.exceptions == (signal,)
+                assert remaining is not None and remaining.exceptions == (business,)
+                # This owner expects iterator completion, but retains the business failure.
+                try:
+                    raise remaining
+                except ExceptionGroup as unhandled:
+                    print(render_failure(unhandled, action="reporting remaining failure"))
+                assert events == ["release"] and owned[0].closed and not frame.closed
+                print("Task Frame closed:", owned[0].closed)
+                print("Iterator completion observed:", True)
+            else:
+                raise AssertionError("control group was converted to a workflow result")
+    finally:
+        logger.removeHandler(handler)
+        handler.close()
+
+asyncio.run(main())
+```
+
+<!-- lclang-doc-output: stdout -->
+```text
+Error in ending workflow:
+Cause: ExceptionGroup: iterator request (2 sub-exceptions)
+  Error in executing a workflow [LCL532812]:
+  Cause: OSError: release
+  Failure 1:
+    Error in handling failure:
+    Cause: StopAsyncIteration: done
+  Failure 2:
+    Error in handling failure [LCL022890]:
+    Cause: OSError: business
+Error in reporting remaining failure [LCL022890]:
+Cause: ExceptionGroup: iterator request (1 sub-exception)
+  Error in executing a workflow [LCL532812]:
+  Cause: OSError: release
+  Failure 1:
+    Error in handling failure [LCL022890]:
+    Cause: OSError: business
+Task Frame closed: True
+Iterator completion observed: True
+```
+<!-- /lclang-doc-case -->
+
+ExceptionGroup inherits Exception, so a broad except Exception alone cannot distinguish this group from an ordinary failure. The library preserves its type and identity and returns no workflow result. This application owner expects the iterator completion, selects it explicitly and reports the remaining business failure. A reusable component should rethrow an unhandled remainder. Native controls have no ordinary diagnostic code; the OSError leaf and retained cleanup cause do. Python still converts StopIteration escaping a coroutine and iteration signals escaping an async generator into RuntimeError where its protocol requires that conversion.

@@ -3,8 +3,6 @@
 Defines ``parse_lcl_command``, ``eval_lcl_command``, ``builtins_command``.
 """
 
-from contextlib import suppress
-
 from lclang.__version__ import __version__
 from lclang.cli.builtin_documentation import render_builtin_docs
 from lclang.cli.cli_models import CliResult, ParameterDoc
@@ -12,6 +10,7 @@ from lclang.cli.command_definition import CommandGroup, cli
 from lclang.cli.command_entrance import CliEntrance
 from lclang.cli.invocation_context import CliContext
 from lclang.error import CliErrorCode, LclCliError
+from lclang.error.native_wrap import is_ordinary_failure
 from lclang.error.operation_guard import guard_async_failure
 
 # Shared required output binding documented by both built-in commands.
@@ -54,8 +53,11 @@ async def parse_lcl_command(context: CliContext) -> CliResult:
        Ordinary RESULT failures are retained in the Frame cache and rendered.
     """
     if await context.frame.get("EVAL") is True:
-        with suppress(Exception):
+        try:
             await context.frame.get("RESULT")
+        except Exception as error:
+            if not is_ordinary_failure(error):
+                raise
     tree = context.frame.inspect_variable("RESULT")
     return CliResult.success("\n".join(tree.to_lines()))
 

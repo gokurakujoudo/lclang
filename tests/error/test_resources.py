@@ -65,6 +65,40 @@ def test_error_types_and_records_are_exported_by_their_single_owner() -> None:
         )
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("signal_first", [False, True])
+async def test_cached_cleanup_retains_protocol_control_and_other_failure(
+    signal_first: bool,
+) -> None:
+    """Either encounter order keeps the same control and every ordinary close cause."""
+    signal = StopAsyncIteration("done")
+    ordinary = OSError("close")
+    attempts: list[str] = []
+
+    class Resource:
+        def __init__(self, name: str, failure: Exception) -> None:
+            self.name = name
+            self.failure = failure
+
+        async def aclose(self) -> None:
+            attempts.append(self.name)
+            raise self.failure
+
+    first = Resource("first", ordinary if signal_first else signal)
+    second = Resource("second", signal if signal_first else ordinary)
+    frame = define_frame(
+        define_module("resources", {"first": "make_first()", "second": "make_second()"}),
+        preset={"make_first": lambda: first, "make_second": lambda: second},
+    )
+    await frame.get("first")
+    await frame.get("second")
+    with pytest.raises(StopAsyncIteration) as caught:
+        await frame.close()
+    assert caught.value is signal and frame.closed and attempts == ["second", "first"]
+    assert isinstance(signal.__cause__, LclError)
+    assert signal.__cause__.code == "LCL236811" and signal.__cause__.__cause__ is ordinary
+
+
 @pytest.mark.parametrize("signal", [StopIteration(), StopAsyncIteration()])
 def test_error_constructor_preserves_iterator_protocol_signals(signal: Exception) -> None:
     """Application exception constructors retain native iterator termination."""

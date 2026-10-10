@@ -88,6 +88,8 @@ live in `lang.common`. Package metadata reads the sole `__version__.py` definiti
   workflow task context.
 - `LclErrorGroup` preserves ordinary execution and cleanup failures and Python
   exception-group splitting; native cancellation and protocol signals survive.
+- Workflow recovery and CLI routing preserve native iterator controls and
+  groups containing them. Cleanup retains prior ordinary causes at these boundaries.
 - Public diagnostic-copy hooks retain declared subclass fields and cause state
   without instance dictionary access. Native group diagnostics display all leaves.
 - Awaited failures are classified at the owning callback or operation boundary.

@@ -118,3 +118,9 @@ retain their original exception in `__cause__`.
 The [exception guide](exceptions.md) describes each failure family, grouped
 execution and cleanup failures, actual diagnostic output, and application
 handling with `except*` and native control signals.
+
+Native controls, including iterator termination and groups that contain it,
+propagate after owned Frames close. Earlier ordinary failures remain in their
+cause chain. Logger configuration or startup failures also retain invocation
+cleanup failures in a combined diagnostic rather than hiding them during final
+cleanup.
