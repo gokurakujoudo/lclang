@@ -93,7 +93,12 @@ def render_failure(error: BaseException, *, action: str) -> str:
     if isinstance(error, LclError):
         return render_error(error)
     reason = safe_repr(error, renderer=str, max_length=None)
-    return f"Error in {action}:\nCause: {type(error).__name__}: {reason}"
+    diagnostic = f"Error in {action}:\nCause: {type(error).__name__}: {reason}"
+    if isinstance(error.__cause__, LclError):
+        diagnostic += "\n" + "\n".join(
+            "  " + line for line in render_error(error.__cause__).splitlines()
+        )
+    return diagnostic
 
 
 def select_error_action(code: str) -> str:
