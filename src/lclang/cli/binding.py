@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import asyncio
-from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from lclang.api import LCL_RUNTIME
 from lclang.ast import LclAstNode, LclConstant
 from lclang.cli.commands import Command
+from lclang.cli.frame_stack import FrameStack as FrameStack
 from lclang.cli.logger_config import logger_definitions
 from lclang.cli.models import CliConfig, CliParams
 from lclang.cli.overrides import partition_overrides, require_forced_result
@@ -24,7 +23,11 @@ from lclang.cli.runtime_keys import (
     RUNTIME_YMD_KEY,
 )
 from lclang.config import load_config
-from lclang.errors import LclCliUsageError
+from lclang.error import LclCliError, LclCliUsageError
+from lclang.error.aggregation import combine_failures
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.codes.cli import Code as cli_codes
 from lclang.runtime import Frame, Module
 from lclang.runtime.frame.defaults import attach_defaults, create_default_frame
 from lclang.types import ModuleName
@@ -49,37 +52,7 @@ YMD_FORMAT = "%Y%m%d"
 EXECUTION_TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
 
 
-@dataclass(slots=True)
-class FrameStack:
-    """Own invocation-created Frames in parent-to-child order.
-
-    :param frames: Frames to close in reverse order.
-    :param closed: Whether close has completed or begun.
-    """
-
-    frames: tuple[Frame, ...]
-    closed: bool = False
-
-    async def close(self) -> None:
-        """Close every owned Frame once in reverse order.
-
-        :returns: ``None``.
-        :raises Exception: If one or more Frame closes fail.
-        """
-        if self.closed:
-            return
-        self.closed = True
-        failure: Exception | None = None
-        for frame in reversed(self.frames):
-            try:
-                await asyncio.shield(frame.close())
-            except Exception as error:
-                if failure is None:
-                    failure = error
-        if failure is not None:
-            raise failure
-
-
+@guard_constructor(LclValidationError, cli_codes.NATIVE_441)
 @dataclass(frozen=True, slots=True)
 class CliBinding:
     """Pair the top handler Frame with its owned hierarchy.
@@ -94,6 +67,7 @@ class CliBinding:
     execution_config_names: tuple[str, ...]
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_441)
 def default_definitions(command: Command, cli_config: CliConfig) -> dict[str, LclAstNode]:
     """Build constant command and logger default definitions.
 
@@ -112,6 +86,7 @@ def default_definitions(command: Command, cli_config: CliConfig) -> dict[str, Lc
     return definitions
 
 
+@guard_async_failure(LclCliError, cli_codes.NATIVE_441)
 async def build_binding(command: Command, params: CliParams, cli_config: CliConfig) -> CliBinding:
     """Construct and validate one complete invocation Frame hierarchy.
 
@@ -210,15 +185,21 @@ async def build_binding(command: Command, params: CliParams, cli_config: CliConf
             and not runtime.has(item.name)
         ]
         if missing:
-            raise LclCliUsageError("missing required parameter: " + ", ".join(missing))
+            raise LclCliUsageError(
+                "missing required parameter: " + ", ".join(missing),
+                code=cli_codes.E41_MISSING_REQUIRED_PARAMETER_JOIN_MISSING,
+            )
         audit_names = {
             *(item.name for item in command.parameter_docs),
             *config_module.definitions,
         }
         return CliBinding(runtime, stack, tuple(sorted(audit_names)))
-    except BaseException:
+    except BaseException as error:
         if not stack.frames:
             stack = FrameStack(tuple(frames))
-        with suppress(Exception):
+        try:
             await stack.close()
+        except BaseException as cleanup:
+            failure = combine_failures(error, cleanup, code=cli_codes.BINDING_CLEANUP_FAILURE)
+            raise failure from failure.__cause__
         raise

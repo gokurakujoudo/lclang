@@ -5,6 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from lclang.ast import LclParameter, ParameterKind
+from lclang.error import LclEvaluationError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.evaluator._types import EvaluateNode
 from lclang.lang.evaluator.context import Resolver
 
@@ -14,6 +18,7 @@ from lclang.lang.evaluator.context import Resolver
 MISSING_PARAMETER = object()
 
 
+@guard_constructor(LclValidationError, language_codes.NATIVE_132)
 @dataclass(frozen=True, slots=True)
 class BoundParameter:
     """Store one normalized parameter binding rule.
@@ -31,6 +36,7 @@ class BoundParameter:
     default: object = MISSING_PARAMETER
 
 
+@guard_async_failure(LclEvaluationError, language_codes.NATIVE_132)
 async def resolve_default(
     parameter: LclParameter,
     resolver: Resolver,
@@ -51,6 +57,7 @@ async def resolve_default(
     return await evaluate(parameter.default, resolver)
 
 
+@guard_failure(LclEvaluationError, language_codes.NATIVE_132)
 def bind_arguments(
     parameters: tuple[BoundParameter, ...],
     args: tuple[object, ...],
@@ -62,7 +69,7 @@ def bind_arguments(
     :param args: Positional call arguments.
     :param kwargs: Named call arguments.
     :returns: Local name-to-value bindings for one invocation.
-    :raises TypeError: If arguments are duplicated, missing, or unexpected.
+    :raises LclEvaluationError: If arguments are duplicated, missing, or unexpected.
 
     .. note::
        Named arguments are copied, so caller-owned input is never mutated.
@@ -86,13 +93,19 @@ def bind_arguments(
             named.clear()
             variadic_keyword = True
     if position < len(args) and not variadic_position:
-        raise TypeError("too many positional arguments")
+        raise LclEvaluationError(
+            "too many positional arguments", code=language_codes.E32_TOO_MANY_POSITIONAL_ARGUMENTS
+        )
     if named and not variadic_keyword:
         unexpected = next(iter(named))
-        raise TypeError(f"unexpected keyword argument: {unexpected}")
+        raise LclEvaluationError(
+            f"unexpected keyword argument: {unexpected}",
+            code=language_codes.E32_UNEXPECTED_KEYWORD_ARGUMENT_VALUE,
+        )
     return values
 
 
+@guard_failure(LclEvaluationError, language_codes.NATIVE_132)
 def bind_positional(
     parameter: BoundParameter,
     args: tuple[object, ...],
@@ -108,27 +121,31 @@ def bind_positional(
     :param named: Remaining named arguments.
     :param values: Binding map populated for the invocation.
     :returns: Cursor after positional, named, or default binding.
-    :raises TypeError: If a value is duplicated or absent.
+    :raises LclEvaluationError: If a value is duplicated or absent.
 
     .. note::
        Exhausted positional input falls through to named/default rules.
     """
     if position < len(args):
         if parameter.name in named:
-            raise TypeError(f"multiple values for argument: {parameter.name}")
+            raise LclEvaluationError(
+                f"multiple values for argument: {parameter.name}",
+                code=language_codes.E32_MULTIPLE_VALUES_FOR_ARGUMENT_VALUE,
+            )
         values[parameter.name] = args[position]
         return position + 1
     values[parameter.name] = take_named(parameter, named)
     return position
 
 
+@guard_failure(LclEvaluationError, language_codes.NATIVE_132)
 def take_named(parameter: BoundParameter, named: dict[str, object]) -> object:
     """Consume a named argument or provide its default value.
 
     :param parameter: Parameter whose name and default are consulted.
     :param named: Mutable remaining named-argument mapping.
     :returns: Popped argument value or the parameter default.
-    :raises TypeError: If a required parameter has no supplied value.
+    :raises LclEvaluationError: If a required parameter has no supplied value.
 
     .. note::
        Popping successful input exposes unexpected names after binding.
@@ -137,4 +154,7 @@ def take_named(parameter: BoundParameter, named: dict[str, object]) -> object:
         return named.pop(parameter.name)
     if parameter.default is not MISSING_PARAMETER:
         return parameter.default
-    raise TypeError(f"missing required argument: {parameter.name}")
+    raise LclEvaluationError(
+        f"missing required argument: {parameter.name}",
+        code=language_codes.E32_MISSING_REQUIRED_ARGUMENT_VALUE,
+    )

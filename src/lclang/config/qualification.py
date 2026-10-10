@@ -5,11 +5,15 @@ from typing import cast
 
 from lclang.ast import LclAstNode, LclName
 from lclang.config.model import ConfigDefinition
+from lclang.error import LclConfigError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.configuration import Code as configuration_codes
 from lclang.runtime.dependency.analysis import analyze_dependencies
 from lclang.source import SourceSpan
 from lclang.types import VarName
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_311)
 def qualify_import(
     definitions: list[ConfigDefinition], namespace_names: set[str], alias: str
 ) -> tuple[list[ConfigDefinition], set[str]]:
@@ -39,6 +43,7 @@ def qualify_import(
     return output, {alias, *(f"{alias}.{name}" for name in namespace_names)}
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_311)
 def qualify_expression(
     node: LclAstNode, free: set[tuple[str, SourceSpan]], alias: str
 ) -> LclAstNode:
@@ -60,6 +65,7 @@ def qualify_expression(
     return node if not changes else replace(node, **changes)  # type: ignore[arg-type]
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_311)
 def qualify_value(value: object, free: set[tuple[str, SourceSpan]], alias: str) -> object:
     """Transform AST-valued fields and immutable child tuples.
 

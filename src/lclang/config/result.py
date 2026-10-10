@@ -8,6 +8,10 @@ from types import MappingProxyType
 from typing import cast
 
 from lclang.config.model import ConfigDefinition
+from lclang.error import LclConfigError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.configuration import Code as configuration_codes
 from lclang.namespace_names import validate_namespace_conflicts, validate_namespace_names
 from lclang.runtime import EvaluationLimits, Frame, FrameFactory, Module, Preset
 from lclang.scopes import real_binding_names, validate_real_conflicts
@@ -15,6 +19,7 @@ from lclang.source import SourceOrigin
 from lclang.types import ModuleName
 
 
+@guard_constructor(LclValidationError, configuration_codes.NATIVE_331)
 @dataclass(frozen=True, slots=True)
 class Config:
     """Expose one completely expanded immutable configuration snapshot.
@@ -39,6 +44,7 @@ class Config:
     masked_names: frozenset[str] = field(init=False)
     namespace_names: frozenset[str] = field(default_factory=frozenset[str], kw_only=True)
 
+    @guard_failure(LclValidationError, configuration_codes.NATIVE_331)
     def __post_init__(self) -> None:
         """Detach occurrences and build stable winners and histories.
 
@@ -65,12 +71,13 @@ class Config:
         history = {name: tuple(items) for name, items in histories.items()}
         object.__setattr__(self, "history", MappingProxyType(history))
 
+    @guard_failure(LclConfigError, configuration_codes.NATIVE_331)
     def to_module(self, name: str | None = None) -> Module:
         """Convert final winners into one immutable runtime Module.
 
         :param name: Optional non-empty runtime module name.
         :returns: Module containing only final winning AST definitions.
-        :raises ValueError: If an explicit name is empty.
+        :raises LclValidationError: If an explicit name is empty.
 
         .. note::
            Conversion performs no evaluation and retains physical AST spans.
@@ -83,18 +90,20 @@ class Config:
             namespace_names=self.namespace_names,
         )
 
+    @guard_failure(LclConfigError, configuration_codes.NATIVE_331)
     def to_frame(self, *, preset: dict[str, object] | None = None) -> Frame:
         """Create a fresh canonical Frame from this configuration.
 
         :param preset: Optional host bindings copied below configuration definitions.
         :returns: Caller-owned Frame with independent lazy result snapshots.
-        :raises TypeError: If *preset* is not a dictionary or its keys are not text.
-        :raises ValueError: If preset binding names or scoped conflicts are invalid.
+        :raises LclValidationError: If *preset* is not a dictionary or its keys are not text.
+        :raises LclValidationError: If preset binding names or scoped conflicts are invalid.
         """
         from lclang.api import define_frame
 
         return define_frame(self.to_module(), preset=preset)
 
+    @guard_failure(LclConfigError, configuration_codes.NATIVE_331)
     def frame_factory(
         self,
         *,
@@ -118,6 +127,7 @@ class Config:
         return FrameFactory(self.to_module(), preset, limits, selected_parent)
 
 
+@guard_failure(LclValidationError, configuration_codes.NATIVE_331)
 def validate_config_structure(
     winners: Mapping[str, ConfigDefinition], namespaces: frozenset[str]
 ) -> None:
@@ -125,16 +135,16 @@ def validate_config_structure(
 
     :param winners: Last chronological definition for each actual binding name.
     :param namespaces: Explicit namespace reservations, including empty imports.
-    :raises TypeError: If namespace metadata has an unsupported type.
-    :raises ValueError: If ordinary bindings or namespace reservations conflict.
+    :raises LclValidationError: If namespace metadata has an unsupported type.
+    :raises LclValidationError: If ordinary bindings or namespace reservations conflict.
     """
     validate_namespace_names(namespaces)
     real_names = real_binding_names({key: item.expression for key, item in winners.items()}, {})
     try:
         validate_real_conflicts(real_names)
         validate_namespace_conflicts(namespaces, real_names)
-    except ValueError as error:
+    except LclValidationError as error:
         names = cast(tuple[str, ...], error.__dict__["binding_names"])
         conflicts = [definition for key, definition in winners.items() if key in names]
-        error.__dict__["source_span"] = conflicts[-1].span
+        vars(error)["source_span"] = conflicts[-1].span
         raise

@@ -7,6 +7,10 @@ from __future__ import annotations
 import os
 from threading import Lock, Thread
 
+from lclang.error import LclLoggerError
+from lclang.error.base import LclStateError, LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.logging import Code as logging_codes
 from lclang.logger.config import LoggerHandlerConfig
 from lclang.logger.dispatcher import Dispatcher
 from lclang.logger.metrics import Counters, RuntimeMetrics
@@ -14,6 +18,7 @@ from lclang.logger.queue_handler import LocalQueueHandler
 from lclang.logger.validation import level
 
 
+@guard_constructor(LclValidationError, logging_codes.NATIVE_621)
 class LoggerRuntime:
     """Own one queue, dispatcher, and immutable metric snapshots."""
 
@@ -30,6 +35,7 @@ class LoggerRuntime:
         self.started = False
 
     @property
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_621)
     def metrics(self) -> RuntimeMetrics:
         """Read detached diagnostics, including after the scope has closed.
 
@@ -43,21 +49,24 @@ RUNTIME_LOCK = Lock()
 ACTIVE_RUNTIME: LoggerRuntime | None = None
 
 
+@guard_failure(LclLoggerError, logging_codes.NATIVE_621)
 def reserve(runtime: LoggerRuntime) -> None:
     """Reject overlapping scopes before any writer is launched.
 
     :param runtime: Proposed process-local runtime.
-    :raises RuntimeError: If an active or inherited runtime already exists.
+    :raises LclStateError: If an active or inherited runtime already exists.
     """
     global ACTIVE_RUNTIME
     with RUNTIME_LOCK:
         if ACTIVE_RUNTIME is not None:
-            raise RuntimeError(
-                "only one logger handler scope is allowed per process; initialize after fork"
+            raise LclStateError(
+                "only one logger handler scope is allowed per process; initialize after fork",
+                code=logging_codes.E21_ONLY_ONE_LOGGER_HANDLER_SCOPE_IS_ALLOWED_PER_PROCESS_INITIALIZE_A,
             )
         ACTIVE_RUNTIME = runtime
 
 
+@guard_failure(LclLoggerError, logging_codes.NATIVE_621)
 def release() -> None:
     """Release the slot only after complete writer cleanup and state restoration."""
     global ACTIVE_RUNTIME
@@ -65,13 +74,17 @@ def release() -> None:
         ACTIVE_RUNTIME = None
 
 
+@guard_failure(LclLoggerError, logging_codes.NATIVE_621)
 def current_runtime() -> LoggerRuntime:
     """Find a usable runtime across all threads and async tasks in this process.
 
     :returns: Current process runtime, possibly draining.
-    :raises RuntimeError: If no initialized scope exists or fork inherited it.
+    :raises LclStateError: If no initialized scope exists or fork inherited it.
     """
     runtime = ACTIVE_RUNTIME
     if runtime is None or runtime.pid != os.getpid() or not runtime.started:
-        raise RuntimeError("use_logger requires an active use_logger_handler scope")
+        raise LclStateError(
+            "use_logger requires an active use_logger_handler scope",
+            code=logging_codes.E21_USE_LOGGER_REQUIRES_AN_ACTIVE_USE_LOGGER_HANDLER_SCOPE,
+        )
     return runtime

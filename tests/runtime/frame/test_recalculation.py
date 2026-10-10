@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from lclang.errors import LclEvaluationError, LclNameError
+from lclang.error import LclEvaluationError, LclNameError, LclValidationError
 from lclang.lang.parser import parse_expression
 from lclang.runtime import Frame, Module
 from lclang.types import FrameId, ModuleName
@@ -144,7 +144,7 @@ async def test_child_recalculates_definition_in_parent_owner() -> None:
 async def test_recalculation_rejects_invalid_or_non_definition_names() -> None:
     """Empty, host-only, and unknown names retain distinct diagnostics."""
     frame = _frame({}, host=42)
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         await frame.recalculate("")
     with pytest.raises(LclEvaluationError):
         await frame.recalculate("host")

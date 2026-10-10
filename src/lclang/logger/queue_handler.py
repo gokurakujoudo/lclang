@@ -7,9 +7,14 @@ import logging
 from queue import SimpleQueue
 from threading import RLock
 
+from lclang.error import LclLoggerError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.logging import Code as logging_codes
 from lclang.logger.metrics import Counters
 
 
+@guard_constructor(LclValidationError, logging_codes.NATIVE_636)
 class LocalQueueHandler(logging.Handler):
     """Accept shallow record snapshots until a sentinel is committed."""
 
@@ -25,6 +30,7 @@ class LocalQueueHandler(logging.Handler):
         self.counters = counters
         self.closing = False
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_636)
     def handle(self, record: logging.LogRecord) -> bool:
         """Use only the admission lock to avoid handler/admission lock inversion.
 
@@ -36,6 +42,7 @@ class LocalQueueHandler(logging.Handler):
             self.emit(selected if isinstance(selected, logging.LogRecord) else record)
         return bool(selected)
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_636)
     def emit(self, record: logging.LogRecord) -> None:
         """Copy and enqueue without formatting the message or traceback.
 
@@ -46,6 +53,7 @@ class LocalQueueHandler(logging.Handler):
                 self.queue.put(copy.copy(record))
                 self.counters.add("records_enqueued")
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_636)
     def stop(self) -> None:
         """Atomically end admission and place the sentinel after accepted events."""
         with self.admission:

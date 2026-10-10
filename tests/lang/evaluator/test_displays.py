@@ -8,7 +8,7 @@ import pytest
 
 from lclang import LclRecord
 from lclang.ast import LclConstant, LclDict
-from lclang.errors import LclEvaluationError
+from lclang.error import LclAttributeError, LclEvaluationError
 from lclang.lang.evaluator.dispatch import interpret_expression
 from lclang.lang.parser import parse_expression
 from lclang.source import SourceSpan
@@ -56,7 +56,7 @@ async def test_record_fields_are_awaited_left_to_right_and_support_attributes() 
 @pytest.mark.asyncio
 async def test_record_missing_attribute_uses_existing_safe_access_rules() -> None:
     """Safe access on a non-null record does not hide a missing field."""
-    with pytest.raises(LclEvaluationError) as caught:
+    with pytest.raises(LclAttributeError) as caught:
         await interpret_expression(parse_expression("{a=1}?.missing"))
     assert isinstance(caught.value.__cause__, AttributeError)
 
@@ -87,10 +87,10 @@ async def test_invalid_unpack_protocols_propagate_type_error() -> None:
     """Sequence and mapping protocol failures become structured causes."""
     with pytest.raises(LclEvaluationError) as sequence:
         await interpret_expression(parse_expression("[*value]"), {"value": 1})
-    assert isinstance(sequence.value.__cause__, TypeError)
+    assert sequence.value.__cause__ is None
     with pytest.raises(LclEvaluationError) as mapping:
         await interpret_expression(parse_expression("{**value}"), {"value": 1})
-    assert isinstance(mapping.value.__cause__, TypeError)
+    assert mapping.value.__cause__ is None
 
 
 @pytest.mark.asyncio
@@ -99,7 +99,7 @@ async def test_dictionary_display_rejects_invalid_ast_entry() -> None:
     malformed = LclDict((LclConstant(value="invalid"),))  # type: ignore[arg-type]
     with pytest.raises(LclEvaluationError, match="unsupported dictionary display entry") as caught:
         await interpret_expression(malformed)
-    assert isinstance(caught.value.__cause__, TypeError)
+    assert caught.value.__cause__ is None
 
 
 @pytest.mark.asyncio

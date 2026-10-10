@@ -6,6 +6,7 @@ from typing import cast
 
 import pytest
 
+from lclang.error import LclEvaluationError
 from lclang.stdlib import collect, first
 
 
@@ -42,9 +43,9 @@ async def test_first_stops_early_and_returns_default_for_empty_input() -> None:
 @pytest.mark.asyncio
 async def test_iterable_helpers_reject_non_iterable_values() -> None:
     """Iteration protocol errors propagate without silent coercion."""
-    with pytest.raises(TypeError):
+    with pytest.raises(LclEvaluationError):
         await collect(1)
-    with pytest.raises(TypeError):
+    with pytest.raises(LclEvaluationError):
         await first(1)
 
 

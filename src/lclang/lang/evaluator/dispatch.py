@@ -42,7 +42,9 @@ from lclang.diagnostics import (
     internal_trace,
     internal_verbose_enabled,
 )
-from lclang.errors import LclError, LclEvaluationError
+from lclang.error import LclError, LclEvaluationError
+from lclang.error.boundary import guard_async_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.evaluator.awaitables import resolve_awaitable
 from lclang.lang.evaluator.budget import (
     internal_check_collection,
@@ -73,6 +75,7 @@ from lclang.override_markers import get_override_marker
 type ResolverSource = Resolver | Mapping[str, object] | None
 
 
+@guard_async_failure(LclEvaluationError, language_codes.NATIVE_139)
 async def interpret_expression(node: LclAstNode, resolver: ResolverSource = None) -> object:
     """Interpret one AST for the Frame runtime and language subsystem.
 
@@ -150,12 +153,14 @@ async def internal_evaluate(node: LclAstNode, resolver: Resolver) -> object:
         token = internal_enter_node(node.span)
         return await internal_evaluate_node(node, resolver)
     except LclError as error:
+        if error.span is None:
+            error.span = node.span
         error.attach_variable_stack(active_definition_stack())
         if not error.evaluation_context:
             error.attach_evaluation_context(capture_evaluation_context())
         raise
     except Exception as error:
-        wrapped = internal_wrap_failure(error, node.span)
+        wrapped = internal_wrap_failure(error, node.span, node=node)
         wrapped.attach_variable_stack(active_definition_stack())
         wrapped.attach_evaluation_context(capture_evaluation_context())
         raise wrapped from error
@@ -178,7 +183,9 @@ async def internal_evaluate_node(node: LclAstNode, resolver: Resolver) -> object
     if isinstance(node, LclConstant):
         if get_override_marker(node) is not None:
             name = active_definition_stack()[-1] if active_definition_stack() else "<expr>"
-            raise LclEvaluationError(f"{name} needs a value", span=node.span)
+            raise LclEvaluationError(
+                f"{name} needs a value", span=node.span, code=language_codes.E39_VALUE_NEEDS_A_VALUE
+            )
         result = node.value
     elif isinstance(node, LclName):
         result = await resolver.resolve(node.identifier, span=node.span)
@@ -211,7 +218,11 @@ async def internal_evaluate_node(node: LclAstNode, resolver: Resolver) -> object
         result = await internal_evaluate_operation(node, resolver, internal_evaluate)
     else:
         name = type(node).__name__
-        raise LclEvaluationError(f"unsupported AST node: {name}", span=node.span)
+        raise LclEvaluationError(
+            f"unsupported AST node: {name}",
+            span=node.span,
+            code=language_codes.E39_UNSUPPORTED_AST_NODE_VALUE,
+        )
     resolved = await resolve_awaitable(result)
     if isinstance(node, LclName):
         record_value_read(str(node.identifier), resolved, node.span)

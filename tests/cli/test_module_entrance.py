@@ -184,7 +184,7 @@ def test_force_strictly_parses_only_marked_result_overrides(
     malformed[5] = "LCL[1 +]"
     assert asyncio.run(LCLANG_CLI_ENTRANCE.run(malformed)) == 2
     error = capsys.readouterr().err
-    assert "[LCL1001]" in error
+    assert "[LCL121491]" in error
     assert "RESULT=LCL[1 +]" in error
     assert "^" in error
 
@@ -287,7 +287,7 @@ def test_parse_lcl_eval_flag_renders_success_and_failure_cache_trees(
     assert "RESULT@" in failure_output
     assert "(Cached) LclEvaluationError:" in failure_output
     assert "division by zero" in failure_output
-    assert "Error in evaluating RESULT [LCL3001]:" in failure_output
+    assert "Error in evaluating RESULT [LCL131421]:" in failure_output
 
     eval_status = asyncio.run(
         LCLANG_CLI_ENTRANCE.run([*MODULE_ARGV, "eval_lcl", "-o", "RESULT", "100", "-o", "EVAL"])
@@ -316,7 +316,7 @@ def test_eval_lcl_reports_malformed_override_and_lexical_variable_stacks(
     assert asyncio.run(LCLANG_CLI_ENTRANCE.run(malformed_args)) == 2
     malformed_error = capsys.readouterr().err
     assert "TypeError: 'str' object is not callable" in malformed_error
-    assert "Error in evaluating RESULT [LCL3001]:" in malformed_error
+    assert "Error in evaluating RESULT [LCL132811]:" in malformed_error
 
     parse_args = [*malformed_args]
     parse_args[2] = "parse_lcl"

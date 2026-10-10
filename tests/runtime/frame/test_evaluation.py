@@ -5,6 +5,7 @@ from typing import Any, cast
 import pytest
 
 import lclang
+from lclang.error import LclValidationError
 
 
 @pytest.mark.asyncio
@@ -38,7 +39,7 @@ async def test_frame_evaluate_sets_and_captures_lhs_owner() -> None:
 async def test_frame_evaluate_validates_input_and_lifecycle() -> None:
     """The convenience boundary accepts source text only on an open Frame."""
     frame = lclang.define_frame()
-    with pytest.raises(TypeError, match="string"):
+    with pytest.raises(LclValidationError, match="string"):
         await frame.evaluate(cast(Any, lclang.parse_expression("1")))
     with pytest.raises(lclang.LclSyntaxError):
         await frame.evaluate("1 +")

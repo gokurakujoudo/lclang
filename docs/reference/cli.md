@@ -104,3 +104,8 @@ extension mechanism; this API is not a scanner for hostile or untrusted modules.
 
 See the [CLI tutorial](../tutorials/09-command-line-applications.md) for a
 progressive application and [workflow reference](workflow.md) for conversion.
+
+See [errors and diagnostic codes](errors.md) for exception fields, specific
+codes, cause chains, and executable troubleshooting examples. Ordinary library
+validation uses `LclValidationError`; native callback and operation failures
+retain their original exception in `__cause__`.

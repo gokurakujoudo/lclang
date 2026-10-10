@@ -1,8 +1,12 @@
 """Source excerpts rendered from immutable snapshots without file access."""
 
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.core import Code as core_codes
 from lclang.source import SourceSpan
 
 
+@guard_failure(LclValidationError, core_codes.NATIVE_841)
 def render_source_location(span: SourceSpan) -> str:
     """Format one-based Unicode source coordinates.
 
@@ -12,6 +16,7 @@ def render_source_location(span: SourceSpan) -> str:
     return f'"{span.origin.name}":{span.start.line}:{span.start.column}'
 
 
+@guard_failure(LclValidationError, core_codes.NATIVE_841)
 def render_source_excerpt(span: SourceSpan, *, underline: bool = True) -> list[str]:
     """Render the physical lines touched by one source range.
 

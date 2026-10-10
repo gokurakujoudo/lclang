@@ -14,6 +14,7 @@ import lclang
 import lclang.workflow as wf
 from lclang.cli import CliConfig, CliContext, CliParams, CliResultStatus
 from lclang.cli.binding import build_binding
+from lclang.error import LclValidationError
 
 
 @dataclass
@@ -77,7 +78,7 @@ async def test_mixin_snapshot_config_tasks_and_concurrent_runs() -> None:
 @pytest.mark.parametrize("bindings", [{"": 1}, {"a": 1, "a.b": 2}, {"a": 1, "a!": 2}])
 def test_invalid_mixin_names_fail_at_definition(bindings: dict[str, object]) -> None:
     """Invalid or ambiguous host bindings never reach execution."""
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         wf.define_workflow("Example", task(), lcl_mixin=bindings)
 
 

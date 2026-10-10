@@ -5,6 +5,10 @@ from __future__ import annotations
 from types import TracebackType
 from typing import Literal, Self
 
+from lclang.error import LclWorkflowError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.workflow import Code as workflow_codes
 from lclang.workflow.finalization import (
     SharedExecutionState,
     ensure_unlocked,
@@ -18,6 +22,7 @@ from lclang.workflow.models import (
 )
 
 
+@guard_constructor(LclValidationError, workflow_codes.NATIVE_531)
 class ExecutionStatusStep:
     """Update and finalize one manager-owned workflow step.
 
@@ -41,6 +46,7 @@ class ExecutionStatusStep:
         self.current = current
         self.state = state
 
+    @guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
     def update(
         self,
         description: str | None = None,
@@ -51,8 +57,8 @@ class ExecutionStatusStep:
         :param description: Replacement text, or ``None`` to preserve it.
         :param status: Replacement status, or ``None`` to preserve it.
         :returns: ``None``.
-        :raises RuntimeError: If this step is finalized.
-        :raises TypeError: If a replacement has an incompatible public type.
+        :raises LclStateError: If this step is finalized.
+        :raises LclValidationError: If a replacement has an incompatible public type.
 
         .. note::
            Every supplied value is validated before either field changes.
@@ -65,15 +71,17 @@ class ExecutionStatusStep:
         if valid_status is not None:
             self.current.status = valid_status
 
+    @guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
     def __enter__(self) -> Self:
         """Enter this step scope while it remains editable.
 
         :returns: This exact step handle.
-        :raises RuntimeError: If this step is finalized.
+        :raises LclStateError: If this step is finalized.
         """
         ensure_unlocked(self.state, self.current)
         return self
 
+    @guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
     def __exit__(
         self,
         error_type: type[BaseException] | None,
@@ -86,7 +94,7 @@ class ExecutionStatusStep:
         :param error: Raised exception instance, or ``None`` on clean exit.
         :param traceback: Raised exception traceback, or ``None`` on clean exit.
         :returns: Always ``False`` so Python propagates any original exception.
-        :raises RuntimeError: If this step was finalized inside its scope.
+        :raises LclStateError: If this step was finalized inside its scope.
         """
         del error_type, traceback
         ensure_unlocked(self.state, self.current)

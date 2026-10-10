@@ -10,6 +10,7 @@ from lclang.ast.comprehensions import (
     LclListComprehension,
     LclSetComprehension,
 )
+from lclang.error import LclValidationError
 from lclang.types import VarName
 
 
@@ -46,11 +47,11 @@ def test_comprehension_heads_precede_clauses() -> None:
 )
 def test_sequence_comprehensions_require_a_clause(node_type: type[object]) -> None:
     """A comprehension node cannot silently behave like a display."""
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         node_type(LclConstant(value=1), ())  # type: ignore[call-arg]
 
 
 def test_dict_comprehension_requires_a_clause() -> None:
     """Dictionary comprehension cardinality is enforced equally."""
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         LclDictComprehension(LclDictUnpack(LclConstant(value={})), ())

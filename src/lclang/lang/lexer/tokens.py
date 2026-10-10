@@ -5,6 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor
+from lclang.error.codes.language import Code as language_codes
 from lclang.source import SourceSpan
 
 
@@ -80,6 +83,7 @@ class TokenKind(StrEnum):
     EOF = "end of input"
 
 
+@guard_constructor(LclValidationError, language_codes.NATIVE_115)
 @dataclass(frozen=True, slots=True)
 class Token:
     """Represent an exact lexical slice and its source range.

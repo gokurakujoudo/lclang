@@ -74,8 +74,8 @@ Python may use `await frame.get("service.database.port")`, or obtain the root
 proxy and use `await service.database.port`. String indexing is identical, so
 `await service["database"].port` in Python and `service["database"].port` in LCL
 retain the same lookup, tracing, caching, and errors. A non-string proxy index
-raises `TypeError`; a missing attribute or index raises the same
-`AttributeError`. References remain fully qualified: `service.total` and
+raises `LclValidationError`; a missing attribute or index raises the same
+`LclAttributeError`. References remain fully qualified: `service.total` and
 `total` are separate.
 
 `await proxy.get(name, default=None)` performs direct-child lookup and returns
@@ -320,3 +320,8 @@ LCL is for trusted application configuration. It is not a security sandbox for
 hostile expressions. Values and callables supplied by the host can execute
 ordinary Python behaviour, including blocking or side effects, so applications
 must review their own Presets.
+
+See [errors and diagnostic codes](errors.md) for exception fields, specific
+codes, cause chains, and executable troubleshooting examples. Ordinary library
+validation uses `LclValidationError`; native callback and operation failures
+retain their original exception in `__cause__`.

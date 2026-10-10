@@ -305,7 +305,7 @@ The omission takes effect immediately, even if the action subsequently fails,
 output publication fails, cleanup fails, or an exception is covered. Those
 failures retain their normal reporting and propagation, but omitted children
 are never added back as skipped status nodes. Cancellation still propagates.
-Calls before or after the action's active lifetime raise `RuntimeError`;
+Calls before or after the action's active lifetime raise `LclStateError`;
 context entry and exit are outside that lifetime. A task with no children may
 call the method without additional effects. Each execution owns fresh control
 state, including concurrent executions of the same workflow.
@@ -527,8 +527,8 @@ retain the multiline body; timestamps and severity belong to the logger formatte
 `record` is an optional dataclass instance. Only direct fields explicitly named
 in `fields` are selected, in declaration order of that selection; additional
 values follow in keyword order. Unknown fields, repeated selections, or names
-shared by the selection and keyword values raise `ValueError`. A non-dataclass
-record raises `TypeError`. No dictionary indexing, methods, or implicit whole
+shared by the selection and keyword values raise `LclValidationError`. A non-dataclass
+record raises `LclValidationError`. No dictionary indexing, methods, or implicit whole
 record expansion occurs.
 
 Disabled levels return before inspecting records or formatting values. Explicit
@@ -536,3 +536,8 @@ Disabled levels return before inspecting records or formatting values. Explicit
 ordinary Python values do not acquire masks by object identity. Unmasked values
 use `safe_repr` with its default 200-character limit. Standard and lclang loggers
 attribute the call to the application's `log_event` line.
+
+See [errors and diagnostic codes](errors.md) for exception fields, specific
+codes, cause chains, and executable troubleshooting examples. Ordinary library
+validation uses `LclValidationError`; native callback and operation failures
+retain their original exception in `__cause__`.

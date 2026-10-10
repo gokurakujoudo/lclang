@@ -5,7 +5,7 @@ from collections.abc import Coroutine
 import pytest
 
 from lclang.ast import LclStringText
-from lclang.errors import LclEvaluationError, LclNameError
+from lclang.error import LclEvaluationError, LclNameError
 from lclang.lang.evaluator.dispatch import interpret_expression
 from lclang.lang.parser import parse_expression
 from lclang.source import SourceOrigin, SourceSpan

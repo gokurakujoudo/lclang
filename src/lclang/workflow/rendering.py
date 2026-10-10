@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from lclang.error import LclWorkflowError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.workflow import Code as workflow_codes
 from lclang.workflow.definitions import ContextTask, TaskNode, Workflow
 from lclang.workflow.mappings import mapping_text
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def task_text(task: TaskNode) -> str:
     """Render one task definition line.
 
@@ -19,6 +23,7 @@ def task_text(task: TaskNode) -> str:
     )
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def context_text(context: ContextTask, stage: str) -> str:
     """Render one context entry or exit line.
 
@@ -33,6 +38,7 @@ def context_text(context: ContextTask, stage: str) -> str:
     )
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def render_task(
     task: TaskNode,
     prefix: str,
@@ -56,6 +62,7 @@ def render_task(
         render_task(child, child_prefix, selected, lines)
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def render_context(
     task: TaskNode,
     index: int,
@@ -82,6 +89,7 @@ def render_context(
     lines.append(inner_prefix + "└─ " + context_text(context, "exit"))
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def render_workflow(workflow: Workflow) -> list[str]:
     """Return deterministic static workflow tree lines.
 

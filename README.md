@@ -50,6 +50,8 @@ to supply its own values and callables:
 - Evaluate only the dependency path needed for the requested output.
 - Share concurrent work and cache value or failure snapshots predictably.
 - Inspect definitions, owners, cache states, lookup paths, and dependencies.
+- Diagnose failures with specific six-digit codes, retained causes and source
+  snapshots; catch the shared `LclError` family in `lclang.error`.
 - Compose configuration files without losing source and history information.
 - Use the same evaluation model in services, batch jobs, CLIs, and tests.
 - Stay fully typed with no third-party runtime dependencies.
@@ -508,3 +510,6 @@ evaluation limits where bounded work matters.
 - Python 3.14 or newer
 - No third-party runtime dependencies
 - MIT license
+
+See the [error reference](docs/reference/errors.md) for the complete builtin code
+directory and executable examples of common failures.

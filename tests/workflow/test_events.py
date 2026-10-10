@@ -13,6 +13,7 @@ import pytest
 
 import lclang
 import lclang.workflow as wf
+from lclang.error import LclValidationError
 from lclang.logger import use_logger, use_logger_handler
 
 
@@ -124,14 +125,14 @@ async def test_event_selection_errors_are_explicit() -> None:
                 [wf.TaskID("root")],
             )
             for record in ({"visible": "value"}, EventRecord):
-                with pytest.raises(TypeError, match="dataclass instance"):
+                with pytest.raises(LclValidationError, match="dataclass instance"):
                     context.log_event("invalid", record=record)
             for selected in (("missing",), ("visible", "visible"), ("__repr__",)):
-                with pytest.raises(ValueError, match="declared, unique"):
+                with pytest.raises(LclValidationError, match="declared, unique"):
                     context.log_event("invalid", record=EventRecord(), fields=selected)
-            with pytest.raises(ValueError):
+            with pytest.raises(LclValidationError):
                 context.log_event("invalid", fields=("visible",))
-            with pytest.raises(ValueError):
+            with pytest.raises(LclValidationError):
                 context.log_event("invalid", record=EventRecord(), fields=("visible",), visible=2)
     finally:
         logger.setLevel(previous)

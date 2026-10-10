@@ -6,12 +6,17 @@ from collections.abc import Set
 from datetime import date
 from typing import final
 
+from lclang.error import LclUtilityError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.codes.utilities import Code as utilities_codes
 from lclang.utils.calendar.base import BDCalendar
 from lclang.utils.calendar.functional import FunctionalBDCalendar
 from lclang.utils.calendar.transformations.logic import dependency_day_type, direct_dependency_ids
 from lclang.utils.calendar.types import CalendarID, DayType
 
 
+@guard_async_failure(LclUtilityError, utilities_codes.NATIVE_714)
 async def filter_day_type(calendar: BDCalendar, d: date, target: DayType) -> DayType:
     """Retain one defined category and make other classifications undefined.
 
@@ -25,6 +30,7 @@ async def filter_day_type(calendar: BDCalendar, d: date, target: DayType) -> Day
     return target if value is target else DayType.Undefined
 
 
+@guard_constructor(LclValidationError, utilities_codes.NATIVE_714)
 @final
 class OnlyBusinessDayBDCalendar(FunctionalBDCalendar):
     """Retain only a base calendar's business dates.
@@ -43,6 +49,7 @@ class OnlyBusinessDayBDCalendar(FunctionalBDCalendar):
         self.base_calendar = base_calendar
         super().__init__(CalendarID(f"{base_calendar!r}.business_days()"))
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_714)
     async def get_day_type(self, d: date) -> DayType:
         """Retain only business-day values.
 
@@ -51,6 +58,7 @@ class OnlyBusinessDayBDCalendar(FunctionalBDCalendar):
         """
         return await filter_day_type(self.base_calendar, d, DayType.BusinessDay)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_714)
     async def get_dependency_ids(self) -> Set[CalendarID]:
         """Return the filtered calendar ID.
 
@@ -58,6 +66,7 @@ class OnlyBusinessDayBDCalendar(FunctionalBDCalendar):
         """
         return await direct_dependency_ids((self.base_calendar,))
 
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_714)
     def business_days(self) -> OnlyBusinessDayBDCalendar:
         """Return this already-filtered calendar.
 
@@ -66,6 +75,7 @@ class OnlyBusinessDayBDCalendar(FunctionalBDCalendar):
         return self
 
 
+@guard_constructor(LclValidationError, utilities_codes.NATIVE_714)
 @final
 class OnlyHolidayBDCalendar(FunctionalBDCalendar):
     """Retain only a base calendar's holidays.
@@ -84,6 +94,7 @@ class OnlyHolidayBDCalendar(FunctionalBDCalendar):
         self.base_calendar = base_calendar
         super().__init__(CalendarID(f"{base_calendar!r}.holidays()"))
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_714)
     async def get_day_type(self, d: date) -> DayType:
         """Retain only holiday values.
 
@@ -92,6 +103,7 @@ class OnlyHolidayBDCalendar(FunctionalBDCalendar):
         """
         return await filter_day_type(self.base_calendar, d, DayType.Holiday)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_714)
     async def get_dependency_ids(self) -> Set[CalendarID]:
         """Return the filtered calendar ID.
 
@@ -99,6 +111,7 @@ class OnlyHolidayBDCalendar(FunctionalBDCalendar):
         """
         return await direct_dependency_ids((self.base_calendar,))
 
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_714)
     def holidays(self) -> OnlyHolidayBDCalendar:
         """Return this already-filtered calendar.
 

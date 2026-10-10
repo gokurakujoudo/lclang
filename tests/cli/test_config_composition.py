@@ -8,7 +8,7 @@ import pytest
 
 from lclang.cli import CliConfig, CliContext, CliParams, CliResult, CliResultStatus, cli
 from lclang.cli.binding import build_binding
-from lclang.errors import LclEvaluationError
+from lclang.error import LclEvaluationError
 
 CONFIG_SOURCES = {
     "derived": "base: 1\nresult: base + 1\n",

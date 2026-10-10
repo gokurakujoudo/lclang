@@ -3,6 +3,9 @@
 from datetime import date
 from typing import final
 
+from lclang.error import LclUtilityError
+from lclang.error.boundary import guard_async_failure
+from lclang.error.codes.utilities import Code as utilities_codes
 from lclang.utils.calendar.functional import FunctionalBDCalendar
 from lclang.utils.calendar.types import CalendarID, DayType
 
@@ -11,6 +14,7 @@ from lclang.utils.calendar.types import CalendarID, DayType
 class AllWeekdaysBDCalendar(FunctionalBDCalendar):
     """Classify Monday through Friday as business days."""
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_716)
     async def get_day_type(self, d: date) -> DayType:
         """Classify a date from its ISO weekday.
 

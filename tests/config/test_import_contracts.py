@@ -17,7 +17,7 @@ from lclang.config import (
     load_config,
     parse_config,
 )
-from lclang.errors import LclEvaluationError
+from lclang.error import LclEvaluationError, LclValidationError
 from tests.config.support import source_span
 
 
@@ -52,12 +52,12 @@ def test_import_public_model_and_expression_coordinates() -> None:
     assert not isinstance(declaration.target, str)
     assert declaration.target.span.start.column == 11
     assert declaration.target.span.snapshot is not None
-    with pytest.raises(TypeError, match="Boolean"):
+    with pytest.raises(LclValidationError, match="Boolean"):
         ConfigImport("a.lclcfg", source_span(), 0, "a", 1)  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="reserved"):
+    with pytest.raises(LclValidationError, match="reserved"):
         ConfigImport("a.lclcfg", source_span(), 0, "__private")
     for span, ordinal in ((1, 0), (source_span(), "0"), (source_span(), True)):
-        with pytest.raises(TypeError):
+        with pytest.raises(LclValidationError):
             cast(Any, ConfigImport)("a.lclcfg", span, ordinal, "a")
 
 
@@ -133,11 +133,11 @@ async def test_empty_namespace_and_invalid_child_cannot_be_repaired_by_importer(
         )
         (root / "part.lclcfg").write_text(child, encoding="utf-8")
         if child:
-            with pytest.raises(ValueError, match="conflict"):
+            with pytest.raises(LclValidationError, match="conflict"):
                 await load_config(root / "main.lclcfg")
         else:
             config = await load_config(root / "main.lclcfg")
-            with pytest.raises(ValueError, match="namespace"):
+            with pytest.raises(LclValidationError, match="namespace"):
                 config.to_frame(preset={"m": 42})
 
 

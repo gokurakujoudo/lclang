@@ -4,6 +4,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
+from lclang.error import LclValidationError
 from lclang.lang.parser import parse_expression
 from lclang.runtime import EvaluationLimits, FrameFactory, Module, Preset
 from lclang.types import FrameId, ModuleName
@@ -96,20 +97,20 @@ def test_with_preset_returns_a_new_composed_factory() -> None:
 
 def test_factory_validates_policy_types_and_delegates_frame_identifiers() -> None:
     """Invalid policy objects fail early while Frame keeps identifier validation."""
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         FrameFactory(object())  # type: ignore[arg-type]
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         FrameFactory(_module(), object())  # type: ignore[arg-type]
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         FrameFactory(_module(), limits=object())  # type: ignore[arg-type]
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         FrameFactory(_module(), parent=object())  # type: ignore[arg-type]
     factory = FrameFactory(_module())
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         factory.with_preset(object())  # type: ignore[arg-type]
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         factory.create(FrameId("frame"), limits=object())  # type: ignore[arg-type]
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         factory.create(FrameId("frame"), parent=object())  # type: ignore[arg-type]
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         factory.create(FrameId(""))

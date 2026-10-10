@@ -1,28 +1,14 @@
-"""Preserve workflow failures while resource scopes unwind."""
+"""Workflow adapter for shared structured failure aggregation."""
+
+from lclang.error.aggregation import combine_failures as combine_error_failures
+from lclang.error.codes.workflow import Code as workflow_codes
 
 
 def combine_failures(pending: BaseException | None, cleanup: BaseException) -> BaseException:
-    """Retain both failures without converting process control to an ordinary error.
+    """Keep workflow failures and cleanup causes in their original order.
 
-    :param pending: Failure already propagating through the resource scope.
+    :param pending: Failure already propagating through an owned resource scope.
     :param cleanup: Failure raised while exiting that scope.
-    :returns: Ordinary exception group or original process-control exception with causes.
+    :returns: Ordinary LCL group or original control signal with retained causes.
     """
-    if pending is None or pending is cleanup:
-        return cleanup
-    if isinstance(pending, Exception) and isinstance(cleanup, Exception):
-        return ExceptionGroup("workflow execution and cleanup failed", [pending, cleanup])
-    if isinstance(pending, Exception):
-        pending, cleanup = cleanup, pending
-    previous = pending.__cause__
-    if cleanup.__context__ is pending:
-        cleanup.__context__ = None
-    pending.__cause__ = (
-        cleanup
-        if previous is None
-        else BaseExceptionGroup(
-            "workflow cleanup failures",
-            [previous, cleanup],
-        )
-    )
-    return pending
+    return combine_error_failures(pending, cleanup, code=workflow_codes.COMPOSITE_FAILURE)

@@ -492,12 +492,12 @@ requirement. There is no `m.profile` yet:
 
 <!-- lclang-doc-output: stdout -->
 ```text
-Error in loading config file "main.lclcfg" [LCL4201]:
+Error in loading config file "main.lclcfg" [LCL139991]:
   at "main.lclcfg":1:1
     import f"{__dir__}/service.lclcfg" as m
   at "service.lclcfg":2:1
     using f"{__dir__}/profiles/{profile}.lclcfg"
-  Error in evaluating profile [LCL3001]:
+  Error in evaluating profile [LCL139991]:
     profile at "service.lclcfg":1:10
       profile: NEED_OVERRIDE
                ^^^^^^^^^^^^^
@@ -564,7 +564,7 @@ output includes the physical child source and those qualified read values:
 
 <!-- lclang-doc-output: stdout -->
 ```text
-Error in evaluating result [LCL3001]:
+Error in evaluating result [LCL131421]:
   result at "main.lclcfg":2:9
     result: m.ratio * 100
   m.ratio at "metrics.lclcfg":3:8
@@ -730,3 +730,6 @@ Python objects. Import isolation controls name composition; it provides no
 hostile-code sandbox.
 
 [Previous: Python utilities for downstream applications](16-python-utilities.md) | [Return to the series introduction](README.md)
+
+The [error reference](../reference/errors.md) lists each builtin code and shows
+how to inspect its cause, source scene, and retained context.

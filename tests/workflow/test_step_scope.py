@@ -4,6 +4,7 @@ from typing import Any, cast
 
 import pytest
 
+from lclang.error import LclStateError, LclValidationError
 from lclang.workflow import (
     ExecutionStatus,
     ExecutionStatusManager,
@@ -75,20 +76,20 @@ def test_step_updates_are_atomic_and_finalized_handles_are_locked() -> None:
     """Invalid updates change nothing and every later handle operation is rejected."""
     manager = ExecutionStatusManager("workflow")
     handle = manager.add_step("work", "original")
-    with pytest.raises(TypeError, match="description"):
+    with pytest.raises(LclValidationError, match="description"):
         InvalidStep.update(handle, 1, ExecutionStatus.FAILURE)
     assert manager.current.sub_tasks[0].status is ExecutionStatus.RUNNING
     assert manager.current.sub_tasks[0].task_description == "original"
-    with pytest.raises(TypeError, match="status"):
+    with pytest.raises(LclValidationError, match="status"):
         InvalidStep.update(handle, "changed", "SUCCESS")
     assert manager.current.sub_tasks[0].task_description == "original"
 
     with handle:
         handle.update()
     for operation in (handle.__enter__, handle.update):
-        with pytest.raises(RuntimeError, match="finalized"):
+        with pytest.raises(LclStateError, match="finalized"):
             operation()
-    with pytest.raises(RuntimeError, match="finalized"):
+    with pytest.raises(LclStateError, match="finalized"):
         handle.__exit__(None, None, None)
 
 

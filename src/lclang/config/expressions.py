@@ -5,19 +5,22 @@ from pathlib import Path
 from typing import cast
 
 from lclang.ast import LclAstNode, LclConstant, LclName
-from lclang.config.errors import LclConfigSyntaxError
 from lclang.diagnostics import (
     internal_render_value,
     internal_trace,
     internal_verbose_enabled,
 )
-from lclang.errors import LclSyntaxError
+from lclang.error import LclConfigError, LclSyntaxError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.configuration import Code as configuration_codes
+from lclang.error.configuration import LclConfigSyntaxError
 from lclang.lang.lexer import Token, TokenKind, scan_tokens
 from lclang.lang.parser.pratt import parse_tokens
 from lclang.lang.printer import to_source
 from lclang.source import SourceOrigin, SourcePosition, SourceSnapshot
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_315)
 def parse_config_expression(
     text: str,
     *,
@@ -51,10 +54,7 @@ def parse_config_expression(
             )
         raise
     except LclSyntaxError as error:
-        converted = LclConfigSyntaxError(
-            error.message,
-            span=error.span,
-        )
+        converted = LclConfigSyntaxError(error.message, span=error.span, code=error.code)
         if internal_verbose_enabled():
             internal_trace(
                 "parse",
@@ -71,6 +71,7 @@ def parse_config_expression(
     return result
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_315)
 def adapt_magic_tokens(tokens: list[Token], path: Path | None) -> list[Token]:
     """Replace standalone file-magic identifiers with string tokens.
 
@@ -97,6 +98,7 @@ def adapt_magic_tokens(tokens: list[Token], path: Path | None) -> list[Token]:
                 raise LclConfigSyntaxError(
                     "file magic requires a physical source path",
                     span=token.span,
+                    code=configuration_codes.E15_FILE_MAGIC_REQUIRES_A_PHYSICAL_SOURCE_PATH,
                 )
             output.append(Token(TokenKind.STRING, token.lexeme, token.span, values[token.lexeme]))
         else:
@@ -104,6 +106,7 @@ def adapt_magic_tokens(tokens: list[Token], path: Path | None) -> list[Token]:
     return output
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_315)
 def replace_magic_nodes(node: LclAstNode, path: Path | None) -> LclAstNode:
     """Replace magic references nested inside semantic f-string fields.
 
@@ -120,6 +123,7 @@ def replace_magic_nodes(node: LclAstNode, path: Path | None) -> LclAstNode:
             raise LclConfigSyntaxError(
                 "file magic requires a physical source path",
                 span=node.span,
+                code=configuration_codes.E15_FILE_MAGIC_REQUIRES_A_PHYSICAL_SOURCE_PATH,
             )
         value = str(path) if str(node.identifier) == "__file__" else str(path.parent)
         return LclConstant(value, span=node.span)
@@ -134,6 +138,7 @@ def replace_magic_nodes(node: LclAstNode, path: Path | None) -> LclAstNode:
     return node if not changes else replace(node, **changes)  # type: ignore[arg-type]
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_315)
 def replace_magic_value(value: object, path: Path | None) -> object:
     """Transform an AST-valued field or immutable child tuple.
 

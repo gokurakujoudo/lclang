@@ -3,6 +3,10 @@
 from datetime import date
 from typing import final
 
+from lclang.error import LclUtilityError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.codes.utilities import Code as utilities_codes
 from lclang.utils.calendar.base import BDCalendar
 from lclang.utils.calendar.constants import MAX_BUSINESS_DAY_SHIFT_DAYS
 from lclang.utils.calendar.helpers import dependency_date
@@ -10,14 +14,15 @@ from lclang.utils.calendar.mapping.base import BDCalendarMapOperation
 from lclang.utils.calendar.mapping.sentinel import SELF_CALENDAR
 
 
+@guard_constructor(LclValidationError, utilities_codes.NATIVE_713)
 @final
 class ShiftNDaysMapOperation(BDCalendarMapOperation):
     """Shift dates by a signed number of strict business days.
 
     :param n: Signed business-day count.
     :param base_calendar: Calendar used for traversal.
-    :raises TypeError: If *n* is not an integer.
-    :raises ValueError: If the count exceeds the primitive operation bound.
+    :raises LclValidationError: If *n* is not an integer.
+    :raises LclValidationError: If the count exceeds the primitive operation bound.
     """
 
     __slots__ = ("n",)
@@ -28,16 +33,23 @@ class ShiftNDaysMapOperation(BDCalendarMapOperation):
         :param n: Signed business-day count.
         :param base_calendar: Calendar used for traversal.
         :returns: ``None``.
-        :raises TypeError: If *n* is not an integer.
-        :raises ValueError: If the count exceeds the primitive operation bound.
+        :raises LclValidationError: If *n* is not an integer.
+        :raises LclValidationError: If the count exceeds the primitive operation bound.
         """
         if not isinstance(n, int) or isinstance(n, bool):
-            raise TypeError("business-day shift must be an integer")
+            raise LclValidationError(
+                "business-day shift must be an integer",
+                code=utilities_codes.E13_BUSINESS_DAY_SHIFT_MUST_BE_AN_INTEGER,
+            )
         if abs(n) > MAX_BUSINESS_DAY_SHIFT_DAYS:
-            raise ValueError("business-day shift exceeds primitive mapping bound")
+            raise LclValidationError(
+                "business-day shift exceeds primitive mapping bound",
+                code=utilities_codes.E13_BUSINESS_DAY_SHIFT_EXCEEDS_PRIMITIVE_MAPPING_BOUND,
+            )
         self.n = n
         super().__init__(base_calendar)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_713)
     async def map_date(self, base_date: date) -> date:
         """Shift one date by the configured business-day count.
 
@@ -67,6 +79,7 @@ class ShiftNDaysMapOperation(BDCalendarMapOperation):
                 )
         return self.validate_displacement(base_date, target)
 
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_713)
     def with_base_calendar(self, calendar: BDCalendar) -> ShiftNDaysMapOperation:
         """Return a new operation bound to a calendar.
 

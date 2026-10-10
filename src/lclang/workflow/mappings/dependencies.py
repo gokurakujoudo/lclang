@@ -3,12 +3,16 @@
 from dataclasses import MISSING
 from typing import cast
 
+from lclang.error import LclWorkflowError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.workflow import Code as workflow_codes
 from lclang.workflow.definitions import TaskNode, Workflow
 from lclang.workflow.mappings.bindings import mapping_variables
 from lclang.workflow.mappings.structure import MappingNode, mapping_nodes, mapping_structure
 from lclang.workflow.variables import TaskVar
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_521)
 def has_field_default(node: MappingNode) -> bool:
     """Inspect constructor fallback metadata without calling its factory.
 
@@ -20,6 +24,7 @@ def has_field_default(node: MappingNode) -> bool:
     )
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_521)
 def external_uses(workflow: Workflow) -> tuple[MappingNode, ...]:
     """Find unresolved argument locations using execution's context scope rules.
 

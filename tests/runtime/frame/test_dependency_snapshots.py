@@ -6,7 +6,7 @@ from typing import cast
 
 import pytest
 
-from lclang.errors import LclClosedFrameError, LclEvaluationError, LclNameError
+from lclang.error import LclClosedFrameError, LclEvaluationError, LclNameError, LclValidationError
 from lclang.lang.parser import parse_expression
 from lclang.runtime import DependencyKind, Frame, Module
 from lclang.types import FrameId, ModuleName, VarName
@@ -129,7 +129,7 @@ async def test_snapshot_routes_to_owner_and_rejects_invalid_lifecycle_names() ->
         {"local_host": 1},
     )
     assert child.dependency_snapshot("value") == parent.dependency_snapshot("value")
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         child.dependency_snapshot("")
     with pytest.raises(LclEvaluationError):
         child.dependency_snapshot("local_host")

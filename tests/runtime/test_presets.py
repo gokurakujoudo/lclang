@@ -6,6 +6,7 @@ from typing import cast
 
 import pytest
 
+from lclang.error import LclValidationError
 from lclang.runtime import Preset
 
 
@@ -28,7 +29,7 @@ def test_preset_rejects_empty_public_names(
     values: dict[str, object],
 ) -> None:
     """Preset and binding identifiers must be non-empty."""
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         Preset(name, values)
 
 
@@ -60,7 +61,7 @@ def test_overlay_accepts_an_explicit_name_and_validates_inputs() -> None:
     preset = Preset("base", {"value": 1})
     other = Preset("local", {"value": 2})
     assert preset.overlay(other, name="effective").name == "effective"
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         preset.overlay(other, name="")
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         preset.overlay(object())  # type: ignore[arg-type]

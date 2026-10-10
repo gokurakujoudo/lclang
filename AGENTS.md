@@ -265,3 +265,25 @@ Keep public documentation in English.
 
 Do not advertise planned behavior as implemented. Preserve unrelated user
 changes. Update this file only when durable architecture or workflow changes.
+
+## Error contract
+
+- Keep exception types, diagnostic records, wrapping, rendering, and code tables
+  in `lclang.error`. Its exception root depends only on low-level primitive types.
+- Builtin codes use `LCL` plus six decimal digits: domain, subsystem, operation,
+  category, cause, refinement. Define meanings under their parents in the central
+  domain tables. Known causes use specific registered codes; incidental parameter
+  names and paths belong in messages and context. Applications may use custom
+  nonempty string codes.
+- Choose codes where a condition is detected or an operation fails. Never infer
+  them from exception message text. Ordinary proactive library failures use LCL
+  types, including validation and lifecycle failures. Native callback/operation
+  failures retain `__cause__`; existing LCL codes survive added context.
+- Preserve native cancellation, exit, interruption, and iterator termination.
+  Attribute protocols retain `AttributeError` inheritance. Ordinary combined
+  failures use `LclErrorGroup` and retain every execution and cleanup member.
+- Rendering uses detached source/value snapshots and never evaluates or reloads
+  configuration. Preserve masks, loading routes, evaluation stacks and task names.
+- Add every builtin code to `docs/reference/errors.md` with its path, cause,
+  minimal trigger, handling and exception type. Execute marked examples. The
+  production source audit rejects uncoded proactive failures and registry errors.

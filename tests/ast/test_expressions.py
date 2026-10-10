@@ -17,6 +17,7 @@ from lclang.ast.operators import (
     ComparisonOperator,
     UnaryOperator,
 )
+from lclang.error import LclValidationError
 from lclang.types import VarName
 
 
@@ -49,9 +50,9 @@ def test_boolean_comparison_and_conditional_children_are_deterministic() -> None
 def test_variable_length_nodes_reject_invalid_cardinality() -> None:
     """Boolean and comparison invariants fail at construction boundaries."""
     value = LclConstant(value=1)
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         LclBoolean(BooleanOperator.OR, (value,))
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         LclCompare(value, (), ())
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         LclCompare(value, (ComparisonOperator.EQUAL,), ())

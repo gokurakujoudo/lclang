@@ -3,6 +3,7 @@
 import pytest
 
 from lclang.cli.validation import freeze_mapping, is_lcl_identifier, normalize_text
+from lclang.error import LclValidationError
 
 
 def test_text_identifier_and_mapping_validation() -> None:
@@ -16,9 +17,9 @@ def test_text_identifier_and_mapping_validation() -> None:
     frozen = freeze_mapping(source, "values")
     source["x"] = 2
     assert frozen == {"x": 1}
-    with pytest.raises(TypeError, match="summary"):
+    with pytest.raises(LclValidationError, match="summary"):
         normalize_text(1, "summary")  # type: ignore[arg-type]
-    with pytest.raises(TypeError, match="mapping"):
+    with pytest.raises(LclValidationError, match="mapping"):
         freeze_mapping(1, "values")  # type: ignore[arg-type]
-    with pytest.raises(TypeError, match="names"):
+    with pytest.raises(LclValidationError, match="names"):
         freeze_mapping({1: "x"}, "values")  # type: ignore[dict-item]

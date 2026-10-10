@@ -3,7 +3,14 @@
 from __future__ import annotations
 
 import logging
+from copy import copy
+from typing import cast
 
+from lclang.error import LclError, LclLoggerError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_failure
+from lclang.error.codes.logging import Code as logging_codes
+from lclang.error.wrapping import wrap_failure
 from lclang.logger.config import LoggerHandlerConfig, handler_config
 from lclang.logger.validation import level, mapping
 from lclang.runtime import Frame
@@ -11,12 +18,13 @@ from lclang.runtime.frame.binding_lookup import find_scoped_binding
 from lclang.scope_proxy import FrameProxy
 
 
+@guard_async_failure(LclLoggerError, logging_codes.NATIVE_613)
 async def proxy_values(proxy: FrameProxy) -> dict[str, object]:
     """Resolve only the effective logger subtree and its necessary dependencies.
 
     :param proxy: Logger or nested configuration proxy.
     :returns: Plain nested values suitable for core validation.
-    :raises ValueError: If a leaf expression fails, annotated with its field path.
+    :raises LclValidationError: If a leaf expression fails, annotated with its field path.
     """
     values: dict[str, object] = {}
     for name in await proxy.field_names():
@@ -24,11 +32,31 @@ async def proxy_values(proxy: FrameProxy) -> dict[str, object]:
             value = await proxy.get(name)
         except Exception as error:
             path = ".".join((*proxy.path, name))
-            raise ValueError(f"cannot resolve logger setting {path!r}") from error
+            if isinstance(error, ExceptionGroup):
+                failure = wrap_failure(
+                    cast(ExceptionGroup[Exception], error),
+                    LclValidationError,
+                    (
+                        error.code
+                        if isinstance(error, LclError)
+                        else logging_codes.E13_CANNOT_RESOLVE_LOGGER_SETTING_VALUE
+                    ),
+                )
+                failure.add_note(f"logger setting {path}")
+                raise failure from failure.__cause__
+            raise LclValidationError(
+                f"cannot resolve logger setting {path!r}",
+                code=(
+                    error.code
+                    if isinstance(error, LclError)
+                    else logging_codes.E13_CANNOT_RESOLVE_LOGGER_SETTING_VALUE
+                ),
+            ) from error
         values[name] = await proxy_values(value) if isinstance(value, FrameProxy) else value
     return values
 
 
+@guard_failure(LclLoggerError, logging_codes.NATIVE_613)
 def verbose_config(config: LoggerHandlerConfig) -> LoggerHandlerConfig:
     """Lower output thresholds without changing sink ownership or source filters.
 
@@ -53,15 +81,17 @@ def verbose_config(config: LoggerHandlerConfig) -> LoggerHandlerConfig:
     )
 
 
+@guard_async_failure(LclLoggerError, logging_codes.NATIVE_613)
 async def resolve_logger_config(frame: Frame, verbose: bool = False) -> LoggerHandlerConfig:
     """Materialize layered logger fields once before any sinks are initialized.
 
     :param frame: Caller-owned Frame containing scoped logger fields and dependencies.
     :param verbose: Whether to force DEBUG for enabled outputs.
     :returns: Validated settings, using handler defaults when the namespace is absent.
-    :raises TypeError: If the namespace is not a FrameProxy or a field type is invalid.
-    :raises ValueError: If a field value is invalid or a leaf expression fails.
+    :raises LclValidationError: If the namespace is not a FrameProxy or a field type is invalid.
+    :raises LclValidationError: If a field value is invalid or a leaf expression fails.
     :raises LclError: If resolving the logger namespace fails.
+    :raises LclLoggerError: If native configuration resolution fails.
 
     .. note::
        Only logger fields and their dependencies are evaluated. The caller owns
@@ -74,15 +104,22 @@ async def resolve_logger_config(frame: Frame, verbose: bool = False) -> LoggerHa
     elif isinstance(proxy, FrameProxy):
         values = await proxy_values(proxy)
     else:
-        raise TypeError("logger must remain a FrameProxy configuration namespace")
+        raise LclValidationError(
+            "logger must remain a FrameProxy configuration namespace",
+            code=logging_codes.E13_LOGGER_MUST_REMAIN_A_FRAMEPROXY_CONFIGURATION_NAMESPACE,
+        )
     try:
         config = handler_config(values)
-    except (TypeError, ValueError) as error:
-        path = str(error).partition(":")[0]
-        raise type(error)(f"{error} (source: {logger_source(frame, path)})") from error
+    except LclValidationError as error:
+        path = error.message.partition(":")[0]
+        failure = copy(error)
+        failure.message = f"{error.message} (source: {logger_source(frame, path)})"
+        failure.args = (failure.message,)
+        raise failure from error.__cause__
     return verbose_config(config) if verbose else config
 
 
+@guard_failure(LclLoggerError, logging_codes.NATIVE_613)
 def logger_source(frame: Frame, path: str) -> str:
     """Locate source metadata without evaluating the invalid field again.
 

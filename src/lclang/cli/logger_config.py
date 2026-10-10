@@ -7,11 +7,15 @@ from dataclasses import fields
 from typing import cast
 
 from lclang.ast import LclAstNode, LclConstant
+from lclang.error import LclCliError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.cli import Code as cli_codes
 from lclang.logger import LoggerHandlerConfig
 from lclang.logger.config import CONFIG_FIELDS
 from lclang.logger.sink_config import CONSOLE_FIELDS, FILE_FIELDS
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_443)
 def logger_parameter(name: str) -> bool:
     """Recognize valid framework logger leaf names without accepting arbitrary prefixes.
 
@@ -32,6 +36,7 @@ def logger_parameter(name: str) -> bool:
     return len(parts) == 2 and parts[1] in CONFIG_FIELDS
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_443)
 def logger_definitions(config: LoggerHandlerConfig) -> dict[str, LclAstNode]:
     """Flatten declared defaults while retaining absent sink fields for inheritance.
 

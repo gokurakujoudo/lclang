@@ -8,6 +8,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import get_type_hints
 
+from lclang.error import LclError, LclWorkflowError
+from lclang.error.base import LclStateError, LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.codes.workflow import Code as workflow_codes
+from lclang.error.wrapping import wrap_failure
 from lclang.runtime import Frame
 from lclang.types import TaskID
 from lclang.workflow.context import (
@@ -30,10 +35,11 @@ STOP_STATUSES = frozenset(
 )
 
 
-class WorkflowStatusStop(RuntimeError):
+class WorkflowStatusStop(LclWorkflowError):
     """Carry one synthetic exception for an explicit stopping status."""
 
 
+@guard_constructor(LclValidationError, workflow_codes.NATIVE_531)
 @dataclass(slots=True)
 class WorkflowRunState:
     """Retain mutable values private to one workflow execution.
@@ -48,6 +54,7 @@ class WorkflowRunState:
     task_outputs: dict[TaskID, object]
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def task_context_for(
     state: WorkflowRunState,
     task: TaskNode,
@@ -74,6 +81,7 @@ def task_context_for(
     )
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def record_exception(
     state: WorkflowRunState,
     manager: ExecutionStatusManager,
@@ -81,7 +89,8 @@ def record_exception(
     error: Exception,
     *,
     preserve_status: bool = False,
-) -> None:
+    code: str = workflow_codes.ACTION_FAILURE,
+) -> LclError:
     """Record one ordinary exception in status, logs, and the shared Frame.
 
     :param state: Current execution state.
@@ -89,14 +98,19 @@ def record_exception(
     :param branch: Root-to-originating-task identifier path.
     :param error: Original or synthetic exception.
     :param preserve_status: Whether an explicit status remains authoritative.
+    :param code: Classified boundary used only for a native failure.
+    :returns: Structured failure stored in the status and shared Frame.
     """
+    error = wrap_failure(error, LclWorkflowError, code)
     if not preserve_status:
         manager.update(ExecutionStatus.ERROR, str(error))
     error.add_note(f"workflow task {'.'.join(branch)}")
     log_task_error(state.context, branch, manager.current.status, error)
     state.context.frame.mixin({"__exception__": WorkflowException(error, branch[-1])})
+    return error
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def raise_for_status(
     state: WorkflowRunState,
     manager: ExecutionStatusManager,
@@ -112,11 +126,15 @@ def raise_for_status(
     status = manager.current.status
     if status not in STOP_STATUSES:
         return
-    error = WorkflowStatusStop(f"task '{branch[-1]}' ended with {status.value}")
+    error = WorkflowStatusStop(
+        f"task '{branch[-1]}' ended with {status.value}",
+        code=workflow_codes.E31_TASK_VALUE_ENDED_WITH_VALUE,
+    )
     record_exception(state, manager, branch, error, preserve_status=True)
     raise error
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def finalize_manager(manager: ExecutionStatusManager) -> None:
     """Finalize one manager with automatic clean success.
 
@@ -127,6 +145,7 @@ def finalize_manager(manager: ExecutionStatusManager) -> None:
     manager.finalize()
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def add_skipped_task(parent: ExecutionStatusManager, task: TaskNode) -> None:
     """Materialize one complete unexecuted task branch as skipped.
 
@@ -141,6 +160,7 @@ def add_skipped_task(parent: ExecutionStatusManager, task: TaskNode) -> None:
     manager.finalize()
 
 
+@guard_async_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 async def execute_action_and_children(
     state: WorkflowRunState,
     task: TaskNode,
@@ -156,18 +176,23 @@ async def execute_action_and_children(
     :param manager: Current task status manager.
     :param stack: Root-to-current task path.
     :returns: Whether traversal may continue.
-    :raises RuntimeError: If a validated action has lost its argument mapping.
+    :raises LclStateError: If a validated action has lost its argument mapping.
     """
     if task.task_action is not None:
         if task.args_mapping is None:
-            missing_mapping = RuntimeError("validated action is missing its argument mapping")
+            missing_mapping = LclStateError(
+                "validated action is missing its argument mapping",
+                code=workflow_codes.E31_VALIDATED_ACTION_IS_MISSING_ITS_ARGUMENT_MAPPING,
+            )
             record_exception(state, manager, stack, missing_mapping)
             raise missing_mapping
         try:
             args = await materialize_args(task.args_mapping, context.frame)
         except Exception as error:
-            record_exception(state, manager, stack, error)
-            raise
+            failure = record_exception(
+                state, manager, stack, error, code=workflow_codes.MAPPING_FAILURE
+            )
+            raise failure from failure.__cause__
         state.task_args[task.task_id] = args
         log_mapping(
             state.context,
@@ -181,17 +206,22 @@ async def execute_action_and_children(
         try:
             output = await task.task_action(context, args, manager)
         except Exception as error:
-            record_exception(state, manager, stack, error)
-            raise
+            failure = record_exception(
+                state, manager, stack, error, code=workflow_codes.ACTION_FAILURE
+            )
+            raise failure from failure.__cause__
         finally:
             context._child_execution.action_active = False
         return_type = get_type_hints(task.task_action).get("return")
         try:
             valid_output = type(output) is record_type(return_type)
-        except TypeError:
+        except TypeError, LclValidationError:
             valid_output = False
         if not valid_output:
-            wrong_output = TypeError("workflow action must return its annotated dataclass")
+            wrong_output = LclValidationError(
+                "workflow action must return its annotated dataclass",
+                code=workflow_codes.E31_WORKFLOW_ACTION_MUST_RETURN_ITS_ANNOTATED_DATACLASS,
+            )
             record_exception(state, manager, stack, wrong_output)
             raise wrong_output
         state.task_outputs[task.task_id] = output
@@ -200,8 +230,10 @@ async def execute_action_and_children(
             if published:
                 state.context.frame.mixin(published)
         except Exception as error:
-            record_exception(state, manager, stack, error)
-            raise
+            failure = record_exception(
+                state, manager, stack, error, code=workflow_codes.MAPPING_FAILURE
+            )
+            raise failure from failure.__cause__
         raise_for_status(state, manager, stack)
     if context._child_execution.children_skipped:
         return True

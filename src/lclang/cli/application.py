@@ -8,6 +8,9 @@ from lclang.cli.commands import CommandGroup, cli
 from lclang.cli.context import CliContext
 from lclang.cli.entrance import CliEntrance
 from lclang.cli.models import CliResult, ParameterDoc
+from lclang.error import LclCliError
+from lclang.error.boundary import guard_async_failure
+from lclang.error.codes.cli import Code as cli_codes
 
 # Shared required output binding documented by both built-in commands.
 # Unitless parameter names, command groups and entrance objects below define the built-in CLI
@@ -38,6 +41,7 @@ FORCE_PARAMETER = ParameterDoc(
 
 
 @cli.command(parameter_docs=(RESULT_PARAMETER, EVAL_PARAMETER, FORCE_PARAMETER))
+@guard_async_failure(LclCliError, cli_codes.NATIVE_416)
 async def parse_lcl_command(context: CliContext) -> CliResult:
     """Render the dependency tree for RESULT, optionally after evaluation.
 
@@ -55,6 +59,7 @@ async def parse_lcl_command(context: CliContext) -> CliResult:
 
 
 @cli.command(parameter_docs=(RESULT_PARAMETER, FORCE_PARAMETER))
+@guard_async_failure(LclCliError, cli_codes.NATIVE_416)
 async def eval_lcl_command(context: CliContext) -> CliResult:
     """Evaluate RESULT and render its string representation.
 
@@ -67,6 +72,7 @@ async def eval_lcl_command(context: CliContext) -> CliResult:
 
 
 @cli.command()
+@guard_async_failure(LclCliError, cli_codes.NATIVE_416)
 async def builtins_command(context: CliContext) -> CliResult:
     """List canonical LCL builtins and namespace methods.
 

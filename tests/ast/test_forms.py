@@ -10,6 +10,7 @@ from lclang.ast.forms import (
     LclRaise,
     ParameterKind,
 )
+from lclang.error import LclValidationError
 from lclang.types import VarName
 
 
@@ -31,11 +32,11 @@ def test_parameter_and_form_children_are_deterministic() -> None:
 @pytest.mark.parametrize("kind", [ParameterKind.VAR_POSITIONAL, ParameterKind.VAR_KEYWORD])
 def test_variadic_parameter_rejects_default(kind: ParameterKind) -> None:
     """Variadic capture and default-value semantics cannot be combined."""
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         LclParameter(VarName("items"), kind, LclConstant(value=1))
 
 
 def test_parameter_rejects_empty_name() -> None:
     """Every binding parameter must have a usable name."""
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         LclParameter(VarName(""), ParameterKind.POSITIONAL)

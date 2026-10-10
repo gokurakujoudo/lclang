@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import pytest
 
 import lclang.workflow as wf
+from lclang.error import LclValidationError
 
 
 @dataclass
@@ -115,7 +116,7 @@ def test_workflow_definition_rejects_duplicate_ids_and_cycles() -> None:
     """The reusable tree has globally unique IDs and cannot contain a cycle."""
     duplicate = wf.define_task("same", "Duplicate")
     root = wf.define_task("same", "Root", children=[duplicate])
-    with pytest.raises(ValueError, match="duplicate workflow task ID"):
+    with pytest.raises(LclValidationError, match="duplicate workflow task ID"):
         wf.define_workflow("Invalid", root)
 
     children: list[wf.TaskNode] = []

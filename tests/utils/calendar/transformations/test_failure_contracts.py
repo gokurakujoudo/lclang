@@ -5,6 +5,7 @@ from typing import cast
 
 import pytest
 
+from lclang.error import LclValidationError
 from lclang.utils.calendar import (
     ALL_DAYS,
     ALL_WEEKDAYS,
@@ -64,12 +65,12 @@ async def test_all_transformation_branches_and_dependency_wrapping() -> None:
     flattened = subtraction.minus(ALL_DAYS)
     assert await flattened.get_day_type(d) is DayType.Holiday
     assert business.calendar_id in await flattened.get_dependency_ids()
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         SubtractionBDCalendar(cast(BDCalendar, object()), (business,))
     for normalizer in (canonical_calendars, ordered_calendars):
-        with pytest.raises(TypeError):
+        with pytest.raises(LclValidationError):
             normalizer((cast(BDCalendar, object()),))
-        with pytest.raises(ValueError):
+        with pytest.raises(LclValidationError):
             normalizer(())
     assert await direct_dependency_ids((business,)) == {business.calendar_id}
     with pytest.raises(DateOperationOutOfScopeException):

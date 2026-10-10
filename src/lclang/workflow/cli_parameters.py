@@ -6,17 +6,23 @@ from typing import get_origin
 from lclang.cli.models import ParameterDoc
 from lclang.cli.parameter_details import DerivedParameterDoc
 from lclang.defaults import DefaultBinding
+from lclang.error import LclWorkflowError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.workflow import Code as workflow_codes
 from lclang.utils.boxes import get_box_type
 from lclang.workflow.mappings.annotations import record_annotations
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_514)
 def expand_record_parameters(parameters: tuple[ParameterDoc, ...]) -> tuple[ParameterDoc, ...]:
     """Add static record field descriptions without creating workflow variables.
 
     :param parameters: Explicit external variables, which take precedence at shared paths.
     :returns: Unique root and field descriptions in declaration traversal order.
-    :raises TypeError: If annotations, field help or overlapping field types are incompatible.
-    :raises ValueError: If a derived name is not a supported CLI path.
+    :raises LclValidationError: If annotations, field help or overlapping field types are
+       incompatible.
+    :raises LclValidationError: If a derived name is not a supported CLI path.
     """
     explicit = {item.name: item for item in parameters}
     output = dict(explicit)
@@ -27,7 +33,7 @@ def expand_record_parameters(parameters: tuple[ParameterDoc, ...]) -> tuple[Para
         :param parent: Description whose fields may be expanded.
         :param root: Owning external variable name.
         :param active: Record classes already on this path, bounding recursive annotations.
-        :raises TypeError: If field metadata or an overlapping annotation is incompatible.
+        :raises LclValidationError: If field metadata or an overlapping annotation is incompatible.
         """
         cls = get_origin(parent.value_type) or parent.value_type
         if (
@@ -59,7 +65,10 @@ def expand_record_parameters(parameters: tuple[ParameterDoc, ...]) -> tuple[Para
             )
             if name in explicit:
                 if explicit[name].value_type != inferred.value_type:
-                    raise TypeError(f"conflicting CLI field annotation: {name}")
+                    raise LclValidationError(
+                        f"conflicting CLI field annotation: {name}",
+                        code=workflow_codes.E14_CONFLICTING_CLI_FIELD_ANNOTATION_VALUE,
+                    )
                 inferred = replace(explicit[name], masked=explicit[name].masked or parent.masked)
             output[name] = inferred
             visit(inferred, root, active | {cls})

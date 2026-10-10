@@ -13,6 +13,10 @@ from lclang.ast import (
     LclUnary,
 )
 from lclang.ast.operators import BooleanOperator, ComparisonOperator, UnaryOperator
+from lclang.error import LclSyntaxError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.lexer import TokenKind
 from lclang.lang.parser.stream import TokenStream
 from lclang.source import merge_source_spans
@@ -30,6 +34,7 @@ _SINGLE_COMPARISONS = {
 }
 
 
+@guard_constructor(LclValidationError, language_codes.NATIVE_121)
 class InternalLogicalParser:
     """Parse the low-precedence logical expression layers.
 
@@ -62,6 +67,7 @@ class InternalLogicalParser:
         self.parse_arithmetic = parse_arithmetic
         self.allow_conditional = allow_conditional
 
+    @guard_failure(LclSyntaxError, language_codes.NATIVE_121)
     def parse(self) -> LclAstNode:
         """Parse the logical expression layer selected by configuration.
 
@@ -232,6 +238,7 @@ class InternalLogicalParser:
         return None
 
 
+@guard_failure(LclSyntaxError, language_codes.NATIVE_121)
 def parse_logical(
     stream: TokenStream,
     parse_arithmetic: Callable[[], LclAstNode],

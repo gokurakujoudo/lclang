@@ -10,7 +10,8 @@ from lclang.ast import (
     LclJoinedString,
     LclStringText,
 )
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.lexer import Token, scan_tokens
 from lclang.lang.lexer.fstring_values import FStringField, FStringText, FStringValue
 from lclang.source import SourceSpan, advance_source_position
@@ -79,7 +80,7 @@ def internal_convert_part(
     try:
         expression = internal_parse_field_expression(part.expression, expression_span)
     except LclSyntaxError as error:
-        raise LclSyntaxError(error.message, span=span) from error
+        raise LclSyntaxError(error.message, span=span, code=error.code) from error
     format_spec = (
         None if part.format_spec is None else internal_convert_value(part.format_spec, span)
     )
@@ -112,4 +113,6 @@ def internal_parse_field_expression(source: str, span: SourceSpan) -> LclAstNode
         )
     except LclSyntaxError as error:
         message = f"invalid f-string expression: {error.message}"
-        raise LclSyntaxError(message, span=span) from error
+        raise LclSyntaxError(
+            message, span=span, code=language_codes.E26_PARSE_FIELD_EXPRESSION_FAILURE
+        ) from error

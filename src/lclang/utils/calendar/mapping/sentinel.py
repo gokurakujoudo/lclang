@@ -3,8 +3,11 @@
 from datetime import date
 from typing import final
 
+from lclang.error import LclUtilityError
+from lclang.error.boundary import guard_async_failure
+from lclang.error.calendar import UnappliedCalendarOperationException
+from lclang.error.codes.utilities import Code as utilities_codes
 from lclang.utils.calendar.base import BDCalendar
-from lclang.utils.calendar.errors import UnappliedCalendarOperationException
 from lclang.utils.calendar.types import CalendarID, DayType
 
 
@@ -12,6 +15,7 @@ from lclang.utils.calendar.types import CalendarID, DayType
 class SelfCalendar(BDCalendar):
     """Represent a source calendar that has not yet been applied."""
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_713)
     async def get_day_type(self, d: date) -> DayType:
         """Reject direct sentinel classification.
 
@@ -19,8 +23,9 @@ class SelfCalendar(BDCalendar):
         :returns: Never returns.
         :raises UnappliedCalendarOperationException: Always.
         """
-        raise UnappliedCalendarOperationException()
+        raise UnappliedCalendarOperationException(code=utilities_codes.E13_OPERATION_IS_UNAVAILABLE)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_713)
     async def next_bd(self, d: date) -> date:
         """Reject direct sentinel traversal.
 
@@ -28,8 +33,9 @@ class SelfCalendar(BDCalendar):
         :returns: Never returns.
         :raises UnappliedCalendarOperationException: Always.
         """
-        raise UnappliedCalendarOperationException()
+        raise UnappliedCalendarOperationException(code=utilities_codes.E13_OPERATION_IS_UNAVAILABLE)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_713)
     async def prev_bd(self, d: date) -> date:
         """Reject direct sentinel traversal.
 
@@ -37,8 +43,9 @@ class SelfCalendar(BDCalendar):
         :returns: Never returns.
         :raises UnappliedCalendarOperationException: Always.
         """
-        raise UnappliedCalendarOperationException()
+        raise UnappliedCalendarOperationException(code=utilities_codes.E13_OPERATION_IS_UNAVAILABLE)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_713)
     async def gen_year(self, year: int) -> dict[date, DayType]:
         """Reject direct sentinel generation.
 
@@ -46,7 +53,7 @@ class SelfCalendar(BDCalendar):
         :returns: Never returns.
         :raises UnappliedCalendarOperationException: Always.
         """
-        raise UnappliedCalendarOperationException()
+        raise UnappliedCalendarOperationException(code=utilities_codes.E13_OPERATION_IS_UNAVAILABLE)
 
 
 # Singleton placeholder for an operation's eventual source calendar.

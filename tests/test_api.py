@@ -6,6 +6,7 @@ from typing import Any, cast
 import pytest
 
 import lclang
+from lclang.error import LclValidationError
 
 
 @pytest.mark.asyncio
@@ -150,11 +151,11 @@ async def test_empty_module_and_custom_preset_still_make_a_user_frame() -> None:
 @pytest.mark.parametrize(
     ("name", "expressions", "error"),
     [
-        (1, {}, TypeError),
-        ("app", [], TypeError),
-        ("app", {1: "1"}, TypeError),
-        ("app", {"value": 1}, TypeError),
-        ("", {}, ValueError),
+        (1, {}, LclValidationError),
+        ("app", [], LclValidationError),
+        ("app", {1: "1"}, LclValidationError),
+        ("app", {"value": 1}, LclValidationError),
+        ("", {}, LclValidationError),
     ],
 )
 def test_define_module_rejects_invalid_inputs(
@@ -188,7 +189,7 @@ def test_define_frame_rejects_invalid_inputs(
     preset: object,
 ) -> None:
     """Rainy: invalid hierarchy inputs cannot yield partial Frames."""
-    expected = ValueError if preset == {"": 1} else TypeError
+    expected = LclValidationError
     with pytest.raises(expected):
         lclang.define_frame(
             cast(Any, module),

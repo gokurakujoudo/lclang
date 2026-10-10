@@ -16,6 +16,8 @@ from lclang.ast import (
     LclStarred,
 )
 from lclang.ast.comprehensions import LclComprehensionClause
+from lclang.error import LclEvaluationError
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.evaluator._types import EvaluateNode
 from lclang.lang.evaluator.context import Resolver, ScopedResolver
 from lclang.lang.evaluator.iteration import iterate_values
@@ -90,7 +92,7 @@ async def internal_dictionary(
     :param resolver: Resolver providing the outer lexical scope.
     :param evaluate: Recursive evaluator for keys, values, and unpacked maps.
     :returns: Dictionary assembled in comprehension iteration order.
-    :raises TypeError: If the head has an unsupported AST type or a
+    :raises LclEvaluationError: If the head has an unsupported AST type or a
        dictionary-unpacking value is not a mapping.
 
     .. note::
@@ -105,10 +107,16 @@ async def internal_dictionary(
         elif isinstance(node.entry, LclDictUnpack):
             value = await evaluate(node.entry.value, scope)
             if not isinstance(value, Mapping):
-                raise TypeError("dictionary unpacking requires a mapping")
+                raise LclEvaluationError(
+                    "dictionary unpacking requires a mapping",
+                    code=language_codes.E35_DICTIONARY_UNPACKING_REQUIRES_A_MAPPING,
+                )
             result.update(cast(Mapping[object, object], value))
         else:
-            raise TypeError("unsupported dictionary comprehension entry")
+            raise LclEvaluationError(
+                "unsupported dictionary comprehension entry",
+                code=language_codes.E35_UNSUPPORTED_DICTIONARY_COMPREHENSION_ENTRY,
+            )
     return result
 
 

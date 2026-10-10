@@ -10,6 +10,10 @@ from pathlib import Path
 from string import Formatter
 from typing import cast
 
+from lclang.error import LclLoggerError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.logging import Code as logging_codes
 from lclang.logger.rotation import RotationConfig, rotation_config
 from lclang.logger.validation import boolean, fields, level, names, positive
 
@@ -27,6 +31,7 @@ FILE_FIELDS = {
 }
 
 
+@guard_constructor(LclValidationError, logging_codes.NATIVE_631)
 @dataclass(frozen=True, slots=True)
 class ConsoleConfig:
     """Hold one borrowed output stream's settings.
@@ -41,6 +46,7 @@ class ConsoleConfig:
     stream: object
 
 
+@guard_constructor(LclValidationError, logging_codes.NATIVE_631)
 @dataclass(frozen=True, slots=True)
 class FileConfig:
     """Hold a fully resolved file policy.
@@ -65,12 +71,13 @@ class FileConfig:
     rotation: RotationConfig
 
 
+@guard_failure(LclLoggerError, logging_codes.NATIVE_631)
 def console_config(value: object) -> ConsoleConfig:
     """Validate a console declaration without writing to its stream.
 
     :param value: Console field mapping.
     :returns: Resolved console settings.
-    :raises TypeError: If a stream is not text-writable.
+    :raises LclValidationError: If a stream is not text-writable.
     """
     path = "logger.console"
     data = fields(value, CONSOLE_FIELDS, path)
@@ -78,7 +85,10 @@ def console_config(value: object) -> ConsoleConfig:
     if stream not in ("stdout", "stderr") and not (
         callable(getattr(stream, "write", None)) and callable(getattr(stream, "flush", None))
     ):
-        raise TypeError(f"{path}.stream: expected stdout, stderr, or a text stream")
+        raise LclValidationError(
+            f"{path}.stream: expected stdout, stderr, or a text stream",
+            code=logging_codes.E31_VALUE_STREAM_EXPECTED_STDOUT_STDERR_OR_A_TEXT_STREAM,
+        )
     return ConsoleConfig(
         boolean(data.get("enabled", True), f"{path}.enabled"),
         level(data.get("level", "INFO"), f"{path}.level"),
@@ -86,28 +96,39 @@ def console_config(value: object) -> ConsoleConfig:
     )
 
 
+@guard_failure(LclLoggerError, logging_codes.NATIVE_631)
 def leaf_filename(value: object, path: str) -> str:
     """Check portable leaf names and supported template substitutions.
 
     :param value: Filename template.
     :param path: Diagnostic configuration path.
     :returns: Validated template.
-    :raises ValueError: If the name or substitution is invalid.
+    :raises LclValidationError: If the name or substitution is invalid.
     """
     if not isinstance(value, str) or not value or value in (".", ".."):
-        raise ValueError(f"{path}: expected nonempty leaf filename")
+        raise LclValidationError(
+            f"{path}: expected nonempty leaf filename",
+            code=logging_codes.E31_VALUE_EXPECTED_NONEMPTY_LEAF_FILENAME,
+        )
     if any(char in value for char in '/\\\x00\n\r<>:"|?*') or value.endswith((" ", ".")):
-        raise ValueError(f"{path}: expected portable leaf filename")
+        raise LclValidationError(
+            f"{path}: expected portable leaf filename",
+            code=logging_codes.E31_VALUE_EXPECTED_PORTABLE_LEAF_FILENAME,
+        )
     try:
         parts = list(Formatter().parse(value))
-    except ValueError as error:
-        raise ValueError(f"{path}: {error}") from error
+    except (ValueError, LclValidationError) as error:
+        raise LclValidationError(f"{path}: {error}", code=logging_codes.E31_VALUE_VALUE) from error
     for _, key, spec, conversion in parts:
         if key is not None and (key not in ("pid", "process") or spec or conversion):
-            raise ValueError(f"{path}: only {{pid}} and {{process}} are supported")
+            raise LclValidationError(
+                f"{path}: only {{pid}} and {{process}} are supported",
+                code=logging_codes.E31_VALUE_ONLY_PID_AND_PROCESS_ARE_SUPPORTED,
+            )
     return value
 
 
+@guard_failure(LclLoggerError, logging_codes.NATIVE_631)
 def file_config(name: str, value: Mapping[str, object], *, template: bool = False) -> FileConfig:
     """Validate a merged sink or a partial default template.
 
@@ -115,24 +136,35 @@ def file_config(name: str, value: Mapping[str, object], *, template: bool = Fals
     :param value: Already merged file fields.
     :param template: Whether missing required output details remain acceptable.
     :returns: Resolved file settings.
-    :raises TypeError: If directory or encoding has an invalid type.
-    :raises ValueError: If an enabled sink lacks a directory.
+    :raises LclValidationError: If directory or encoding has an invalid type.
+    :raises LclValidationError: If an enabled sink lacks a directory.
     """
     path = f"logger.file.{name}"
     data = fields(value, FILE_FIELDS, path)
     enabled = boolean(data.get("enabled", True), f"{path}.enabled")
     directory = data.get("directory")
     if directory is not None and not isinstance(directory, (str, os.PathLike)):
-        raise TypeError(f"{path}.directory: expected a path")
+        raise LclValidationError(
+            f"{path}.directory: expected a path",
+            code=logging_codes.E31_VALUE_DIRECTORY_EXPECTED_A_PATH,
+        )
     if enabled and not template and not directory:
-        raise ValueError(f"{path}.directory: enabled sink requires a directory")
+        raise LclValidationError(
+            f"{path}.directory: enabled sink requires a directory",
+            code=logging_codes.E31_VALUE_DIRECTORY_ENABLED_SINK_REQUIRES_A_DIRECTORY,
+        )
     encoding = data.get("encoding", "utf-8")
     if not isinstance(encoding, str):
-        raise TypeError(f"{path}.encoding: expected encoding name")
+        raise LclValidationError(
+            f"{path}.encoding: expected encoding name",
+            code=logging_codes.E31_VALUE_ENCODING_EXPECTED_ENCODING_NAME,
+        )
     try:
         codecs.lookup(encoding)
     except LookupError as error:
-        raise ValueError(f"{path}.encoding: {error}") from error
+        raise LclValidationError(
+            f"{path}.encoding: {error}", code=logging_codes.E31_VALUE_ENCODING_VALUE
+        ) from error
     return FileConfig(
         enabled,
         None if directory is None else Path(cast(str | os.PathLike[str], directory)),

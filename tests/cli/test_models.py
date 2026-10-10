@@ -6,6 +6,7 @@ from typing import Any, cast
 import pytest
 
 from lclang.cli import CliConfig, CliParams, CliResult, CliResultStatus, ParameterDoc
+from lclang.error import LclValidationError
 from lclang.logger import LoggerHandlerConfig
 
 InvalidParameterDoc = cast(Any, ParameterDoc)
@@ -40,7 +41,7 @@ def test_result_shortcuts_preserve_status_text_and_constructor_validation() -> N
     assert success == CliResult(CliResultStatus.SUCCESS, "完成")
     assert failure == CliResult(CliResultStatus.FAILURE, "")
     assert isinstance(DerivedCliResult.success("ok"), DerivedCliResult)
-    with pytest.raises(TypeError, match="description"):
+    with pytest.raises(LclValidationError, match="description"):
         CliResult.success(1)  # type: ignore[arg-type]
 
 
@@ -49,7 +50,7 @@ def test_parameter_and_log_contracts_reject_invalid_values() -> None:
     assert ParameterDoc("count", list[int], True, "item count").default is None
     assert ParameterDoc("meter.start", float, True, "Opening meter reading").name == "meter.start"
     assert LoggerHandlerConfig(format="%(message)s").format == "%(message)s"
-    with pytest.raises(ValueError, match="identifier"):
+    with pytest.raises(LclValidationError, match="identifier"):
         ParameterDoc("bad-key", str, False, "bad")
 
 
@@ -72,22 +73,22 @@ def test_parameter_defaults_and_direct_params_accept_mask_markers() -> None:
 @pytest.mark.parametrize(
     "factory, error",
     [
-        (lambda: InvalidParameterDoc("x", str, 1, "x"), TypeError),
-        (lambda: InvalidParameterDoc("x", str, True, "x", None, 1), TypeError),
-        (lambda: InvalidCliParams(1, ["run"], date.today(), False, None, {}), TypeError),
-        (lambda: InvalidCliParams("", ["run"], date.today(), False, None, {}), ValueError),
-        (lambda: InvalidCliParams("python", [], date.today(), False, None, {}), ValueError),
+        (lambda: InvalidParameterDoc("x", str, 1, "x"), LclValidationError),
+        (lambda: InvalidParameterDoc("x", str, True, "x", None, 1), LclValidationError),
+        (lambda: InvalidCliParams(1, ["run"], date.today(), False, None, {}), LclValidationError),
+        (lambda: InvalidCliParams("", ["run"], date.today(), False, None, {}), LclValidationError),
+        (lambda: InvalidCliParams("python", [], date.today(), False, None, {}), LclValidationError),
         (
             lambda: InvalidCliParams(
                 "python", ["run"], date.today(), False, None, {}, script_path=1
             ),
-            TypeError,
+            LclValidationError,
         ),
         (
             lambda: InvalidCliParams(
                 "python", ["run"], date.today(), False, None, {}, script_path=""
             ),
-            ValueError,
+            LclValidationError,
         ),
         (
             lambda: InvalidCliParams(
@@ -99,27 +100,36 @@ def test_parameter_defaults_and_direct_params_accept_mask_markers() -> None:
                 {},
                 raw_argv=("python", ""),
             ),
-            ValueError,
+            LclValidationError,
         ),
-        (lambda: InvalidCliParams("python", ["run"], "today", False, None, {}), TypeError),
-        (lambda: InvalidCliParams("python", ["run"], date.today(), 1, None, {}), TypeError),
-        (lambda: InvalidCliParams("python", ["run"], date.today(), False, 1, {}), TypeError),
-        (lambda: InvalidCliParams("python", ["run"], date.today(), False, "", {}), ValueError),
+        (lambda: InvalidCliParams("python", ["run"], "today", False, None, {}), LclValidationError),
+        (
+            lambda: InvalidCliParams("python", ["run"], date.today(), 1, None, {}),
+            LclValidationError,
+        ),
+        (
+            lambda: InvalidCliParams("python", ["run"], date.today(), False, 1, {}),
+            LclValidationError,
+        ),
+        (
+            lambda: InvalidCliParams("python", ["run"], date.today(), False, "", {}),
+            LclValidationError,
+        ),
         (
             lambda: InvalidCliParams("python", ["run"], date.today(), False, None, {"x": 1}),
-            TypeError,
+            LclValidationError,
         ),
         (
             lambda: InvalidCliParams("python", ["run"], date.today(), False, None, {"x": False}),
-            TypeError,
+            LclValidationError,
         ),
         (
             lambda: InvalidCliParams("python", ["run"], date.today(), False, None, {}, 1),
-            TypeError,
+            LclValidationError,
         ),
-        (lambda: InvalidCliResult(0, "x"), TypeError),
-        (lambda: InvalidCliResult(CliResultStatus.SUCCESS, 1), TypeError),
-        (lambda: InvalidCliConfig(log_config=object()), TypeError),
+        (lambda: InvalidCliResult(0, "x"), LclValidationError),
+        (lambda: InvalidCliResult(CliResultStatus.SUCCESS, 1), LclValidationError),
+        (lambda: InvalidCliConfig(log_config=object()), LclValidationError),
     ],
 )
 def test_value_models_reject_each_invalid_public_shape(

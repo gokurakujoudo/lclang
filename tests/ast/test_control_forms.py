@@ -4,6 +4,7 @@ import pytest
 
 from lclang.ast import LclConstant
 from lclang.ast.control_forms import LclExceptHandler, LclTry, LclWith, LclWithItem
+from lclang.error import LclValidationError
 from lclang.types import VarName
 
 
@@ -30,23 +31,23 @@ def test_bare_handler_has_only_body_child() -> None:
 
 def test_try_requires_handler_or_finally() -> None:
     """A try node cannot silently behave as a grouping wrapper."""
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         LclTry(LclConstant(value=1), (), None)
 
 
 def test_with_requires_item_and_nonempty_target() -> None:
     """Context forms require one manager and usable optional target names."""
     value = LclConstant(value=1)
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         LclWith((), value)
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         LclWithItem(value, VarName(""))
 
 
 def test_except_handler_rejects_empty_and_bare_bindings() -> None:
     """Exception bindings must be non-empty and require a typed matcher."""
     value = LclConstant(value=1)
-    with pytest.raises(ValueError, match="cannot be empty"):
+    with pytest.raises(LclValidationError, match="cannot be empty"):
         LclExceptHandler(value, VarName(""), value)
-    with pytest.raises(ValueError, match="bare except"):
+    with pytest.raises(LclValidationError, match="bare except"):
         LclExceptHandler(None, VarName("error"), value)

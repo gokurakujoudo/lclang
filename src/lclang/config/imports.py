@@ -3,15 +3,18 @@
 from dataclasses import replace
 
 from lclang.config.declarations import parse_using, significant_tokens, validate_definition_name
-from lclang.config.errors import LclConfigSyntaxError
 from lclang.config.lines import LogicalLine
 from lclang.config.model import ConfigImport
 from lclang.config.positions import advance_position
-from lclang.errors import LclSyntaxError
+from lclang.error import LclConfigError, LclSyntaxError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.configuration import Code as configuration_codes
+from lclang.error.configuration import LclConfigSyntaxError
 from lclang.lang.lexer import TokenKind, scan_tokens
 from lclang.source import SourceOrigin
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_314)
 def parse_import(
     line: LogicalLine, leading: int, ordinal: int, origin: SourceOrigin
 ) -> ConfigImport:
@@ -25,7 +28,11 @@ def parse_import(
     :raises LclConfigSyntaxError: If target, alias, or delimiter syntax is invalid.
     """
     if line.continued:
-        raise LclConfigSyntaxError("import declaration cannot continue", span=line.span)
+        raise LclConfigSyntaxError(
+            "import declaration cannot continue",
+            span=line.span,
+            code=configuration_codes.E14_IMPORT_DECLARATION_CANNOT_CONTINUE,
+        )
     keyword_end = leading + (7 if line.text[leading:].startswith("import?") else 6)
     try:
         tokens = significant_tokens(
@@ -37,10 +44,14 @@ def parse_import(
             )
         )
     except LclSyntaxError as error:
-        raise LclConfigSyntaxError(error.message, span=error.span) from error
+        raise LclConfigSyntaxError(error.message, span=error.span, code=error.code) from error
     separators = [token for token in tokens if token.kind is TokenKind.KW_AS]
     if len(separators) != 1:
-        raise LclConfigSyntaxError("import requires one static alias after 'as'", span=line.span)
+        raise LclConfigSyntaxError(
+            "import requires one static alias after 'as'",
+            span=line.span,
+            code=configuration_codes.E14_IMPORT_REQUIRES_ONE_STATIC_ALIAS_AFTER_AS,
+        )
     separator = separators[0]
     boundary = separator.span.start.offset - line.start.offset
     alias_start = separator.span.end.offset - line.start.offset

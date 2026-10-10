@@ -4,6 +4,7 @@ from typing import Any, cast
 
 import pytest
 
+from lclang.error import LclValidationError
 from lclang.utils import safe_repr
 
 
@@ -20,7 +21,7 @@ def test_representation_handles_rendering_failures_and_newlines() -> None:
     assert safe_repr(42) == "42"
     assert safe_repr("ignored", renderer=lambda value: "a\r\nb") == "a\\r\\nb"
     assert safe_repr(BrokenRepr()) == "<repr failed: KeyboardInterrupt>"
-    assert safe_repr(0, renderer=lambda value: cast(Any, 7)) == "<repr failed: TypeError>"
+    assert safe_repr(0, renderer=lambda value: cast(Any, 7)) == "<repr failed: LclValidationError>"
     assert safe_repr(0, renderer=lambda value: repr(BrokenRepr())) == (
         "<repr failed: KeyboardInterrupt>"
     )
@@ -43,11 +44,11 @@ def test_total_length_includes_the_truncation_marker(length: int) -> None:
 @pytest.mark.parametrize("length", [True, "200", 1.5])
 def test_invalid_length_types_are_rejected(length: object) -> None:
     """Length is an explicit integer contract rather than a coercion surface."""
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         safe_repr(0, max_length=cast(Any, length))
 
 
 def test_negative_length_is_rejected() -> None:
     """Negative budgets are errors even when the value is masked."""
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         safe_repr(0, max_length=-1, masked=True)

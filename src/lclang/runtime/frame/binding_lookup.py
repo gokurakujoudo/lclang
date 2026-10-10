@@ -9,6 +9,10 @@ from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
+from lclang.error import LclEvaluationError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.runtime import Code as runtime_codes
 from lclang.namespace_names import validate_namespace_conflicts
 from lclang.override_markers import RUNTIME_OVERRIDE, get_override_marker
 from lclang.types import FrameId
@@ -25,6 +29,7 @@ from lclang.scopes import (
 )
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_232)
 def local_binding_kind(frame: object, name: str) -> str | None:
     """Classify one local binding or inferred prefix.
 
@@ -56,19 +61,22 @@ def walk_hierarchy(frame: object) -> Iterator[Frame]:
 
     :param frame: Child-most Frame to traverse.
     :returns: Iterator over each distinct Frame in lookup order.
-    :raises ValueError: If the parent graph contains a cycle.
+    :raises LclValidationError: If the parent graph contains a cycle.
     """
     current: Frame | None = cast("Frame", frame)
     seen: set[int] = set()
     while current is not None:
         identity = id(current)
         if identity in seen:
-            raise ValueError("Frame parent cycle detected")
+            raise LclValidationError(
+                "Frame parent cycle detected", code=runtime_codes.E32_FRAME_PARENT_CYCLE_DETECTED
+            )
         seen.add(identity)
         yield current
         current = current.parent
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_232)
 def is_name_masked(frame: object, name: str) -> bool:
     """Report whether any effective hierarchy layer masks one exact name.
 
@@ -84,6 +92,7 @@ def is_name_masked(frame: object, name: str) -> bool:
     )
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_232)
 def find_scoped_binding(frame: object, name: str) -> tuple[Frame | None, str | None]:
     """Find the nearest real binding or proxy prefix.
 
@@ -95,6 +104,7 @@ def find_scoped_binding(frame: object, name: str) -> tuple[Frame | None, str | N
     return selected.owner, selected.kind
 
 
+@guard_constructor(LclValidationError, runtime_codes.NATIVE_232)
 @dataclass(frozen=True, slots=True)
 class BindingSelection:
     """Retain one operation's selected binding without caching hierarchy state.
@@ -109,13 +119,14 @@ class BindingSelection:
     path: tuple[FrameId, ...]
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_232)
 def select_binding(frame: object, name: str) -> BindingSelection:
     """Scan a hierarchy once, preferring concrete bindings to inferred proxies.
 
     :param frame: Requesting Frame whose hierarchy is inspected.
     :param name: Complete normalized binding name.
     :returns: Owner, kind and diagnostic path for this operation only.
-    :raises ValueError: If mutable parents form a cycle.
+    :raises LclValidationError: If mutable parents form a cycle.
     """
     inferred: BindingSelection | None = None
     reservation: BindingSelection | None = None
@@ -151,6 +162,7 @@ def select_binding(frame: object, name: str) -> BindingSelection:
     return reservation if reservation is not None else BindingSelection(None, None, tuple(path))
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_232)
 def find_scoped_factory(frame: object, name: str) -> ScopedProxyFactory | None:
     """Return the selected factory for one exact scoped utility binding.
 
@@ -162,6 +174,7 @@ def find_scoped_factory(frame: object, name: str) -> ScopedProxyFactory | None:
     return cast(ScopedProxyFactory, scoped.values[name])
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_232)
 def hierarchy_real_names(
     frame: object,
     replacement: tuple[object, Mapping[str, object]] | None = None,
@@ -183,6 +196,7 @@ def hierarchy_real_names(
     return tuple(result)
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_232)
 def hierarchy_binding_names(frame: object) -> tuple[str, ...]:
     """Collect all names visible from one Frame.
 
@@ -205,11 +219,12 @@ def hierarchy_binding_names(frame: object) -> tuple[str, ...]:
     return tuple(result)
 
 
+@guard_failure(LclValidationError, runtime_codes.NATIVE_232)
 def validate_frame_hierarchy(frame: object) -> None:
     """Reject scoped real-value conflicts in one hierarchy.
 
     :param frame: Child-most effective Frame.
-    :raises ValueError: If real ancestor/descendant keys coexist.
+    :raises LclValidationError: If real ancestor/descendant keys coexist.
     """
     validate_real_conflicts(hierarchy_real_names(frame))
     validate_namespace_conflicts(
@@ -218,12 +233,13 @@ def validate_frame_hierarchy(frame: object) -> None:
     )
 
 
+@guard_failure(LclValidationError, runtime_codes.NATIVE_232)
 def validate_mixin_tree(frame: object, values: Mapping[str, object]) -> None:
     """Validate a prospective mixin against every live descendant.
 
     :param frame: Frame receiving the update.
     :param values: Complete prospective local values.
-    :raises ValueError: If any affected hierarchy would conflict.
+    :raises LclValidationError: If any affected hierarchy would conflict.
     """
     pending = [cast("Frame", frame)]
     while pending:
@@ -239,18 +255,21 @@ def validate_mixin_tree(frame: object, values: Mapping[str, object]) -> None:
         pending.extend(tuple(current._children))
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_232)
 def find_frame(frame: object, name: str) -> Frame | None:
     """Return the nearest Frame that owns a selected name binding.
 
     :param frame: First Frame in the child-to-parent search.
     :param name: Non-empty definition or host-value name.
     :returns: Nearest owning Frame, or ``None`` when the hierarchy lacks *name*.
-    :raises ValueError: If *name* is empty.
+    :raises LclValidationError: If *name* is empty.
 
     .. note::
        A local definition wins over a same-Frame value; either stops recursion.
     """
     if not name:
-        raise ValueError("variable name cannot be empty")
+        raise LclValidationError(
+            "variable name cannot be empty", code=runtime_codes.E32_VARIABLE_NAME_CANNOT_BE_EMPTY
+        )
     owner, _ = find_scoped_binding(frame, name)
     return owner

@@ -8,7 +8,7 @@ from typing import cast
 from weakref import ReferenceType, ref
 
 import lclang
-from lclang.errors import LclEvaluationError
+from lclang.error import LclEvaluationError
 from lclang.workflow import ExecutionStatusManager
 from tests.support.concurrency import CountingGate
 

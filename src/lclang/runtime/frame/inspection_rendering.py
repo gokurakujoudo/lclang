@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from lclang.error import LclEvaluationError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.runtime import Code as runtime_codes
 from lclang.utils.representation import safe_repr
 
 if TYPE_CHECKING:
@@ -19,6 +23,7 @@ from lclang.stdlib.namespaces import StdlibNamespace
 from lclang.stdlib.recursion import RecursiveFunction
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_251)
 def render_inspection(self: VariableInspectionTree) -> str:
     """Return a compact non-recursive single-line summary.
 
@@ -61,6 +66,7 @@ def render_inspection(self: VariableInspectionTree) -> str:
     return f"{self.var_name}@{path}: {definition}({self.status.value}) {payload}"
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_251)
 def canonical_value_repr(value: object) -> str:
     """Return one physical line for an arbitrary current value.
 
@@ -73,11 +79,12 @@ def canonical_value_repr(value: object) -> str:
     if isinstance(value, LclAstNode):
         try:
             return to_source(value)
-        except TypeError:
+        except TypeError, LclValidationError:
             pass
     return repr(value)
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_251)
 def native_value_payload(name: str, value: object) -> str:
     """Return the uniform dependency-tree payload for a canonical native value.
 
@@ -94,6 +101,7 @@ def native_value_payload(name: str, value: object) -> str:
     return f"{type(value).__name__}: {compact_repr(value)}"
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_251)
 def compact_repr(value: object) -> str:
     """Render canonical values safely without truncating inspection output.
 

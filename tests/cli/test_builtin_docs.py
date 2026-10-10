@@ -13,6 +13,7 @@ from lclang.cli.builtin_docs import (
     ROOT_BUILTIN_DESCRIPTIONS,
     render_builtin_docs,
 )
+from lclang.error import LclValidationError
 from lclang.stdlib import STANDARD_MANIFESTS
 from lclang.utils.calendar.lcl import CALENDARS_NAMESPACE
 
@@ -86,5 +87,5 @@ def test_builtin_docs_reject_metadata_drift(
 ) -> None:
     """Missing, colliding, blank, and multiline descriptions fail explicitly."""
     monkeypatch.setattr(builtin_docs, target, replacement)
-    with pytest.raises(ValueError, match=message):
+    with pytest.raises(LclValidationError, match=message):
         builtin_docs.render_builtin_docs()

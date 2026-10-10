@@ -4,6 +4,10 @@ from collections.abc import Iterable, Set
 from datetime import date
 from typing import final
 
+from lclang.error import LclUtilityError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.codes.utilities import Code as utilities_codes
 from lclang.utils.calendar.base import BDCalendar
 from lclang.utils.calendar.functional import FunctionalBDCalendar
 from lclang.utils.calendar.transformations.logic import dependency_day_type
@@ -11,6 +15,7 @@ from lclang.utils.calendar.transformations.operands import canonical_calendars
 from lclang.utils.calendar.types import CalendarID, DayType
 
 
+@guard_constructor(LclValidationError, utilities_codes.NATIVE_714)
 @final
 class SubtractionBDCalendar(FunctionalBDCalendar):
     """Turn base business days into holidays when subtrahends accept them.
@@ -27,16 +32,20 @@ class SubtractionBDCalendar(FunctionalBDCalendar):
         :param base_calendar: Calendar whose classifications are retained.
         :param to_subtract: Calendars whose business days are removed.
         :returns: ``None``.
-        :raises TypeError: If *base_calendar* is not a calendar.
+        :raises LclValidationError: If *base_calendar* is not a calendar.
         """
         if not isinstance(base_calendar, BDCalendar):
-            raise TypeError("base calendar must be a BDCalendar")
+            raise LclValidationError(
+                "base calendar must be a BDCalendar",
+                code=utilities_codes.E14_BASE_CALENDAR_MUST_BE_A_BDCALENDAR,
+            )
         values = canonical_calendars(to_subtract)
         self.base_calendar = base_calendar
         self.to_subtract = frozenset(values)
         suffix = " - ".join(map(repr, values))
         super().__init__(CalendarID(f"({base_calendar!r} - {suffix})"))
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_714)
     async def get_day_type(self, d: date) -> DayType:
         """Apply subtraction truth-table semantics.
 
@@ -53,6 +62,7 @@ class SubtractionBDCalendar(FunctionalBDCalendar):
                 return DayType.Holiday
         return DayType.BusinessDay
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_714)
     async def get_dependency_ids(self) -> Set[CalendarID]:
         """Return base and subtrahend IDs.
 
@@ -62,6 +72,7 @@ class SubtractionBDCalendar(FunctionalBDCalendar):
             (self.base_calendar.calendar_id, *(item.calendar_id for item in self.to_subtract))
         )
 
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_714)
     def minus(self, another: BDCalendar) -> SubtractionBDCalendar:
         """Append another canonical subtrahend.
 

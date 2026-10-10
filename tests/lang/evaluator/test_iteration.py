@@ -6,6 +6,7 @@ from typing import cast
 
 import pytest
 
+from lclang.error import LclEvaluationError
 from lclang.lang.evaluator.iteration import iterate_values
 
 
@@ -33,9 +34,37 @@ async def test_iterate_values_adapts_sync_and_async_protocols() -> None:
 
 @pytest.mark.asyncio
 async def test_iterate_values_rejects_non_iterable() -> None:
-    """Invalid values retain the ordinary iteration TypeError."""
-    with pytest.raises(TypeError):
+    """Non-iterable inputs receive a specific structured failure."""
+    with pytest.raises(LclEvaluationError):
         _ = [value async for value in iterate_values(42)]
+
+
+@pytest.mark.asyncio
+async def test_iteration_retains_a_callback_lcl_failure_without_self_cause() -> None:
+    """An iterator's existing code and original cause survive propagation unchanged."""
+    error = LclEvaluationError("iterator failed", code="APP")
+
+    async def values() -> AsyncIterator[int]:
+        yield 1
+        raise error
+
+    with pytest.raises(LclEvaluationError) as caught:
+        _ = [value async for value in iterate_values(values())]
+    assert caught.value is error and error.__cause__ is None
+
+
+@pytest.mark.asyncio
+async def test_native_iterator_failure_has_its_own_boundary_code() -> None:
+    """Failure in the iteration callback is distinct from resolving a yielded awaitable."""
+    native = OSError("iterator unavailable")
+
+    async def values() -> AsyncIterator[int]:
+        yield 1
+        raise native
+
+    with pytest.raises(LclEvaluationError) as caught:
+        _ = [value async for value in iterate_values(values())]
+    assert caught.value.code == "LCL135811" and caught.value.__cause__ is native
 
 
 @pytest.mark.asyncio
@@ -67,7 +96,7 @@ async def test_iterate_values_propagates_awaitable_item_failure() -> None:
 
     deferred = broken()
     try:
-        with pytest.raises(RuntimeError, match="broken mapped item"):
+        with pytest.raises(LclEvaluationError, match="broken mapped item"):
             _ = [value async for value in iterate_values([deferred])]
     finally:
         deferred.close()

@@ -13,6 +13,7 @@ import pytest
 
 import lclang
 import lclang.workflow as wf
+from lclang.error import LclStateError, LclValidationError, LclWorkflowError
 
 
 @dataclass
@@ -241,7 +242,8 @@ async def test_unhandled_action_error_records_failure_and_skips_full_branch() ->
         failure = await frame.get("__exception__")
 
     assert isinstance(failure, wf.WorkflowException)
-    assert isinstance(failure.exception, ValueError)
+    assert isinstance(failure.exception, LclWorkflowError)
+    assert isinstance(failure.exception.__cause__, ValueError)
     assert failure.error_task == wf.TaskID("root")
     assert result.execution_status.status is wf.ExecutionStatus.ERROR
     task = result.execution_status.sub_tasks[0]
@@ -297,7 +299,7 @@ class CoverFailure(wf.FailureCoveringContextTask[NumberArgs, NumberOutputs]):
         :param exception: Inner exception.
         """
         del context, args, status_mgr, resource
-        assert str(exception) == "covered"
+        assert exception.__cause__ is not None and str(exception.__cause__) == "covered"
         self.events.append("handle")
 
     async def release(
@@ -422,7 +424,7 @@ async def test_explicit_failure_creates_synthetic_exception_and_stops() -> None:
     assert result.execution_status.status is wf.ExecutionStatus.FAILURE
     assert result.task_outputs[wf.TaskID("root")] == NumberOutputs(4)
     assert result.execution_status.sub_tasks[0].sub_tasks[0].status is wf.ExecutionStatus.SKIPPED
-    assert isinstance(cast(wf.WorkflowException, failure).exception, RuntimeError)
+    assert isinstance(cast(wf.WorkflowException, failure).exception, LclWorkflowError)
 
 
 @pytest.mark.asyncio
@@ -501,7 +503,9 @@ async def test_context_enter_exit_and_unsuppressed_failures_are_recorded() -> No
         async with lclang.define_frame(preset={"source": 1}) as frame:
             result = await wf.define_workflow("Workflow", task).execute(execution_context(frame))
             failure = cast(wf.WorkflowException, await frame.get("__exception__"))
-        assert str(failure.exception) == message
+        assert (
+            failure.exception.__cause__ is not None and str(failure.exception.__cause__) == message
+        )
         assert result.execution_status.status is wf.ExecutionStatus.ERROR
 
 
@@ -546,7 +550,7 @@ async def test_wrong_action_outputs_and_duplicate_publication_fail_cleanly() -> 
         async with lclang.define_frame(preset={"source": 1}) as frame:
             result = await wf.define_workflow("Workflow", task).execute(execution_context(frame))
             failure = cast(wf.WorkflowException, await frame.get("__exception__"))
-        assert isinstance(failure.exception, (TypeError, ValueError))
+        assert isinstance(failure.exception, LclValidationError)
         assert result.execution_status.status is wf.ExecutionStatus.ERROR
 
 
@@ -555,7 +559,7 @@ async def test_defensive_execution_validation_and_task_frame_close_failure(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Corrupted definitions and cleanup errors still produce concrete failures."""
-    with pytest.raises(TypeError, match="execution context"):
+    with pytest.raises(LclValidationError, match="execution context"):
         await wf.define_workflow("Workflow", wf.define_task("root", "Root")).execute(
             cast(wf.WorkflowExecutionContext, object())
         )
@@ -572,7 +576,7 @@ async def test_defensive_execution_validation_and_task_frame_close_failure(
     async with lclang.define_frame() as frame:
         result = await wf.Workflow("Workflow", invalid).execute(execution_context(frame))
         failure = cast(wf.WorkflowException, await frame.get("__exception__"))
-    assert isinstance(failure.exception, RuntimeError)
+    assert isinstance(failure.exception, LclStateError)
 
     original_close = lclang.Frame.close
 
@@ -586,7 +590,10 @@ async def test_defensive_execution_validation_and_task_frame_close_failure(
     async with lclang.define_frame() as frame:
         result = await wf.Workflow("Workflow", structural).execute(execution_context(frame))
         failure = cast(wf.WorkflowException, await frame.get("__exception__"))
-    assert str(failure.exception) == "close failed"
+    assert (
+        failure.exception.__cause__ is not None
+        and str(failure.exception.__cause__) == "close failed"
+    )
     assert result.execution_status.status is wf.ExecutionStatus.ERROR
 
 
@@ -612,9 +619,9 @@ async def test_failure_covering_base_hooks_and_clean_scope() -> None:
     base = wf.FailureCoveringContextTask[NumberArgs, NumberOutputs]()
     manager = wf.ExecutionStatusManager("context")
     context = cast(wf.TaskContext, object())
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(LclStateError):
         await base.acquire(context, NumberArgs(1), manager)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(LclStateError):
         await base.handle_exception(
             context,
             NumberArgs(1),

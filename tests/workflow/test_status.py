@@ -4,6 +4,7 @@ from typing import Any, cast
 
 import pytest
 
+from lclang.error import LclStateError, LclValidationError
 from lclang.workflow import (
     ExecutionStatus,
     ExecutionStatusManager,
@@ -148,23 +149,23 @@ def test_subtree_locks_do_not_lock_parent_but_ancestor_finalize_locks_all() -> N
         child.__enter__,
     ]
     for operation in locked_operations:
-        with pytest.raises(RuntimeError, match="finalized"):
+        with pytest.raises(LclStateError, match="finalized"):
             operation()
 
     manager.add_step("sibling", "still allowed", ExecutionStatus.SUCCESS)
     manager.finalize()
-    with pytest.raises(RuntimeError, match="finalized"):
+    with pytest.raises(LclStateError, match="finalized"):
         manager.update(ExecutionStatus.SUCCESS)
 
 
 @pytest.mark.parametrize(
     "factory, error",
     [
-        (lambda: InvalidManager(1), TypeError),
-        (lambda: InvalidManager(""), ValueError),
-        (lambda: InvalidManager("task", 1), TypeError),
-        (lambda: InvalidManager("task", task_type="TASK"), TypeError),
-        (lambda: InvalidManager("task", status="PENDING"), TypeError),
+        (lambda: InvalidManager(1), LclValidationError),
+        (lambda: InvalidManager(""), LclValidationError),
+        (lambda: InvalidManager("task", 1), LclValidationError),
+        (lambda: InvalidManager("task", task_type="TASK"), LclValidationError),
+        (lambda: InvalidManager("task", status="PENDING"), LclValidationError),
         (
             lambda: InvalidTree(
                 ExecutionStatus.PENDING,
@@ -173,7 +174,7 @@ def test_subtree_locks_do_not_lock_parent_but_ancestor_finalize_locks_all() -> N
                 "description",
                 (),
             ),
-            TypeError,
+            LclValidationError,
         ),
         (
             lambda: InvalidTree(
@@ -183,7 +184,7 @@ def test_subtree_locks_do_not_lock_parent_but_ancestor_finalize_locks_all() -> N
                 "description",
                 [object()],
             ),
-            TypeError,
+            LclValidationError,
         ),
         (
             lambda: ExecutionStatusTree(
@@ -200,7 +201,7 @@ def test_subtree_locks_do_not_lock_parent_but_ancestor_finalize_locks_all() -> N
                     )
                 ],
             ),
-            ValueError,
+            LclValidationError,
         ),
     ],
 )
@@ -213,16 +214,16 @@ def test_public_values_reject_invalid_shapes(factory: object, error: type[Except
 def test_updates_validate_values_and_steps_remain_leaves() -> None:
     """Mutation inputs are checked and step managers cannot gain descendants."""
     manager = ExecutionStatusManager("step", task_type=ExecutionTaskType.STEP)
-    with pytest.raises(ValueError, match="step"):
+    with pytest.raises(LclValidationError, match="step"):
         manager.add_step("child", "bad", ExecutionStatus.SUCCESS)
-    with pytest.raises(ValueError, match="step"):
+    with pytest.raises(LclValidationError, match="step"):
         manager.add_sub_task("child", "bad")
-    with pytest.raises(TypeError, match="status"):
+    with pytest.raises(LclValidationError, match="status"):
         InvalidManager.update(manager, "SUCCESS")
-    with pytest.raises(TypeError, match="description"):
+    with pytest.raises(LclValidationError, match="description"):
         InvalidManager.update(manager, ExecutionStatus.SUCCESS, 1)
     task_manager = ExecutionStatusManager("task")
-    with pytest.raises(TypeError, match="status"):
+    with pytest.raises(LclValidationError, match="status"):
         InvalidManager.add_step(task_manager, "child", "bad", "SUCCESS")
 
 
@@ -232,5 +233,5 @@ def test_normal_manager_context_finalizes_its_current_tree() -> None:
     with manager as entered:
         assert entered is manager
         entered.update(ExecutionStatus.SUCCESS, "done")
-    with pytest.raises(RuntimeError, match="finalized"):
+    with pytest.raises(LclStateError, match="finalized"):
         manager.finalize()

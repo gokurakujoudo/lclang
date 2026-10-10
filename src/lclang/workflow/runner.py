@@ -5,25 +5,27 @@
 
 from __future__ import annotations
 
-from contextlib import AbstractAsyncContextManager, suppress
-from typing import cast
+from contextlib import suppress
 
+from lclang.error import LclWorkflowError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_failure
+from lclang.error.codes.workflow import Code as workflow_codes
+from lclang.error.wrapping import wrap_failure
 from lclang.runtime import Frame, Module
 from lclang.types import ModuleName, TaskID
 from lclang.workflow.context import (
-    TaskContext,
     WorkflowExecutionContext,
     WorkflowExecutionResult,
 )
+from lclang.workflow.context_execution import execute_context_scope
 from lclang.workflow.defaults import execution_defaults
 from lclang.workflow.definitions import TaskNode, Workflow
 from lclang.workflow.execution import (
     STOP_STATUSES,
     WorkflowRunState,
     add_skipped_task,
-    execute_action_and_children,
     finalize_manager,
-    raise_for_status,
     record_exception,
     task_context_for,
 )
@@ -35,118 +37,10 @@ from lclang.workflow.logging import (
     log_task_start,
 )
 from lclang.workflow.manager import ExecutionStatusManager
-from lclang.workflow.mappings import mapped_outputs, materialize_args
 from lclang.workflow.models import ExecutionStatus
 
 
-async def execute_context_scope(
-    state: WorkflowRunState,
-    task: TaskNode,
-    task_context: TaskContext,
-    manager: ExecutionStatusManager,
-    stack: tuple[TaskID, ...],
-    index: int,
-) -> bool:
-    """Enter contexts recursively so ordinary async-exit suppression applies.
-
-    :param state: Current execution state.
-    :param task: Current task definition.
-    :param task_context: Current action-visible context.
-    :param manager: Current task status manager.
-    :param stack: Root-to-current task path.
-    :param index: Next context index.
-    :returns: Whether traversal may continue.
-    """
-    if index == len(task.context_tasks):
-        return await execute_action_and_children(state, task, task_context, manager, stack)
-    definition = task.context_tasks[index]
-    branch = (*stack, definition.task_id)
-    context_manager = manager.add_sub_task(
-        definition.task_id, definition.title, ExecutionStatus.RUNNING
-    )
-    log_task_start(state.context, branch, definition.title)
-    try:
-        args = await materialize_args(definition.args_mapping, task_context.frame)
-        log_mapping(
-            state.context,
-            branch,
-            definition.args_mapping,
-            args,
-            output=False,
-            frame=task_context.frame,
-        )
-        scope = cast(
-            AbstractAsyncContextManager[object],
-            definition.task_context(task_context, args, context_manager),
-        )
-        resource = await scope.__aenter__()
-    except BaseException as error:
-        if isinstance(error, Exception):
-            record_exception(state, context_manager, branch, error)
-        finalize_manager(context_manager)
-        log_task_complete(state.context, branch, context_manager.current.status)
-        raise
-    incoming: BaseException | None = None
-    completed = False
-    try:
-        try:
-            updates = await mapped_outputs(definition.outputs_mapping, resource, task_context.frame)
-        except Exception as error:
-            record_exception(state, context_manager, branch, error)
-            raise
-        if updates:
-            task_context.frame.mixin(updates)
-        raise_for_status(state, context_manager, branch)
-        completed = await execute_context_scope(
-            state, task, task_context, manager, stack, index + 1
-        )
-    except BaseException as error:
-        incoming = error
-    try:
-        suppressed = await scope.__aexit__(
-            None if incoming is None else type(incoming),
-            incoming,
-            None if incoming is None else incoming.__traceback__,
-        )
-    except BaseException as error:
-        failure = combine_failures(incoming, error)
-        if isinstance(error, Exception):
-            recorded = failure if isinstance(failure, Exception) else error
-            record_exception(state, context_manager, branch, recorded)
-        finalize_manager(context_manager)
-        log_task_complete(state.context, branch, context_manager.current.status)
-        log_mapping(
-            state.context,
-            branch,
-            definition.outputs_mapping,
-            resource,
-            output=True,
-            frame=task_context.frame,
-        )
-        raise failure from failure.__cause__
-    finalize_manager(context_manager)
-    log_task_complete(state.context, branch, context_manager.current.status)
-    log_mapping(
-        state.context,
-        branch,
-        definition.outputs_mapping,
-        resource,
-        output=True,
-        frame=task_context.frame,
-    )
-    if incoming is not None:
-        if (
-            isinstance(incoming, Exception)
-            and suppressed
-            and context_manager.current.status is ExecutionStatus.FAILURE_COVERED
-        ):
-            manager.update(ExecutionStatus.FAILURE_COVERED)
-            return False
-        raise incoming
-    raise_for_status(state, context_manager, branch)
-    return completed
-
-
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_532)
 def add_unexecuted_statuses(
     manager: ExecutionStatusManager,
     task: TaskNode,
@@ -173,6 +67,7 @@ def add_unexecuted_statuses(
             add_skipped_task(manager, child)
 
 
+@guard_async_failure(LclWorkflowError, workflow_codes.NATIVE_532)
 async def execute_task(
     state: WorkflowRunState,
     task: TaskNode,
@@ -211,9 +106,18 @@ async def execute_task(
     try:
         await frame.close()
     except BaseException as error:
-        pending = combine_failures(pending, error)
+        cleanup = (
+            wrap_failure(error, LclWorkflowError, workflow_codes.FRAME_CLOSE_FAILURE)
+            if isinstance(error, Exception)
+            else error
+        )
+        pending = combine_failures(pending, cleanup)
         if isinstance(error, Exception):
-            recorded = pending if isinstance(pending, Exception) else error
+            recorded = (
+                pending
+                if isinstance(pending, Exception)
+                else wrap_failure(error, LclWorkflowError, workflow_codes.FRAME_CLOSE_FAILURE)
+            )
             record_exception(state, manager, stack, recorded)
     finalize_manager(manager)
     log_task_complete(state.context, stack, manager.current.status)
@@ -232,6 +136,7 @@ async def execute_task(
     return completed and manager.current.status not in STOP_STATUSES
 
 
+@guard_async_failure(LclWorkflowError, workflow_codes.NATIVE_532)
 async def execute_workflow(
     workflow: Workflow,
     context: WorkflowExecutionContext,
@@ -241,10 +146,13 @@ async def execute_workflow(
     :param workflow: Reusable workflow definition.
     :param context: Execution metadata and borrowed Frame.
     :returns: Final status tree and materialized action values.
-    :raises TypeError: If *context* has the wrong public type.
+    :raises LclValidationError: If *context* has the wrong public type.
     """
     if not isinstance(context, WorkflowExecutionContext):
-        raise TypeError("workflow execution context has the wrong type")
+        raise LclValidationError(
+            "workflow execution context has the wrong type",
+            code=workflow_codes.E32_WORKFLOW_EXECUTION_CONTEXT_HAS_THE_WRONG_TYPE,
+        )
     if workflow.lcl_mixin:
         context.frame.mixin(dict(workflow.lcl_mixin))
     manager = ExecutionStatusManager(workflow.title, status=ExecutionStatus.RUNNING)

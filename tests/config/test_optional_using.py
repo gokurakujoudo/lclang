@@ -139,7 +139,12 @@ async def test_optional_filesystem_failures_are_not_absence(kind: str) -> None:
         entry.write_text(f'using? "{child.as_posix()}"\n', encoding="utf-8")
         with pytest.raises(LclConfigUsingError) as caught:
             await load_config(entry, resolver=FileConfigResolver(allowed))
-        assert isinstance(caught.value.__cause__, expected)
+        if kind == "invalid_utf8":
+            assert isinstance(caught.value.__cause__, expected)
+            assert caught.value.code == "LCL321721"
+        else:
+            assert caught.value.__cause__ is None
+            assert caught.value.code == ("LCL321792" if kind == "directory" else "LCL321791")
 
 
 @pytest.mark.asyncio

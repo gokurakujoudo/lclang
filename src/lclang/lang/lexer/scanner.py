@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.lexer.characters import ASCII_DIGITS
 from lclang.lang.lexer.literals import InternalLiteralScanError, scan_literal
 from lclang.lang.lexer.tokens import Token, TokenKind
@@ -49,6 +52,7 @@ _STRING_OR_NUMBER_START = frozenset("'\"")
 # ASCII digits accepted at the start of numeric symbols.
 
 
+@guard_constructor(LclValidationError, language_codes.NATIVE_111)
 @dataclass(slots=True)
 class InternalScanner:
     """Track mutable state while converting source text into tokens.
@@ -74,6 +78,7 @@ class InternalScanner:
     column: int = 1
     tokens: list[Token] = field(default_factory=list[Token])
 
+    @guard_failure(LclSyntaxError, language_codes.NATIVE_111)
     def scan(self) -> list[Token]:
         """Scan all remaining source characters and append an EOF token.
 
@@ -91,7 +96,9 @@ class InternalScanner:
             except InternalLiteralScanError as error:
                 start = self.internal_position()
                 self.internal_advance_to(max(error.end, self.offset + 1))
-                raise LclSyntaxError(error.message, span=self.internal_span(start)) from error
+                raise LclSyntaxError(
+                    error.message, span=self.internal_span(start), code=error.code
+                ) from error
             if literal is not None:
                 start = self.internal_position()
                 self.internal_advance_to(literal.end)
@@ -158,6 +165,7 @@ class InternalScanner:
         raise LclSyntaxError(
             f"unsupported {category} {character!r}",
             span=self.internal_span(start),
+            code=language_codes.E11_UNSUPPORTED_VALUE_VALUE,
         )
 
     def internal_scan_comment(self) -> None:
@@ -269,6 +277,7 @@ class InternalScanner:
         self.tokens.append(Token(kind, lexeme, self.internal_span(start), value))
 
 
+@guard_failure(LclSyntaxError, language_codes.NATIVE_111)
 def scan_tokens(
     text: str,
     *,

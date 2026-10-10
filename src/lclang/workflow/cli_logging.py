@@ -6,12 +6,16 @@ import logging
 import random
 from typing import cast
 
+from lclang.error import LclWorkflowError
+from lclang.error.boundary import guard_async_failure, guard_failure
+from lclang.error.codes.workflow import Code as workflow_codes
 from lclang.logger import Logger
 from lclang.runtime import Frame
 from lclang.workflow.logging import status_level
 from lclang.workflow.models import ExecutionStatus, ExecutionStatusTree
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def status_lines(tree: ExecutionStatusTree) -> list[str]:
     """Render one finalized execution status tree.
 
@@ -40,6 +44,7 @@ def status_lines(tree: ExecutionStatusTree) -> list[str]:
     return lines
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def log_status_tree(
     logger: logging.Logger | Logger,
     tree: ExecutionStatusTree,
@@ -57,6 +62,7 @@ def log_status_tree(
     logger.log(status_level(tree.status), "%s", message)
 
 
+@guard_async_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 async def log_lunch_option(
     logger: logging.Logger | Logger,
     frame: Frame,

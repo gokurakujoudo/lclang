@@ -9,6 +9,7 @@ import pytest
 
 from lclang import LCL_IMPORTS, LCL_RUNTIME, LclNameError
 from lclang.config import evaluate_config, load_config
+from lclang.error import LclValidationError
 from lclang.runtime import DependencyKind, Frame, FrameDependencyGraph, build_dependency_graph
 from lclang.types import FrameId
 
@@ -89,7 +90,7 @@ async def test_loaded_config_builds_independent_runtime_frames(tmp_path: Path) -
         await first.close()
         await second.close()
     assert await evaluate_config(config, "result") == 3
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         await evaluate_config(object(), "result")  # type: ignore[arg-type]
 
 
@@ -115,7 +116,7 @@ async def test_loaded_config_rejects_final_scoped_conflicts(tmp_path: Path) -> N
     """Final winners cannot contain a real prefix and descendant."""
     path = tmp_path / "conflict.lclcfg"
     path.write_text("A: 1\nA.x: 2\n", encoding="utf-8")
-    with pytest.raises(ValueError, match="conflict"):
+    with pytest.raises(LclValidationError, match="conflict"):
         await load_config(path)
 
 
@@ -233,7 +234,12 @@ async def test_config_to_frame_closes_owned_results_after_evaluation_failure() -
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("preset", "error"),
-    (([], TypeError), ({1: 2}, TypeError), ({"": 2}, ValueError), ({"A": 1, "A.x": 2}, ValueError)),
+    (
+        ([], LclValidationError),
+        ({1: 2}, LclValidationError),
+        ({"": 2}, LclValidationError),
+        ({"A": 1, "A.x": 2}, LclValidationError),
+    ),
 )
 async def test_config_to_frame_retains_preset_validation(
     preset: object,

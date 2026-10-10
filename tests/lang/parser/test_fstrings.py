@@ -8,7 +8,7 @@ from lclang.ast import (
     LclName,
     LclStringText,
 )
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError
 from lclang.lang.parser import parse_expression
 from lclang.lang.printer import to_source
 from lclang.source import SourceOrigin
@@ -63,7 +63,7 @@ def test_invalid_embedded_expression_uses_outer_token_span() -> None:
     with pytest.raises(LclSyntaxError) as caught:
         parse_expression(source)
     error = caught.value
-    assert error.code == "LCL1001"
+    assert error.code == "LCL126491"
     assert error.span is not None
     assert (error.span.start.offset, error.span.end.offset) == (0, len(source))
     assert isinstance(error.__cause__, LclSyntaxError)

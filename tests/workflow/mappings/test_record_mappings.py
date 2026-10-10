@@ -11,6 +11,7 @@ import pytest
 
 import lclang
 import lclang.workflow as wf
+from lclang.error import LclValidationError
 
 
 @dataclass
@@ -138,7 +139,7 @@ def test_whole_mapping_requires_exact_dataclass_annotation(kind: str, annotation
     correct = wf.define_variable[Record[int]]("correct")
     args = wrong.quote if kind.endswith("args") else correct.quote
     output = wrong.quote if kind.endswith("outputs") else correct.quote
-    with pytest.raises(TypeError, match="dataclass|annotations"):
+    with pytest.raises(LclValidationError, match="dataclass|annotations"):
         if kind.startswith("context"):
             wf.define_context_task("context", "Context", resource, args, output)
         else:

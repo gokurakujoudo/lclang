@@ -9,7 +9,12 @@ from contextlib import suppress
 from queue import Empty, SimpleQueue
 from threading import Event
 
-from lclang.error_rendering import render_failure
+from lclang.error import LclLoggerError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.logging import Code as logging_codes
+from lclang.error.rendering import render_failure
+from lclang.error.wrapping import wrap_failure
 from lclang.logger.config import LoggerHandlerConfig
 from lclang.logger.console import ConsoleSink
 from lclang.logger.file import FileSink
@@ -17,6 +22,7 @@ from lclang.logger.formatter import RecordFormatter
 from lclang.logger.metrics import Counters, SinkMetrics
 
 
+@guard_constructor(LclValidationError, logging_codes.NATIVE_635)
 class Dispatcher:
     """Run all output operations in one dedicated thread."""
 
@@ -37,6 +43,7 @@ class Dispatcher:
         self.startup_error: BaseException | None = None
         self.sinks: list[ConsoleSink | FileSink] = []
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_635)
     def report(self, sink: ConsoleSink | FileSink, error: BaseException) -> None:
         """Count an output failure without recursively using logging.
 
@@ -47,9 +54,15 @@ class Dispatcher:
         self.counters.add("writer_errors")
         with suppress(Exception):
             if sys.__stderr__ is not None:
-                diagnostic = render_failure(error, action=f"writing log sink {sink.key!r}")
+                failure = (
+                    wrap_failure(error, LclLoggerError, logging_codes.WRITE_FAILURE)
+                    if isinstance(error, Exception)
+                    else error
+                )
+                diagnostic = render_failure(failure, action=f"writing log sink {sink.key!r}")
                 sys.__stderr__.write(diagnostic + "\n")
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_635)
     def initialize(self) -> None:
         """Create all enabled sinks before producer admission begins."""
         formatter = RecordFormatter(self.config.format, timezone=self.config.timezone)
@@ -63,6 +76,7 @@ class Dispatcher:
             for sink in self.sinks:
                 self.counters.sinks.setdefault(sink.key, SinkMetrics())
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_635)
     def fail(self, sink: ConsoleSink | FileSink, error: Exception) -> None:
         """Retire failed file streams and isolate secondary close errors.
 
@@ -76,6 +90,7 @@ class Dispatcher:
             except Exception as close_error:
                 self.report(sink, close_error)
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_635)
     def dispatch(self, record: logging.LogRecord) -> None:
         """Write independently to every matching sink.
 
@@ -94,6 +109,7 @@ class Dispatcher:
         if written:
             self.counters.add("records_written")
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_635)
     def timers(self) -> float:
         """Process timers between records to avoid busy-queue starvation.
 
@@ -110,6 +126,7 @@ class Dispatcher:
                 timeout = min(timeout, sink.timeout(monotonic, wall))
         return timeout
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_635)
     def run(self) -> None:
         """Initialize, drain through the sentinel, and retire every owned sink."""
         try:

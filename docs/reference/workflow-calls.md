@@ -145,3 +145,8 @@ needs to account for unsuccessful work. Multiple ordinary body/cleanup failures
 are retained in an exception group; cancellation retains associated cleanup
 failures as causes. Start and completion logs include the call name, workflow
 title and status, without automatically logging the preset payload.
+
+See [errors and diagnostic codes](errors.md) for exception fields, specific
+codes, cause chains, and executable troubleshooting examples. Ordinary library
+validation uses `LclValidationError`; native callback and operation failures
+retain their original exception in `__cause__`.

@@ -303,6 +303,9 @@ from lclang import (
 )
 
 
+from lclang.error import LclValidationError
+
+
 class Resource:
     def __init__(self) -> None:
         self.closed = False
@@ -322,7 +325,7 @@ async def expect(error_type: type[Exception], operation: object) -> None:
 async def main() -> None:
     try:
         define_module("conflict", {"service": "1", "service.port": "2"})
-    except ValueError:
+    except LclValidationError:
         pass
     else:
         raise AssertionError("a real prefix must conflict with its descendant")

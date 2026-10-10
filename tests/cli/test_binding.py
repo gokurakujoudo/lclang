@@ -22,9 +22,70 @@ from lclang.cli import (
     cli,
 )
 from lclang.cli.binding import FrameStack, build_binding, default_definitions
-from lclang.errors import LclCliUsageError
+from lclang.cli.execution import run_bound_command
+from lclang.error import LclCliError, LclCliUsageError, LclErrorGroup
+from lclang.logger import use_logger, use_logger_handler
 from lclang.runtime import Frame, VariableInspectionStatus
 from lclang.utils.environment import BoundEnvironment
+
+
+@pytest.mark.asyncio
+async def test_binding_and_cleanup_failures_are_both_retained(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Partial binding closes every owned Frame and retains setup and cleanup failures."""
+    closed: list[Frame] = []
+    original_close = Frame.close
+
+    @cli.command(parameter_docs=[ParameterDoc("needed", str, True, "required")])
+    async def command(context: CliContext) -> CliResult:
+        """Return a result only if the required binding can be created."""
+        return CliResult(CliResultStatus.SUCCESS, "ready")
+
+    async def close(frame: Frame) -> None:
+        await original_close(frame)
+        closed.append(frame)
+        raise OSError(str(frame.module.name))
+
+    monkeypatch.setattr(Frame, "close", close)
+    params = CliParams("python", ("command",), date(2026, 8, 9), False, None, {})
+    with pytest.raises(LclErrorGroup) as caught:
+        await build_binding(command, params, CliConfig())
+    assert caught.value.code == "LCL441972"
+    assert closed and all(frame.closed for frame in closed)
+    assert isinstance(caught.value.exceptions[0], LclCliUsageError)
+    assert isinstance(caught.value.exceptions[1], LclErrorGroup)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("cleanup_fails", [False, True])
+async def test_command_control_signal_closes_every_frame(cleanup_fails: bool) -> None:
+    """Command interruption retains its signal and any cleanup cause after all closes."""
+    signal = asyncio.CancelledError("command")
+    native = OSError("cleanup")
+    closed: list[str] = []
+
+    @cli.command()
+    async def cancelled_command(context: CliContext) -> CliResult:
+        """Interrupt command execution before publishing a result."""
+        raise signal
+
+    class Resource:
+        async def close(self) -> None:
+            closed.append("resource")
+            if cleanup_fails:
+                raise native
+
+    params = CliParams("python", ("cancelled",), date(2026, 8, 9), False, None, {})
+    binding = await build_binding(cancelled_command, params, CliConfig())
+    binding.stack.frames = (*binding.stack.frames, cast(Frame, Resource()))
+    async with use_logger_handler({"console": {"enabled": False}}):
+        logger = await use_logger()
+        with pytest.raises(asyncio.CancelledError) as caught:
+            await run_bound_command(cancelled_command, params, binding, logger)
+    assert caught.value is signal and closed == ["resource"] and binding.frame.closed
+    if cleanup_fails:
+        assert signal.__cause__ is not None and signal.__cause__.__cause__ is native
 
 
 @cli.command(
@@ -245,17 +306,22 @@ def test_frame_stack_continues_reverse_cleanup_after_failure() -> None:
     first = CloseProbe(None)
     second = CloseProbe("close failed")
     stack = FrameStack((cast(Frame, first), cast(Frame, second)))
-    with pytest.raises(RuntimeError, match="close failed"):
+    with pytest.raises(LclCliError, match="close failed"):
         asyncio.run(stack.close())
     assert first.calls == second.calls == 1
     asyncio.run(stack.close())
 
 
 def test_frame_stack_retains_first_of_multiple_close_failures() -> None:
-    """Reverse cleanup attempts every Frame and raises its first encountered failure."""
+    """Reverse cleanup retains all failures after attempting every Frame."""
     first = CloseProbe("first failed")
     second = CloseProbe("second failed")
     stack = FrameStack((cast(Frame, first), cast(Frame, second)))
-    with pytest.raises(RuntimeError, match="second failed"):
+    with pytest.raises(LclErrorGroup) as caught:
         asyncio.run(stack.close())
+    assert caught.value.code == "LCL441971"
+    assert [str(error.__cause__) for error in caught.value.exceptions] == [
+        "second failed",
+        "first failed",
+    ]
     assert first.calls == second.calls == 1

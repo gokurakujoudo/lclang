@@ -5,6 +5,7 @@ from collections.abc import Mapping
 
 import pytest
 
+from lclang.error import LclValidationError
 from lclang.logger import LoggerHandlerConfig
 from lclang.logger.config import handler_config
 
@@ -26,7 +27,7 @@ from lclang.logger.config import handler_config
 )
 def test_invalid_top_level_declarations(value: object) -> None:
     """Reject invalid public shapes with no side effects."""
-    with pytest.raises((TypeError, ValueError)):
+    with pytest.raises((LclValidationError, LclValidationError)):
         handler_config(value)  # type: ignore[arg-type]
 
 
@@ -61,7 +62,7 @@ def test_invalid_top_level_declarations(value: object) -> None:
 )
 def test_invalid_file_fields(fields: dict[str, object]) -> None:
     """Disabled outputs still validate supplied field types and policies."""
-    with pytest.raises((TypeError, ValueError, LookupError)):
+    with pytest.raises((LclValidationError, LclValidationError, LookupError)):
         LoggerHandlerConfig(file={"app": {"enabled": False, **fields}})
 
 
@@ -99,5 +100,5 @@ def test_declarations_are_frozen_and_rotation_templates_are_partial() -> None:
 )
 def test_library_validation_errors_include_field(config: dict[str, object], path: str) -> None:
     """Stdlib validation failures retain the public configuration path."""
-    with pytest.raises(ValueError, match=path):
+    with pytest.raises(LclValidationError, match=path):
         handler_config(config)

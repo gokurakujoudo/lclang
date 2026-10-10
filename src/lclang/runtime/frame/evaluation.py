@@ -7,6 +7,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from lclang.error import LclEvaluationError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure
+from lclang.error.codes.runtime import Code as runtime_codes
+
 if TYPE_CHECKING:
     from lclang.runtime.frame.frame import Frame
 
@@ -19,7 +24,7 @@ from lclang.diagnostics import (
     internal_trace,
     internal_verbose_enabled,
 )
-from lclang.errors import LclNameError
+from lclang.error import LclNameError
 from lclang.lang.evaluator.awaitables import resolve_awaitable
 from lclang.lang.evaluator.context import Resolver
 from lclang.lang.evaluator.definition_context import definition_scope
@@ -44,6 +49,7 @@ from lclang.source import SourceSpan
 from lclang.types import VarName
 
 
+@guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_233)
 async def get_value(requester: Frame, name: str, fallback: object = NO_FALLBACK) -> object:
     """Resolve one local definition or host binding.
 
@@ -51,7 +57,7 @@ async def get_value(requester: Frame, name: str, fallback: object = NO_FALLBACK)
     :param name: Non-empty variable name to resolve.
     :param fallback: Value returned unchanged when *name* is absent.
     :returns: Cached or newly evaluated value, or the explicit fallback.
-    :raises ValueError: If *name* is empty.
+    :raises LclValidationError: If *name* is empty.
     :raises LclNameError: If no binding exists and fallback is ``NO_FALLBACK``.
     :raises Exception: If definition evaluation fails.
 
@@ -63,7 +69,9 @@ async def get_value(requester: Frame, name: str, fallback: object = NO_FALLBACK)
     frame = requester
     frame._lifecycle.ensure_open(None)
     if not name:
-        raise ValueError("variable name cannot be empty")
+        raise LclValidationError(
+            "variable name cannot be empty", code=runtime_codes.E33_VARIABLE_NAME_CANNOT_BE_EMPTY
+        )
     selected = select_binding(requester, name)
     if selected.owner is None:
         if fallback is NO_FALLBACK:
@@ -72,7 +80,9 @@ async def get_value(requester: Frame, name: str, fallback: object = NO_FALLBACK)
                     "lookup",
                     f"name={name!r} owner={str(frame.frame_id)!r} source=missing",
                 )
-            raise LclNameError(f"unknown variable: {name}")
+            raise LclNameError(
+                f"unknown variable: {name}", code=runtime_codes.E33_UNKNOWN_VARIABLE_VALUE
+            )
         if internal_verbose_enabled():
             internal_trace(
                 "lookup",
@@ -83,13 +93,14 @@ async def get_value(requester: Frame, name: str, fallback: object = NO_FALLBACK)
     return await read_selected_binding(requester, name, None, selected)
 
 
+@guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_233)
 async def evaluate_expression(requester: Frame, expr: str) -> object:
     """Evaluate one unnamed expression against this open Frame.
 
     :param requester: Concrete Frame providing the operation state.
     :param expr: Complete LCL source expression.
     :returns: Fully resolved uncached result.
-    :raises TypeError: If *expr* is not a string.
+    :raises LclValidationError: If *expr* is not a string.
     :raises LclClosedFrameError: If Frame closing has begun.
 
     .. note::
@@ -99,12 +110,16 @@ async def evaluate_expression(requester: Frame, expr: str) -> object:
     frame = requester
     frame._lifecycle.ensure_open(None)
     if not isinstance(expr, str):
-        raise TypeError("Frame expression must be a string")
+        raise LclValidationError(
+            "Frame expression must be a string",
+            code=runtime_codes.E33_FRAME_EXPRESSION_MUST_BE_A_STRING,
+        )
     node = parse_expression(expr)
     with definition_scope("<expr>"), internal_budget_scope(frame.limits):
         return await interpret_expression(node, cast(Resolver, requester))
 
 
+@guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_233)
 async def resolve_name(requester: Frame, name: VarName, *, span: SourceSpan) -> object:
     """Resolve a name for the language evaluator.
 
@@ -125,6 +140,7 @@ async def resolve_name(requester: Frame, name: VarName, *, span: SourceSpan) -> 
     return result
 
 
+@guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_233)
 async def get_resolved(requester: Frame, name: str, span: SourceSpan | None) -> object:
     """Resolve one validated name while retaining its diagnostic span.
 
@@ -144,6 +160,7 @@ async def get_resolved(requester: Frame, name: str, span: SourceSpan | None) -> 
     return await read_selected_binding(requester, name, span, select_binding(requester, name))
 
 
+@guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_233)
 async def read_selected_binding(
     requester: Frame,
     name: str,
@@ -170,7 +187,9 @@ async def read_selected_binding(
                 "lookup",
                 f"name={name!r} owner={str(frame.frame_id)!r} source=missing",
             )
-        raise LclNameError(f"unknown variable: {name}", span=span)
+        raise LclNameError(
+            f"unknown variable: {name}", span=span, code=runtime_codes.E33_UNKNOWN_VARIABLE_VALUE
+        )
     binding_kind = selected.kind
     if binding_kind == "proxy":
         return FrameProxy(cast(object, requester), tuple(name.split(".")))  # type: ignore[arg-type]
@@ -244,6 +263,7 @@ async def read_selected_binding(
     return result
 
 
+@guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_233)
 async def evaluate_definition(requester: Frame, name: str) -> object:
     """Evaluate and atomically publish one owned definition snapshot.
 

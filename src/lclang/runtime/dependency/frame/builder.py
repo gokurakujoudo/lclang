@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from lclang.error import LclEvaluationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.runtime import Code as runtime_codes
+
 if TYPE_CHECKING:
     from lclang.runtime.frame.frame import Frame
 
@@ -27,12 +31,13 @@ if TYPE_CHECKING:
     from lclang.runtime.frame import Frame
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_244)
 def build_frame_dependency_graph(frame: Frame) -> FrameDependencyGraph:
     """Build qualified static dependencies for a complete Frame chain.
 
     :param frame: Child-most Frame whose hierarchy should be analyzed.
     :returns: Immutable definitions, values, lookup paths, and resolved edges.
-    :raises ValueError: If the mutable parent object graph contains a cycle.
+    :raises LclValidationError: If the mutable parent object graph contains a cycle.
 
     .. note::
        Construction reads names and ASTs only; opaque values are never touched.
@@ -68,6 +73,7 @@ def build_frame_dependency_graph(frame: Frame) -> FrameDependencyGraph:
     )
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_244)
 def build_frame_edges(
     frames: tuple[Frame, ...],
     definitions: list[FrameDependencyBinding],
@@ -104,6 +110,7 @@ def build_frame_edges(
     return tuple(edges)
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_244)
 def edges_for_node(
     frames: tuple[Frame, ...],
     owner_index: int,

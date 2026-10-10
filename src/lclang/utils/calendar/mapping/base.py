@@ -7,14 +7,19 @@ from collections.abc import Mapping, Set
 from datetime import date
 from types import MappingProxyType
 
+from lclang.error import LclUtilityError
+from lclang.error.base import LclAttributeError, LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.calendar import DateOperationOutOfScopeException
+from lclang.error.codes.utilities import Code as utilities_codes
 from lclang.utils.calendar.base import BDCalendar
 from lclang.utils.calendar.constants import MAX_BUSINESS_DAY_SHIFT_DAYS
-from lclang.utils.calendar.errors import DateOperationOutOfScopeException
 from lclang.utils.calendar.helpers import safe_add_days
 from lclang.utils.calendar.mapping.sentinel import SELF_CALENDAR
 from lclang.utils.calendar.types import CalendarID
 
 
+@guard_constructor(LclValidationError, utilities_codes.NATIVE_713)
 class BDCalendarMapOperation(ABC):
     """Map dates monotonically through one calendar operation.
 
@@ -23,13 +28,14 @@ class BDCalendarMapOperation(ABC):
 
     __slots__ = ("_mapped_dates", "base_calendar", "mapped_dates")
 
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_713)
     def __setattr__(self, name: str, value: object) -> None:
         """Set caches once while preventing configuration replacement.
 
         :param name: Attribute name.
         :param value: Attribute value.
         :returns: ``None``.
-        :raises AttributeError: If immutable public configuration already exists.
+        :raises LclAttributeError: If immutable public configuration already exists.
         """
         if name in {"base_calendar", "mapped_dates", "n", "operations"}:
             try:
@@ -37,7 +43,9 @@ class BDCalendarMapOperation(ABC):
             except AttributeError:
                 pass
             else:
-                raise AttributeError(f"{name} is immutable")
+                raise LclAttributeError(
+                    f"{name} is immutable", code=utilities_codes.E13_VALUE_IS_IMMUTABLE
+                )
         object.__setattr__(self, name, value)
 
     def __init__(self, base_calendar: BDCalendar = SELF_CALENDAR) -> None:
@@ -45,15 +53,19 @@ class BDCalendarMapOperation(ABC):
 
         :param base_calendar: Calendar used by the operation.
         :returns: ``None``.
-        :raises TypeError: If *base_calendar* is not a calendar.
+        :raises LclValidationError: If *base_calendar* is not a calendar.
         """
         if not isinstance(base_calendar, BDCalendar):
-            raise TypeError("mapping base must be a BDCalendar")
+            raise LclValidationError(
+                "mapping base must be a BDCalendar",
+                code=utilities_codes.E13_MAPPING_BASE_MUST_BE_A_BDCALENDAR,
+            )
         self.base_calendar = base_calendar
         self._mapped_dates: dict[date, date] = {}
         self.mapped_dates: Mapping[date, date] = MappingProxyType(self._mapped_dates)
 
     @abstractmethod
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_713)
     async def map_date(self, base_date: date) -> date:
         """Map one source date to one target date.
 
@@ -63,6 +75,7 @@ class BDCalendarMapOperation(ABC):
         """
 
     @abstractmethod
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_713)
     def with_base_calendar(self, calendar: BDCalendar) -> BDCalendarMapOperation:
         """Return a configuration-equivalent operation bound to a calendar.
 
@@ -70,6 +83,7 @@ class BDCalendarMapOperation(ABC):
         :returns: New bound operation.
         """
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_713)
     async def map_date_reverse(self, target_date: date) -> tuple[date, date]:
         """Find the inclusive source range mapped to a target date.
 
@@ -98,7 +112,9 @@ class BDCalendarMapOperation(ABC):
                 if anchor is not None:
                     break
         if anchor is None:
-            raise DateOperationOutOfScopeException(target_date, self.base_calendar)
+            raise DateOperationOutOfScopeException(
+                target_date, self.base_calendar, code=utilities_codes.E13_TARGET_DATE
+            )
 
         lower = safe_add_days(target_date, -MAX_BUSINESS_DAY_SHIFT_DAYS) or date.min
         upper = anchor
@@ -130,6 +146,7 @@ class BDCalendarMapOperation(ABC):
                 upper = date.fromordinal(middle.toordinal() - 1)
         return first, lower
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_713)
     async def get_dependency_ids(self) -> Set[CalendarID]:
         """Return the operation's concrete calendar dependency.
 
@@ -139,6 +156,7 @@ class BDCalendarMapOperation(ABC):
             return frozenset()
         return frozenset((self.base_calendar.calendar_id,))
 
+    @guard_failure(LclValidationError, utilities_codes.NATIVE_713)
     def validate_displacement(self, source: date, target: date) -> date:
         """Reject a primitive target farther than the mapping bound.
 
@@ -148,6 +166,8 @@ class BDCalendarMapOperation(ABC):
         :raises DateOperationOutOfScopeException: If displacement exceeds the bound.
         """
         if abs((target - source).days) > MAX_BUSINESS_DAY_SHIFT_DAYS:
-            raise DateOperationOutOfScopeException(source, self.base_calendar)
+            raise DateOperationOutOfScopeException(
+                source, self.base_calendar, code=utilities_codes.E13_SOURCE
+            )
         self._mapped_dates[source] = target
         return target

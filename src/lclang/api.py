@@ -7,6 +7,9 @@ from typing import cast
 
 from lclang.ast import LclAstNode
 from lclang.diagnostics import internal_masked_scope
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.core import Code as core_codes
 from lclang.lang.evaluator.definition_context import lhs
 from lclang.lang.parser import parse_expression
 from lclang.masking import normalize_masked_mapping
@@ -119,6 +122,7 @@ LCL_IMPORTS = Frame(
 )
 
 
+@guard_failure(LclValidationError, core_codes.NATIVE_844)
 def define_module(
     name: str,
     exprs: Mapping[str, str | FrameProxyMarker | OverrideMarker],
@@ -128,8 +132,9 @@ def define_module(
     :param name: Non-empty module name.
     :param exprs: Definition names mapped to complete LCL source expressions.
     :returns: Detached Module containing parsed custom AST definitions.
-    :raises TypeError: If expressions are not a string-keyed dictionary of strings or markers.
-    :raises ValueError: If the module or a definition name is empty.
+    :raises LclValidationError: If expressions are not a string-keyed dictionary
+       of strings or markers.
+    :raises LclValidationError: If the module or a definition name is empty.
     :raises LclSyntaxError: If an expression is empty or malformed.
 
     .. note::
@@ -137,16 +142,27 @@ def define_module(
        cannot change the returned Module.
     """
     if not isinstance(name, str):
-        raise TypeError("module name must be a string")
+        raise LclValidationError(
+            "module name must be a string", code=core_codes.E44_MODULE_NAME_MUST_BE_A_STRING
+        )
     if not isinstance(exprs, dict):
-        raise TypeError("module expressions must be a dictionary")
+        raise LclValidationError(
+            "module expressions must be a dictionary",
+            code=core_codes.E44_MODULE_EXPRESSIONS_MUST_BE_A_DICTIONARY,
+        )
     if any(not isinstance(key, str) for key in exprs):
-        raise TypeError("module definition names must be strings")
+        raise LclValidationError(
+            "module definition names must be strings",
+            code=core_codes.E44_MODULE_NAME_MUST_BE_A_STRING,
+        )
     if any(
         not isinstance(source, (str, OverrideMarker)) and source is not FRAME_PROXY
         for source in exprs.values()
     ):
-        raise TypeError("module expressions must be strings or declaration markers")
+        raise LclValidationError(
+            "module expressions must be strings or declaration markers",
+            code=core_codes.E44_MODULE_NAME_MUST_BE_A_STRING,
+        )
     normalized, masked_names = normalize_masked_mapping(exprs)
     definitions: dict[str, LclAstNode] = {}
     for key, source in normalized.items():
@@ -159,6 +175,7 @@ def define_module(
     return Module(ModuleName(name), definitions, masked_names=masked_names)
 
 
+@guard_failure(LclValidationError, core_codes.NATIVE_844)
 def define_frame(
     module: Module | None = None,
     base: Frame = LCL_RUNTIME,
@@ -170,8 +187,8 @@ def define_frame(
     :param base: Borrowed per-run base Frame below the imports layer.
     :param preset: Optional host imports copied into a fresh imports layer.
     :returns: Fresh user Frame with independent cache and lifecycle state.
-    :raises TypeError: If *module*, *base*, or *preset* has the wrong type.
-    :raises ValueError: If a preset binding name is empty.
+    :raises LclValidationError: If *module*, *base*, or *preset* has the wrong type.
+    :raises LclValidationError: If a preset binding name is empty.
 
     .. note::
        With the default base and no preset, the immutable empty `LCL_IMPORTS`
@@ -180,11 +197,18 @@ def define_frame(
        that owned state deterministically.
     """
     if module is not None and not isinstance(module, Module):
-        raise TypeError("frame module must be a Module")
+        raise LclValidationError(
+            "frame module must be a Module", code=core_codes.E44_FRAME_MODULE_MUST_BE_A_MODULE
+        )
     if not isinstance(base, Frame):
-        raise TypeError("frame base must be a Frame")
+        raise LclValidationError(
+            "frame base must be a Frame", code=core_codes.E44_FRAME_BASE_MUST_BE_A_FRAME
+        )
     if preset is not None and not isinstance(preset, dict):
-        raise TypeError("frame preset must be a dictionary")
+        raise LclValidationError(
+            "frame preset must be a dictionary",
+            code=core_codes.E44_MODULE_EXPRESSIONS_MUST_BE_A_DICTIONARY,
+        )
     selected_module = LCL_USER_MODULE if module is None else module
     if base is LCL_RUNTIME and preset is None:
         imports = LCL_IMPORTS

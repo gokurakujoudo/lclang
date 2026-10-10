@@ -522,7 +522,7 @@ Runtime rainy cases use structured public exceptions:
 | Request after close begins | `LclClosedFrameError` |
 | Direct cancellation/BaseException | propagates unwrapped after required cleanup |
 | Missing ordinary attribute after `?.` on non-None | normal failure; not suppressed |
-| Duplicate `**` keyword at runtime | wrapped `TypeError` cause |
+| Duplicate `**` keyword at runtime | `LclEvaluationError` with the duplicate-keyword code |
 
 ## Unsupported Python syntax
 
@@ -538,3 +538,8 @@ V1 deliberately excludes statements and Python compilation semantics:
 Use LCL's `(...) -> expression`, eta-expanded fixed-point combinators when
 recursion is genuinely useful, expression-form `try`/`with`, host-provided
 reviewed Presets, and explicit application APIs instead.
+
+See [errors and diagnostic codes](errors.md) for exception fields, specific
+codes, cause chains, and executable troubleshooting examples. Ordinary library
+validation uses `LclValidationError`; native callback and operation failures
+retain their original exception in `__cause__`.

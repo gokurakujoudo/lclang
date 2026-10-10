@@ -2,6 +2,7 @@
 
 import pytest
 
+from lclang.error import LclValidationError
 from lclang.lang.parser import parse_expression
 from lclang.runtime import (
     DependencyKind,
@@ -136,9 +137,9 @@ def test_frame_graph_filters_kinds_and_rejects_invalid_hierarchies() -> None:
     lazy = graph.definitions[0]
     assert graph.dependencies(lazy, frozenset({DependencyKind.EAGER})) == ()
     assert len(graph.dependencies(lazy, frozenset({DependencyKind.DEFERRED}))) == 1
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         build_dependency_graph(object())  # type: ignore[call-overload]
 
     parent.parent = child
-    with pytest.raises(ValueError, match="cycle"):
+    with pytest.raises(LclValidationError, match="cycle"):
         build_dependency_graph(child)

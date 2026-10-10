@@ -2,7 +2,7 @@
 
 import pytest
 
-from lclang.errors import LclEvaluationError
+from lclang.error import LclEvaluationError
 from lclang.lang.evaluator.dispatch import interpret_expression
 from lclang.lang.parser import parse_expression
 from lclang.source import SourceSpan

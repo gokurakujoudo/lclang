@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from lclang.errors import LclCircularDependencyError, LclEvaluationError
+from lclang.error import LclCircularDependencyError, LclEvaluationError
 from lclang.lang.parser import parse_expression
 from lclang.runtime import Frame, Module
 from lclang.types import FrameId, ModuleName
@@ -106,7 +106,7 @@ async def test_nested_failure_reports_direct_to_failing_variable_stack() -> None
     assert first.value is second.value
     assert first.value.variable_stack == ("RESULT", "middle", "failing")
     diagnostic = str(first.value)
-    assert diagnostic.startswith("Error in evaluating RESULT [LCL3001]:")
+    assert diagnostic.startswith("Error in evaluating RESULT [LCL131421]:")
     assert (
         diagnostic.index("  RESULT at")
         < diagnostic.index("  middle at")

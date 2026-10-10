@@ -113,3 +113,8 @@ namespace from `LCL_BUILTINS`. It contains `DayType`, all factories, and every
 singleton. Use `calendars.DayType.BusinessDay`. Standard `iter`, `text`, `data`,
 and `json` namespaces also live in `LCL_BUILTINS`; `LCL_ROOT` contains only
 definition-scoped `lhs()`.
+
+See [errors and diagnostic codes](errors.md) for exception fields, specific
+codes, cause chains, and executable troubleshooting examples. Ordinary library
+validation uses `LclValidationError`; native callback and operation failures
+retain their original exception in `__cause__`.

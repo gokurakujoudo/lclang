@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from lclang.errors import LclEvaluationError
+from lclang.error import LclEvaluationError
 from lclang.lang.evaluator.dispatch import interpret_expression
 from lclang.lang.parser import parse_expression
 from tests.lang.evaluator.context_support import AsyncManager, SyncManager
@@ -57,7 +57,9 @@ async def test_later_entry_failure_unwinds_earlier_manager() -> None:
     with pytest.raises(LclEvaluationError) as caught:
         await interpret_expression(parse_expression("with first, second: None"), locals())
     assert isinstance(caught.value.__cause__, ValueError)
-    assert first.seen_error is second.enter_error
+    assert first.seen_error is caught.value
+    assert caught.value.code == "LCL138811"
+    assert caught.value.__cause__ is second.enter_error
     assert events == ["enter first", "enter second", "exit first"]
 
 

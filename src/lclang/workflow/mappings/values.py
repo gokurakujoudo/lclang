@@ -4,6 +4,10 @@ from dataclasses import MISSING, fields, is_dataclass, replace
 from types import UnionType
 from typing import Any, Union, cast, get_args, get_origin
 
+from lclang.error import LclWorkflowError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_failure
+from lclang.error.codes.workflow import Code as workflow_codes
 from lclang.runtime import Frame, FrameProxy
 from lclang.utils.boxes import box_value, get_box_type
 from lclang.workflow.mappings.annotations import record_annotations
@@ -13,6 +17,7 @@ from lclang.workflow.projections import TaskProjection, reference_name
 from lclang.workflow.variables import TaskVar
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_522)
 def matches_annotation(value: object, annotation: Any) -> bool:
     """Check a projected value's outer type without traversing containers.
 
@@ -29,13 +34,14 @@ def matches_annotation(value: object, annotation: Any) -> bool:
     return not isinstance(cls, type) or isinstance(value, cls)
 
 
+@guard_async_failure(LclWorkflowError, workflow_codes.NATIVE_522)
 async def materialize_record(value: object, annotation: Any) -> object:
     """Convert a scope into a recursively typed record, preserving concrete records.
 
     :param value: Referenced record or scope proxy.
     :param annotation: Concrete or generic dataclass annotation.
     :returns: Existing concrete record or a newly constructed typed record.
-    :raises TypeError: If the record class differs or required fields are missing.
+    :raises LclValidationError: If the record class differs or required fields are missing.
     :raises Exception: If a scope field cannot be evaluated.
     """
     cls = record_type(annotation)
@@ -54,17 +60,21 @@ async def materialize_record(value: object, annotation: Any) -> object:
                 updates[item.name] = current
         return cls(**updates)
     if type(value) is not cls:
-        raise TypeError("workflow argument must match its mapping dataclass")
+        raise LclValidationError(
+            "workflow argument must match its mapping dataclass",
+            code=workflow_codes.E22_WORKFLOW_ARGUMENT_MUST_MATCH_ITS_MAPPING_DATACLASS,
+        )
     return value
 
 
+@guard_async_failure(LclWorkflowError, workflow_codes.NATIVE_522)
 async def resolve_reference(variable: TaskVar[object], frame: Frame) -> object:
     """Resolve one root value and optionally read its declared dataclass path.
 
     :param variable: Root variable or read-only projection.
     :param frame: Current task lookup environment.
     :returns: Concrete referenced value with record proxies materialized.
-    :raises TypeError: If a projected value has the wrong type or is null.
+    :raises LclValidationError: If a projected value has the wrong type or is null.
     :raises Exception: If lookup, record conversion or projected type checks fail.
     """
     root = variable.root if isinstance(variable, TaskProjection) else variable
@@ -83,11 +93,15 @@ async def resolve_reference(variable: TaskVar[object], frame: Frame) -> object:
             value = box_value(getattr(value, name), expected)
             if not matches_annotation(value, expected):
                 detail = "null value" if value is None else "type mismatch"
-                raise TypeError(f"workflow field {detail}: {reference_name(variable)}")
+                raise LclValidationError(
+                    f"workflow field {detail}: {reference_name(variable)}",
+                    code=workflow_codes.E22_WORKFLOW_FIELD_VALUE_VALUE,
+                )
             annotation = expected
     return value
 
 
+@guard_async_failure(LclWorkflowError, workflow_codes.NATIVE_522)
 async def materialize_node(node: MappingNode, frame: Frame) -> object:
     """Build one mapping node while preserving non-record literal identity.
 

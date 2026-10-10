@@ -7,10 +7,15 @@ import warnings
 from dataclasses import dataclass
 from typing import Any
 
+from lclang.error import LclLoggerError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.logging import Code as logging_codes
 from lclang.logger.config import LoggerHandlerConfig
 from lclang.logger.queue_handler import LocalQueueHandler
 
 
+@guard_constructor(LclValidationError, logging_codes.NATIVE_611)
 @dataclass(slots=True)
 class LoggerState:
     """Retain configuration without owning or modifying borrowed handlers.
@@ -30,6 +35,7 @@ class LoggerState:
     disabled: bool
     filters: list[logging.Filter | Any]
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
     def restore(self) -> None:
         """Restore exact borrowed objects and effective level caches."""
         self.logger.handlers = self.handlers
@@ -39,6 +45,7 @@ class LoggerState:
         self.logger.disabled = self.disabled
 
 
+@guard_constructor(LclValidationError, logging_codes.NATIVE_611)
 class LoggingTakeover:
     """Save all state before installing process-global logging changes."""
 
@@ -70,6 +77,7 @@ class LoggingTakeover:
         # stdlib exposes no capture-state getter; preserve its saved callback for exact restoration.
         self.saved_warning = logging._warnings_showwarning  # type: ignore[attr-defined]
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
     def install(self) -> None:
         """Replace only selected targets while leaving borrowed handlers untouched."""
         for state in self.states:
@@ -82,6 +90,7 @@ class LoggingTakeover:
         if self.config.capture_warnings:
             logging.captureWarnings(True)
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
     def restore(self) -> None:
         """Restore logging and the precise pre-scope warnings callback state."""
         for state in reversed(self.states):

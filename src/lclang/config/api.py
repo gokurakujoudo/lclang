@@ -10,10 +10,15 @@ from lclang.config.limits import ConfigLoadLimits
 from lclang.config.loader import ConfigLoader
 from lclang.config.protocols import ConfigSourceResolver
 from lclang.config.result import Config
+from lclang.error import LclConfigError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure
+from lclang.error.codes.configuration import Code as configuration_codes
 from lclang.runtime import EvaluationLimits, Frame, Preset
 from lclang.types import FrameId
 
 
+@guard_async_failure(LclConfigError, configuration_codes.NATIVE_333)
 async def load_config(
     path: str | Path,
     *,
@@ -41,6 +46,7 @@ async def load_config(
     )
 
 
+@guard_async_failure(LclConfigError, configuration_codes.NATIVE_333)
 async def evaluate_config(
     config: Config,
     name: str,
@@ -59,14 +65,17 @@ async def evaluate_config(
     :param parent: Optional borrowed parent Frame.
     :param limits: Optional evaluation limits.
     :returns: Evaluated definition value.
-    :raises TypeError: If *config* is not a Config.
+    :raises LclValidationError: If *config* is not a Config.
     :raises Exception: If Frame construction, evaluation, or cleanup fails.
 
     .. note::
        The temporary Frame is closed even when lookup fails.
     """
     if not isinstance(config, Config):
-        raise TypeError("evaluate_config requires a Config")
+        raise LclValidationError(
+            "evaluate_config requires a Config",
+            code=configuration_codes.E33_EVALUATE_CONFIG_REQUIRES_A_CONFIG,
+        )
     factory = config.frame_factory(preset=preset, limits=limits)
     frame = factory.create(
         FrameId(f"config:{config.root_origin.name}"),

@@ -5,6 +5,7 @@ from typing import Any, cast
 
 import pytest
 
+from lclang.error import LclValidationError
 from lclang.utils import make_multi_log_lines, make_repr_lines
 
 
@@ -60,14 +61,14 @@ def test_masking_precedes_record_and_dictionary_reads() -> None:
 @pytest.mark.parametrize("records", [Record, [Record], 42, "", "text", b"", [object()], {1: 2}])
 def test_invalid_records_are_rejected(records: object) -> None:
     """Only record instances and string-keyed dictionaries are supported."""
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         make_repr_lines(records)
 
 
 @pytest.mark.parametrize("width", [True, "3", 1.5, -1])
 def test_width_is_validated_even_for_empty_input(width: object) -> None:
     """Invalid explicit widths cannot silently pass on an empty record."""
-    with pytest.raises(ValueError if width == -1 else TypeError):
+    with pytest.raises(LclValidationError if width == -1 else LclValidationError):
         make_repr_lines({}, key_column_length=cast(Any, width))
 
 

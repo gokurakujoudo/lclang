@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
+from lclang.error import LclStateError, LclUtilityError, LclValidationError
 from lclang.utils import SnowflakeGenerator
 
 
@@ -25,22 +26,22 @@ def test_default_epoch_and_read_only_configuration() -> None:
 @pytest.mark.parametrize("value", [True, False, 1.5, "1", None])
 def test_noninteger_arguments_are_rejected(value: object) -> None:
     """Boolean and coercible inputs never silently change the ID domain."""
-    with pytest.raises(TypeError, match="worker_id"):
+    with pytest.raises(LclValidationError, match="worker_id"):
         SnowflakeGenerator(value)  # type: ignore[arg-type]
-    with pytest.raises(TypeError, match="epoch_ms"):
+    with pytest.raises(LclValidationError, match="epoch_ms"):
         SnowflakeGenerator(0, epoch_ms=value)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("worker_id", [-1, 1024])
 def test_worker_range_is_validated(worker_id: int) -> None:
     """Only the ten-bit worker domain is accepted."""
-    with pytest.raises(ValueError, match="worker_id"):
+    with pytest.raises(LclValidationError, match="worker_id"):
         SnowflakeGenerator(worker_id)
 
 
 def test_negative_epoch_is_rejected() -> None:
     """The epoch uses nonnegative Unix milliseconds."""
-    with pytest.raises(ValueError, match="epoch_ms"):
+    with pytest.raises(LclValidationError, match="epoch_ms"):
         SnowflakeGenerator(0, epoch_ms=-1)
 
 
@@ -61,12 +62,12 @@ def test_clock_failures_preserve_state_and_allow_recovery() -> None:
     generator = SnowflakeGenerator(0, epoch_ms=100)
     readings = [99, 102, 101, 99, 102, 103]
     with patch("lclang.utils.snowflake.time_ns", side_effect=[ms * 1_000_000 for ms in readings]):
-        with pytest.raises(ValueError, match="epoch"):
+        with pytest.raises(LclValidationError, match="epoch"):
             generator.next_id()
         assert generator.next_id() == 2 << 22
-        with pytest.raises(RuntimeError, match="backward"):
+        with pytest.raises(LclStateError, match="backward"):
             generator.next_id()
-        with pytest.raises(ValueError, match="epoch"):
+        with pytest.raises(LclValidationError, match="epoch"):
             generator.next_id()
         assert generator.next_id() == (2 << 22) | 1
         assert generator.next_id() == 3 << 22
@@ -80,7 +81,7 @@ def test_full_sequence_fails_repeatedly_then_recovers_next_millisecond() -> None
             (1023 << 12) | sequence for sequence in range(4096)
         ]
         for _ in range(2):
-            with pytest.raises(OverflowError, match="sequence"):
+            with pytest.raises(LclUtilityError, match="sequence"):
                 generator.next_id()
     with patch("lclang.utils.snowflake.time_ns", return_value=1_000_000):
         assert generator.next_id() == (1 << 22) | (1023 << 12)
@@ -93,7 +94,7 @@ def test_timestamp_boundary_and_failed_read_do_not_consume_sequence() -> None:
         first = generator.next_id()
     with (
         patch("lclang.utils.snowflake.time_ns", return_value=2**41 * 1_000_000),
-        pytest.raises(OverflowError, match="timestamp"),
+        pytest.raises(LclUtilityError, match="timestamp"),
     ):
         generator.next_id()
     with patch("lclang.utils.snowflake.time_ns", return_value=(2**41 - 1) * 1_000_000):

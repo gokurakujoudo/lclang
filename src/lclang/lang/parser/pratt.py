@@ -9,7 +9,10 @@ from lclang.diagnostics import (
     internal_trace,
     internal_verbose_enabled,
 )
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.lexer import Token, TokenKind, scan_tokens
 from lclang.lang.parser.atoms import parse_atom
 from lclang.lang.parser.control_forms import parse_control_form
@@ -49,6 +52,7 @@ _UNARY = {
 }
 
 
+@guard_constructor(LclValidationError, language_codes.NATIVE_121)
 class InternalPrattParser:
     """Coordinate recursive-descent forms with binding-power parsing.
 
@@ -68,6 +72,7 @@ class InternalPrattParser:
         """
         self.stream = stream
 
+    @guard_failure(LclSyntaxError, language_codes.NATIVE_121)
     def parse(self) -> LclAstNode:
         """Parse one complete expression and reject trailing input.
 
@@ -91,7 +96,11 @@ class InternalPrattParser:
                 span=merge_source_spans(elements[0].span, elements[-1].span),
             )
         if self.stream.current.kind is not TokenKind.EOF:
-            raise LclSyntaxError("unexpected trailing token", span=self.stream.current.span)
+            raise LclSyntaxError(
+                "unexpected trailing token",
+                span=self.stream.current.span,
+                code=language_codes.E21_UNEXPECTED_TRAILING_TOKEN,
+            )
         return node
 
     def internal_parse_complete(self) -> LclAstNode:
@@ -177,6 +186,7 @@ class InternalPrattParser:
         return left
 
 
+@guard_failure(LclSyntaxError, language_codes.NATIVE_121)
 def parse_expression(
     text: str,
     *,
@@ -189,7 +199,7 @@ def parse_expression(
     :param origin: Optional diagnostic source origin.
     :param version: Independent LCL grammar version.
     :returns: Immutable custom AST root spanning the parsed expression.
-    :raises ValueError: If *version* is unsupported.
+    :raises LclValidationError: If *version* is unsupported.
     :raises LclSyntaxError: If *text* is empty, malformed, or has trailing input.
 
     .. note::
@@ -215,6 +225,7 @@ def parse_expression(
     return node
 
 
+@guard_failure(LclSyntaxError, language_codes.NATIVE_121)
 def parse_tokens(
     tokens: list[Token],
     *,
@@ -225,7 +236,7 @@ def parse_tokens(
     :param tokens: Source-aware tokens ending with EOF.
     :param version: Independent LCL grammar version.
     :returns: Immutable custom AST root.
-    :raises ValueError: If *version* is unsupported or tokens omit EOF.
+    :raises LclValidationError: If *version* is unsupported or tokens omit EOF.
     :raises LclSyntaxError: If the token sequence is malformed.
 
     .. note::
@@ -233,7 +244,10 @@ def parse_tokens(
        with literal tokens without changing the standalone expression API.
     """
     if version is not LCL_V1:
-        raise ValueError(f"unsupported LCL language version: {version}")
+        raise LclValidationError(
+            f"unsupported LCL language version: {version}",
+            code=language_codes.E21_UNSUPPORTED_LCL_LANGUAGE_VERSION_VALUE,
+        )
     node = InternalPrattParser(TokenStream(tokens)).parse()
     markers = tuple(
         item for item in node.walk() if is_frame_proxy(item) or get_override_marker(item)
@@ -242,5 +256,6 @@ def parse_tokens(
         raise LclSyntaxError(
             f"{to_source(markers[0])} must be a complete expression",
             span=markers[0].span,
+            code=language_codes.E21_VALUE_MUST_BE_A_COMPLETE_EXPRESSION,
         )
     return node

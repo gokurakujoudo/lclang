@@ -5,7 +5,10 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from lclang.ast import LclAstNode, LclExceptHandler, LclTry, LclWith, LclWithItem
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.lexer import TokenKind
 from lclang.lang.parser.bindings import validate_binding_name
 from lclang.lang.parser.stream import TokenStream
@@ -13,6 +16,7 @@ from lclang.source import merge_source_spans
 from lclang.types import VarName
 
 
+@guard_constructor(LclValidationError, language_codes.NATIVE_125)
 class InternalControlFormParser:
     """Parse try and with forms from a shared token stream.
 
@@ -43,6 +47,7 @@ class InternalControlFormParser:
         self.parse_complete = parse_complete
         self.parse_nonconditional = parse_nonconditional
 
+    @guard_failure(LclSyntaxError, language_codes.NATIVE_125)
     def parse(self) -> LclAstNode | None:
         """Dispatch to the control-form parser selected by lookahead.
 
@@ -77,7 +82,11 @@ class InternalControlFormParser:
         bare_seen = False
         while (marker := self.stream.match(TokenKind.KW_EXCEPT)) is not None:
             if bare_seen:
-                raise LclSyntaxError("bare except handler must be last", span=marker.span)
+                raise LclSyntaxError(
+                    "bare except handler must be last",
+                    span=marker.span,
+                    code=language_codes.E25_BARE_EXCEPT_HANDLER_MUST_BE_LAST,
+                )
             exception = None
             name = None
             if self.stream.current.kind is not TokenKind.COLON:
@@ -106,7 +115,11 @@ class InternalControlFormParser:
             self.stream.expect(TokenKind.COLON, "finally requires body colon")
             finally_body = self.parse_complete()
         if not handlers and finally_body is None:
-            raise LclSyntaxError("try form requires except or finally", span=body.span)
+            raise LclSyntaxError(
+                "try form requires except or finally",
+                span=body.span,
+                code=language_codes.E25_TRY_FORM_REQUIRES_EXCEPT_OR_FINALLY,
+            )
         final = finally_body or handlers[-1].body
         return LclTry(
             body,
@@ -154,6 +167,7 @@ class InternalControlFormParser:
         return LclWith(tuple(items), body, span=merge_source_spans(opening.span, body.span))
 
 
+@guard_failure(LclSyntaxError, language_codes.NATIVE_125)
 def parse_control_form(
     stream: TokenStream,
     parse_complete: Callable[[], LclAstNode],

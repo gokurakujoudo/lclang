@@ -6,6 +6,7 @@ from typing import ClassVar
 import pytest
 
 import lclang
+from lclang.error import LclAttributeError, LclEvaluationError, LclValidationError
 from lclang.runtime import VariableInspectionStatus
 
 
@@ -45,10 +46,10 @@ async def test_scoped_definitions_infer_lazy_python_proxies() -> None:
         assert isinstance(proxy, lclang.FrameProxy)
         assert repr(proxy) == "FrameProxy(A)"
         private_name = "_private"
-        with pytest.raises(AttributeError, match="_private"):
+        with pytest.raises(LclAttributeError, match="_private"):
             getattr(proxy, private_name)
         missing_name = "missing"
-        with pytest.raises(AttributeError, match="A.missing"):
+        with pytest.raises(LclAttributeError, match="A.missing"):
             getattr(proxy, missing_name)
         assert await proxy.B.y == 42
         assert await frame.get("A.B.x") == 21
@@ -93,9 +94,9 @@ async def test_proxy_index_names_and_records_share_scoped_lookup() -> None:
             Endpoint("canary.example"),
             Endpoint("green.example"),
         ]
-        with pytest.raises(AttributeError, match="endpoints.missing"):
+        with pytest.raises(LclAttributeError, match="endpoints.missing"):
             endpoints["missing"]
-        with pytest.raises(TypeError):
+        with pytest.raises(LclValidationError):
             endpoints[1]  # type: ignore[index]
     finally:
         await child.close()
@@ -120,7 +121,7 @@ async def test_proxy_record_validation_defaults_and_failures() -> None:
         complete = await frame.get("complete")
         assert isinstance(complete, lclang.FrameProxy)
         assert await complete.get("absent", "fallback") == "fallback"
-        with pytest.raises(TypeError):
+        with pytest.raises(LclValidationError):
             await complete.get(1)  # type: ignore[arg-type]
         assert await complete.as_record(Endpoint) == Endpoint(None)  # type: ignore[arg-type]
         assert (await complete.as_record(Endpoint)).tags == []
@@ -128,9 +129,9 @@ async def test_proxy_record_validation_defaults_and_failures() -> None:
         nested = group.endpoint
         assert isinstance(nested, lclang.FrameProxy)
         assert await nested.host == "nested.example"
-        with pytest.raises(TypeError, match="dataclass"):
+        with pytest.raises(LclValidationError, match="dataclass"):
             await complete.as_record(dict)
-        with pytest.raises(TypeError, match="host"):
+        with pytest.raises(LclEvaluationError, match="host"):
             missing = await frame.get("missing")
             assert isinstance(missing, lclang.FrameProxy)
             await missing.as_record(Endpoint)
@@ -163,12 +164,12 @@ async def test_scoped_lookup_uses_caller_hierarchy_and_safe_missing() -> None:
 
 def test_scoped_real_prefix_conflicts_are_eager_and_atomic() -> None:
     """Real ancestors conflict while placeholders and exact overrides work."""
-    with pytest.raises(ValueError, match="conflict"):
+    with pytest.raises(LclValidationError, match="conflict"):
         lclang.define_module("bad", {"A": "1", "A.x": "2"})
     module = lclang.define_module("good", {"A": lclang.FRAME_PROXY, "A.x": "1", "A.y": "2"})
     parent = lclang.define_frame(module)
     parent.derive(lclang.define_module("child", {"A.x": "3"}))
-    with pytest.raises(ValueError, match="conflict"):
+    with pytest.raises(LclValidationError, match="conflict"):
         parent.mixin({"A.x.deep": 4})
     assert "A.x.deep" not in parent.values
 

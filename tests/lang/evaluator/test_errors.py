@@ -5,11 +5,23 @@ import asyncio
 import pytest
 
 from lclang.ast import LclAstNode, LclConstant, LclExceptHandler
-from lclang.errors import LclEvaluationError
+from lclang.error import LclEvaluationError
 from lclang.lang.evaluator.context import MappingResolver, Resolver
 from lclang.lang.evaluator.dispatch import interpret_expression
-from lclang.lang.evaluator.errors import internal_matches
+from lclang.lang.evaluator.errors import internal_matches, internal_wrap_failure
 from lclang.lang.parser import parse_expression
+from lclang.source import UNKNOWN_SPAN
+
+
+@pytest.mark.parametrize(
+    "native,code",
+    [(IndexError("custom indexing failed"), "LCL133313"), (KeyError("missing"), "LCL133312")],
+)
+def test_native_index_failure_keeps_its_specific_code(native: Exception, code: str) -> None:
+    """Custom sequence and mapping lookup failures retain distinct classified reasons."""
+    wrapped = internal_wrap_failure(native, UNKNOWN_SPAN)
+    assert wrapped.code == code and wrapped.span is UNKNOWN_SPAN
+    assert wrapped.native_cause == f"{type(native).__name__}: {native}"
 
 
 @pytest.mark.asyncio

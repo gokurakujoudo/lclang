@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from lclang.errors import LclEvaluationError
+from lclang.error import LclAttributeError, LclEvaluationError, LclValidationError
 from lclang.lang.parser import parse_expression
 from lclang.runtime import EvaluationLimits, Frame, Module
 from lclang.types import FrameId, ModuleName
@@ -25,18 +25,18 @@ def test_limit_defaults_are_immutable_and_explicit() -> None:
     assert limits.max_depth == 100
     assert limits.max_steps == 100_000
     assert limits.max_collection_items == 10_000
-    with pytest.raises(AttributeError):
+    with pytest.raises(LclAttributeError):
         limits.max_depth = 1  # type: ignore[misc]
 
 
 @pytest.mark.parametrize("invalid", [True, 0, -1])
 def test_each_limit_requires_a_positive_non_boolean_integer(invalid: object) -> None:
     """All three budget dimensions reject ambiguous or non-positive values."""
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         EvaluationLimits(max_depth=invalid)  # type: ignore[arg-type]
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         EvaluationLimits(max_steps=invalid)  # type: ignore[arg-type]
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         EvaluationLimits(max_collection_items=invalid)  # type: ignore[arg-type]
 
 

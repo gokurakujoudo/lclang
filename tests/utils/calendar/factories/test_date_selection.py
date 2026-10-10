@@ -6,6 +6,7 @@ from typing import cast
 
 import pytest
 
+from lclang.error import LclValidationError
 from lclang.utils.calendar import (
     ALL_DAYS,
     ALL_WEEKDAYS,
@@ -37,9 +38,9 @@ async def test_date_selection_factories_cover_signed_positions_and_ranges() -> N
     run = at("20240102", "20240103", "20240105")
     assert await range_start_days(run).get_day_type(date(2024, 1, 2)) is DayType.BusinessDay
     assert await range_end_days(run).get_day_type(date(2024, 1, 3)) is DayType.BusinessDay
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         nth_day_of_month(0)
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         at(object())  # type: ignore[arg-type]
 
 
@@ -47,11 +48,11 @@ async def test_date_selection_factories_cover_signed_positions_and_ranges() -> N
 async def test_factories_cover_invalid_values_boundaries_and_cached_months() -> None:
     """Factories validate callbacks, dates, positions, and date-range edges."""
     for value in (-1, True, 123456789):
-        with pytest.raises((TypeError, ValueError)):
+        with pytest.raises((LclValidationError, LclValidationError)):
             at(value)
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         nth_day_of_month(cast(int, "1"))
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         nth_day_of_month(32)
     selector = nth_day_of_month(31)
     assert await selector.get_day_type(date(2024, 2, 29)) is DayType.Holiday
@@ -71,9 +72,9 @@ async def test_factories_cover_invalid_values_boundaries_and_cached_months() -> 
     assert await starts.get_dependency_ids() == {CalendarID("ALL_WEEKDAYS")}
     assert await ends.get_dependency_ids() == {CalendarID("ALL_WEEKDAYS")}
 
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         def_functional_calendar(CalendarID("BAD"), cast(Callable[[date], DayType], 1))
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         def_functional_calendar(
             CalendarID("BAD"),
             lambda d: DayType.BusinessDay,

@@ -8,8 +8,9 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from lclang.config import FileConfigResolver, LclConfigUsingError, load_config
+from lclang.config import FileConfigResolver, load_config
 from lclang.config.files import read_file_source
+from lclang.error import LclConfigUsingError
 
 
 @pytest.mark.asyncio
@@ -47,7 +48,7 @@ def test_non_regular_source_is_not_reported_missing(monkeypatch: pytest.MonkeyPa
 
         with monkeypatch.context() as patch:
             patch.setattr(Path, "stat", read_special_status)
-            with pytest.raises(OSError, match="not a regular file") as caught:
+            with pytest.raises(LclConfigUsingError, match="not a regular file") as caught:
                 read_file_source(path, None)
         assert not isinstance(caught.value, FileNotFoundError)
 

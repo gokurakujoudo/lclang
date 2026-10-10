@@ -10,6 +10,10 @@ from lclang.ast import (
     LclName,
     LclStringText,
 )
+from lclang.error import LclEvaluationError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.printer._types import Render, RenderResult
 from lclang.override_markers import OverrideMarker
 from lclang.scopes import FRAME_PROXY
@@ -19,6 +23,7 @@ from lclang.scopes import FRAME_PROXY
 ATOM_PRECEDENCE = 100
 
 
+@guard_failure(LclEvaluationError, language_codes.NATIVE_141)
 def render_atom(node: LclAstNode, render: Render) -> RenderResult | None:
     """Render an atom or semantic interpolated string.
 
@@ -43,7 +48,7 @@ def internal_constant(value: object) -> str:
 
     :param value: Constant value to render.
     :returns: Python-compatible source text for the constant.
-    :raises TypeError: If the value is not a supported LCL constant type.
+    :raises LclValidationError: If the value is not a supported LCL constant type.
 
     .. note::
        Boolean checks precede integer checks because ``bool`` is an ``int``
@@ -61,7 +66,10 @@ def internal_constant(value: object) -> str:
         return "False"
     if isinstance(value, (int, float, str, bytes)):
         return repr(value)
-    raise TypeError(f"unsupported constant value: {type(value).__name__}")
+    raise LclValidationError(
+        f"unsupported constant value: {type(value).__name__}",
+        code=language_codes.E41_UNSUPPORTED_CONSTANT_VALUE_VALUE,
+    )
 
 
 def internal_joined(node: LclJoinedString, render: Render) -> str:
@@ -71,7 +79,7 @@ def internal_joined(node: LclJoinedString, render: Render) -> str:
     :param render: Recursive dispatcher for expressions inside replacement
        fields.
     :returns: The joined f-string body without its surrounding quotes.
-    :raises TypeError: If the node contains an unsupported value node.
+    :raises LclValidationError: If the node contains an unsupported value node.
 
     .. note::
        Replacement-field format specifications are rendered recursively so
@@ -91,7 +99,10 @@ def internal_joined(node: LclJoinedString, render: Render) -> str:
                 field += f":{internal_joined(value.format_spec, render)}"
             parts.append(f"{{{field}}}")
         else:
-            raise TypeError("joined string contains an unsupported value")
+            raise LclValidationError(
+                "joined string contains an unsupported value",
+                code=language_codes.E41_JOINED_STRING_CONTAINS_AN_UNSUPPORTED_VALUE,
+            )
     return "".join(parts)
 
 

@@ -11,7 +11,7 @@ import pytest
 import lclang
 import lclang.workflow as wf
 from lclang.cli import CliContext, CliParams, CliResultStatus
-from lclang.errors import LclCliUsageError
+from lclang.error import LclCliUsageError, LclValidationError
 from lclang.workflow.cli import cli_status, log_status_tree, status_lines
 
 
@@ -314,7 +314,7 @@ async def test_to_cli_validates_presets_and_rejects_internal_overrides() -> None
         outputs_mapping=ValueOutputs(result.quote),
     )
     workflow = wf.define_workflow("Workflow", task)
-    with pytest.raises(ValueError, match="non-external"):
+    with pytest.raises(LclValidationError, match="non-external"):
         workflow.to_cli("run", "Run", {"result": 1})
     command = workflow.to_cli("run", "Run", {"source!": 2})
     assert command.preset == {"source": 2}

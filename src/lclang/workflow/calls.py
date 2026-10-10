@@ -8,7 +8,12 @@ from collections.abc import AsyncGenerator, Mapping
 from contextlib import asynccontextmanager
 
 from lclang.api import define_frame
-from lclang.error_rendering import render_failure
+from lclang.error import LclWorkflowError
+from lclang.error.base import LclStateError, LclValidationError
+from lclang.error.boundary import guard_async_failure
+from lclang.error.codes.workflow import Code as workflow_codes
+from lclang.error.rendering import render_failure
+from lclang.error.wrapping import wrap_failure
 from lclang.runtime import Frame, Preset
 from lclang.workflow.call_status import attach_call_status, propagate_call_status
 from lclang.workflow.context import TaskContext, WorkflowExecutionContext, WorkflowExecutionResult
@@ -20,6 +25,7 @@ from lclang.workflow.manager import ExecutionStatusManager
 from lclang.workflow.models import ExecutionStatus, ExecutionStatusTree, ExecutionTaskType
 
 
+@guard_async_failure(LclWorkflowError, workflow_codes.NATIVE_541)
 async def close_call_frame(frame: Frame) -> BaseException | None:
     """Wait for owned cleanup even when cancellation interrupts the waiting caller.
 
@@ -38,7 +44,12 @@ async def close_call_frame(frame: Frame) -> BaseException | None:
     try:
         closing.result()
     except BaseException as error:
-        failure = combine_failures(failure, error)
+        cleanup = (
+            wrap_failure(error, LclWorkflowError, workflow_codes.CALL_CLEANUP_FAILURE)
+            if isinstance(error, Exception)
+            else error
+        )
+        failure = combine_failures(failure, cleanup)
     return failure
 
 
@@ -59,18 +70,27 @@ async def execute_workflow_in_task(
     :param name: Unique display name among existing and declared child nodes.
     :param preset: Explicit shallow bindings, without implicit parent Frame inheritance.
     :returns: Async scope yielding native status, arguments, outputs and the owned Frame.
-    :raises TypeError: If context, parent, preset or binding names have wrong types.
-    :raises ValueError: If the name conflicts or parent cannot accept a child.
-    :raises RuntimeError: If outside an active action or the parent is finalized.
+    :raises LclValidationError: If context, parent, preset or binding names have wrong types.
+    :raises LclValidationError: If the name conflicts or parent cannot accept a child.
+    :raises LclStateError: If outside an active action or the parent is finalized.
     :raises BaseException: On Frame setup/cleanup, body failure or cancellation.
        Ordinary child execution failures are represented by an ERROR result.
     """
     if not isinstance(context, TaskContext) or not isinstance(parent, ExecutionStatusManager):
-        raise TypeError("workflow calls require a task context and status manager")
+        raise LclValidationError(
+            "workflow calls require a task context and status manager",
+            code=workflow_codes.E41_WORKFLOW_CALLS_REQUIRE_A_TASK_CONTEXT_AND_STATUS_MANAGER,
+        )
     if not context._child_execution.action_active:
-        raise RuntimeError("workflow calls are only available during the task action")
+        raise LclStateError(
+            "workflow calls are only available during the task action",
+            code=workflow_codes.E41_WORKFLOW_CALLS_ARE_ONLY_AVAILABLE_DURING_THE_TASK_ACTION,
+        )
     if preset is not None and not isinstance(preset, Mapping):
-        raise TypeError("workflow call preset must be a mapping")
+        raise LclValidationError(
+            "workflow call preset must be a mapping",
+            code=workflow_codes.E41_WORKFLOW_CALL_PRESET_MUST_BE_A_MAPPING,
+        )
     values = {} if preset is None else dict(preset)
     Preset("workflow_call", values)
     reserved = {
@@ -79,7 +99,10 @@ async def execute_workflow_in_task(
         *(item.task_id for item in context.task_node.context_tasks),
     }
     if name in reserved:
-        raise ValueError("workflow call name conflicts with a child node")
+        raise LclValidationError(
+            "workflow call name conflicts with a child node",
+            code=workflow_codes.E41_WORKFLOW_CALL_NAME_CONFLICTS_WITH_A_CHILD_NODE,
+        )
     manager = parent.add_sub_task(name, workflow.title, ExecutionStatus.RUNNING)
     branch = ".".join((*context.task_id_stack, name))
     frame: Frame | None = None
@@ -119,7 +142,14 @@ async def execute_workflow_in_task(
         propagate_call_status(parent, result.execution_status.status)
         yield result
     except BaseException as error:
-        pending = error
+        code = (
+            workflow_codes.CALL_SETUP_FAILURE
+            if result is None
+            else workflow_codes.CALL_BODY_FAILURE
+        )
+        pending = (
+            wrap_failure(error, LclWorkflowError, code) if isinstance(error, Exception) else error
+        )
     finally:
         if frame is not None:
             cleanup = await close_call_frame(frame)

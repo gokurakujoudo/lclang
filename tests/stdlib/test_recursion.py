@@ -5,6 +5,7 @@ from collections.abc import Awaitable, Callable
 import pytest
 
 import lclang
+from lclang.error import LclValidationError
 from lclang.stdlib import recursive
 
 
@@ -65,14 +66,14 @@ async def test_recursive_python_builder_repr_uses_function_name() -> None:
 @pytest.mark.asyncio
 async def test_recursive_rejects_noncallable_builder_and_step() -> None:
     """Malformed builders fail at the earliest meaningful call boundary."""
-    with pytest.raises(TypeError, match="builder must be callable"):
+    with pytest.raises(LclValidationError, match="builder must be callable"):
         recursive(1)  # type: ignore[arg-type]
 
     def build_invalid_step(again: object) -> int:
         return 1
 
     call = recursive(build_invalid_step)
-    with pytest.raises(TypeError, match="must return a callable"):
+    with pytest.raises(LclValidationError, match="must return a callable"):
         await call()
 
 

@@ -5,6 +5,7 @@ from types import ModuleType
 import pytest
 
 from lclang.cli import CliContext, CliResult, cli, scan_commands
+from lclang.error import LclValidationError
 from tests.cli import scan_fixture
 
 
@@ -47,11 +48,11 @@ def test_scan_commands_rejects_distinct_duplicate_names() -> None:
 
     module.first = first
     module.second = second
-    with pytest.raises(ValueError, match="duplicate scanned command"):
+    with pytest.raises(LclValidationError, match="duplicate scanned command"):
         scan_commands(module, "root", "Duplicates")
 
 
 def test_scan_commands_rejects_non_module_roots() -> None:
     """Discovery never treats arbitrary objects as import namespaces."""
-    with pytest.raises(TypeError, match="root"):
+    with pytest.raises(LclValidationError, match="root"):
         scan_commands(object(), "root", "Invalid")  # type: ignore[arg-type]

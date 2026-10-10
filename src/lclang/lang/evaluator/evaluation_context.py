@@ -8,13 +8,18 @@ from typing import Literal, cast
 
 from lclang.ast import LclAstNode
 from lclang.diagnostics import ACTIVE_MASKED_VALUE
-from lclang.error_context import DiagnosticValue, EvaluationContextFrame
+from lclang.error import LclEvaluationError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.language import Code as language_codes
+from lclang.error.context import DiagnosticValue, EvaluationContextFrame
 from lclang.lang.printer import to_source
 from lclang.scopes import ScopedProxyValue
 from lclang.source import SourceSpan
 from lclang.utils.representation import safe_repr
 
 
+@guard_constructor(LclValidationError, language_codes.NATIVE_131)
 @dataclass(slots=True)
 class EvaluationReadJournal:
     """Own transient read evidence for one active expression or function call.
@@ -68,6 +73,7 @@ def collect_evaluation_context(
         ACTIVE_EVALUATION_CONTEXT.reset(token)
 
 
+@guard_failure(LclEvaluationError, language_codes.NATIVE_131)
 def record_value_read(name: str, value: object, span: SourceSpan, *, masked: bool = False) -> None:
     """Record an already resolved value without invoking its representation.
 
@@ -86,6 +92,7 @@ def record_value_read(name: str, value: object, span: SourceSpan, *, masked: boo
     journal.reads[key] = (value, sticky_mask)
 
 
+@guard_failure(LclEvaluationError, language_codes.NATIVE_131)
 def capture_evaluation_context() -> tuple[EvaluationContextFrame, ...]:
     """Detach protected source and value snapshots for the active failure path.
 
@@ -115,6 +122,7 @@ def capture_evaluation_context() -> tuple[EvaluationContextFrame, ...]:
     return tuple(records)
 
 
+@guard_failure(LclEvaluationError, language_codes.NATIVE_131)
 def render_ast_source(value: object) -> str:
     """Render a journal's known semantic node through the canonical printer.
 

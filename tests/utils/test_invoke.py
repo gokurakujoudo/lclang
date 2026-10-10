@@ -7,6 +7,7 @@ from typing import assert_type, cast
 
 import pytest
 
+from lclang.error import LclUtilityError
 from lclang.utils import invoke
 
 
@@ -56,9 +57,15 @@ async def test_nested_awaitables_errors_and_cancellation() -> None:
         def fail(failure: BaseException = error) -> None:
             raise failure
 
-        with pytest.raises(type(error)) as caught:
+        with pytest.raises(
+            type(error) if isinstance(error, asyncio.CancelledError) else LclUtilityError
+        ) as caught:
             await invoke(fail)
-        assert caught.value is error
+        assert (
+            caught.value is error
+            if isinstance(error, asyncio.CancelledError)
+            else caught.value.__cause__ is error
+        )
 
     started = asyncio.Event()
     finished = asyncio.Event()

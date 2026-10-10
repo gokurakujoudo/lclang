@@ -9,9 +9,25 @@ from unittest.mock import patch
 
 import pytest
 
-from lclang.logger import use_logger, use_logger_handler
+from lclang.error import LclLoggerError, LclStateError
+from lclang.logger import LoggerHandlerConfig, use_logger, use_logger_handler
 from lclang.logger.console import ConsoleSink
 from lclang.logger.file import FileSink
+from lclang.logger.formatter import RecordFormatter
+from lclang.logger.metrics import Counters
+
+
+def test_sink_requires_an_open_stream_after_initialization() -> None:
+    """An incomplete sink initialization fails before attempting any write."""
+    with TemporaryDirectory() as directory:
+        config = LoggerHandlerConfig(file={"app": {"directory": directory}})
+        with patch.object(FileSink, "open_segment", return_value=None):
+            sink = FileSink(
+                "app", config.resolved_files()["app"], RecordFormatter(config.format), Counters()
+            )
+            with pytest.raises(LclStateError) as caught:
+                sink.write(logging.makeLogRecord({"msg": "message"}))
+            assert caught.value.code == "LCL633611"
 
 
 def test_failed_file_startup_restores_logging_and_closes_partial_sinks() -> None:
@@ -22,7 +38,7 @@ def test_failed_file_startup_restores_logging_and_closes_partial_sinks() -> None
         original = logging.root.handlers
 
         async def exercise() -> None:
-            with pytest.raises(OSError):
+            with pytest.raises(LclLoggerError):
                 async with use_logger_handler(
                     {
                         "file": {
@@ -109,7 +125,7 @@ def test_failed_header_closes_new_stream_and_reports_startup_error() -> None:
             patch("lclang.logger.segments.Path.mkdir"),
             patch("lclang.logger.segments.Path.open", return_value=stream),
             patch("lclang.logger.segments.path_line", side_effect=OSError("header")),
-            pytest.raises(OSError, match="header"),
+            pytest.raises(LclLoggerError, match="header"),
         ):
             async with use_logger_handler({"file": {"app": {"directory": "."}}}):
                 pass

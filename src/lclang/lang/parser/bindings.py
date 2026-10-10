@@ -1,9 +1,13 @@
 """Shared validation for names introduced by LCL syntax."""
 
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.lexer import Token
 
 
+@guard_failure(LclValidationError, language_codes.NATIVE_123)
 def validate_binding_name(token: Token) -> None:
     """Reject a reserved double-underscore binding token.
 
@@ -18,4 +22,5 @@ def validate_binding_name(token: Token) -> None:
         raise LclSyntaxError(
             "binding name cannot start with double underscore",
             span=token.span,
+            code=language_codes.E23_BINDING_NAME_CANNOT_START_WITH_DOUBLE_UNDERSCORE,
         )

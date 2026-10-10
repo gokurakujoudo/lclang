@@ -3,6 +3,7 @@
 import pytest
 
 import lclang
+from lclang.error import LclAttributeError, LclValidationError
 from lclang.utils import env
 from lclang.utils.environment import BoundEnvironment
 
@@ -17,7 +18,7 @@ def test_python_environment_reads_are_live_and_optional(
     monkeypatch.delenv(invalid, raising=False)
     assert getattr(env, name) is None
     private_name = "__missing__"
-    with pytest.raises(AttributeError):
+    with pytest.raises(LclAttributeError):
         getattr(env, private_name)
     assert env.get(name) is None
     assert env.get(invalid, "fallback") == "fallback"
@@ -27,7 +28,7 @@ def test_python_environment_reads_are_live_and_optional(
     assert env.get(invalid) == "second"
     monkeypatch.setenv(name, "changed")
     assert getattr(env, name) == "changed"
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         env.get(1)  # type: ignore[arg-type]
 
 
@@ -57,9 +58,9 @@ async def test_lcl_environment_falls_back_after_scoped_overrides(
         assert type(environment) is BoundEnvironment
         assert repr(environment) == "BoundEnvironment(env)"
         private_name = "__private"
-        with pytest.raises(AttributeError):
+        with pytest.raises(LclAttributeError):
             getattr(environment, private_name)
-        with pytest.raises(TypeError):
+        with pytest.raises(LclValidationError):
             await environment.get(1)  # type: ignore[arg-type]
         assert await environment.LCLANG_ENV_ALPHA == "module-alpha"
         assert await environment.get("LCLANG_ENV_ALPHA") == "module-alpha"

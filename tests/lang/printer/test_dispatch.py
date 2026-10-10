@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import pytest
 
 from lclang.ast import LclAstNode
+from lclang.error import LclValidationError
 from lclang.lang.parser import parse_expression
 from lclang.lang.printer import to_source
 
@@ -24,5 +25,5 @@ def test_unknown_node_subclass_is_rejected() -> None:
     class UnknownNode(LclAstNode):
         pass
 
-    with pytest.raises(TypeError, match="unsupported AST node"):
+    with pytest.raises(LclValidationError, match="unsupported AST node"):
         to_source(UnknownNode())

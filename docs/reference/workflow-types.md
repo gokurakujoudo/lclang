@@ -182,3 +182,8 @@ existing outer-shape check even if static errors are bypassed; use boxes.
 `TypedDict`, forward-reference strings and special typing forms are not a
 general runtime validation language. Resolve record annotations normally and
 validate external data explicitly. See [mapping best practices](workflow-mappings.md).
+
+See [errors and diagnostic codes](errors.md) for exception fields, specific
+codes, cause chains, and executable troubleshooting examples. Ordinary library
+validation uses `LclValidationError`; native callback and operation failures
+retain their original exception in `__cause__`.

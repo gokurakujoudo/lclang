@@ -3,17 +3,22 @@
 from datetime import date
 from typing import final
 
+from lclang.error import LclUtilityError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor
+from lclang.error.codes.utilities import Code as utilities_codes
 from lclang.utils.calendar.functional import FunctionalBDCalendar
 from lclang.utils.calendar.types import CalendarID, DayType
 
 
+@guard_constructor(LclValidationError, utilities_codes.NATIVE_716)
 @final
 class WeekdayBDCalendar(FunctionalBDCalendar):
     """Classify exactly one Python weekday as business.
 
     :param calendar_id: Unique calendar identifier.
     :param weekday: Python weekday number from zero through six.
-    :raises ValueError: If *weekday* is outside zero through six.
+    :raises LclValidationError: If *weekday* is outside zero through six.
     """
 
     __slots__ = ("weekday",)
@@ -24,13 +29,17 @@ class WeekdayBDCalendar(FunctionalBDCalendar):
         :param calendar_id: Unique calendar identifier.
         :param weekday: Python weekday number from zero through six.
         :returns: ``None``.
-        :raises ValueError: If *weekday* is outside zero through six.
+        :raises LclValidationError: If *weekday* is outside zero through six.
         """
         if not isinstance(weekday, int) or isinstance(weekday, bool) or not 0 <= weekday <= 6:
-            raise ValueError("weekday must be between 0 and 6")
+            raise LclValidationError(
+                "weekday must be between 0 and 6",
+                code=utilities_codes.E16_WEEKDAY_MUST_BE_BETWEEN_0_AND_6,
+            )
         self.weekday = weekday
         super().__init__(calendar_id)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_716)
     async def get_day_type(self, d: date) -> DayType:
         """Return business only on the selected weekday.
 

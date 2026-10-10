@@ -131,3 +131,8 @@ Output names must be unique after normalization, projections remain input-only,
 and failed validation publishes no partial set. Prefer explicit destinations
 to mutation of input objects. See [variable types and boxes](workflow-types.md)
 for opt-in conversion at individual quote boundaries.
+
+See [errors and diagnostic codes](errors.md) for exception fields, specific
+codes, cause chains, and executable troubleshooting examples. Ordinary library
+validation uses `LclValidationError`; native callback and operation failures
+retain their original exception in `__cause__`.

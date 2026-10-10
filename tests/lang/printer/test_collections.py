@@ -3,6 +3,7 @@
 import pytest
 
 from lclang.ast import LclConstant, LclDict
+from lclang.error import LclValidationError
 from lclang.lang.parser import parse_expression
 from lclang.lang.printer import to_source
 
@@ -32,5 +33,5 @@ def test_collection_source_is_canonical(source: str, canonical: str) -> None:
 def test_unsupported_dictionary_entry_is_rejected() -> None:
     """A malformed dictionary tree fails at its entry ownership boundary."""
     node = LclDict(entries=(LclConstant(value=1),))  # type: ignore[arg-type]
-    with pytest.raises(TypeError, match="unsupported entry"):
+    with pytest.raises(LclValidationError, match="unsupported entry"):
         to_source(node)

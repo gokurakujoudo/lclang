@@ -8,7 +8,13 @@ from pathlib import Path
 from threading import RLock
 from types import MappingProxyType
 
+from lclang.error import LclLoggerError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.logging import Code as logging_codes
 
+
+@guard_constructor(LclValidationError, logging_codes.NATIVE_611)
 @dataclass(frozen=True, slots=True)
 class SinkMetrics:
     """Snapshot one sink's output state.
@@ -27,6 +33,7 @@ class SinkMetrics:
     path: Path | None = None
 
 
+@guard_constructor(LclValidationError, logging_codes.NATIVE_611)
 @dataclass(frozen=True, slots=True)
 class RuntimeMetrics:
     """Snapshot aggregate counters and named sink counters.
@@ -45,6 +52,7 @@ class RuntimeMetrics:
     sinks: Mapping[str, SinkMetrics]
 
 
+@guard_constructor(LclValidationError, logging_codes.NATIVE_611)
 class Counters:
     """Serialize diagnostic updates separately from producer admission."""
 
@@ -57,6 +65,7 @@ class Counters:
         )
         self.sinks: dict[str, SinkMetrics] = {}
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
     def add(self, event: str, sink: str | None = None) -> None:
         """Increment an aggregate or sink counter.
 
@@ -72,6 +81,7 @@ class Counters:
                 previous = self.sinks.get(sink, SinkMetrics())
                 self.sinks[sink] = replace(previous, **{event: getattr(previous, event) + 1})
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
     def set_path(self, sink: str, path: Path) -> None:
         """Publish a newly created output path.
 
@@ -83,6 +93,7 @@ class Counters:
         with self.lock:
             self.sinks[sink] = replace(self.sinks.get(sink, SinkMetrics()), path=path)
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
     def snapshot(self) -> RuntimeMetrics:
         """Read mutually consistent immutable counters.
 

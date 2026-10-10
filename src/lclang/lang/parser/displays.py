@@ -16,7 +16,10 @@ from lclang.ast import (
     LclTuple,
 )
 from lclang.ast.displays import LclDictEntry
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.lexer import TokenKind
 from lclang.lang.parser.comprehensions import ComprehensionKind, parse_comprehension
 from lclang.lang.parser.records import parse_record
@@ -24,6 +27,7 @@ from lclang.lang.parser.stream import TokenStream
 from lclang.source import SourceSpan, merge_source_spans
 
 
+@guard_constructor(LclValidationError, language_codes.NATIVE_122)
 class InternalDisplayParser:
     """Parse grouped, sequence, set, and dictionary displays.
 
@@ -54,6 +58,7 @@ class InternalDisplayParser:
         self.parse_nonconditional = parse_nonconditional
         self.opening = stream.advance()
 
+    @guard_failure(LclSyntaxError, language_codes.NATIVE_122)
     def parse(self) -> LclAstNode:
         """Dispatch parsing according to the opening delimiter.
 
@@ -138,6 +143,7 @@ class InternalDisplayParser:
                 raise LclSyntaxError(
                     "mapping unpack is invalid in a sequence",
                     span=self.stream.current.span,
+                    code=language_codes.E22_MAPPING_UNPACK_IS_INVALID_IN_A_SEQUENCE,
                 )
             return self.parse_nested()
         value = self.parse_nested()
@@ -208,6 +214,7 @@ class InternalDisplayParser:
                 raise LclSyntaxError(
                     "iterable unpack is invalid in a dict",
                     span=self.stream.current.span,
+                    code=language_codes.E22_ITERABLE_UNPACK_IS_INVALID_IN_A_DICT,
                 )
             key = self.parse_nested()
             self.stream.expect(TokenKind.COLON, "expected colon after dictionary key")
@@ -236,12 +243,14 @@ class InternalDisplayParser:
                 raise LclSyntaxError(
                     "mapping unpack is invalid in a set",
                     span=self.stream.current.span,
+                    code=language_codes.E22_MAPPING_UNPACK_IS_INVALID_IN_A_SET,
                 )
             element = self.internal_sequence_element()
             if self.stream.current.kind is TokenKind.COLON:
                 raise LclSyntaxError(
                     "cannot mix set and dictionary entries",
                     span=self.stream.current.span,
+                    code=language_codes.E22_CANNOT_MIX_SET_AND_DICTIONARY_ENTRIES,
                 )
             elements.append(element)
         closing = self.stream.expect(TokenKind.RBRACE, "expected closing set brace")
@@ -286,6 +295,7 @@ class InternalDisplayParser:
         )
 
 
+@guard_failure(LclSyntaxError, language_codes.NATIVE_122)
 def parse_display(
     stream: TokenStream,
     parse_nested: Callable[[], LclAstNode],

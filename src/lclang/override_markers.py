@@ -2,6 +2,10 @@
 
 from enum import Enum
 
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.core import Code as core_codes
+
 
 class OverrideMarker(Enum):
     """Identify a lazy, value-less definition reservation.
@@ -29,6 +33,7 @@ NEED_OVERRIDE = OverrideMarker.NEED_OVERRIDE
 RUNTIME_OVERRIDE = OverrideMarker.RUNTIME_OVERRIDE
 
 
+@guard_failure(LclValidationError, core_codes.NATIVE_841)
 def get_override_marker(value: object) -> OverrideMarker | None:
     """Extract a declaration marker from a host value or constant AST.
 

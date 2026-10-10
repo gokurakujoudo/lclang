@@ -5,7 +5,9 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from lclang.ast import LclAstNode, LclRecordDisplay, LclRecordField
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.lexer import TokenKind
 from lclang.lang.parser.bindings import validate_binding_name
 from lclang.lang.parser.stream import TokenStream
@@ -13,6 +15,7 @@ from lclang.source import SourceSpan
 from lclang.types import VarName
 
 
+@guard_failure(LclSyntaxError, language_codes.NATIVE_128)
 def parse_record(
     stream: TokenStream,
     opening: SourceSpan,
@@ -32,7 +35,11 @@ def parse_record(
         name = stream.expect(TokenKind.IDENTIFIER, "expected record field name")
         validate_binding_name(name)
         if name.lexeme in names:
-            raise LclSyntaxError("duplicate record field", span=name.span)
+            raise LclSyntaxError(
+                "duplicate record field",
+                span=name.span,
+                code=language_codes.E28_DUPLICATE_RECORD_FIELD,
+            )
         names.add(name.lexeme)
         stream.expect(TokenKind.EQUAL, "expected equals after record field name")
         value = parse_nested()

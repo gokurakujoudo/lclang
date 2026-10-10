@@ -9,6 +9,7 @@ from lclang.ast import (
     LclName,
     LclStringText,
 )
+from lclang.error import LclValidationError
 from lclang.lang.parser import parse_expression
 from lclang.lang.printer import to_source
 from lclang.types import VarName
@@ -48,12 +49,12 @@ def test_semantic_fstring_has_canonical_escaping_and_fields() -> None:
 
 def test_unsupported_constant_value_is_rejected() -> None:
     """Constants outside the language value set never fall back to repr."""
-    with pytest.raises(TypeError, match="unsupported constant value"):
+    with pytest.raises(LclValidationError, match="unsupported constant value"):
         to_source(LclConstant(value=object()))
 
 
 def test_unsupported_joined_string_child_is_rejected() -> None:
     """Joined strings accept only semantic text and field wrappers."""
     node = LclJoinedString(values=(LclConstant(value=1),))
-    with pytest.raises(TypeError, match="unsupported value"):
+    with pytest.raises(LclValidationError, match="unsupported value"):
         to_source(node)

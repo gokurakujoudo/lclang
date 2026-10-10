@@ -6,6 +6,10 @@ from datetime import date
 from types import MappingProxyType
 from typing import Self, final
 
+from lclang.error import LclUtilityError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.codes.utilities import Code as utilities_codes
 from lclang.utils.calendar.base import BDCalendar
 from lclang.utils.calendar.builtins.all_days import ALL_DAYS
 from lclang.utils.calendar.factories.nth_day import (
@@ -18,6 +22,7 @@ from lclang.utils.calendar.transformations.logic import dependency_day_type
 from lclang.utils.calendar.types import CalendarID, DayType
 
 
+@guard_constructor(LclValidationError, utilities_codes.NATIVE_715)
 @final
 class NthBusinessDayOfMonthBDCalendar(FunctionalBDCalendar):
     """Select signed business-day positions from a base calendar.
@@ -44,6 +49,7 @@ class NthBusinessDayOfMonthBDCalendar(FunctionalBDCalendar):
         suffix = ", ".join(map(str, nth))
         super().__init__(CalendarID(f"nth_business_day_of_month({base_calendar!r}, {suffix})"))
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_715)
     async def selected_dates(self, year: int, month: int) -> frozenset[date]:
         """Return cached selected business dates for one month.
 
@@ -67,6 +73,7 @@ class NthBusinessDayOfMonthBDCalendar(FunctionalBDCalendar):
         self._selected_months[key] = selected
         return selected
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_715)
     async def get_day_type(self, d: date) -> DayType:
         """Classify a date by its business-day month position.
 
@@ -76,6 +83,7 @@ class NthBusinessDayOfMonthBDCalendar(FunctionalBDCalendar):
         selected = await self.selected_dates(d.year, d.month)
         return DayType.BusinessDay if d in selected else DayType.Holiday
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_715)
     async def get_dependency_ids(self) -> Set[CalendarID]:
         """Return the base calendar ID.
 
@@ -83,6 +91,7 @@ class NthBusinessDayOfMonthBDCalendar(FunctionalBDCalendar):
         """
         return frozenset((self.base_calendar.calendar_id,))
 
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_715)
     def business_days(self) -> Self:
         """Return this total selector unchanged.
 
@@ -91,6 +100,7 @@ class NthBusinessDayOfMonthBDCalendar(FunctionalBDCalendar):
         return self
 
 
+@guard_failure(LclUtilityError, utilities_codes.NATIVE_715)
 def nth_business_day_of_month(
     calendar: BDCalendar,
     *n: int,

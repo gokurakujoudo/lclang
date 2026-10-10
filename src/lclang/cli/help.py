@@ -8,6 +8,9 @@ from collections.abc import Iterable
 
 from lclang.cli.commands import Command, CommandGroup
 from lclang.cli.parameter_details import DerivedParameterDoc
+from lclang.error import LclCliError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.cli import Code as cli_codes
 from lclang.utils.representation import safe_repr
 
 # Characters per line; the CLI layout contract fixes 100 for deterministic help
@@ -19,6 +22,7 @@ ROW_INDENT = 2
 ROW_GAP = 2
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_451)
 def format_rows(rows: Iterable[tuple[str, str]]) -> list[str]:
     """Align and wrap label/description rows at the fixed help width.
 
@@ -38,6 +42,7 @@ def format_rows(rows: Iterable[tuple[str, str]]) -> list[str]:
     return output
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_451)
 def common_option_rows() -> tuple[tuple[str, str], ...]:
     """Return canonical common command option help.
 
@@ -56,6 +61,7 @@ def common_option_rows() -> tuple[tuple[str, str], ...]:
     )
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_451)
 def render_group_help(
     script: str,
     group: CommandGroup,
@@ -87,6 +93,7 @@ def render_group_help(
     return "\n".join(lines) + "\n"
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_451)
 def render_command_help(script: str, command: Command, path: tuple[str, ...]) -> str:
     """Render one leaf command's options and configuration parameters.
 
@@ -155,6 +162,7 @@ def render_command_help(script: str, command: Command, path: tuple[str, ...]) ->
     return "\n".join(lines) + "\n"
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_451)
 def render_usage_error(message: str, help_text: str) -> str:
     """Prefix nearest-scope help with one concise error line.
 

@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import unicodedata
 
+from lclang.error import LclSyntaxError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.lexer.characters import character_at
 
 # Unitless escape mappings follow the supported Python-style literal grammar; exact replacements
@@ -22,17 +26,19 @@ _SIMPLE_ESCAPES = {
 }
 
 
-class EscapeDecodeError(ValueError):
+@guard_constructor(LclValidationError, language_codes.NATIVE_113)
+class EscapeDecodeError(LclSyntaxError):
     """Report invalid literal content at a content-relative boundary.
 
     .. note::
        The lexer translates the relative boundary into an absolute source span.
     """
 
-    def __init__(self, message: str, end: int) -> None:
+    def __init__(self, message: str, end: int, *, code: str | None = None) -> None:
         """Store a stable message and exclusive error boundary.
 
         :param message: Human-readable description of the invalid content.
+        :param code: Classified cause from the detecting scanner.
         :param end: Content-relative exclusive offset for the diagnostic.
         :returns: ``None``.
 
@@ -40,11 +46,12 @@ class EscapeDecodeError(ValueError):
            The offset is relative to the literal content rather than the
            complete source document.
         """
-        super().__init__(message)
+        super().__init__(message, code=code)
         self.message = message
         self.end = end
 
 
+@guard_failure(LclSyntaxError, language_codes.NATIVE_113)
 def decode_content(content: str, *, raw: bool, bytes_mode: bool) -> str | bytes:
     """Decode content between already-matched quote delimiters.
 
@@ -61,6 +68,7 @@ def decode_content(content: str, *, raw: bool, bytes_mode: bool) -> str | bytes:
         raise EscapeDecodeError(
             "non-ASCII source character in bytes literal",
             len(content),
+            code=language_codes.E13_NON_ASCII_SOURCE_CHARACTER_IN_BYTES_LITERAL,
         )
     if raw:
         return internal_encode_bytes(content) if bytes_mode else content
@@ -106,13 +114,25 @@ def internal_decode_escape(content: str, cursor: int, *, bytes_mode: bool) -> tu
         return internal_fixed_escape(content, cursor, 2)
     if marker in {"u", "U"}:
         if bytes_mode:
-            raise EscapeDecodeError("Unicode escape in bytes literal", cursor + 1)
+            raise EscapeDecodeError(
+                "Unicode escape in bytes literal",
+                cursor + 1,
+                code=language_codes.E13_UNICODE_ESCAPE_IN_BYTES_LITERAL,
+            )
         return internal_fixed_escape(content, cursor, 4 if marker == "u" else 8)
     if marker == "N":
         if bytes_mode:
-            raise EscapeDecodeError("named Unicode escape in bytes literal", cursor + 1)
+            raise EscapeDecodeError(
+                "named Unicode escape in bytes literal",
+                cursor + 1,
+                code=language_codes.E13_NAMED_UNICODE_ESCAPE_IN_BYTES_LITERAL,
+            )
         return internal_named_escape(content, cursor)
-    raise EscapeDecodeError(f"unsupported escape \\{marker}", cursor + 1)
+    raise EscapeDecodeError(
+        f"unsupported escape \\{marker}",
+        cursor + 1,
+        code=language_codes.E13_UNSUPPORTED_ESCAPE_VALUE,
+    )
 
 
 def internal_fixed_escape(content: str, marker_at: int, width: int) -> tuple[str, int]:
@@ -132,11 +152,15 @@ def internal_fixed_escape(content: str, marker_at: int, width: int) -> tuple[str
     digits = content[marker_at + 1 : end]
     invalid_digit = any(character not in "0123456789abcdefABCDEF" for character in digits)
     if len(digits) != width or invalid_digit:
-        raise EscapeDecodeError("invalid hexadecimal escape", end)
+        raise EscapeDecodeError(
+            "invalid hexadecimal escape", end, code=language_codes.E13_INVALID_HEXADECIMAL_ESCAPE
+        )
     try:
         return chr(int(digits, 16)), end
-    except ValueError as error:
-        raise EscapeDecodeError("invalid Unicode code point", end) from error
+    except (ValueError, LclValidationError) as error:
+        raise EscapeDecodeError(
+            "invalid Unicode code point", end, code=language_codes.E13_INVALID_UNICODE_CODE_POINT
+        ) from error
 
 
 def internal_named_escape(content: str, marker_at: int) -> tuple[str, int]:
@@ -152,14 +176,26 @@ def internal_named_escape(content: str, marker_at: int) -> tuple[str, int]:
        the Unicode database bundled with the running Python version.
     """
     if character_at(content, marker_at + 1) != "{":
-        raise EscapeDecodeError("invalid named Unicode escape", marker_at + 1)
+        raise EscapeDecodeError(
+            "invalid named Unicode escape",
+            marker_at + 1,
+            code=language_codes.E13_INVALID_NAMED_UNICODE_ESCAPE,
+        )
     end = content.find("}", marker_at + 2)
     if end < 0:
-        raise EscapeDecodeError("unterminated named Unicode escape", len(content))
+        raise EscapeDecodeError(
+            "unterminated named Unicode escape",
+            len(content),
+            code=language_codes.E13_UNTERMINATED_NAMED_UNICODE_ESCAPE,
+        )
     try:
         return unicodedata.lookup(content[marker_at + 2 : end]), end + 1
     except KeyError as error:
-        raise EscapeDecodeError("unknown Unicode character name", end + 1) from error
+        raise EscapeDecodeError(
+            "unknown Unicode character name",
+            end + 1,
+            code=language_codes.E13_UNKNOWN_UNICODE_CHARACTER_NAME,
+        ) from error
 
 
 def internal_encode_bytes(value: str) -> bytes:
@@ -176,4 +212,8 @@ def internal_encode_bytes(value: str) -> bytes:
     try:
         return value.encode("latin-1")
     except UnicodeEncodeError as error:
-        raise EscapeDecodeError("non-byte character in bytes literal", error.end) from error
+        raise EscapeDecodeError(
+            "non-byte character in bytes literal",
+            error.end,
+            code=language_codes.E13_NON_BYTE_CHARACTER_IN_BYTES_LITERAL,
+        ) from error

@@ -9,6 +9,10 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import TYPE_CHECKING
 
+from lclang.error import LclWorkflowError
+from lclang.error.base import LclStateError, LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.codes.workflow import Code as workflow_codes
 from lclang.logger import Logger
 from lclang.runtime import Frame
 from lclang.types import TaskID
@@ -19,6 +23,7 @@ if TYPE_CHECKING:
     from lclang.workflow.definitions import TaskNode
 
 
+@guard_constructor(LclValidationError, workflow_codes.NATIVE_533)
 @dataclass(frozen=True, slots=True)
 class WorkflowException:
     """Retain one execution failure and its originating task.
@@ -31,6 +36,7 @@ class WorkflowException:
     error_task: TaskID
 
 
+@guard_constructor(LclValidationError, workflow_codes.NATIVE_533)
 @dataclass(frozen=True, slots=True)
 class WorkflowExecutionContext:
     """Supply metadata and the shared Frame for one workflow execution.
@@ -49,6 +55,7 @@ class WorkflowExecutionContext:
     frame: Frame
 
 
+@guard_constructor(LclValidationError, workflow_codes.NATIVE_533)
 @dataclass(slots=True)
 class TaskChildExecution:
     """Retain child traversal decisions for one task execution.
@@ -61,6 +68,7 @@ class TaskChildExecution:
     children_skipped: bool = False
 
 
+@guard_constructor(LclValidationError, workflow_codes.NATIVE_533)
 @dataclass(frozen=True, slots=True)
 class TaskContext:
     """Expose services and identity for one executing task node.
@@ -88,6 +96,7 @@ class TaskContext:
         compare=False,
     )
 
+    @guard_failure(LclWorkflowError, workflow_codes.NATIVE_533)
     def log_event(
         self,
         event: str,
@@ -106,27 +115,33 @@ class TaskContext:
         :param fields: Direct record fields in display order.
         :param masked_fields: Record or keyword names redacted before reading or formatting.
         :param values: Additional named values with no inferred identity-based masking.
-        :raises TypeError: If an enabled event supplies a non-dataclass record.
-        :raises ValueError: If selected fields are unknown, repeated, or conflict with values.
+        :raises LclValidationError: If an enabled event supplies a non-dataclass record.
+        :raises LclValidationError: If selected fields are unknown, repeated, or conflict with
+           values.
         :raises Exception: If an unmasked selected getter or logger raises.
         """
         from lclang.workflow.events import emit_event
 
         emit_event(self, event, level, record, fields, masked_fields, values)
 
+    @guard_failure(LclWorkflowError, workflow_codes.NATIVE_533)
     def skip_children(self) -> None:
         """Omit this task's child subtrees without creating status records.
 
         The request is idempotent and survives subsequent action or cleanup
         failures. It does not stop the action or prevent output publication.
 
-        :raises RuntimeError: If called outside the action's active lifetime.
+        :raises LclStateError: If called outside the action's active lifetime.
         """
         if not self._child_execution.action_active:
-            raise RuntimeError("skip_children is only available during the task action")
+            raise LclStateError(
+                "skip_children is only available during the task action",
+                code=workflow_codes.E33_SKIP_CHILDREN_IS_ONLY_AVAILABLE_DURING_THE_TASK_ACTION,
+            )
         self._child_execution.children_skipped = True
 
 
+@guard_constructor(LclValidationError, workflow_codes.NATIVE_533)
 @dataclass(frozen=True, slots=True)
 class WorkflowExecutionResult:
     """Return workflow status, shared values, and materialized action values.
@@ -147,6 +162,7 @@ class WorkflowExecutionResult:
 class FailureCoveringContextTask[ArgsT, ResourceT]:
     """Template an async context that covers an inner ordinary exception."""
 
+    @guard_async_failure(LclWorkflowError, workflow_codes.NATIVE_533)
     async def acquire(
         self,
         context: TaskContext,
@@ -159,10 +175,14 @@ class FailureCoveringContextTask[ArgsT, ResourceT]:
         :param args: Materialized context arguments.
         :param status_mgr: Context-task status manager.
         :returns: Acquired resource output.
-        :raises NotImplementedError: Unless a subclass implements acquisition.
+        :raises LclStateError: Unless a subclass implements acquisition.
         """
-        raise NotImplementedError
+        raise LclStateError(
+            "context resource acquisition is not implemented",
+            code=workflow_codes.CONTEXT_ACQUIRE_UNIMPLEMENTED,
+        )
 
+    @guard_async_failure(LclWorkflowError, workflow_codes.NATIVE_533)
     async def handle_exception(
         self,
         context: TaskContext,
@@ -178,10 +198,14 @@ class FailureCoveringContextTask[ArgsT, ResourceT]:
         :param status_mgr: Context-task status manager.
         :param resource: Acquired context resource.
         :param exception: Inner ordinary exception.
-        :raises NotImplementedError: Unless a subclass implements handling.
+        :raises LclStateError: Unless a subclass implements handling.
         """
-        raise NotImplementedError
+        raise LclStateError(
+            "context exception handling is not implemented",
+            code=workflow_codes.CONTEXT_HANDLER_UNIMPLEMENTED,
+        )
 
+    @guard_async_failure(LclWorkflowError, workflow_codes.NATIVE_533)
     async def release(
         self,
         context: TaskContext,
@@ -223,6 +247,7 @@ class FailureCoveringContextTask[ArgsT, ResourceT]:
         if covered:
             status_mgr.update(ExecutionStatus.FAILURE_COVERED)
 
+    @guard_failure(LclWorkflowError, workflow_codes.NATIVE_533)
     def __call__(
         self,
         context: TaskContext,

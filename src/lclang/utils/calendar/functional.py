@@ -5,9 +5,17 @@ from collections.abc import Mapping
 from datetime import date
 from types import MappingProxyType
 
+from lclang.error import LclError, LclUtilityError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor
+from lclang.error.calendar import (
+    CalendarLogicException,
+    DateOperationOutOfScopeException,
+    wrap_calendar_failure,
+)
+from lclang.error.codes.utilities import Code as utilities_codes
 from lclang.utils.calendar.base import BDCalendar
 from lclang.utils.calendar.constants import MAX_BUSINESS_DAY_GAP_DAYS
-from lclang.utils.calendar.errors import CalendarLogicException, DateOperationOutOfScopeException
 from lclang.utils.calendar.helpers import (
     CALENDAR_ERRORS,
     require_day_type,
@@ -17,6 +25,7 @@ from lclang.utils.calendar.helpers import (
 from lclang.utils.calendar.types import CalendarID, DayType
 
 
+@guard_constructor(LclValidationError, utilities_codes.NATIVE_711)
 class FunctionalBDCalendar(BDCalendar):
     """Implement traversal around an abstract per-date classifier.
 
@@ -36,6 +45,7 @@ class FunctionalBDCalendar(BDCalendar):
         self.defined_dates: Mapping[date, DayType] = MappingProxyType(self._defined_dates)
 
     @abstractmethod
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_711)
     async def get_day_type(self, d: date) -> DayType:
         """Calculate one date's classification.
 
@@ -43,6 +53,7 @@ class FunctionalBDCalendar(BDCalendar):
         :returns: Calculated day type.
         """
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_711)
     async def cached_day_type(self, d: date) -> DayType:
         """Return and cache one validated classifier result.
 
@@ -58,10 +69,22 @@ class FunctionalBDCalendar(BDCalendar):
         except CALENDAR_ERRORS:
             raise
         except Exception as error:
-            raise CalendarLogicException(self.calendar_id) from error
+            failure = wrap_calendar_failure(
+                error,
+                CalendarLogicException(
+                    self.calendar_id,
+                    code=(
+                        error.code
+                        if isinstance(error, LclError)
+                        else utilities_codes.E11_SELF_CALENDAR_ID
+                    ),
+                ),
+            )
+            raise failure from failure.__cause__
         self._defined_dates[d] = value
         return value
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_711)
     async def next_bd(self, d: date) -> date:
         """Search forward within the configured gap bound.
 
@@ -75,8 +98,9 @@ class FunctionalBDCalendar(BDCalendar):
                 break
             if await self.cached_day_type(candidate) is DayType.BusinessDay:
                 return candidate
-        raise DateOperationOutOfScopeException(d, self)
+        raise DateOperationOutOfScopeException(d, self, code=utilities_codes.E11_D)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_711)
     async def prev_bd(self, d: date) -> date:
         """Search backward within the configured gap bound.
 
@@ -90,13 +114,14 @@ class FunctionalBDCalendar(BDCalendar):
                 break
             if await self.cached_day_type(candidate) is DayType.BusinessDay:
                 return candidate
-        raise DateOperationOutOfScopeException(d, self)
+        raise DateOperationOutOfScopeException(d, self, code=utilities_codes.E11_D)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_711)
     async def gen_year(self, year: int) -> dict[date, DayType]:
         """Calculate and cache every date in one year.
 
         :param year: Gregorian year from 1 through 9999.
         :returns: Complete date-to-day-type mapping.
-        :raises ValueError: If *year* is outside the supported range.
+        :raises LclValidationError: If *year* is outside the supported range.
         """
         return {d: await self.cached_day_type(d) for d in year_dates(year)}

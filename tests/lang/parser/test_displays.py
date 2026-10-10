@@ -12,7 +12,7 @@ from lclang.ast import (
     LclStarred,
     LclTuple,
 )
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError
 from lclang.lang.parser import parse_expression
 
 

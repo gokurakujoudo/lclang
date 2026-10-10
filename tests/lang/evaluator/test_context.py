@@ -6,7 +6,7 @@ import logging
 import pytest
 
 from lclang.diagnostics import internal_trace, internal_verbose_scope
-from lclang.errors import LclNameError
+from lclang.error import LclEvaluationError, LclNameError
 from lclang.lang.evaluator import MappingResolver, Resolver, ScopedResolver
 from lclang.source import UNKNOWN_SPAN
 from lclang.types import VarName
@@ -29,7 +29,7 @@ async def test_mapping_resolver_reports_source_aware_missing_name() -> None:
     with pytest.raises(LclNameError) as caught:
         await resolver.resolve(VarName("missing"), span=UNKNOWN_SPAN)
     assert caught.value.span is UNKNOWN_SPAN
-    assert caught.value.code == "LCL2001"
+    assert caught.value.code == "LCL133311"
     assert "missing" in caught.value.message
 
 
@@ -66,17 +66,17 @@ async def test_resolvers_trace_active_values_missing_names_and_await_failures() 
         assert await mapping.resolve(VarName("answer"), span=UNKNOWN_SPAN) == 42
         with pytest.raises(LclNameError):
             await mapping.resolve(VarName("missing"), span=UNKNOWN_SPAN)
-        with pytest.raises(RuntimeError):
+        with pytest.raises(LclEvaluationError):
             await mapping.resolve(VarName("bad"), span=UNKNOWN_SPAN)
         assert await scoped.resolve(VarName("local"), span=UNKNOWN_SPAN) == "value"
-        with pytest.raises(RuntimeError):
+        with pytest.raises(LclEvaluationError):
             await scoped.resolve(VarName("bad_local"), span=UNKNOWN_SPAN)
     trace = output.getvalue()
     assert "source=external-provided value=(int) 42" in trace
     assert "source=missing" in trace
-    assert "source=external-provided error=(RuntimeError)" in trace
+    assert "source=external-provided error=(LclEvaluationError)" in trace
     assert "source=local-provided value=(str) 'value'" in trace
-    assert "source=local-provided error=(RuntimeError)" in trace
+    assert "source=local-provided error=(LclEvaluationError)" in trace
 
 
 @pytest.mark.asyncio
@@ -93,5 +93,5 @@ async def test_mapping_resolver_accepts_masked_binding_spelling() -> None:
     values: dict[str, object] = {"token!": "secret"}
     mutable = MappingResolver(values)
     values["token"] = "collision"
-    with pytest.raises(ValueError, match="duplicate"):
+    with pytest.raises(LclEvaluationError, match="duplicate"):
         await mutable.resolve(VarName("token"), span=UNKNOWN_SPAN)

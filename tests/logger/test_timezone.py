@@ -12,6 +12,7 @@ from unittest.mock import patch
 import pytest
 
 from lclang import define_frame, define_module
+from lclang.error import LclValidationError
 from lclang.logger import LoggerHandlerConfig, resolve_logger_config, use_logger_handler
 from lclang.logger.config import handler_config
 from lclang.logger.formatter import RecordFormatter
@@ -114,12 +115,12 @@ async def test_sinks_and_successive_scopes_share_selected_timezone() -> None:
 @pytest.mark.parametrize(
     "value, error",
     [
-        (None, TypeError),
-        (True, TypeError),
-        (1, TypeError),
-        ("UTC", ValueError),
-        ("", ValueError),
-        ("Asia/Shanghai", ValueError),
+        (None, LclValidationError),
+        (True, LclValidationError),
+        (1, LclValidationError),
+        ("UTC", LclValidationError),
+        ("", LclValidationError),
+        ("Asia/Shanghai", LclValidationError),
     ],
 )
 async def test_invalid_timezone_fails_before_file_creation(
@@ -157,5 +158,5 @@ async def test_configuration_paths_preserve_timezone(
 async def test_timezone_error_retains_source() -> None:
     """Invalid Frame values identify their defining source."""
     async with define_frame(define_module("bad_timezone", {"logger.timezone": '"UTC"'})) as frame:
-        with pytest.raises(ValueError, match="logger.timezone.*bad_timezone"):
+        with pytest.raises(LclValidationError, match="logger.timezone.*bad_timezone"):
             await resolve_logger_config(frame)

@@ -5,7 +5,7 @@ from typing import cast
 
 import pytest
 
-from lclang.errors import LclNameError
+from lclang.error import LclNameError, LclValidationError
 from lclang.lang.evaluator.context import MappingResolver
 from lclang.lang.evaluator.dispatch import interpret_expression
 from lclang.lang.parser import parse_expression
@@ -17,10 +17,10 @@ def test_trace_validates_source_and_retains_bounded_ordered_snapshots() -> None:
     """Exact repeat observations deduplicate without mutating old snapshots."""
     first_span = parse_expression("target").span
     later_span = parse_expression(" target").span
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         DependencyTrace(VarName(""))
     trace = DependencyTrace(VarName("source"))
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         trace.record(VarName(""), first_span)
     trace.record(VarName("target"), first_span)
     snapshot = trace.edges

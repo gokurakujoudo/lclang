@@ -19,13 +19,17 @@ from lclang.ast import (
     LclTuple,
 )
 from lclang.ast.call_arguments import LclCallArgument
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.lexer import TokenKind
 from lclang.lang.parser.stream import TokenStream
 from lclang.source import SourceSpan, merge_source_spans
 from lclang.types import VarName
 
 
+@guard_constructor(LclValidationError, language_codes.NATIVE_124)
 class InternalPrimaryParser:
     """Parse left-associated postfix operations after an initial expression.
 
@@ -48,6 +52,7 @@ class InternalPrimaryParser:
         self.stream = stream
         self.parse_nested = parse_nested
 
+    @guard_failure(LclSyntaxError, language_codes.NATIVE_124)
     def parse(self, value: LclAstNode) -> LclAstNode:
         """Consume every contiguous postfix operation after *value*.
 
@@ -107,7 +112,11 @@ class InternalPrimaryParser:
         opening = self.stream.advance()
         index: LclAstNode
         if self.stream.current.kind is TokenKind.RBRACKET:
-            raise LclSyntaxError("subscript cannot be empty", span=self.stream.current.span)
+            raise LclSyntaxError(
+                "subscript cannot be empty",
+                span=self.stream.current.span,
+                code=language_codes.E24_SUBSCRIPT_CANNOT_BE_EMPTY,
+            )
         if self.stream.match(TokenKind.COLON) is not None:
             index = self.internal_slice(opening.span, None)
         else:
@@ -237,15 +246,24 @@ class InternalPrimaryParser:
                 raise LclSyntaxError(
                     "star argument cannot follow keyword unpacking",
                     span=marker.span,
+                    code=language_codes.E24_STAR_ARGUMENT_CANNOT_FOLLOW_KEYWORD_UNPACKING,
                 )
             value = self.parse_nested()
             return LclStarArgument(value, span=merge_source_spans(marker.span, value.span))
         candidate = self.parse_nested()
         if self.stream.match(TokenKind.EQUAL) is not None:
             if not isinstance(candidate, LclName):
-                raise LclSyntaxError("keyword target must be a name", span=candidate.span)
+                raise LclSyntaxError(
+                    "keyword target must be a name",
+                    span=candidate.span,
+                    code=language_codes.E24_KEYWORD_TARGET_MUST_BE_A_NAME,
+                )
             if candidate.identifier in explicit_names:
-                raise LclSyntaxError("duplicate keyword argument", span=candidate.span)
+                raise LclSyntaxError(
+                    "duplicate keyword argument",
+                    span=candidate.span,
+                    code=language_codes.E24_DUPLICATE_KEYWORD_ARGUMENT,
+                )
             explicit_names.add(candidate.identifier)
             value = self.parse_nested()
             return LclKeywordArgument(
@@ -257,10 +275,12 @@ class InternalPrimaryParser:
             raise LclSyntaxError(
                 "positional argument follows keyword argument",
                 span=candidate.span,
+                code=language_codes.E24_POSITIONAL_ARGUMENT_FOLLOWS_KEYWORD_ARGUMENT,
             )
         return LclPositionalArgument(candidate, span=candidate.span)
 
 
+@guard_failure(LclSyntaxError, language_codes.NATIVE_124)
 def parse_primaries(
     stream: TokenStream,
     value: LclAstNode,

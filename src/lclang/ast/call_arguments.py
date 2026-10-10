@@ -5,9 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from lclang.ast.base import LclAstNode
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.core import Code as core_codes
 from lclang.types import VarName
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_822)
 @dataclass(frozen=True, slots=True)
 class LclPositionalArgument(LclAstNode):
     """Represent one ordinary positional argument.
@@ -20,6 +24,7 @@ class LclPositionalArgument(LclAstNode):
 
     value: LclAstNode
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_822)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return the argument expression.
 
@@ -31,6 +36,7 @@ class LclPositionalArgument(LclAstNode):
         return (self.value,)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_822)
 @dataclass(frozen=True, slots=True)
 class LclStarArgument(LclAstNode):
     """Represent one iterable positional unpacking argument.
@@ -43,6 +49,7 @@ class LclStarArgument(LclAstNode):
 
     value: LclAstNode
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_822)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return the unpacked expression.
 
@@ -54,13 +61,14 @@ class LclStarArgument(LclAstNode):
         return (self.value,)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_822)
 @dataclass(frozen=True, slots=True)
 class LclKeywordArgument(LclAstNode):
     """Represent one explicitly named keyword argument.
 
     :param name: Non-empty keyword name.
     :param value: Argument expression.
-    :raises ValueError: If *name* is empty.
+    :raises LclValidationError: If *name* is empty.
 
     .. note::
        Duplicate-name validation belongs to the parser.
@@ -69,14 +77,19 @@ class LclKeywordArgument(LclAstNode):
     name: VarName
     value: LclAstNode
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_822)
     def __post_init__(self) -> None:
         """Reject an empty keyword name.
 
-        :raises ValueError: If the name is empty.
+        :raises LclValidationError: If the name is empty.
         """
         if not self.name:
-            raise ValueError("keyword argument name cannot be empty")
+            raise LclValidationError(
+                "keyword argument name cannot be empty",
+                code=core_codes.E22_KEYWORD_ARGUMENT_NAME_CANNOT_BE_EMPTY,
+            )
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_822)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return the keyword value expression.
 
@@ -88,6 +101,7 @@ class LclKeywordArgument(LclAstNode):
         return (self.value,)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_822)
 @dataclass(frozen=True, slots=True)
 class LclKeywordUnpackArgument(LclAstNode):
     """Represent one mapping keyword unpacking argument.
@@ -100,6 +114,7 @@ class LclKeywordUnpackArgument(LclAstNode):
 
     value: LclAstNode
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_822)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return the unpacked mapping expression.
 

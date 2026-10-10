@@ -11,7 +11,10 @@ from lclang.diagnostics import (
     internal_trace,
     internal_verbose_enabled,
 )
-from lclang.errors import LclNameError
+from lclang.error import LclEvaluationError, LclNameError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.evaluator.awaitables import resolve_awaitable
 from lclang.lang.evaluator.evaluation_context import record_value_read
 from lclang.masking import normalize_masked_mapping
@@ -40,6 +43,7 @@ class Resolver(Protocol):
         ...
 
 
+@guard_constructor(LclValidationError, language_codes.NATIVE_133)
 @dataclass(frozen=True, slots=True)
 class MappingResolver:
     """Adapt a caller-owned mapping to :class:`Resolver`.
@@ -52,15 +56,17 @@ class MappingResolver:
 
     values: Mapping[str, object]
 
+    @guard_failure(LclValidationError, language_codes.NATIVE_133)
     def __post_init__(self) -> None:
         """Validate current key spellings without copying the borrowed mapping.
 
         :returns: ``None`` after marked aliases are proven unambiguous.
-        :raises TypeError: If a binding name is not text.
-        :raises ValueError: If normalized names collide or markers are malformed.
+        :raises LclEvaluationError: If a binding name is not text.
+        :raises LclEvaluationError: If normalized names collide or markers are malformed.
         """
         normalize_masked_mapping(self.values)
 
+    @guard_async_failure(LclEvaluationError, language_codes.NATIVE_133)
     async def resolve(self, name: VarName, *, span: SourceSpan) -> object:
         """Return a mapped value or raise a source-aware name error.
 
@@ -68,7 +74,7 @@ class MappingResolver:
         :param span: Source range attached to a missing-name error.
         :returns: Current mapped value, which may itself be awaitable.
         :raises LclNameError: If *name* is absent from the mapping.
-        :raises ValueError: If live mapping mutation creates a marked alias collision.
+        :raises LclEvaluationError: If live mapping mutation creates a marked alias collision.
 
         .. note::
            Membership follows the supplied mapping's ordinary string-key rules.
@@ -77,13 +83,20 @@ class MappingResolver:
             plain = str(name)
             marked = f"{plain}!"
             if plain in self.values and marked in self.values:
-                raise ValueError(f"duplicate normalized binding name: {plain}")
+                raise LclEvaluationError(
+                    f"duplicate normalized binding name: {plain}",
+                    code=language_codes.E33_DUPLICATE_NORMALIZED_BINDING_NAME_VALUE,
+                )
             masked = marked in self.values
             selected = self.values[marked if masked else plain]
         except KeyError:
             if internal_verbose_enabled():
                 internal_trace("lookup", f"name={str(name)!r} source=missing")
-            raise LclNameError(f"unknown variable: {name}", span=span) from None
+            raise LclNameError(
+                f"unknown variable: {name}",
+                span=span,
+                code=language_codes.E33_UNKNOWN_VARIABLE_VALUE,
+            ) from None
         if not internal_verbose_enabled():
             result = await resolve_awaitable(selected)
             record_value_read(str(name), result, span, masked=masked)
@@ -105,6 +118,7 @@ class MappingResolver:
         return result
 
 
+@guard_constructor(LclValidationError, language_codes.NATIVE_133)
 @dataclass(frozen=True, slots=True)
 class ScopedResolver:
     """Overlay local bindings on another resolver.
@@ -119,6 +133,7 @@ class ScopedResolver:
     values: Mapping[str, object]
     parent: Resolver
 
+    @guard_async_failure(LclEvaluationError, language_codes.NATIVE_133)
     async def resolve(self, name: VarName, *, span: SourceSpan) -> object:
         """Resolve locally before delegating to the parent.
 

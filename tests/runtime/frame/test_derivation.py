@@ -5,6 +5,7 @@ from typing import Any, cast
 import pytest
 
 import lclang
+from lclang.error import LclValidationError
 
 
 @pytest.mark.asyncio
@@ -67,9 +68,9 @@ async def test_derive_default_values_are_empty_and_independent() -> None:
 @pytest.mark.parametrize(
     ("module", "values", "error"),
     [
-        (object(), {}, TypeError),
-        (lclang.define_module("child", {}), [], TypeError),
-        (lclang.define_module("child", {}), {"": 1}, ValueError),
+        (object(), {}, LclValidationError),
+        (lclang.define_module("child", {}), [], LclValidationError),
+        (lclang.define_module("child", {}), {"": 1}, LclValidationError),
     ],
 )
 @pytest.mark.asyncio

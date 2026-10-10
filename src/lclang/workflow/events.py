@@ -5,12 +5,17 @@ from dataclasses import fields as record_fields
 from dataclasses import is_dataclass
 from typing import TYPE_CHECKING
 
+from lclang.error import LclWorkflowError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.workflow import Code as workflow_codes
 from lclang.utils.representation import align_repr_fields, make_multi_log_lines, safe_repr
 
 if TYPE_CHECKING:
     from lclang.workflow.context import TaskContext
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_534)
 def emit_event(
     context: TaskContext,
     event: str,
@@ -29,8 +34,8 @@ def emit_event(
     :param fields: Ordered direct dataclass field names.
     :param masked_fields: Selected or keyword names to redact before reading.
     :param values: Additional named application values.
-    :raises TypeError: If an enabled event supplies a non-dataclass record.
-    :raises ValueError: If fields are missing, duplicated, or conflict with keyword values.
+    :raises LclValidationError: If an enabled event supplies a non-dataclass record.
+    :raises LclValidationError: If fields are missing, duplicated, or conflict with keyword values.
     :raises Exception: If an unmasked selected getter or logger raises.
     """
     if not context.logger.isEnabledFor(level):
@@ -38,14 +43,20 @@ def emit_event(
     selected = tuple(fields)
     masked = frozenset(masked_fields)
     if record is not None and (not is_dataclass(record) or isinstance(record, type)):
-        raise TypeError("event record must be a dataclass instance")
+        raise LclValidationError(
+            "event record must be a dataclass instance",
+            code=workflow_codes.E34_EVENT_RECORD_MUST_BE_A_DATACLASS_INSTANCE,
+        )
     declared: set[str] = set() if record is None else {item.name for item in record_fields(record)}
     if (
         set(selected) - declared
         or len(set(selected)) != len(selected)
         or set(selected) & values.keys()
     ):
-        raise ValueError("event fields must be declared, unique, and separate from keyword values")
+        raise LclValidationError(
+            "event fields must be declared, unique, and separate from keyword values",
+            code=workflow_codes.E34_EVENT_FIELDS_MUST_BE_DECLARED_UNIQUE_AND_SEPARATE_FROM_KEYWORD_VA,
+        )
     rendered: list[tuple[str, str]] = []
     for name in selected:
         value = None if name in masked else getattr(record, name)
@@ -60,7 +71,7 @@ def emit_event(
     context.logger.log(
         level,
         message,
-        stacklevel=3,
+        stacklevel=5,
         extra={
             "lclang_event": event,
             "lclang_task_branch": branch,

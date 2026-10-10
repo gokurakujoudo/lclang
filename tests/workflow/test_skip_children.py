@@ -11,6 +11,7 @@ import pytest
 
 import lclang
 import lclang.workflow as wf
+from lclang.error import LclStateError, LclWorkflowError
 
 
 @dataclass
@@ -61,13 +62,13 @@ async def test_omission_preserves_outputs_steps_cleanup_and_siblings(
         args: Value,
         status_mgr: wf.ExecutionStatusManager,
     ) -> AsyncGenerator[Value]:
-        with pytest.raises(RuntimeError, match="action"):
+        with pytest.raises(LclStateError, match="action"):
             context.skip_children()
         events.append(f"enter{args.value}")
         try:
             yield args
         finally:
-            with pytest.raises(RuntimeError, match="action"):
+            with pytest.raises(LclStateError, match="action"):
                 context.skip_children()
             events.append(f"exit{args.value}")
 
@@ -135,7 +136,7 @@ async def test_omission_preserves_outputs_steps_cleanup_and_siblings(
         assert events == ["enter1", "enter2", "action", "exit2", "exit1"]
         assert not any("root.parent.child" in message for message in caplog.messages)
     for context in captured:
-        with pytest.raises(RuntimeError, match="action"):
+        with pytest.raises(LclStateError, match="action"):
             context.skip_children()
 
 
@@ -158,7 +159,10 @@ async def test_omission_survives_failures_and_cancellation(
     ) -> AsyncGenerator[Value]:
         try:
             yield args
-        except ValueError:
+        except LclWorkflowError as error:
+            if error.code != "LCL531811":
+                raise
+            assert isinstance(error.__cause__, ValueError)
             assert failure == "covered"
             status_mgr.update(wf.ExecutionStatus.FAILURE_COVERED)
         finally:
@@ -219,7 +223,7 @@ async def test_omission_survives_failures_and_cancellation(
     assert "child" not in status_names(managers[0].current)
     assert "descendant" not in status_names(managers[0].current)
     assert not any("root.parent.child" in message for message in caplog.messages)
-    with pytest.raises(RuntimeError, match="action"):
+    with pytest.raises(LclStateError, match="action"):
         captured[0].skip_children()
 
 

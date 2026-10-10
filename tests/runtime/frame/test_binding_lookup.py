@@ -3,6 +3,7 @@
 import pytest
 
 import lclang
+from lclang.error import LclValidationError
 
 
 def test_has_and_get_definition_follow_recursive_lookup_precedence() -> None:
@@ -63,5 +64,5 @@ def test_lookup_inspection_does_not_evaluate_or_cache_a_definition() -> None:
 def test_lookup_inspection_rejects_empty_names(method: str) -> None:
     """Inspection uses the same non-empty-name contract as get."""
     frame = lclang.define_frame()
-    with pytest.raises(ValueError, match="variable name cannot be empty"):
+    with pytest.raises(LclValidationError, match="variable name cannot be empty"):
         getattr(frame, method)("")

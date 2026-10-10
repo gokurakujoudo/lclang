@@ -9,6 +9,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
+from lclang.error import LclStateError
 from lclang.logger import LoggerHandlerConfig, use_logger, use_logger_handler
 
 
@@ -18,7 +19,7 @@ async def test_scope_formats_and_restores() -> None:
     stream = io.StringIO()
     root = logging.getLogger()
     handlers, level = root.handlers, root.level
-    with pytest.raises(RuntimeError):
+    with pytest.raises(LclStateError):
         await use_logger()
     async with use_logger_handler({"console": {"stream": stream, "level": "DEBUG"}}) as runtime:
         logger = await use_logger(prefix="[ORDER]")
@@ -27,7 +28,7 @@ async def test_scope_formats_and_restores() -> None:
             raise ValueError("broken")
         except ValueError:
             logger.exception("failed")
-        with pytest.raises(RuntimeError):
+        with pytest.raises(LclStateError):
             async with use_logger_handler({}):
                 pass
     assert root.handlers is handlers and root.level == level
@@ -36,7 +37,7 @@ async def test_scope_formats_and_restores() -> None:
     assert output.count("[ORDER]") == 2
     assert "ValueError: broken" in output
     assert runtime.metrics.records_enqueued == runtime.metrics.records_written == 2
-    with pytest.raises(RuntimeError):
+    with pytest.raises(LclStateError):
         logger.info("outside")
 
 

@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from lclang.ast import LclAssert, LclExceptHandler, LclRaise, LclTry
-from lclang.errors import LclEvaluationError
+from lclang.ast import LclAssert, LclAstNode, LclCall, LclExceptHandler, LclRaise, LclTry
+from lclang.error import LclError, LclEvaluationError
+from lclang.error.aggregation import combine_failures
+from lclang.error.codes.language import Code as language_codes
+from lclang.error.wrapping import is_ordinary_failure, wrap_failure
 from lclang.lang.evaluator._types import EvaluateNode
 from lclang.lang.evaluator.context import Resolver, ScopedResolver
 from lclang.source import SourceSpan
@@ -36,8 +39,19 @@ async def internal_evaluate_error_form(
     """
     if isinstance(node, LclRaise):
         value = await evaluate(node.value, resolver)
+        if isinstance(value, LclError):
+            raise value
+        if isinstance(value, BaseException) and not is_ordinary_failure(value):
+            raise value
+        if isinstance(value, ExceptionGroup):
+            raise wrap_failure(
+                cast(ExceptionGroup[Exception], value),
+                LclEvaluationError,
+                language_codes.EXPLICIT_RAISE,
+                span=node.span,
+            )
         message = str(value) or "raised LCL value"
-        error = LclEvaluationError(message, span=node.span)
+        error = LclEvaluationError(message, span=node.span, code=language_codes.EXPLICIT_RAISE)
         if isinstance(value, BaseException):
             error.freeze_native_cause(value)
             raise error from value
@@ -50,7 +64,7 @@ async def internal_evaluate_error_form(
         if node.message is not None:
             detail = await evaluate(node.message, resolver)
             message = str(detail) or message
-        raise LclEvaluationError(message, span=node.span)
+        raise LclEvaluationError(message, span=node.span, code=language_codes.ASSERTION_FAILED)
     return await internal_try(node, resolver, evaluate)
 
 
@@ -72,15 +86,24 @@ async def internal_try(
        The finalizer is evaluated even when the body or a handler raises, so
        cleanup failures follow ordinary exception precedence.
     """
+    pending: BaseException | None = None
+    result: object = None
     try:
         try:
             result = await evaluate(node.body, resolver)
         except Exception as error:
             result = await internal_handlers(error, node.handlers, resolver, evaluate)
-        return result
-    finally:
+    except BaseException as error:
+        pending = error
+    try:
         if node.finally_body is not None:
             await evaluate(node.finally_body, resolver)
+    except BaseException as cleanup:
+        combined = combine_failures(pending, cleanup, code=language_codes.FINALIZER_FAILURE)
+        raise combined from combined.__cause__
+    if pending is not None:
+        raise pending
+    return result
 
 
 async def internal_handlers(
@@ -142,11 +165,14 @@ async def internal_matches(
     return False
 
 
-def internal_wrap_failure(error: Exception, span: SourceSpan) -> LclEvaluationError:
+def internal_wrap_failure(
+    error: Exception, span: SourceSpan, *, node: LclAstNode | None = None
+) -> LclError:
     """Convert an ordinary evaluator exception into a source-aware failure.
 
     :param error: Original exception raised during evaluation.
     :param span: Source range associated with the failed operation.
+    :param node: Optional active operation used to classify host failures.
     :returns: Evaluation error containing the original exception type and
        message at *span*.
 
@@ -154,8 +180,20 @@ def internal_wrap_failure(error: Exception, span: SourceSpan) -> LclEvaluationEr
        The wrapper formats the original type name and message without changing
        the original exception object.
     """
-    wrapped = LclEvaluationError(type(error).__name__, span=span)
-    wrapped.freeze_native_cause(error)
-    wrapped.message = wrapped.native_cause or type(error).__name__
-    wrapped.args = (wrapped.message,)
-    return wrapped
+    if isinstance(node, LclCall):
+        code = language_codes.HOST_CALL_FAILURE
+    elif isinstance(error, ZeroDivisionError):
+        code = language_codes.DIVISION_BY_ZERO
+    elif isinstance(error, ArithmeticError):
+        code = language_codes.ARITHMETIC_FAILURE
+    elif isinstance(error, AttributeError):
+        code = language_codes.MISSING_ATTRIBUTE
+    elif isinstance(error, KeyError):
+        code = language_codes.MISSING_KEY
+    elif isinstance(error, IndexError):
+        code = language_codes.INDEX_OUT_OF_RANGE
+    elif isinstance(error, TypeError):
+        code = language_codes.OPERATOR_TYPE
+    else:
+        code = language_codes.NATIVE_FAILURE
+    return wrap_failure(error, LclEvaluationError, code, span=span)

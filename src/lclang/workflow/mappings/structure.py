@@ -4,12 +4,17 @@ from collections.abc import Iterator
 from dataclasses import Field, dataclass, fields, is_dataclass
 from typing import Any
 
+from lclang.error import LclWorkflowError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.workflow import Code as workflow_codes
 from lclang.workflow.mappings.annotations import record_annotations
 from lclang.workflow.mappings.records import mapping_annotation
 from lclang.workflow.projections import TaskProjection
 from lclang.workflow.variables import TaskVar
 
 
+@guard_constructor(LclValidationError, workflow_codes.NATIVE_521)
 @dataclass(frozen=True, slots=True)
 class MappingNode:
     """Describe one mapping location without copying its retained values.
@@ -28,6 +33,7 @@ class MappingNode:
     field: Field[Any] | None = None
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_521)
 def mapping_structure(
     value: object,
     path: str = "",
@@ -43,18 +49,24 @@ def mapping_structure(
     :param active: Dataclass identities on the current recursion path.
     :param field: Optional dataclass constructor metadata.
     :returns: Detached structure retaining literal values by reference.
-    :raises ValueError: If a dataclass template contains a cycle.
-    :raises TypeError: If a quote contradicts its declared field annotation.
+    :raises LclValidationError: If a dataclass template contains a cycle.
+    :raises LclValidationError: If a quote contradicts its declared field annotation.
     """
     expected = mapping_annotation(value) if annotation is None else annotation
     if isinstance(value, TaskVar):
         if annotation not in (None, Any, object) and annotation != value.value_type:
-            raise TypeError(f"{path}: workflow reference annotation mismatch for {value.name}")
+            raise LclValidationError(
+                f"{path}: workflow reference annotation mismatch for {value.name}",
+                code=workflow_codes.E21_VALUE_WORKFLOW_REFERENCE_ANNOTATION_MISMATCH_FOR_VALUE,
+            )
         return MappingNode(value, path, expected, field=field)
     children: tuple[MappingNode, ...] = ()
     if not isinstance(value, type) and is_dataclass(value):
         if id(value) in active:
-            raise ValueError(f"{path}: cyclic workflow dataclass mapping")
+            raise LclValidationError(
+                f"{path}: cyclic workflow dataclass mapping",
+                code=workflow_codes.E21_VALUE_CYCLIC_WORKFLOW_DATACLASS_MAPPING,
+            )
         declared = mapping_annotation(value) if annotation in (None, Any, object) else annotation
         annotations = record_annotations(declared)
         children = tuple(
@@ -81,21 +93,28 @@ def mapping_nodes(node: MappingNode) -> Iterator[MappingNode]:
         yield from mapping_nodes(child)
 
 
+@guard_failure(LclValidationError, workflow_codes.NATIVE_521)
 def validate_mapping(value: object, *, output: bool) -> None:
     """Validate directional marker constraints throughout a mapping.
 
     :param value: Dataclass mapping or whole-record quote.
     :param output: Whether the mapping publishes returned values.
-    :raises TypeError: If a projection is used as an output or a quote cannot initialize.
-    :raises ValueError: If the structure contains a cycle.
+    :raises LclValidationError: If a projection is used as an output or a quote cannot initialize.
+    :raises LclValidationError: If the structure contains a cycle.
     """
     for node in mapping_nodes(mapping_structure(value)):
         if output and isinstance(node.value, TaskProjection):
-            raise TypeError(f"{node.path}: workflow output projections are read-only")
+            raise LclValidationError(
+                f"{node.path}: workflow output projections are read-only",
+                code=workflow_codes.E21_VALUE_WORKFLOW_OUTPUT_PROJECTIONS_ARE_READ_ONLY,
+            )
         if (
             not output
             and isinstance(node.value, TaskVar)
             and node.field is not None
             and not node.field.init
         ):
-            raise TypeError(f"{node.path}: input quote requires an init field")
+            raise LclValidationError(
+                f"{node.path}: input quote requires an init field",
+                code=workflow_codes.E21_VALUE_INPUT_QUOTE_REQUIRES_AN_INIT_FIELD,
+            )

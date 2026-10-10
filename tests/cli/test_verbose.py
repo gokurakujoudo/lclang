@@ -18,6 +18,7 @@ from lclang.cli import (
     cli,
 )
 from lclang.cli.application import LCLANG_CLI_ENTRANCE
+from lclang.error import LclError
 from lclang.logger import LoggerHandlerConfig
 
 
@@ -81,7 +82,7 @@ def make_verbose_entrance(log_dir: str | None = None) -> CliEntrance:
         await context.frame.get("broken")
         await context.frame.get("long_text")
         await context.frame.get("LOCAL_RESULT")
-        with suppress(RuntimeError):
+        with suppress(LclError):
             await context.frame.get("failing_awaitable")
         with suppress(Exception):
             await context.frame.get("absent")
@@ -148,7 +149,7 @@ def test_verbose_reports_parse_lookup_evaluation_and_safe_values(
     assert "source=local-provided value=(str) 'local'" in trace
     assert "source=fallback value=(str) 'fallback'" in trace
     assert "value=(BrokenRepresentation) <repr failed: RuntimeError>" in trace
-    assert "source=external-provided error=(RuntimeError)" in trace
+    assert "source=external-provided error=(LclEvaluationError)" in trace
     assert "source=missing" in trace
     assert "\\n" in trace
     assert "<truncated>" in trace

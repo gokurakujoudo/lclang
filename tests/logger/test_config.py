@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from lclang.error import LclValidationError
 from lclang.logger import LoggerHandlerConfig
 
 
@@ -38,5 +39,5 @@ def test_templates_preserve_false_and_explicit_true() -> None:
 )
 def test_invalid_configs_fail_before_io(config: dict[str, object]) -> None:
     """Invalid declarations cannot silently disable or misroute logs."""
-    with pytest.raises((TypeError, ValueError)):
+    with pytest.raises((LclValidationError, LclValidationError)):
         LoggerHandlerConfig(**config)  # type: ignore[arg-type]

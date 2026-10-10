@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from lclang.error import LclEvaluationError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.runtime import Code as runtime_codes
+
 if TYPE_CHECKING:
     pass
 
@@ -11,11 +16,11 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 
-from lclang.errors import LclEvaluationError
 from lclang.lang.evaluator.budget import internal_has_guard, internal_install_guard
 from lclang.source import SourceSpan
 
 
+@guard_constructor(LclValidationError, runtime_codes.NATIVE_237)
 @dataclass(frozen=True, slots=True)
 class EvaluationLimits:
     """Set resource ceilings for one uncached Frame evaluation chain.
@@ -23,7 +28,7 @@ class EvaluationLimits:
     :param max_depth: Maximum simultaneously nested semantic AST nodes.
     :param max_steps: Maximum semantic AST node visits in the chain.
     :param max_collection_items: Maximum items in one materialized collection.
-    :raises ValueError: If any limit is boolean, non-integer, or not positive.
+    :raises LclValidationError: If any limit is boolean, non-integer, or not positive.
 
     .. note::
        Cached lookup consumes no budget; recalculation starts a fresh budget.
@@ -33,16 +38,21 @@ class EvaluationLimits:
     max_steps: int = 100_000
     max_collection_items: int = 10_000
 
+    @guard_failure(LclValidationError, runtime_codes.NATIVE_237)
     def __post_init__(self) -> None:
         """Validate every configured ceiling.
 
-        :raises ValueError: If a ceiling is not a positive integer.
+        :raises LclValidationError: If a ceiling is not a positive integer.
         """
         values = (self.max_depth, self.max_steps, self.max_collection_items)
         if any(type(value) is not int or value <= 0 for value in values):
-            raise ValueError("evaluation limits must be positive integers")
+            raise LclValidationError(
+                "evaluation limits must be positive integers",
+                code=runtime_codes.E37_EVALUATION_LIMITS_MUST_BE_POSITIVE_INTEGERS,
+            )
 
 
+@guard_constructor(LclValidationError, runtime_codes.NATIVE_237)
 class InternalEvaluationBudget:
     """Track mutable step consumption for one evaluation chain."""
 
@@ -54,6 +64,7 @@ class InternalEvaluationBudget:
         self.limits = limits
         self.steps = 0
 
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_237)
     def enter(self, span: SourceSpan, depth: int) -> None:
         """Charge one node visit and enforce depth and step ceilings.
 
@@ -62,11 +73,20 @@ class InternalEvaluationBudget:
         :raises LclEvaluationError: If depth or steps exceed their ceiling.
         """
         if depth > self.limits.max_depth:
-            raise LclEvaluationError("evaluation depth limit exceeded", span=span)
+            raise LclEvaluationError(
+                "evaluation depth limit exceeded",
+                span=span,
+                code=runtime_codes.E37_EVALUATION_DEPTH_LIMIT_EXCEEDED,
+            )
         self.steps += 1
         if self.steps > self.limits.max_steps:
-            raise LclEvaluationError("evaluation step limit exceeded", span=span)
+            raise LclEvaluationError(
+                "evaluation step limit exceeded",
+                span=span,
+                code=runtime_codes.E37_EVALUATION_STEP_LIMIT_EXCEEDED,
+            )
 
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_237)
     def collection(self, size: int, span: SourceSpan) -> None:
         """Enforce the materialized collection-size ceiling.
 
@@ -75,7 +95,11 @@ class InternalEvaluationBudget:
         :raises LclEvaluationError: If *size* exceeds its ceiling.
         """
         if size > self.limits.max_collection_items:
-            raise LclEvaluationError("collection item limit exceeded", span=span)
+            raise LclEvaluationError(
+                "collection item limit exceeded",
+                span=span,
+                code=runtime_codes.E37_COLLECTION_ITEM_LIMIT_EXCEEDED,
+            )
 
 
 @contextmanager

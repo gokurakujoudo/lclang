@@ -3,6 +3,7 @@
 import pytest
 
 from lclang.ast import LclCall, LclConstant, LclName, LclSlice
+from lclang.error import LclValidationError
 from lclang.lang.parser import parse_expression
 from lclang.lang.printer import to_source
 from lclang.types import VarName
@@ -39,5 +40,5 @@ def test_unsupported_call_argument_is_rejected() -> None:
         function=LclName(identifier=VarName("function")),
         arguments=(LclConstant(value=1),),  # type: ignore[arg-type]
     )
-    with pytest.raises(TypeError, match="unsupported argument"):
+    with pytest.raises(LclValidationError, match="unsupported argument"):
         to_source(node)

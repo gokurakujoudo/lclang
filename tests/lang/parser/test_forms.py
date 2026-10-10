@@ -4,7 +4,7 @@ import pytest
 
 from lclang.ast import LclBinary, LclCall, LclList, LclName, LclTuple
 from lclang.ast.forms import LclAssert, LclFunction, LclRaise, ParameterKind
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError
 from lclang.lang.parser import parse_expression
 from lclang.types import VarName
 

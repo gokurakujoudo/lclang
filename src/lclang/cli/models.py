@@ -9,10 +9,15 @@ from enum import IntEnum
 from typing import Self
 
 from lclang.cli.validation import freeze_mapping, normalize_text, require_lcl_qualified_name
+from lclang.error import LclCliError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.cli import Code as cli_codes
 from lclang.logger import LoggerHandlerConfig
 from lclang.masking import normalize_masked_mapping, split_masked_name
 
 
+@guard_constructor(LclValidationError, cli_codes.NATIVE_414)
 @dataclass(frozen=True, slots=True)
 class ParameterDoc:
     """Describe one Frame-resolved command parameter for help and presence checks.
@@ -32,23 +37,31 @@ class ParameterDoc:
     default: object = None
     masked: bool = False
 
+    @guard_failure(LclValidationError, cli_codes.NATIVE_414)
     def __post_init__(self) -> None:
         """Validate and normalize declaration metadata.
 
         :returns: ``None``.
-        :raises TypeError: If required is not Boolean or description is not text.
-        :raises ValueError: If name is not an LCL qualified name.
+        :raises LclValidationError: If required is not Boolean or description is not text.
+        :raises LclValidationError: If name is not an LCL qualified name.
         """
         name, marked = split_masked_name(self.name)
         object.__setattr__(self, "name", require_lcl_qualified_name(name, "parameter name"))
         if not isinstance(self.required, bool):
-            raise TypeError("parameter required must be Boolean")
+            raise LclValidationError(
+                "parameter required must be Boolean",
+                code=cli_codes.E14_PARAMETER_REQUIRED_MUST_BE_BOOLEAN,
+            )
         if not isinstance(self.masked, bool):
-            raise TypeError("parameter masked must be Boolean")
+            raise LclValidationError(
+                "parameter masked must be Boolean",
+                code=cli_codes.E14_PARAMETER_REQUIRED_MUST_BE_BOOLEAN,
+            )
         object.__setattr__(self, "masked", self.masked or marked)
         object.__setattr__(self, "description", normalize_text(self.description, "description"))
 
 
+@guard_constructor(LclValidationError, cli_codes.NATIVE_414)
 @dataclass(frozen=True, slots=True)
 class CliParams:
     """Snapshot one parsed command-line invocation.
@@ -76,41 +89,71 @@ class CliParams:
     script_path: str = field(default="script.py", kw_only=True)
     raw_argv: Sequence[str] | None = field(default=None, kw_only=True)
 
+    @guard_failure(LclValidationError, cli_codes.NATIVE_414)
     def __post_init__(self) -> None:
         """Detach containers and validate scalar fields.
 
         :returns: ``None``.
-        :raises TypeError: If a scalar or override has an invalid type.
-        :raises ValueError: If executable, command, or config text is empty.
+        :raises LclValidationError: If a scalar or override has an invalid type.
+        :raises LclValidationError: If executable, command, or config text is empty.
         """
         if not isinstance(self.executable_path, str):
-            raise TypeError("executable path must be text")
+            raise LclValidationError(
+                "executable path must be text", code=cli_codes.E14_EXECUTABLE_PATH_MUST_BE_TEXT
+            )
         if not self.executable_path:
-            raise ValueError("executable path cannot be empty")
+            raise LclValidationError(
+                "executable path cannot be empty",
+                code=cli_codes.E14_EXECUTABLE_PATH_CANNOT_BE_EMPTY,
+            )
         if not isinstance(self.script_path, str):
-            raise TypeError("script path must be text")
+            raise LclValidationError(
+                "script path must be text", code=cli_codes.E14_EXECUTABLE_PATH_MUST_BE_TEXT
+            )
         if not self.script_path:
-            raise ValueError("script path cannot be empty")
+            raise LclValidationError(
+                "script path cannot be empty", code=cli_codes.E14_EXECUTABLE_PATH_CANNOT_BE_EMPTY
+            )
         raw_argv = None if self.raw_argv is None else tuple(self.raw_argv)
         if raw_argv is not None and any(not isinstance(item, str) or not item for item in raw_argv):
-            raise ValueError("raw argv tokens must be non-empty text")
+            raise LclValidationError(
+                "raw argv tokens must be non-empty text",
+                code=cli_codes.E14_RAW_ARGV_TOKENS_MUST_BE_NON_EMPTY_TEXT,
+            )
         command = tuple(self.command)
         if not command or any(not isinstance(item, str) or not item for item in command):
-            raise ValueError("command path must contain non-empty text segments")
+            raise LclValidationError(
+                "command path must contain non-empty text segments",
+                code=cli_codes.E14_COMMAND_PATH_MUST_CONTAIN_NON_EMPTY_TEXT_SEGMENTS,
+            )
         if not isinstance(self.as_of_date, date):
-            raise TypeError("as-of date must be a date")
+            raise LclValidationError(
+                "as-of date must be a date", code=cli_codes.E14_AS_OF_DATE_MUST_BE_A_DATE
+            )
         if not isinstance(self.dryrun, bool):
-            raise TypeError("dryrun must be Boolean")
+            raise LclValidationError(
+                "dryrun must be Boolean", code=cli_codes.E14_PARAMETER_REQUIRED_MUST_BE_BOOLEAN
+            )
         if not isinstance(self.verbose, bool):
-            raise TypeError("verbose must be Boolean")
+            raise LclValidationError(
+                "verbose must be Boolean", code=cli_codes.E14_PARAMETER_REQUIRED_MUST_BE_BOOLEAN
+            )
         if self.config_file_path is not None and not isinstance(self.config_file_path, str):
-            raise TypeError("config path must be text or None")
+            raise LclValidationError(
+                "config path must be text or None",
+                code=cli_codes.E14_EXECUTABLE_PATH_MUST_BE_TEXT,
+            )
         if self.config_file_path == "":
-            raise ValueError("config path cannot be empty")
+            raise LclValidationError(
+                "config path cannot be empty", code=cli_codes.E14_EXECUTABLE_PATH_CANNOT_BE_EMPTY
+            )
         overrides = freeze_mapping(self.overrides, "overrides")
         normalized, masked_names = normalize_masked_mapping(overrides, self.masked_names)
         if any(not isinstance(value, str) and value is not True for value in normalized.values()):
-            raise TypeError("override values must be strings or True")
+            raise LclValidationError(
+                "override values must be strings or True",
+                code=cli_codes.E14_EXECUTABLE_PATH_MUST_BE_TEXT,
+            )
         object.__setattr__(self, "command", command)
         object.__setattr__(self, "overrides", freeze_mapping(normalized, "overrides"))
         object.__setattr__(self, "masked_names", masked_names)
@@ -128,6 +171,7 @@ class CliResultStatus(IntEnum):
     FAILURE_COVERED = 3
 
 
+@guard_constructor(LclValidationError, cli_codes.NATIVE_414)
 @dataclass(frozen=True, slots=True)
 class CliResult:
     """Describe one command outcome.
@@ -140,37 +184,47 @@ class CliResult:
     description: str
 
     @classmethod
+    @guard_failure(LclCliError, cli_codes.NATIVE_414)
     def success(cls, msg: str) -> Self:
         """Create a successful result with one description.
 
         :param msg: Unicode result text, including empty text.
         :returns: Successful result of the selected class.
-        :raises TypeError: If *msg* is not text.
+        :raises LclValidationError: If *msg* is not text.
         """
         return cls(CliResultStatus.SUCCESS, msg)
 
     @classmethod
+    @guard_failure(LclCliError, cli_codes.NATIVE_414)
     def fail(cls, msg: str) -> Self:
         """Create a failed result with one description.
 
         :param msg: Unicode result text, including empty text.
         :returns: Failed result of the selected class.
-        :raises TypeError: If *msg* is not text.
+        :raises LclValidationError: If *msg* is not text.
         """
         return cls(CliResultStatus.FAILURE, msg)
 
+    @guard_failure(LclValidationError, cli_codes.NATIVE_414)
     def __post_init__(self) -> None:
         """Reject incompatible status and description values.
 
         :returns: ``None``.
-        :raises TypeError: If either field has the wrong public type.
+        :raises LclValidationError: If either field has the wrong public type.
         """
         if not isinstance(self.result_status, CliResultStatus):
-            raise TypeError("result status must be CliResultStatus")
+            raise LclValidationError(
+                "result status must be CliResultStatus",
+                code=cli_codes.E14_RESULT_STATUS_MUST_BE_CLIRESULTSTATUS,
+            )
         if not isinstance(self.description, str):
-            raise TypeError("result description must be text")
+            raise LclValidationError(
+                "result description must be text",
+                code=cli_codes.E14_EXECUTABLE_PATH_MUST_BE_TEXT,
+            )
 
 
+@guard_constructor(LclValidationError, cli_codes.NATIVE_414)
 @dataclass(frozen=True, slots=True)
 class CliConfig:
     """Hold framework-wide command execution defaults.
@@ -180,11 +234,15 @@ class CliConfig:
 
     log_config: LoggerHandlerConfig = field(default_factory=LoggerHandlerConfig)
 
+    @guard_failure(LclValidationError, cli_codes.NATIVE_414)
     def __post_init__(self) -> None:
         """Require the public logging configuration type.
 
         :returns: ``None``.
-        :raises TypeError: If *log_config* is not a :class:`LoggerHandlerConfig`.
+        :raises LclValidationError: If *log_config* is not a :class:`LoggerHandlerConfig`.
         """
         if not isinstance(self.log_config, LoggerHandlerConfig):
-            raise TypeError("CLI log configuration must be LoggerHandlerConfig")
+            raise LclValidationError(
+                "CLI log configuration must be LoggerHandlerConfig",
+                code=cli_codes.E14_CLI_LOG_CONFIGURATION_MUST_BE_LOGGERHANDLERCONFIG,
+            )

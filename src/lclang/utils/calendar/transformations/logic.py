@@ -3,12 +3,16 @@
 from collections.abc import Iterable, Set
 from datetime import date
 
+from lclang.error import LclError, LclUtilityError
+from lclang.error.boundary import guard_async_failure
+from lclang.error.calendar import CalendarLogicException, wrap_calendar_failure
+from lclang.error.codes.utilities import Code as utilities_codes
 from lclang.utils.calendar.base import BDCalendar
-from lclang.utils.calendar.errors import CalendarLogicException
 from lclang.utils.calendar.helpers import CALENDAR_ERRORS, require_day_type
 from lclang.utils.calendar.types import CalendarID, DayType
 
 
+@guard_async_failure(LclUtilityError, utilities_codes.NATIVE_714)
 async def dependency_day_type(calendar: BDCalendar, d: date) -> DayType:
     """Classify through a dependency with structured logic wrapping.
 
@@ -22,9 +26,21 @@ async def dependency_day_type(calendar: BDCalendar, d: date) -> DayType:
     except CALENDAR_ERRORS:
         raise
     except Exception as error:
-        raise CalendarLogicException(calendar.calendar_id) from error
+        failure = wrap_calendar_failure(
+            error,
+            CalendarLogicException(
+                calendar.calendar_id,
+                code=(
+                    error.code
+                    if isinstance(error, LclError)
+                    else utilities_codes.E14_DEPENDENCY_DAY_TYPE_FAILURE
+                ),
+            ),
+        )
+        raise failure from failure.__cause__
 
 
+@guard_async_failure(LclUtilityError, utilities_codes.NATIVE_714)
 async def direct_dependency_ids(calendars: Iterable[BDCalendar]) -> Set[CalendarID]:
     """Return direct IDs for calendar operands.
 

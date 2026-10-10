@@ -7,6 +7,10 @@ from types import TracebackType
 from typing import Protocol, cast
 
 from lclang.ast import LclWith
+from lclang.error import LclError, LclEvaluationError
+from lclang.error.aggregation import combine_failures
+from lclang.error.codes.language import Code as language_codes
+from lclang.error.wrapping import wrap_failure
 from lclang.lang.evaluator._types import EvaluateNode
 from lclang.lang.evaluator.awaitables import resolve_awaitable
 from lclang.lang.evaluator.context import Resolver, ScopedResolver
@@ -71,20 +75,45 @@ async def internal_enter_item(
         return await evaluate(node.body, resolver)
     item = node.items[index]
     manager = await evaluate(item.context, resolver)
-    value, exit_method = await internal_acquire(manager)
+    try:
+        value, exit_method = await internal_acquire(manager)
+    except LclError:
+        raise
+    except Exception as error:
+        raise wrap_failure(
+            error, LclEvaluationError, language_codes.CONTEXT_ENTER_FAILURE, span=item.span
+        ) from error
     scope = resolver
     if item.target is not None:
         scope = ScopedResolver({str(item.target): value}, resolver)
     try:
         result = await internal_enter_item(node, index + 1, scope, evaluate)
     except BaseException as error:
-        suppressed = await resolve_awaitable(
-            exit_method(type(error), error, error.__traceback__),
-        )
+        try:
+            suppressed = await resolve_awaitable(
+                exit_method(type(error), error, error.__traceback__)
+            )
+        except BaseException as cleanup:
+            failure = (
+                wrap_failure(
+                    cleanup, LclEvaluationError, language_codes.CONTEXT_EXIT_FAILURE, span=item.span
+                )
+                if isinstance(cleanup, Exception)
+                else cleanup
+            )
+            combined = combine_failures(error, failure, code=language_codes.COMPOSITE_FAILURE)
+            raise combined from combined.__cause__
         if bool(suppressed):
             return None
         raise
-    await resolve_awaitable(exit_method(None, None, None))
+    try:
+        await resolve_awaitable(exit_method(None, None, None))
+    except LclError:
+        raise
+    except Exception as error:
+        raise wrap_failure(
+            error, LclEvaluationError, language_codes.CONTEXT_EXIT_FAILURE, span=item.span
+        ) from error
     return result
 
 

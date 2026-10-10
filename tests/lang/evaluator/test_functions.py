@@ -6,7 +6,7 @@ from typing import cast
 
 import pytest
 
-from lclang.errors import LclEvaluationError
+from lclang.error import LclEvaluationError
 from lclang.lang.evaluator.dispatch import interpret_expression
 from lclang.lang.parser import parse_expression
 
@@ -71,7 +71,7 @@ async def test_invalid_argument_bindings_raise_public_error(call_source: str) ->
     function = await interpret_expression(parse_expression("(a) -> a"))
     with pytest.raises(LclEvaluationError) as caught:
         await interpret_expression(parse_expression(call_source), {"function": function})
-    assert isinstance(caught.value.__cause__, TypeError)
+    assert caught.value.__cause__ is None
 
 
 @pytest.mark.asyncio

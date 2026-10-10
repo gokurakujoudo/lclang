@@ -9,7 +9,7 @@ from hypothesis import strategies as st
 
 import lclang
 from lclang.ast import LclAstNode
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError
 from lclang.lang.evaluator.dispatch import interpret_expression
 from tests.support.property_strategies import AST_VALUES, ast_shape
 

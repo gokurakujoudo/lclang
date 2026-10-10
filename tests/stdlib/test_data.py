@@ -2,6 +2,7 @@
 
 import pytest
 
+from lclang.error import LclValidationError
 from lclang.stdlib import lookup, merge
 
 
@@ -22,7 +23,7 @@ def test_merge_is_shallow_ordered_right_biased_and_read_only() -> None:
 def test_merge_rejects_non_mappings_and_accepts_no_inputs() -> None:
     """An empty merge is valid while every supplied value must be a Mapping."""
     assert merge() == {}
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         merge({"value": 1}, object())  # type: ignore[arg-type]
 
 
@@ -31,5 +32,5 @@ def test_lookup_returns_present_values_or_the_explicit_default() -> None:
     marker = object()
     assert lookup({"value": None}, "value", marker) is None
     assert lookup({}, "missing", marker) is marker
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         lookup(object(), "value")  # type: ignore[arg-type]

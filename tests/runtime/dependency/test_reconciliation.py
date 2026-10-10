@@ -4,6 +4,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
+from lclang.error import LclValidationError
 from lclang.lang.parser import parse_expression
 from lclang.runtime import (
     DependencyEdge,
@@ -66,7 +67,7 @@ def test_reconciliation_rejects_edges_in_the_wrong_channels() -> None:
     """Static predictions and dynamic observations use disjoint vocabularies."""
     static = _edge("item", "value", DependencyKind.EAGER, "value")
     dynamic = _edge("item", "value", DependencyKind.DYNAMIC, "value")
-    with pytest.raises(ValueError, match="static"):
+    with pytest.raises(LclValidationError, match="static"):
         reconcile_dependency_edges((dynamic,), ())
-    with pytest.raises(ValueError, match="dynamic"):
+    with pytest.raises(LclValidationError, match="dynamic"):
         reconcile_dependency_edges((), (static,))

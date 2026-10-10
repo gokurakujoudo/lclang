@@ -10,7 +10,7 @@ import pytest
 
 import lclang
 import lclang.workflow as wf
-from lclang.errors import LclClosedFrameError
+from lclang.error import LclClosedFrameError, LclStateError, LclValidationError
 from tests.workflow.call_support import Value, make_child, run_parent
 
 
@@ -156,11 +156,11 @@ async def test_call_preflight_rejects_invalid_names_and_parents_before_execution
 
     async def parent(context: wf.TaskContext, manager: wf.ExecutionStatusManager) -> Value:
         for name in ("", "reserved"):
-            with pytest.raises(ValueError):
+            with pytest.raises(LclValidationError):
                 async with child.execute_in_task(context, manager, name=name):
                     pytest.fail("entered")
         for bad_context, bad_manager in ((None, manager), (context, None)):
-            with pytest.raises(TypeError):
+            with pytest.raises(LclValidationError):
                 async with child.execute_in_task(
                     cast(wf.TaskContext, bad_context),
                     cast(wf.ExecutionStatusManager, bad_manager),
@@ -168,7 +168,7 @@ async def test_call_preflight_rejects_invalid_names_and_parents_before_execution
                 ):
                     pytest.fail("entered")
         inactive = replace(context)
-        with pytest.raises(RuntimeError, match="active|action"):
+        with pytest.raises(LclStateError, match="active|action"):
             async with child.execute_in_task(inactive, manager, name="inactive"):
                 pytest.fail("entered")
         for invalid_parent in (
@@ -177,12 +177,12 @@ async def test_call_preflight_rejects_invalid_names_and_parents_before_execution
         ):
             if invalid_parent.current.task_name == "locked":
                 invalid_parent.finalize()
-            with pytest.raises((ValueError, RuntimeError)):
+            with pytest.raises((LclValidationError, LclStateError)):
                 async with child.execute_in_task(context, invalid_parent, name="invalid"):
                     pytest.fail("entered")
         async with child.execute_in_task(context, manager, name="used", preset={"input": 1}):
             pass
-        with pytest.raises(ValueError, match="conflicts"):
+        with pytest.raises(LclValidationError, match="conflicts"):
             async with child.execute_in_task(context, manager, name="used"):
                 pytest.fail("entered")
         return Value(1)

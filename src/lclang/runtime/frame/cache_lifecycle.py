@@ -4,13 +4,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from lclang.error import LclEvaluationError
+from lclang.error.aggregation import combine_failures
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.codes.runtime import Code as runtime_codes
+from lclang.error.wrapping import wrap_failure
+
 if TYPE_CHECKING:
     pass
 
 import asyncio
 from collections.abc import Callable
 
-from lclang.errors import LclClosedFrameError, LclEvaluationError
+from lclang.error import LclClosedFrameError
 from lclang.lang.evaluator.awaitables import resolve_awaitable
 from lclang.source import SourceSpan
 
@@ -19,6 +26,7 @@ from lclang.source import SourceSpan
 _MISSING = object()
 
 
+@guard_constructor(LclValidationError, runtime_codes.NATIVE_236)
 class InternalFrameLifecycle:
     """Own Frame cache commits, closure state, and resource retirement.
 
@@ -52,6 +60,7 @@ class InternalFrameLifecycle:
         self.closed = False
         self.close_task: asyncio.Task[None] | None = None
 
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_236)
     def ensure_open(self, span: SourceSpan | None) -> None:
         """Reject operations once closing has begun.
 
@@ -59,8 +68,11 @@ class InternalFrameLifecycle:
         :raises LclClosedFrameError: If the Frame is closing or closed.
         """
         if self.closing or self.closed:
-            raise LclClosedFrameError("Frame is closed", span=span)
+            raise LclClosedFrameError(
+                "Frame is closed", span=span, code=runtime_codes.E36_FRAME_IS_CLOSED
+            )
 
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_236)
     def commit_result(self, name: str, result: object) -> None:
         """Publish one successful snapshot and retire its replacement.
 
@@ -73,6 +85,7 @@ class InternalFrameLifecycle:
         self.results[name] = result
         self.failures.pop(name, None)
 
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_236)
     def commit_failure(self, name: str, error: Exception) -> None:
         """Publish one failed snapshot and retire any successful value.
 
@@ -84,6 +97,7 @@ class InternalFrameLifecycle:
             self.retired.append(previous)
         self.failures[name] = error
 
+    @guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_236)
     async def close(self) -> None:
         """Join or create the shielded single-flight close task."""
         task = self.close_task
@@ -126,12 +140,23 @@ class InternalFrameLifecycle:
             self.clear_dependencies()
             self.closing = False
             self.closed = True
-        if errors:
-            first = errors[0]
-            if not isinstance(first, Exception):
-                raise first
-            wrapped = LclEvaluationError(f"Frame cleanup failed: {first}")
-            raise wrapped from first
+        failure: BaseException | None = None
+        for error in errors:
+            cleanup = (
+                wrap_failure(
+                    error,
+                    LclEvaluationError,
+                    runtime_codes.RESOURCE_CLEANUP_FAILURE,
+                    message="Frame cleanup failed",
+                )
+                if isinstance(error, Exception)
+                else error
+            )
+            failure = combine_failures(
+                failure, cleanup, code=runtime_codes.MULTIPLE_CLEANUP_FAILURES
+            )
+        if failure is not None:
+            raise failure from failure.__cause__
 
 
 async def internal_close_resource(resource: object) -> None:

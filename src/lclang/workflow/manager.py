@@ -5,6 +5,10 @@ from __future__ import annotations
 from types import TracebackType
 from typing import Literal, Self
 
+from lclang.error import LclWorkflowError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.workflow import Code as workflow_codes
 from lclang.workflow.finalization import (
     SharedExecutionState,
     ensure_can_add,
@@ -21,6 +25,7 @@ from lclang.workflow.models import (
 from lclang.workflow.steps import ExecutionStatusStep
 
 
+@guard_constructor(LclValidationError, workflow_codes.NATIVE_551)
 class ExecutionStatusManager:
     """Build and finalize one cursor within a shared execution-status tree.
 
@@ -46,12 +51,13 @@ class ExecutionStatusManager:
         :param task_type: Initial composite-task or leaf-step category.
         :param status: Initial execution status.
         :returns: ``None``.
-        :raises TypeError: If a field has an incompatible public type.
-        :raises ValueError: If *name* is empty.
+        :raises LclValidationError: If a field has an incompatible public type.
+        :raises LclValidationError: If *name* is empty.
         """
         self.current = ExecutionStatusTree(status, task_type, name, description)
         self.state = SharedExecutionState()
 
+    @guard_failure(LclWorkflowError, workflow_codes.NATIVE_551)
     def update(
         self,
         status: ExecutionStatus,
@@ -62,8 +68,8 @@ class ExecutionStatusManager:
         :param status: New exact execution status.
         :param description: Replacement text, or ``None`` to preserve it.
         :returns: ``None``.
-        :raises RuntimeError: If this manager's subtree is finalized.
-        :raises TypeError: If a replacement has an incompatible type.
+        :raises LclStateError: If this manager's subtree is finalized.
+        :raises LclValidationError: If a replacement has an incompatible type.
         """
         ensure_unlocked(self.state, self.current)
         valid_status = require_status(status)
@@ -72,6 +78,7 @@ class ExecutionStatusManager:
         if valid_description is not None:
             self.current.task_description = valid_description
 
+    @guard_failure(LclWorkflowError, workflow_codes.NATIVE_551)
     def add_step(
         self,
         name: str,
@@ -84,9 +91,9 @@ class ExecutionStatusManager:
         :param description: Step detail text.
         :param status: Initial status, defaulting to ``RUNNING``.
         :returns: Handle sharing and optionally scoping the appended step.
-        :raises RuntimeError: If this manager's subtree is finalized.
-        :raises TypeError: If an argument has an incompatible public type.
-        :raises ValueError: If the current node is a step or *name* is empty.
+        :raises LclStateError: If this manager's subtree is finalized.
+        :raises LclValidationError: If an argument has an incompatible public type.
+        :raises LclValidationError: If the current node is a step or *name* is empty.
         """
         ensure_can_add(self.state, self.current)
         child = ExecutionStatusTree(
@@ -98,6 +105,7 @@ class ExecutionStatusManager:
         self.current.sub_tasks.append(child)
         return ExecutionStatusStep(child, self.state)
 
+    @guard_failure(LclWorkflowError, workflow_codes.NATIVE_551)
     def add_sub_task(
         self,
         name: str,
@@ -110,9 +118,9 @@ class ExecutionStatusManager:
         :param description: Sub-task detail text.
         :param status: Initial sub-task status.
         :returns: Manager sharing this tree and pointing at the new task.
-        :raises RuntimeError: If this manager's subtree is finalized.
-        :raises TypeError: If an argument has an incompatible public type.
-        :raises ValueError: If the current node is a step or *name* is empty.
+        :raises LclStateError: If this manager's subtree is finalized.
+        :raises LclValidationError: If an argument has an incompatible public type.
+        :raises LclValidationError: If the current node is a step or *name* is empty.
         """
         ensure_can_add(self.state, self.current)
         child = ExecutionStatusTree(status, ExecutionTaskType.TASK, name, description)
@@ -122,25 +130,28 @@ class ExecutionStatusManager:
         manager.state = self.state
         return manager
 
+    @guard_failure(LclWorkflowError, workflow_codes.NATIVE_551)
     def finalize(self) -> ExecutionStatusTree:
         """Finalize and lock the current subtree, returning its current node.
 
         :returns: The same tree node managed by this cursor.
-        :raises RuntimeError: If this manager's subtree is already finalized.
+        :raises LclStateError: If this manager's subtree is already finalized.
         """
         ensure_unlocked(self.state, self.current)
         finalize_node(self.state, self.current)
         return self.current
 
+    @guard_failure(LclWorkflowError, workflow_codes.NATIVE_551)
     def __enter__(self) -> Self:
         """Enter a scoped manager and ensure it is still editable.
 
         :returns: This manager cursor.
-        :raises RuntimeError: If this manager's subtree is already finalized.
+        :raises LclStateError: If this manager's subtree is already finalized.
         """
         ensure_unlocked(self.state, self.current)
         return self
 
+    @guard_failure(LclWorkflowError, workflow_codes.NATIVE_551)
     def __exit__(
         self,
         error_type: type[BaseException] | None,
@@ -153,7 +164,7 @@ class ExecutionStatusManager:
         :param error: Raised exception instance, or ``None`` on clean exit.
         :param traceback: Raised exception traceback, or ``None`` on clean exit.
         :returns: Always ``False`` so Python propagates any original exception.
-        :raises RuntimeError: If this manager's subtree was finalized in the scope.
+        :raises LclStateError: If this manager's subtree was finalized in the scope.
         """
         del error_type, traceback
         if error is not None:

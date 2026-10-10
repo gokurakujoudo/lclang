@@ -3,18 +3,23 @@
 from datetime import date
 from typing import Self, final
 
+from lclang.error import LclUtilityError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.utilities import Code as utilities_codes
 from lclang.stdlib.dates import parse_ymd, to_ymd
 from lclang.utils.calendar.hardcoded import HardcodedBDCalendar
 from lclang.utils.calendar.types import CalendarID, DayType
 
 
+@guard_failure(LclUtilityError, utilities_codes.NATIVE_715)
 def coerce_calendar_date(value: date | str | int) -> date:
     """Convert one factory value into a strict Gregorian date.
 
     :param value: Date, strict ``YYYYMMDD`` text, or padded integer.
     :returns: Converted date.
-    :raises TypeError: If *value* has an unsupported type.
-    :raises ValueError: If an integer or string is not a valid date.
+    :raises LclValidationError: If *value* has an unsupported type.
+    :raises LclValidationError: If an integer or string is not a valid date.
     """
     if isinstance(value, date):
         return value
@@ -24,10 +29,17 @@ def coerce_calendar_date(value: date | str | int) -> date:
         text = f"{value:08d}"
         if len(text) == 8:
             return parse_ymd(text)
-        raise ValueError("integer calendar date must fit YYYYMMDD")
-    raise TypeError("calendar date must be date, YYYYMMDD text, or integer")
+        raise LclValidationError(
+            "integer calendar date must fit YYYYMMDD",
+            code=utilities_codes.E15_INTEGER_CALENDAR_DATE_MUST_FIT_YYYYMMDD,
+        )
+    raise LclValidationError(
+        "calendar date must be date, YYYYMMDD text, or integer",
+        code=utilities_codes.E15_CALENDAR_DATE_MUST_BE_DATE_YYYYMMDD_TEXT_OR_INTEGER,
+    )
 
 
+@guard_constructor(LclValidationError, utilities_codes.NATIVE_715)
 @final
 class FewBusinessDaysBDCalendar(HardcodedBDCalendar):
     """Classify only a finite set of dates as business.
@@ -47,6 +59,7 @@ class FewBusinessDaysBDCalendar(HardcodedBDCalendar):
         identifier = CalendarID(f"at({', '.join(to_ymd(d) for d in business_days)})")
         super().__init__(identifier, {d: DayType.BusinessDay for d in business_days})
 
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_715)
     def business_days(self) -> Self:
         """Return this already-sparse business calendar.
 
@@ -55,6 +68,7 @@ class FewBusinessDaysBDCalendar(HardcodedBDCalendar):
         return self
 
 
+@guard_failure(LclUtilityError, utilities_codes.NATIVE_715)
 def at(*values: date | str | int) -> FewBusinessDaysBDCalendar:
     """Create a calendar at explicitly selected business dates.
 

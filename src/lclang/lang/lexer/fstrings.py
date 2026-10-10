@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from lclang.error import LclSyntaxError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.lexer.characters import character_at
 from lclang.lang.lexer.escapes import EscapeDecodeError, decode_content
 from lclang.lang.lexer.fstring_values import (
@@ -12,17 +16,19 @@ from lclang.lang.lexer.fstring_values import (
 )
 
 
-class FStringScanError(ValueError):
+@guard_constructor(LclValidationError, language_codes.NATIVE_114)
+class FStringScanError(LclSyntaxError):
     """Report invalid interpolation at an absolute source boundary.
 
     .. note::
        The outer scanner converts this internal boundary into ``LclSyntaxError``.
     """
 
-    def __init__(self, message: str, end: int) -> None:
+    def __init__(self, message: str, end: int, *, code: str | None = None) -> None:
         """Store a stable message and exclusive error boundary.
 
         :param message: Human-readable description of the malformed f-string.
+        :param code: Classified cause from the detecting scanner.
         :param end: Absolute exclusive source offset for the diagnostic.
         :returns: ``None``.
 
@@ -30,11 +36,12 @@ class FStringScanError(ValueError):
            The outer lexer translates this boundary into the final source
            span reported to callers.
         """
-        super().__init__(message)
+        super().__init__(message, code=code)
         self.message = message
         self.end = end
 
 
+@guard_constructor(LclValidationError, language_codes.NATIVE_114)
 class InternalFStringScanner:
     """Maintain cursor state while scanning one interpolated string.
 
@@ -62,6 +69,7 @@ class InternalFStringScanner:
         self.delimiter = self.quote * (3 if self.triple else 1)
         self.cursor = quote_at + len(self.delimiter)
 
+    @guard_failure(LclSyntaxError, language_codes.NATIVE_114)
     def scan(self) -> FStringMatch:
         """Scan the complete f-string and return its lexical value.
 
@@ -99,7 +107,11 @@ class InternalFStringScanner:
                 self.cursor += 1
                 return parts
             if character in "\r\n" and top_level and not self.triple:
-                raise FStringScanError("newline in single-quoted f-string", self.cursor + 1)
+                raise FStringScanError(
+                    "newline in single-quoted f-string",
+                    self.cursor + 1,
+                    code=language_codes.E14_NEWLINE_IN_SINGLE_QUOTED_F_STRING,
+                )
             if character == "\\":
                 text.append(character)
                 self.cursor += 1
@@ -120,11 +132,15 @@ class InternalFStringScanner:
                 parts.append(self.internal_field())
                 continue
             if character == "}":
-                raise FStringScanError("unmatched closing brace in f-string", self.cursor + 1)
+                raise FStringScanError(
+                    "unmatched closing brace in f-string",
+                    self.cursor + 1,
+                    code=language_codes.E14_UNMATCHED_CLOSING_BRACE_IN_F_STRING,
+                )
             text.append(character)
             self.cursor += 1
         message = "unterminated f-string" if top_level else "unterminated format specification"
-        raise FStringScanError(message, len(self.text))
+        raise FStringScanError(message, len(self.text), code=language_codes.E14_PARTS_FAILURE)
 
     def internal_field(self) -> FStringField:
         """Scan one replacement field from its opening brace.
@@ -155,7 +171,11 @@ class InternalFStringScanner:
                 self.cursor += 1
                 continue
             if character in ")]" and (not stack or character != stack[-1]):
-                raise FStringScanError("mismatched delimiter in f-string field", self.cursor + 1)
+                raise FStringScanError(
+                    "mismatched delimiter in f-string field",
+                    self.cursor + 1,
+                    code=language_codes.E14_MISMATCHED_DELIMITER_IN_F_STRING_FIELD,
+                )
             is_not_equal = character == "!" and self.text[self.cursor : self.cursor + 2] == "!="
             if not stack and character in "!:}" and not is_not_equal:
                 break
@@ -163,15 +183,27 @@ class InternalFStringScanner:
                 debug = True
                 break
             if character == "\\":
-                raise FStringScanError("backslash in f-string expression", self.cursor + 1)
+                raise FStringScanError(
+                    "backslash in f-string expression",
+                    self.cursor + 1,
+                    code=language_codes.E14_BACKSLASH_IN_F_STRING_EXPRESSION,
+                )
             if character == "#":
-                raise FStringScanError("comment in f-string expression", self.cursor + 1)
+                raise FStringScanError(
+                    "comment in f-string expression",
+                    self.cursor + 1,
+                    code=language_codes.E14_COMMENT_IN_F_STRING_EXPRESSION,
+                )
             self.cursor += 1
         original = self.text[start : self.cursor]
         expression = original.strip()
         expression_offset = start - self.quote_at + len(original) - len(original.lstrip())
         if not expression:
-            raise FStringScanError("empty f-string expression", self.cursor + 1)
+            raise FStringScanError(
+                "empty f-string expression",
+                self.cursor + 1,
+                code=language_codes.E14_EMPTY_F_STRING_EXPRESSION,
+            )
         if debug:
             self.cursor += 1
             self.internal_skip_space()
@@ -184,7 +216,11 @@ class InternalFStringScanner:
             self.cursor += 1
         else:
             end = min(self.cursor + 1, len(self.text))
-            raise FStringScanError("unterminated f-string field", end)
+            raise FStringScanError(
+                "unterminated f-string field",
+                end,
+                code=language_codes.E14_UNTERMINATED_F_STRING_FIELD,
+            )
         return FStringField(
             expression, conversion, format_spec, debug, expression_offset=expression_offset
         )
@@ -204,7 +240,11 @@ class InternalFStringScanner:
         self.cursor += 1
         conversion = self.internal_peek()
         if conversion not in {"s", "r", "a"}:
-            raise FStringScanError("invalid f-string conversion", self.cursor + 1)
+            raise FStringScanError(
+                "invalid f-string conversion",
+                self.cursor + 1,
+                code=language_codes.E14_INVALID_F_STRING_CONVERSION,
+            )
         self.cursor += 1
         return conversion
 
@@ -240,7 +280,11 @@ class InternalFStringScanner:
             if self.text.startswith(delimiter, cursor):
                 return cursor + len(delimiter)
             cursor += 2 if self.text[cursor] == "\\" else 1
-        raise FStringScanError("unterminated quote in f-string expression", len(self.text))
+        raise FStringScanError(
+            "unterminated quote in f-string expression",
+            len(self.text),
+            code=language_codes.E14_UNTERMINATED_QUOTE_IN_F_STRING_EXPRESSION,
+        )
 
     def internal_flush(
         self,
@@ -264,7 +308,7 @@ class InternalFStringScanner:
         try:
             decoded = decode_content(source, raw=self.raw, bytes_mode=False)
         except EscapeDecodeError as error:
-            raise FStringScanError(error.message, self.cursor) from error
+            raise FStringScanError(error.message, self.cursor, code=error.code) from error
         parts.append(FStringText(str(decoded)))
         text.clear()
 
@@ -292,6 +336,7 @@ class InternalFStringScanner:
         return character_at(self.text, self.cursor)
 
 
+@guard_failure(LclSyntaxError, language_codes.NATIVE_114)
 def scan_fstring(text: str, quote_at: int, *, raw: bool) -> FStringMatch:
     """Scan one f-string whose opening quote begins at *quote_at*.
 

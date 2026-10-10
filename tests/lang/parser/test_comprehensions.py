@@ -9,7 +9,7 @@ from lclang.ast.comprehensions import (
     LclListComprehension,
     LclSetComprehension,
 )
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError
 from lclang.lang.lexer import TokenKind, scan_tokens
 from lclang.lang.parser import parse_expression
 from lclang.lang.parser.comprehensions import (

@@ -1,8 +1,12 @@
 """Small source-coordinate helpers for configuration parsing."""
 
+from lclang.error import LclConfigError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.configuration import Code as configuration_codes
 from lclang.source import SourceOrigin, SourcePosition, SourceSpan, advance_source_position
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_311)
 def advance_position(start: SourcePosition, prefix: str) -> SourcePosition:
     """Advance a physical source position across a prefix.
 
@@ -16,6 +20,7 @@ def advance_position(start: SourcePosition, prefix: str) -> SourcePosition:
     return advance_source_position(start, prefix)
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_311)
 def physical_end(item: tuple[str, str, int, int]) -> SourcePosition:
     """Return the exclusive position after one physical line.
 
@@ -31,6 +36,7 @@ def physical_end(item: tuple[str, str, int, int]) -> SourcePosition:
     return SourcePosition(line, len(content) + 1, offset + len(content))
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_311)
 def span_for_physical(origin: SourceOrigin, item: tuple[str, str, int, int]) -> SourceSpan:
     """Build a complete span for one physical line.
 
@@ -45,6 +51,7 @@ def span_for_physical(origin: SourceOrigin, item: tuple[str, str, int, int]) -> 
     return SourceSpan(origin, SourcePosition(line, 1, offset), physical_end(item))
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_311)
 def end_position(text: str) -> SourcePosition:
     """Calculate the exclusive position after complete source text.
 

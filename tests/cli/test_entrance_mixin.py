@@ -9,6 +9,7 @@ import pytest
 
 import lclang.workflow as wf
 from lclang.cli import CliContext, CliEntrance, CliResult, CommandGroup, ParameterDoc, cli
+from lclang.error import LclValidationError
 
 # Static config exercises application and logger expressions before handler execution.
 CONFIG = "value: helper(seed)\nlogger.console.enabled: console_on\n"
@@ -98,5 +99,5 @@ async def test_entrance_defaults_reach_all_commands_configs_and_tasks() -> None:
 @pytest.mark.parametrize("bindings", [{"": 1}, {"a": 1, "a.b": 2}, {"a": 1, "a!": 2}])
 def test_entrance_rejects_invalid_host_bindings(bindings: dict[str, object]) -> None:
     """Binding failures are reported while defining the entrance."""
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         CliEntrance(CommandGroup("root", "Root", []), lcl_mixin=bindings)

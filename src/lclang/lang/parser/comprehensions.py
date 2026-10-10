@@ -16,7 +16,9 @@ from lclang.ast import (
     LclName,
     LclSetComprehension,
 )
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.lexer import TokenKind
 from lclang.lang.parser.bindings import validate_binding_name
 from lclang.lang.parser.stream import TokenStream
@@ -49,6 +51,7 @@ _CLOSING = {
 }
 
 
+@guard_failure(LclSyntaxError, language_codes.NATIVE_127)
 def parse_comprehension(
     stream: TokenStream,
     head: LclAstNode,
@@ -98,5 +101,9 @@ def parse_comprehension(
     if kind is ComprehensionKind.SET:
         return LclSetComprehension(head, clause_tuple, span=span)
     if not isinstance(head, (LclKeyValue, LclDictUnpack)):
-        raise LclSyntaxError("invalid dictionary comprehension head", span=head.span)
+        raise LclSyntaxError(
+            "invalid dictionary comprehension head",
+            span=head.span,
+            code=language_codes.E27_INVALID_DICTIONARY_COMPREHENSION_HEAD,
+        )
     return LclDictComprehension(head, clause_tuple, span=span)

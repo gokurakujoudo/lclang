@@ -7,6 +7,7 @@ from dataclasses import FrozenInstanceError
 import pytest
 
 from lclang.ast import LclAstNode, LclConstant, LclName, LclTuple, LclVisitor
+from lclang.error import LclValidationError
 from lclang.types import VarName
 
 
@@ -42,5 +43,5 @@ def test_accept_delegates_to_generic_visitor() -> None:
 
 def test_name_rejects_empty_identifier() -> None:
     """An AST variable reference must always contain a usable identifier."""
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         LclName(identifier=VarName(""))

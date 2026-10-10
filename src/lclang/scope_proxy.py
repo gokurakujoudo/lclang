@@ -6,10 +6,15 @@ from collections.abc import Callable
 from dataclasses import dataclass, fields, is_dataclass
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
+from lclang.error import LclEvaluationError
+from lclang.error.base import LclAttributeError, LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.codes.runtime import Code as runtime_codes
+
 if TYPE_CHECKING:
     from lclang.runtime.frame.frame import Frame
 
-from lclang.errors import LclNameError
+from lclang.error import LclNameError
 from lclang.scopes import ScopedProxyValue
 from lclang.source import SourceSpan
 
@@ -27,6 +32,7 @@ class ProxyFrame(Protocol):
         ...
 
 
+@guard_constructor(LclValidationError, runtime_codes.NATIVE_261)
 @dataclass(frozen=True, slots=True)
 class FrameProxy(ScopedProxyValue):
     """Expose qualified children through one requesting Frame.
@@ -47,50 +53,59 @@ class FrameProxy(ScopedProxyValue):
         """
         return f"FrameProxy({'.'.join(self.path)})"
 
+    @guard_failure(LclAttributeError, runtime_codes.NATIVE_261)
     def __getattr__(self, name: str) -> Any:
         """Return a nested proxy or terminal lookup awaitable.
 
         :param name: Python attribute segment.
         :returns: Nested proxy or coroutine resolving a real leaf.
-        :raises AttributeError: If the qualified child is absent.
+        :raises LclAttributeError: If the qualified child is absent.
         """
         from lclang.runtime.frame.binding_lookup import find_scoped_binding
 
         if name.startswith("_"):
-            raise AttributeError(name)
+            raise LclAttributeError(name, code=runtime_codes.E61___GETATTR___FAILURE)
         full = ".".join((*self.path, name))
         owner, kind = find_scoped_binding(self.frame, full)
         if owner is None:
-            raise AttributeError(full)
+            raise LclAttributeError(full, code=runtime_codes.E61_FULL)
         if kind == "proxy":
             return FrameProxy(self.frame, (*self.path, name))
         return self.frame.get_resolved(full, None)
 
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_261)
     def __getitem__(self, name: str) -> Any:
         """Return the same child selected by attribute access.
 
         :param name: Direct child identifier.
         :returns: Nested proxy or coroutine resolving a real leaf.
-        :raises TypeError: If *name* is not text.
-        :raises AttributeError: If the qualified child is absent.
+        :raises LclValidationError: If *name* is not text.
+        :raises LclAttributeError: If the qualified child is absent.
         """
         if not isinstance(name, str):
-            raise TypeError("FrameProxy index must be text")
+            raise LclValidationError(
+                "FrameProxy index must be text",
+                code=runtime_codes.E61_FRAMEPROXY_INDEX_MUST_BE_TEXT,
+            )
         return getattr(self, name)
 
+    @guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_261)
     async def get(self, name: str, default: object = None) -> object:
         """Resolve one direct child or return a default when it is absent.
 
         :param name: Direct child name.
         :param default: Value returned unchanged when the child is absent.
         :returns: Nested proxy, resolved terminal value, or *default*.
-        :raises TypeError: If *name* is not text.
+        :raises LclValidationError: If *name* is not text.
         """
         from lclang.runtime.frame.binding_lookup import select_binding
         from lclang.runtime.frame.evaluation import read_selected_binding
 
         if not isinstance(name, str):
-            raise TypeError("FrameProxy child name must be text")
+            raise LclValidationError(
+                "FrameProxy child name must be text",
+                code=runtime_codes.E61_FRAMEPROXY_INDEX_MUST_BE_TEXT,
+            )
         full = ".".join((*self.path, name))
         selected = select_binding(self.frame, full)
         owner, kind = selected.owner, selected.kind
@@ -100,6 +115,7 @@ class FrameProxy(ScopedProxyValue):
             return FrameProxy(self.frame, (*self.path, name), self.trace)
         return await read_selected_binding(cast("Frame", self.frame), full, None, selected)
 
+    @guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_261)
     async def field_names(self) -> list[str]:
         """Return alphabetically sorted identifiers for direct proxy children.
 
@@ -115,17 +131,21 @@ class FrameProxy(ScopedProxyValue):
         }
         return sorted(names)
 
+    @guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_261)
     async def as_record[T](self, cls: type[T]) -> T:
         """Materialize direct children into one dataclass instance.
 
         :param cls: Dataclass type used as the record template.
         :returns: New dataclass instance containing present child values.
-        :raises TypeError: If *cls* is not a dataclass type or required fields
+        :raises LclValidationError: If *cls* is not a dataclass type or required fields
            remain absent.
         :raises Exception: If resolving a present child fails.
         """
         if not isinstance(cls, type) or not is_dataclass(cls):
-            raise TypeError("FrameProxy record type must be a dataclass")
+            raise LclValidationError(
+                "FrameProxy record type must be a dataclass",
+                code=runtime_codes.E61_FRAMEPROXY_RECORD_TYPE_MUST_BE_A_DATACLASS,
+            )
         available = set(await self.field_names())
         values: dict[str, object] = {}
         for item in fields(cls):
@@ -133,6 +153,7 @@ class FrameProxy(ScopedProxyValue):
                 values[item.name] = await self.get(item.name)
         return cls(**values)
 
+    @guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_261)
     async def resolve_attribute(
         self,
         name: str,
@@ -157,7 +178,11 @@ class FrameProxy(ScopedProxyValue):
         if owner is None:
             if safe:
                 return None
-            raise LclNameError(f"unknown variable: {full}", span=span)
+            raise LclNameError(
+                f"unknown variable: {full}",
+                span=span,
+                code=runtime_codes.E61_UNKNOWN_VARIABLE_VALUE,
+            )
         if kind == "proxy":
             return FrameProxy(self.frame, (*self.path, name), self.trace)
         if self.trace is not None:
@@ -169,26 +194,31 @@ class FrameProxy(ScopedProxyValue):
         record_value_read(full, result, span, masked=is_name_masked(self.frame, full))
         return result
 
+    @guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_261)
     async def resolve_index(self, name: object, *, span: SourceSpan) -> object:
         """Resolve an LCL index while retaining qualified read evidence.
 
         :param name: Direct child identifier supplied by the index expression.
         :param span: Source range of the complete subscription.
         :returns: Nested proxy or resolved terminal value.
-        :raises TypeError: If the index is not text.
-        :raises AttributeError: If the child is absent or private.
+        :raises LclValidationError: If the index is not text.
+        :raises LclAttributeError: If the child is absent or private.
         """
         from lclang.runtime.frame.binding_lookup import select_binding
 
         if not isinstance(name, str):
-            raise TypeError("FrameProxy index must be text")
+            raise LclValidationError(
+                "FrameProxy index must be text",
+                code=runtime_codes.E61_FRAMEPROXY_INDEX_MUST_BE_TEXT,
+            )
         full = ".".join((*self.path, name))
         if name.startswith("_"):
-            raise AttributeError(name)
+            raise LclAttributeError(name, code=runtime_codes.E61___GETATTR___FAILURE)
         if select_binding(self.frame, full).owner is None:
-            raise AttributeError(full)
+            raise LclAttributeError(full, code=runtime_codes.E61_FULL)
         return await self.resolve_attribute(name, safe=False, span=span)
 
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_261)
     def with_trace(self, trace: Callable[[str, SourceSpan], None]) -> FrameProxy:
         """Return this proxy with one dynamic dependency recorder.
 

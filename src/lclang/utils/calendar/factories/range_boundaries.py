@@ -6,6 +6,10 @@ from collections.abc import Set
 from datetime import date
 from typing import final
 
+from lclang.error import LclUtilityError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.codes.utilities import Code as utilities_codes
 from lclang.utils.calendar.base import BDCalendar
 from lclang.utils.calendar.functional import FunctionalBDCalendar
 from lclang.utils.calendar.helpers import safe_add_days
@@ -13,6 +17,7 @@ from lclang.utils.calendar.transformations.logic import dependency_day_type, dir
 from lclang.utils.calendar.types import CalendarID, DayType
 
 
+@guard_async_failure(LclUtilityError, utilities_codes.NATIVE_715)
 async def classify_range_boundary(calendar: BDCalendar, d: date, direction: int) -> DayType:
     """Select business dates adjacent to a non-business day or date boundary.
 
@@ -31,6 +36,7 @@ async def classify_range_boundary(calendar: BDCalendar, d: date, direction: int)
     return DayType.Holiday if value is DayType.BusinessDay else DayType.BusinessDay
 
 
+@guard_constructor(LclValidationError, utilities_codes.NATIVE_715)
 @final
 class RangeStartDaysBDCalendar(FunctionalBDCalendar):
     """Select first dates of contiguous base-calendar business ranges.
@@ -49,6 +55,7 @@ class RangeStartDaysBDCalendar(FunctionalBDCalendar):
         self.base_calendar = base_calendar
         super().__init__(CalendarID(f"range_start_days({base_calendar!r})"))
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_715)
     async def get_day_type(self, d: date) -> DayType:
         """Classify first dates of business ranges.
 
@@ -57,6 +64,7 @@ class RangeStartDaysBDCalendar(FunctionalBDCalendar):
         """
         return await classify_range_boundary(self.base_calendar, d, -1)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_715)
     async def get_dependency_ids(self) -> Set[CalendarID]:
         """Return the base calendar ID.
 
@@ -65,6 +73,7 @@ class RangeStartDaysBDCalendar(FunctionalBDCalendar):
         return await direct_dependency_ids((self.base_calendar,))
 
 
+@guard_failure(LclUtilityError, utilities_codes.NATIVE_715)
 def range_start_days(calendar: BDCalendar) -> RangeStartDaysBDCalendar:
     """Create a contiguous-business-range start selector.
 
@@ -74,6 +83,7 @@ def range_start_days(calendar: BDCalendar) -> RangeStartDaysBDCalendar:
     return RangeStartDaysBDCalendar(calendar)
 
 
+@guard_constructor(LclValidationError, utilities_codes.NATIVE_715)
 @final
 class RangeEndDaysBDCalendar(FunctionalBDCalendar):
     """Select last dates of contiguous base-calendar business ranges.
@@ -92,6 +102,7 @@ class RangeEndDaysBDCalendar(FunctionalBDCalendar):
         self.base_calendar = base_calendar
         super().__init__(CalendarID(f"range_end_days({base_calendar!r})"))
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_715)
     async def get_day_type(self, d: date) -> DayType:
         """Classify last dates of business ranges.
 
@@ -100,6 +111,7 @@ class RangeEndDaysBDCalendar(FunctionalBDCalendar):
         """
         return await classify_range_boundary(self.base_calendar, d, 1)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_715)
     async def get_dependency_ids(self) -> Set[CalendarID]:
         """Return the base calendar ID.
 
@@ -108,6 +120,7 @@ class RangeEndDaysBDCalendar(FunctionalBDCalendar):
         return await direct_dependency_ids((self.base_calendar,))
 
 
+@guard_failure(LclUtilityError, utilities_codes.NATIVE_715)
 def range_end_days(calendar: BDCalendar) -> RangeEndDaysBDCalendar:
     """Create a contiguous-business-range end selector.
 

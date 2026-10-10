@@ -3,7 +3,7 @@
 import pytest
 
 from lclang.ast import LclConstant, LclName
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError
 from lclang.lang.lexer import scan_tokens
 from lclang.lang.parser.atoms import parse_atom
 from lclang.lang.parser.stream import TokenStream

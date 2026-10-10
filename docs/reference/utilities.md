@@ -72,15 +72,15 @@ produce ID zero. The maximum elapsed time is `2**41 - 1` milliseconds, about
 69.7 years after the configured epoch; at most 4096 IDs fit in each millisecond
 per worker. These are identifiers, not secrets or cryptographic random values.
 
-Both arguments must be integers excluding bool (`TypeError` otherwise).
-`worker_id` must be in `0..1023` and `epoch_ms` must be nonnegative (`ValueError`
+Both arguments must be integers excluding bool (`LclValidationError` otherwise).
+`worker_id` must be in `0..1023` and `epoch_ms` must be nonnegative (`LclValidationError`
 otherwise). The read-only properties `worker_id` and `epoch_ms` expose the
 validated configuration. Each instance serializes clock reads and state updates
 with a thread lock, so Python threads and tasks in different event loops can
 share it. It never sleeps or spins waiting for the clock.
 
-`next_id()` raises `ValueError` when the clock precedes the epoch,
-`RuntimeError` when it moves behind the last successful millisecond, and
+`next_id()` raises `LclValidationError` when the clock precedes the epoch,
+`LclStateError` when it moves behind the last successful millisecond, and
 `OverflowError` when the sequence or 41-bit timestamp is exhausted. Failures
 leave the last successful timestamp and sequence unchanged. After sequence
 exhaustion, the caller may retry when the clock advances; after rollback, it
@@ -143,8 +143,8 @@ It uses `repr` or the supplied `renderer(value)`, escapes CR and LF, and convert
 renderer exceptions (including `BaseException`) or non-string results to
 `<repr failed: ExceptionType>`. The length budget includes `...<truncated>`;
 small budgets retain its prefix, zero returns empty text, and `None` disables
-truncation. A negative budget raises `ValueError`; non-integers, including bool,
-raise `TypeError`. With `masked=True`, the result is `*masked*` and no renderer
+truncation. A negative budget raises `LclValidationError`; non-integers, including bool,
+raise `LclValidationError`. With `masked=True`, the result is `*masked*` and no renderer
 runs; the masking marker is independent of the validated budget.
 
 ## Multiline representations
@@ -156,7 +156,7 @@ masked_keys=None)` accepts one dataclass instance or string-keyed dictionary,
 or an iterable of those records. It retains declaration, insertion and record
 order, including duplicate names; sorting by name is stable when requested.
 The key width is the maximum of all name lengths and the supplied minimum.
-Dataclass classes, unsupported records and non-string keys raise `TypeError`.
+Dataclass classes, unsupported records and non-string keys raise `LclValidationError`.
 Widths must be nonnegative integers (not bool), or `None`. Empty inputs yield
 no lines. Masked names are checked before getters or dictionary reads and
 render as `*masked*`; other values use `safe_repr`. Neither nested values nor
@@ -191,8 +191,8 @@ set is equivalent to False. Containers and dataclass class objects are leaves.
 Empty nested records also remain leaves so an explicitly present empty value
 does not disappear. Empty root records produce an empty dictionary.
 
-Invalid root/control types raise `TypeError`. Invalid, unknown or non-record
-selected paths and cycles on expanded paths raise `ValueError`. Reusing an
+Invalid root/control types raise `LclValidationError`. Invalid, unknown or non-record
+selected paths and cycles on expanded paths raise `LclValidationError`. Reusing an
 acyclic record on different branches is supported. The helper never calls a
 constructor or default factory, performs no masking or box conversion, and
 does not deep-copy values. It uses `dataclasses.fields`, including `init=False`
@@ -227,3 +227,8 @@ assert flatten_to_dict(options, nested=False)["dialect"] is options.dialect
 The selected dialect becomes a dotted leaf. The headers list remains the same
 object, and shallow expansion preserves the dialect instance too. Pass `flat`
 to `workflow.to_cli(..., preset=flat)` when individual CLI overrides are needed.
+
+See [errors and diagnostic codes](errors.md) for exception fields, specific
+codes, cause chains, and executable troubleshooting examples. Ordinary library
+validation uses `LclValidationError`; native callback and operation failures
+retain their original exception in `__cause__`.

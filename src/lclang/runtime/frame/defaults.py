@@ -11,11 +11,16 @@ from typing import TYPE_CHECKING
 
 from lclang.ast import LclCall, LclConstant
 from lclang.defaults import NO_DEFAULT, DefaultBinding
+from lclang.error import LclEvaluationError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.runtime import Code as runtime_codes
 
 if TYPE_CHECKING:
     from lclang.runtime.frame.frame import Frame
 
 
+@guard_constructor(LclValidationError, runtime_codes.NATIVE_238)
 @dataclass(frozen=True, slots=True)
 class DefaultScope:
     """Associate one execution's root and definition owners with defaults.
@@ -35,6 +40,7 @@ class DefaultScope:
 DEFAULT_SCOPES: ContextVar[tuple[DefaultScope, ...]] = ContextVar("workflow_defaults", default=())
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_238)
 def create_default_frame(bindings: Mapping[str, DefaultBinding]) -> Frame:
     """Create lazy factory definitions and reference-preserving literal bindings.
 
@@ -56,6 +62,7 @@ def create_default_frame(bindings: Mapping[str, DefaultBinding]) -> Frame:
     return Frame(Module(ModuleName("variable_defaults"), definitions), values=values)
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_238)
 def attach_defaults(frame: Frame, defaults: Frame) -> None:
     """Associate an owned CLI hierarchy with its separate fallback Frame.
 
@@ -83,6 +90,7 @@ def default_scope(root: Frame, defaults: Frame) -> Generator[None]:
         DEFAULT_SCOPES.reset(token)
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_238)
 def default_frame_for(frame: Frame) -> Frame | None:
     """Find the nearest active default environment for a requesting Frame.
 
