@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from lclang.ast import LclAstNode, LclJoinedString
+from lclang.scopes import validate_qualified_name
 from lclang.source import SourceOrigin, SourceSpan
 from lclang.types import VarName
 
@@ -89,7 +90,42 @@ class ConfigUsing:
             raise TypeError("config using optional flag must be Boolean")
 
 
-type ConfigDeclaration = ConfigDefinition | ConfigUsing
+@dataclass(frozen=True, slots=True)
+class ConfigImport:
+    """Represent an independent configuration subtree under a static alias.
+
+    :param target: Decoded literal path or semantic f-string.
+    :param span: Complete physical declaration location.
+    :param ordinal: Zero-based declaration position in its document.
+    :param alias: Static qualified namespace receiving the imported definitions.
+    :param optional: Whether a directly missing target contributes nothing.
+    :raises TypeError: If a field has an unsupported type.
+    :raises ValueError: If the alias, target, or ordinal is invalid.
+    """
+
+    target: str | LclJoinedString
+    span: SourceSpan
+    ordinal: int
+    alias: str
+    optional: bool = False
+
+    def __post_init__(self) -> None:
+        """Validate the shared target contract and static namespace.
+
+        :raises TypeError: If a declaration field has an unsupported type.
+        :raises ValueError: If the alias is malformed or reserved.
+        """
+        if not isinstance(self.span, SourceSpan):
+            raise TypeError("config import span must be a SourceSpan")
+        if not isinstance(self.ordinal, int) or isinstance(self.ordinal, bool):
+            raise TypeError("config import ordinal must be an integer")
+        ConfigUsing(self.target, self.span, self.ordinal, self.optional)
+        validate_qualified_name(self.alias)
+        if self.alias.startswith("__"):
+            raise ValueError("config import alias cannot be reserved")
+
+
+type ConfigDeclaration = ConfigDefinition | ConfigUsing | ConfigImport
 
 
 @dataclass(frozen=True, slots=True)

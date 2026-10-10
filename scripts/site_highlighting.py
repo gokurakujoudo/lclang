@@ -50,7 +50,8 @@ def format_fence(
     **kwargs: object,
 ) -> str:
     """Restore SuperFences' removed line terminator before highlighting exact source."""
-    source += "\n"
+    if source:
+        source += "\n"
     content = highlight_code(source, language, "") or escape(source)
     return (
         f'<div class="highlight"><pre><code class="language-{escape(language, quote=True)}">'

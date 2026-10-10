@@ -2,6 +2,7 @@
 
 import re
 
+from tests.documentation.cases import extract_file_cases
 from tests.documentation.examples import ROOT, marked_blocks
 
 
@@ -23,7 +24,9 @@ def test_series_directory_titles_and_navigation_match_the_toc() -> None:
     for index, (title, filename) in enumerate(chapters):
         text = (directory / filename).read_text(encoding="utf-8")
         assert text.splitlines()[0] == f"# {title}"
-        assert marked_blocks(text), f"chapter without executable workflow: {filename}"
+        assert marked_blocks(text) or extract_file_cases(
+            text, filename
+        ), f"chapter without executable workflow: {filename}"
         previous = re.findall(r"\[Previous:[^]]+\]\(([^)]+)\)", text)
         following = re.findall(r"\[Next:[^]]+\]\(([^)]+)\)", text)
         assert previous == ([] if index == 0 else [paths[index - 1]])

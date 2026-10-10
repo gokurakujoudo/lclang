@@ -8,6 +8,7 @@ from collections.abc import AsyncGenerator, Mapping
 from contextlib import asynccontextmanager
 
 from lclang.api import define_frame
+from lclang.error_rendering import render_failure
 from lclang.runtime import Frame, Preset
 from lclang.workflow.call_status import attach_call_status, propagate_call_status
 from lclang.workflow.context import TaskContext, WorkflowExecutionContext, WorkflowExecutionResult
@@ -103,7 +104,9 @@ async def execute_workflow_in_task(
         try:
             result = await workflow.execute(execution)
         except Exception as error:
-            context.logger.error("workflow call error: [%s]", branch, exc_info=True)
+            context.logger.error(
+                "%s", render_failure(error, action=f"calling workflow {branch!r}"), exc_info=True
+            )
             result = WorkflowExecutionResult(
                 ExecutionStatusTree(
                     ExecutionStatus.ERROR, ExecutionTaskType.TASK, workflow.title, str(error)
@@ -129,8 +132,8 @@ async def execute_workflow_in_task(
             manager.update(ExecutionStatus.ERROR, str(pending))
             propagate_call_status(parent, ExecutionStatus.ERROR)
             context.logger.error(
-                "workflow call error: [%s]",
-                branch,
+                "%s",
+                render_failure(pending, action=f"calling workflow {branch!r}"),
                 exc_info=(type(pending), pending, pending.__traceback__),
             )
         finalize_manager(manager)

@@ -14,9 +14,10 @@ from lclang.config.errors import (
     LclConfigUsingError,
 )
 from lclang.config.limits import ConfigLoadLimits
-from lclang.config.model import ConfigDefinition, ConfigUsing
+from lclang.config.model import ConfigDefinition, ConfigImport, ConfigUsing
 from lclang.config.parser import parse_document
 from lclang.config.protocols import ConfigSourceResolver
+from lclang.config.qualification import qualify_import
 from lclang.config.result import Config
 from lclang.config.sources import (
     LoadedConfigSource,
@@ -25,6 +26,8 @@ from lclang.config.sources import (
     resolve_using_path,
 )
 from lclang.config.using import evaluate_using_target, snapshot_using_overrides
+from lclang.error_context import ConfigLoadFrame
+from lclang.error_loading import derive_loading_error
 from lclang.errors import LclConfigError
 from lclang.source import SourceOrigin
 from lclang.types import SourceName
@@ -75,10 +78,21 @@ class ConfigLoader:
         """
         self.ensure_loop()
         selected_overrides = snapshot_using_overrides(overrides)
-        root = await self.source_for(canonical_config_path(path), None)
-        expanded: list[ConfigDefinition] = []
-        await self.expand(root, (), 1, expanded, selected_overrides)
-        return Config(root.document.version, root.document.origin, tuple(expanded))
+        selected_path = canonical_config_path(path)
+        origin = SourceOrigin(SourceName(str(selected_path)), selected_path)
+        try:
+            root = await self.source_for(selected_path, None)
+            expanded: list[ConfigDefinition] = []
+            namespaces: set[str] = set()
+            await self.expand(root, (), 1, expanded, selected_overrides, namespaces)
+            return Config(
+                root.document.version,
+                root.document.origin,
+                tuple(expanded),
+                namespace_names=frozenset(namespaces),
+            )
+        except Exception as error:
+            raise derive_loading_error(error, ConfigLoadFrame(origin)) from error.__cause__
 
     def ensure_loop(self) -> None:
         """Bind first use to the current event loop and reject cross-loop reuse.
@@ -152,7 +166,9 @@ class ConfigLoader:
         except LclConfigError:
             raise
         except Exception as error:
-            raise LclConfigUsingError(f"cannot load config source {path}") from error
+            wrapped = LclConfigUsingError(f"cannot load config source {path}")
+            wrapped.freeze_native_cause(error)
+            raise wrapped from error
         existing = self.identities.get(source.identity)
         if existing is not None:
             return existing
@@ -177,6 +193,7 @@ class ConfigLoader:
         depth: int,
         output: list[ConfigDefinition],
         overrides: Mapping[str, object],
+        namespaces: set[str] | None = None,
     ) -> None:
         """Expand a parsed document at one source-order placement.
 
@@ -185,6 +202,7 @@ class ConfigLoader:
         :param depth: One-based expansion depth including the root.
         :param output: Call-local chronological definitions accumulated in place.
         :param overrides: Call-level using-target overrides.
+        :param namespaces: Call-local explicit namespace reservations.
         :returns: ``None`` after appending chronological definitions.
         :raises LclConfigCycleError: If the identity is already active.
         :raises LclConfigLimitError: If depth exceeds policy.
@@ -193,6 +211,8 @@ class ConfigLoader:
         .. note::
            A cached document is still traversed for each source-order placement.
         """
+        if namespaces is None:
+            namespaces = set()
         if depth > self.limits.max_depth:
             raise LclConfigLimitError("config using depth limit exceeded")
         identity = loaded.source.identity
@@ -205,13 +225,39 @@ class ConfigLoader:
             if isinstance(declaration, ConfigDefinition):
                 output.append(declaration)
                 continue
-            assert isinstance(declaration, ConfigUsing)
-            target_text = await evaluate_using_target(declaration, output, overrides)
-            target = resolve_using_path(target_text, loaded.source)
+            assert isinstance(declaration, (ConfigUsing, ConfigImport))
+            target_text: str | None = None
             try:
-                child = await self.source_for(target, loaded.source)
-            except LclConfigUsingError as error:
-                if declaration.optional and isinstance(error.__cause__, FileNotFoundError):
-                    continue
-                raise
-            await self.expand(child, active, depth + 1, output, overrides)
+                target_text = await evaluate_using_target(
+                    declaration, output, overrides, namespace_names=frozenset(namespaces)
+                )
+                target = resolve_using_path(target_text, loaded.source)
+                try:
+                    child = await self.source_for(target, loaded.source)
+                except LclConfigUsingError as error:
+                    if declaration.optional and isinstance(error.__cause__, FileNotFoundError):
+                        continue
+                    raise
+                if isinstance(declaration, ConfigImport):
+                    isolated: list[ConfigDefinition] = []
+                    child_namespaces: set[str] = set()
+                    await self.expand(
+                        child, active, depth + 1, isolated, overrides, child_namespaces
+                    )
+                    Config(
+                        child.document.version,
+                        child.document.origin,
+                        tuple(isolated),
+                        namespace_names=frozenset(child_namespaces),
+                    )
+                    qualified, reservations = qualify_import(
+                        isolated, child_namespaces, declaration.alias
+                    )
+                    output.extend(qualified)
+                    namespaces.update(reservations)
+                else:
+                    await self.expand(child, active, depth + 1, output, overrides, namespaces)
+            except Exception as error:
+                raise derive_loading_error(
+                    error, ConfigLoadFrame(loaded.document.origin, declaration.span, target_text)
+                ) from error.__cause__

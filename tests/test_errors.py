@@ -14,7 +14,7 @@ def test_error_without_span_has_stable_code_and_rendering() -> None:
     error = LclNameError("missing variable")
     assert error.code == "LCL2001"
     assert error.message == "missing variable"
-    assert str(error) == "[LCL2001] missing variable"
+    assert str(error) == "Error in resolving a variable [LCL2001]:\nCause: missing variable"
     assert isinstance(error, LclError)
 
 
@@ -27,7 +27,10 @@ def test_error_with_span_renders_source_start() -> None:
         SourcePosition(line=3, column=8, offset=11),
     )
     error = LclSyntaxError("unexpected token", span=span, code="CUSTOM")
-    assert str(error) == "config.lcl:3:7: [CUSTOM] unexpected token"
+    assert (
+        str(error)
+        == 'Error in parsing source [CUSTOM]:\n  at "config.lcl":3:7\nCause: unexpected token'
+    )
 
 
 def test_evaluation_error_renders_an_immutable_variable_stack() -> None:
@@ -38,7 +41,8 @@ def test_evaluation_error_renders_an_immutable_variable_stack() -> None:
     )
     assert error.variable_stack == ("RESULT", "middle", "failing")
     assert str(error) == (
-        "[LCL3001] division by zero " "[variable evaluation stack: RESULT -> middle -> failing]"
+        "Error in evaluating RESULT [LCL3001]:\n  RESULT\n  middle\n  failing\n"
+        "Cause: division by zero"
     )
     error.attach_variable_stack(("replacement",))
     assert error.variable_stack == ("RESULT", "middle", "failing")

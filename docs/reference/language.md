@@ -406,6 +406,18 @@ iteration, formatting, and context management. Ordinary host `Exception`
 failures are wrapped once as source-aware `LclEvaluationError`; existing LCL
 errors pass through.
 
+`NEED_OVERRIDE` and `RUNTIME_OVERRIDE` are reserved complete-expression
+declaration markers. They cannot occur inside a collection, call, function
+body, or other composite expression. Both fail lazily when requested without
+a value. Their replacement and host-input rules are defined in the
+[runtime reference](runtime.md#frame-caching-and-concurrency).
+
+Failures render complete multiline English diagnostics with original source,
+definition and function frames, and already-read value snapshots. Rendering
+does not evaluate additional names. Exceptions retain their types, stable
+codes, original causes, and Python tracebacks. See
+[errors and inspection](../tutorials/07-errors-and-inspection.md).
+
 Runtime Frames add lazy per-name success/failure caching, one owner task per
 name, cycle detection, waiter cancellation isolation, task-local resource
 limits, explicit atomic recalculation, dependency snapshots, and deterministic

@@ -24,6 +24,7 @@ from lclang.lang.evaluator.awaitables import resolve_awaitable
 from lclang.lang.evaluator.context import Resolver
 from lclang.lang.evaluator.definition_context import definition_scope
 from lclang.lang.evaluator.dispatch import interpret_expression
+from lclang.lang.evaluator.evaluation_context import record_value_read
 from lclang.lang.parser import parse_expression
 from lclang.runtime.frame.binding_lookup import (
     BindingSelection,
@@ -119,7 +120,9 @@ async def resolve_name(requester: Frame, name: VarName, *, span: SourceSpan) -> 
     """
     frame = requester
     frame._lifecycle.ensure_open(span)
-    return await requester.get_resolved(str(name), span)
+    result = await requester.get_resolved(str(name), span)
+    record_value_read(str(name), result, span, masked=is_name_masked(requester, str(name)))
+    return result
 
 
 async def get_resolved(requester: Frame, name: str, span: SourceSpan | None) -> object:
@@ -177,7 +180,7 @@ async def read_selected_binding(
     frame = owner
     frame._lifecycle.ensure_open(span)
     internal_check_cycle(owner, name, span)
-    if name in frame._results:
+    if selected.kind != "host" and name in frame._results:
         result = frame._results[name]
         if internal_verbose_enabled():
             internal_trace(
@@ -186,7 +189,7 @@ async def read_selected_binding(
                 f"value={internal_render_value(result, masked=is_name_masked(frame, name))}",
             )
         return result
-    if name in frame._failures:
+    if selected.kind != "host" and name in frame._failures:
         if internal_verbose_enabled():
             rendered_error = internal_render_value(
                 frame._failures[name],
@@ -198,7 +201,7 @@ async def read_selected_binding(
                 f"error={rendered_error}",
             )
         raise frame._failures[name]
-    if name in frame.module.definitions:
+    if selected.kind != "host" and name in frame.module.definitions:
         task = frame._inflight.get(name)
         source = "shared-lcl-evaluation" if task is not None else "lcl-evaluated"
         if task is None:

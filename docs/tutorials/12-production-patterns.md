@@ -84,52 +84,62 @@ uses only its explicit values.
 File-backed policy can use the same factory pattern. The test controls file I/O
 with a temporary directory and covers sunny, alternate, and rainy inputs.
 
+<!-- lclang-doc-case: capacity-scenarios -->
+
+`capacity.lclcfg`:
+
+<!-- lclang-doc-file: capacity.lclcfg -->
+```lclcfg
+requested: replicas * capacity_per_replica
+accepted: requested <= hard_limit
+decision: "accept" if accepted else "reject"
+```
+
+Run the following program beside the file:
+
 <!-- lclang-doc-exec -->
 ```python
 import asyncio
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 from lclang import EvaluationLimits, LclNameError
 from lclang.config import load_config
 
 
 async def main() -> None:
-    with TemporaryDirectory(prefix="lclang-production-tutorial-") as directory:
-        path = Path(directory) / "capacity.lclcfg"
-        path.write_text(
-            "requested: replicas * capacity_per_replica\n"
-            "accepted: requested <= hard_limit\n"
-            'decision: "accept" if accepted else "reject"\n',
-            encoding="utf-8",
-        )
-        config = await load_config(path)
-        factory = config.frame_factory(
-            limits=EvaluationLimits(max_collection_items=100)
-        )
+    directory = str(Path.cwd())
+    path = Path(directory) / "capacity.lclcfg"
+    config = await load_config(path)
+    factory = config.frame_factory(
+        limits=EvaluationLimits(max_collection_items=100)
+    )
 
-        scenarios = [
-            ({"replicas": 2, "capacity_per_replica": 20, "hard_limit": 100}, "accept"),
-            ({"replicas": 6, "capacity_per_replica": 20, "hard_limit": 100}, "reject"),
-        ]
-        for values, expected in scenarios:
-            async with factory.create(values=values) as frame:
-                assert await frame.get("decision") == expected
-                assert frame.inspect_variable("requested").definition is not None
+    scenarios = [
+        ({"replicas": 2, "capacity_per_replica": 20, "hard_limit": 100}, "accept"),
+        ({"replicas": 6, "capacity_per_replica": 20, "hard_limit": 100}, "reject"),
+    ]
+    for values, expected in scenarios:
+        async with factory.create(values=values) as frame:
+            assert await frame.get("decision") == expected
+            assert frame.inspect_variable("requested").definition is not None
 
-        async with factory.create(
-            values={"replicas": 2, "capacity_per_replica": 20}
-        ) as missing:
-            try:
-                await missing.get("decision")
-            except LclNameError as error:
-                assert "hard_limit" in str(error)
-            else:
-                raise AssertionError("missing host input was accepted")
+    async with factory.create(
+        values={"replicas": 2, "capacity_per_replica": 20}
+    ) as missing:
+        try:
+            await missing.get("decision")
+        except LclNameError as error:
+            assert "hard_limit" in str(error)
+        else:
+            raise AssertionError("missing host input was accepted")
 
 
 asyncio.run(main())
 ```
+
+The program completes without console output. Its assertions check the
+results and log contents described below.
+<!-- /lclang-doc-case -->
 
 The first scenario requests `40`, so `40 <= 100` selects `accept`. The second
 requests `120`, making the comparison false and selecting `reject`. The final

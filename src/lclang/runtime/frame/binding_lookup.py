@@ -9,6 +9,8 @@ from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
+from lclang.namespace_names import validate_namespace_conflicts
+from lclang.override_markers import RUNTIME_OVERRIDE, get_override_marker
 from lclang.types import FrameId
 
 if TYPE_CHECKING:
@@ -33,6 +35,8 @@ def local_binding_kind(frame: object, name: str) -> str | None:
     scoped = cast("Frame", frame)
     if name in scoped.module.definitions:
         definition_value = scoped.module.definitions[name]
+        if get_override_marker(definition_value) is RUNTIME_OVERRIDE:
+            return "host" if name in scoped.values else "runtime"
         return "proxy" if is_frame_proxy(definition_value) else "real"
     if name in scoped.values:
         host_value = scoped.values[name]
@@ -114,17 +118,23 @@ def select_binding(frame: object, name: str) -> BindingSelection:
     :raises ValueError: If mutable parents form a cycle.
     """
     inferred: BindingSelection | None = None
+    reservation: BindingSelection | None = None
     path: list[FrameId] = []
     for layer in walk_hierarchy(frame):
         current = layer
         path.append(current.frame_id)
         kind = local_binding_kind(current, name)
-        if kind == "proxy":
+        if kind == "runtime":
+            if reservation is None:
+                reservation = BindingSelection(current, kind, tuple(path))
+        elif kind == "proxy":
+            if name in current.module.namespace_names:
+                return BindingSelection(current, kind, tuple(path))
             if inferred is None:
                 inferred = BindingSelection(current, kind, tuple(path))
         elif kind is not None:
             return BindingSelection(current, kind, tuple(path))
-    if inferred is not None:
+    if inferred is not None and reservation is None:
         return inferred
     from lclang.runtime.frame.defaults import default_frame_for
 
@@ -138,7 +148,7 @@ def select_binding(frame: object, name: str) -> BindingSelection:
         )
         if not blocked and (kind := local_binding_kind(defaults, name)) is not None:
             return BindingSelection(defaults, kind, (*path, defaults.frame_id))
-    return BindingSelection(None, None, tuple(path))
+    return reservation if reservation is not None else BindingSelection(None, None, tuple(path))
 
 
 def find_scoped_factory(frame: object, name: str) -> ScopedProxyFactory | None:
@@ -202,6 +212,10 @@ def validate_frame_hierarchy(frame: object) -> None:
     :raises ValueError: If real ancestor/descendant keys coexist.
     """
     validate_real_conflicts(hierarchy_real_names(frame))
+    validate_namespace_conflicts(
+        (name for owner in walk_hierarchy(frame) for name in owner.module.namespace_names),
+        hierarchy_real_names(frame),
+    )
 
 
 def validate_mixin_tree(frame: object, values: Mapping[str, object]) -> None:
@@ -218,6 +232,10 @@ def validate_mixin_tree(frame: object, values: Mapping[str, object]) -> None:
         if bool(getattr(lifecycle, "closing", False) or getattr(lifecycle, "closed", False)):
             continue
         validate_real_conflicts(hierarchy_real_names(current, (frame, values)))
+        validate_namespace_conflicts(
+            (name for owner in walk_hierarchy(current) for name in owner.module.namespace_names),
+            hierarchy_real_names(current, (frame, values)),
+        )
         pending.extend(tuple(current._children))
 
 

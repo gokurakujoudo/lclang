@@ -24,7 +24,7 @@ class LclConfigVersionError(LclConfigError):
 
 
 class LclConfigUsingError(LclConfigError):
-    """Report failure to resolve or retrieve a `using` target.
+    """Report failure to resolve or retrieve a configuration file target.
 
     .. note::
        The stable default code is ``LCL4201``.
@@ -34,7 +34,7 @@ class LclConfigUsingError(LclConfigError):
 
 
 class LclConfigCycleError(LclConfigUsingError):
-    """Report a recursive `using` expansion cycle.
+    """Report a recursive configuration file expansion cycle.
 
     .. note::
        The stable default code is ``LCL4202``.

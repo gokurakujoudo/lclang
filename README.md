@@ -238,6 +238,12 @@ between it and the final address. Definitions can refer forward or backward.
 definitions win, and complete history remains available for diagnostics.
 `using?` skips a directly missing optional file while preserving errors in
 existing files. Both declarations share the same target and expansion rules.
+`import` and `import?` expand an independent child context under a required
+static alias, such as `import f"{__dir__}/pricing.lclcfg" as pricing`.
+References to child definitions become `pricing.*`; undeclared inputs remain
+external. Repeated aliases merge fields, and existing empty files reserve empty
+namespaces. Use `f"{__dir__}/..."` for every introduction to make its defining
+directory explicit.
 Targets may be literal paths or position-sensitive LCL f-strings. A dynamic
 target sees definitions already expanded above it, explicit loader or CLI
 overrides, and canonical builtins such as `env`; its temporary evaluation cache
@@ -259,7 +265,14 @@ async def address_for(environment: str) -> str:
 
 Loading is asynchronous, UTF-8, bounded by configurable limits, cycle-aware,
 and concurrency-sharing. It performs no globbing or network access. Only
-dynamic `using` f-strings evaluate during composition.
+dynamic file-target f-strings evaluate during composition.
+
+`NEED_OVERRIDE` requires an actual replacement definition, while
+`RUNTIME_OVERRIDE` also accepts runtime inputs. Both fail lazily when unfilled.
+`Module.mixin()` composes replacement definitions into a new immutable Module;
+`Frame.mixin()` supplies host values. The
+[configuration composition tutorial](docs/tutorials/17-configuration-composition.md)
+explains precedence, isolation, overrides, and common mistakes.
 
 For readable configuration, keep definitions from one scope on consecutive
 rows, separate functional or scope groups with a blank line, and describe rows
@@ -288,7 +301,10 @@ print("\n".join(tree.to_lines()))
 
 Syntax, name, evaluation, circular-dependency, closed-Frame, and configuration
 failures use specific `LclError` subclasses. Source-aware errors retain the
-variable evaluation stack so application boundaries can report useful context.
+complete loading and evaluation stacks, source excerpts, and snapshots of values
+already read. The multiline English display preserves original causes and
+tracebacks without performing another evaluation. Exact-name masks protect
+expressions and captured values, including masked function arguments.
 
 ### Async-first evaluation
 

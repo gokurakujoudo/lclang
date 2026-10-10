@@ -10,6 +10,7 @@ from lclang.api import (
     define_module,
 )
 from lclang.ast import LclAstNode, LclConstant, LclName, LclTuple, LclVisitor
+from lclang.error_context import ConfigLoadFrame, DiagnosticValue, EvaluationContextFrame
 from lclang.errors import (
     LclCircularDependencyError,
     LclCliError,
@@ -22,6 +23,7 @@ from lclang.errors import (
     LclSyntaxError,
 )
 from lclang.lang import parse_expression, to_source
+from lclang.override_markers import NEED_OVERRIDE, RUNTIME_OVERRIDE, OverrideMarker
 from lclang.records import LclRecord
 from lclang.runtime import (
     FRAME_PROXY,
@@ -34,7 +36,7 @@ from lclang.runtime import (
     Module,
     Preset,
 )
-from lclang.source import SourceOrigin, SourcePosition, SourceSpan
+from lclang.source import SourceOrigin, SourcePosition, SourceSnapshot, SourceSpan
 from lclang.stdlib import STANDARD_PRESET
 from lclang.types import FrameId, ModuleName, SourceName, VarName
 from lclang.version import LCL_V1, LanguageVersion
@@ -73,12 +75,19 @@ __all__ = [
     "ModuleName",
     "Module",
     "NO_FALLBACK",
+    "NEED_OVERRIDE",
+    "RUNTIME_OVERRIDE",
+    "OverrideMarker",
     "Preset",
     "STANDARD_PRESET",
     "SourceName",
     "SourceOrigin",
     "SourcePosition",
     "SourceSpan",
+    "SourceSnapshot",
+    "ConfigLoadFrame",
+    "DiagnosticValue",
+    "EvaluationContextFrame",
     "VarName",
     "__version__",
     "define_frame",

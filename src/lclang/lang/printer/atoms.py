@@ -11,6 +11,7 @@ from lclang.ast import (
     LclStringText,
 )
 from lclang.lang.printer._types import Render, RenderResult
+from lclang.override_markers import OverrideMarker
 from lclang.scopes import FRAME_PROXY
 
 # Unitless precedence 100 matches atomic expressions in the parser; the highest rank avoids
@@ -50,6 +51,8 @@ def internal_constant(value: object) -> str:
     """
     if value is FRAME_PROXY:
         return "FRAME_PROXY"
+    if isinstance(value, OverrideMarker):
+        return value.value
     if value is None:
         return "None"
     if value is True:

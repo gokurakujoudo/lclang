@@ -184,7 +184,7 @@ def test_inspection_is_read_only_and_reports_missing_and_cycles_as_leaves() -> N
     assert isinstance(missing.current_exception, LclNameError)
     assert repr(missing) == (
         "missing@frame-app: <missing> (NotEvaluated) "
-        "LclNameError: [LCL2001] unknown variable: missing"
+        "LclNameError: Error in resolving a variable [LCL2001]:\\nCause: unknown variable: missing"
     )
     produced = tree.dependencies[2]
     assert produced.status is VariableInspectionStatus.NOT_EVALUATED

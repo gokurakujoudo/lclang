@@ -39,6 +39,7 @@ async def internal_evaluate_error_form(
         message = str(value) or "raised LCL value"
         error = LclEvaluationError(message, span=node.span)
         if isinstance(value, BaseException):
+            error.freeze_native_cause(value)
             raise error from value
         raise error
     if isinstance(node, LclAssert):
@@ -153,5 +154,8 @@ def internal_wrap_failure(error: Exception, span: SourceSpan) -> LclEvaluationEr
        The wrapper formats the original type name and message without changing
        the original exception object.
     """
-    message = f"{type(error).__name__}: {error}"
-    return LclEvaluationError(message, span=span)
+    wrapped = LclEvaluationError(type(error).__name__, span=span)
+    wrapped.freeze_native_cause(error)
+    wrapped.message = wrapped.native_cause or type(error).__name__
+    wrapped.args = (wrapped.message,)
+    return wrapped

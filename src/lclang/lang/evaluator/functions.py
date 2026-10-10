@@ -7,10 +7,12 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 
 from lclang.ast import LclAstNode, LclFunction
+from lclang.diagnostics import ACTIVE_MASKED_VALUE, internal_masked_scope
 from lclang.errors import LclEvaluationError
 from lclang.lang.evaluator._types import EvaluateNode
 from lclang.lang.evaluator.context import Resolver, ScopedResolver
 from lclang.lang.evaluator.definition_context import active_definition, definition_scope
+from lclang.lang.evaluator.evaluation_context import collect_evaluation_context
 from lclang.lang.evaluator.function_arguments import (
     BoundParameter,
     bind_arguments,
@@ -39,6 +41,7 @@ class LclFunctionValue:
     :param definition_name: Optional lexical Frame definition owner.
     :param source: Original function node retained for canonical representation.
     :param internal_evaluate: Recursive evaluator retained by the closure.
+    :param masked: Whether the defining name protects invocation diagnostics.
 
     .. note::
        Calls are async, task-safe, and deliberately non-recursive in LCL V1.
@@ -51,6 +54,7 @@ class LclFunctionValue:
     definition_name: str | None
     source: LclFunction
     internal_evaluate: EvaluateNode
+    masked: bool = False
 
     def __repr__(self) -> str:
         """Return the canonical LCL function expression.
@@ -84,7 +88,13 @@ class LclFunctionValue:
                 if self.definition_name is not None
                 else nullcontext()
             )
-            with scope:
+            with (
+                scope,
+                internal_masked_scope(self.masked),
+                collect_evaluation_context(
+                    self.definition_name or "<function>", self.body, kind="function"
+                ),
+            ):
                 return await self.internal_evaluate(self.body, resolver)
         finally:
             _ACTIVE_FUNCTIONS.reset(token)
@@ -115,4 +125,5 @@ async def create_function(
         active_definition(),
         node,
         evaluate,
+        ACTIVE_MASKED_VALUE.get(),
     )

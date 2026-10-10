@@ -187,7 +187,7 @@ async def test_dynamic_using_validates_overrides_masks_and_evaluated_type(
     declaration = parse_config('using f"chosen.lclcfg"\n').declarations[0]
     assert isinstance(declaration, ConfigUsing)
 
-    async def wrong_result(*args: object) -> object:
+    async def wrong_result(*args: object, **kwargs: object) -> object:
         return 1
 
     monkeypatch.setattr("lclang.config.using.evaluate_target_expression", wrong_result)

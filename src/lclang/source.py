@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from lclang.types import SourceName
@@ -54,13 +54,36 @@ class SourcePosition:
 
 
 @dataclass(frozen=True, slots=True)
+class SourceSnapshot:
+    """Retain parsed Unicode source without reopening its original file.
+
+    :param text: Original complete source or independently parsed fragment.
+    :param start: Physical position corresponding to the first character.
+    :raises TypeError: If text or start has an unsupported type.
+    """
+
+    text: str
+    start: SourcePosition
+
+    def __post_init__(self) -> None:
+        """Validate detached source metadata.
+
+        :raises TypeError: If text or start has an unsupported type.
+        """
+        if not isinstance(self.text, str) or not isinstance(self.start, SourcePosition):
+            raise TypeError("source snapshot requires text and a SourcePosition")
+
+
+@dataclass(frozen=True, slots=True)
 class SourceSpan:
     """Represent a half-open source range within one origin.
 
     :param origin: Source containing the range.
     :param start: Inclusive first position.
     :param end: Exclusive final position.
+    :param snapshot: Optional immutable parsed source, excluded from position equality.
     :raises ValueError: If the end precedes the start.
+    :raises TypeError: If snapshot is neither a SourceSnapshot nor None.
 
     .. note::
        Empty spans are valid when *start* and *end* are equal.
@@ -69,14 +92,18 @@ class SourceSpan:
     origin: SourceOrigin
     start: SourcePosition
     end: SourcePosition
+    snapshot: SourceSnapshot | None = field(default=None, kw_only=True, compare=False, repr=False)
 
     def __post_init__(self) -> None:
         """Reject ranges whose offsets run backwards.
 
         :raises ValueError: If the end offset precedes the start offset.
+        :raises TypeError: If snapshot has an unsupported type.
         """
         if self.end.offset < self.start.offset:
             raise ValueError("source span end cannot precede its start")
+        if self.snapshot is not None and not isinstance(self.snapshot, SourceSnapshot):
+            raise TypeError("source span snapshot must be a SourceSnapshot or None")
 
 
 # Defaults below are internal source-less sentinels, not measured positions in an input.
@@ -105,4 +132,31 @@ def merge_source_spans(first: SourceSpan, last: SourceSpan) -> SourceSpan:
     :returns: Span covering both endpoints and intervening source text.
     :raises ValueError: If the final end precedes the initial start.
     """
-    return SourceSpan(first.origin, first.start, last.end)
+    return SourceSpan(first.origin, first.start, last.end, snapshot=first.snapshot)
+
+
+def advance_source_position(start: SourcePosition, prefix: str) -> SourcePosition:
+    """Advance Unicode coordinates through original physical source text.
+
+    :param start: Physical position before the source prefix.
+    :param prefix: Original text, including retained CRLF or other newlines.
+    :returns: Position after the prefix; CRLF consumes two offsets and one line.
+    """
+    line, column, offset = start.line, start.column, start.offset
+    index = 0
+    while index < len(prefix):
+        if prefix[index : index + 2] == "\r\n":
+            index += 2
+            offset += 2
+            line += 1
+            column = 1
+        elif prefix[index] in "\r\n":
+            index += 1
+            offset += 1
+            line += 1
+            column = 1
+        else:
+            index += 1
+            offset += 1
+            column += 1
+    return SourcePosition(line, column, offset)

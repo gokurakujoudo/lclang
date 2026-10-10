@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from dataclasses import replace
 
+from lclang.error_rendering import render_failure
 from lclang.runtime import Frame
 from lclang.types import TaskID
 from lclang.workflow.context import WorkflowExecutionContext
@@ -62,8 +63,8 @@ def log_task_error(
     :param error: Original or synthetic ordinary exception.
     """
     context.logger.error(
-        "task error: [%s] %s",
-        branch_text(branch),
+        "%s\n  task status: %s",
+        render_failure(error, action=f"running workflow task {branch_text(branch)!r}"),
         status.value,
         exc_info=(type(error), error, error.__traceback__),
     )

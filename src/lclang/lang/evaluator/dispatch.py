@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sized
-from typing import cast
+from typing import Literal, cast
 
 from lclang.ast import (
     LclAssert,
@@ -56,12 +56,18 @@ from lclang.lang.evaluator.contexts import internal_evaluate_with
 from lclang.lang.evaluator.definition_context import active_definition_stack
 from lclang.lang.evaluator.displays import internal_evaluate_display
 from lclang.lang.evaluator.errors import internal_evaluate_error_form, internal_wrap_failure
+from lclang.lang.evaluator.evaluation_context import (
+    capture_evaluation_context,
+    collect_evaluation_context,
+    record_value_read,
+)
 from lclang.lang.evaluator.fstrings import internal_evaluate_joined
 from lclang.lang.evaluator.functions import create_function
 from lclang.lang.evaluator.logical import internal_evaluate_logical
 from lclang.lang.evaluator.operations import internal_evaluate_operation
 from lclang.lang.evaluator.primaries import internal_evaluate_primary
 from lclang.lang.printer import to_source
+from lclang.override_markers import get_override_marker
 
 type ResolverSource = Resolver | Mapping[str, object] | None
 
@@ -80,7 +86,12 @@ async def interpret_expression(node: LclAstNode, resolver: ResolverSource = None
        every result is recursively auto-awaited.
     """
     try:
-        result = await internal_evaluate(node, internal_coerce_resolver(resolver))
+        name = active_definition_stack()[-1] if active_definition_stack() else "<expr>"
+        kind: Literal["definition", "function", "target"] = (
+            "target" if name == "using_target" else "definition"
+        )
+        with collect_evaluation_context(name, node, kind=kind):
+            result = await internal_evaluate(node, internal_coerce_resolver(resolver))
     except BaseException as error:
         if internal_verbose_enabled():
             definition = " -> ".join(active_definition_stack()) or "<direct>"
@@ -139,10 +150,13 @@ async def internal_evaluate(node: LclAstNode, resolver: Resolver) -> object:
         return await internal_evaluate_node(node, resolver)
     except LclError as error:
         error.attach_variable_stack(active_definition_stack())
+        if not error.evaluation_context:
+            error.attach_evaluation_context(capture_evaluation_context())
         raise
     except Exception as error:
         wrapped = internal_wrap_failure(error, node.span)
         wrapped.attach_variable_stack(active_definition_stack())
+        wrapped.attach_evaluation_context(capture_evaluation_context())
         raise wrapped from error
     finally:
         internal_leave_node(token)
@@ -161,6 +175,9 @@ async def internal_evaluate_node(node: LclAstNode, resolver: Resolver) -> object
        materialized, while all other values pass directly through unchanged.
     """
     if isinstance(node, LclConstant):
+        if get_override_marker(node) is not None:
+            name = active_definition_stack()[-1] if active_definition_stack() else "<expr>"
+            raise LclEvaluationError(f"{name} needs a value", span=node.span)
         result = node.value
     elif isinstance(node, LclName):
         result = await resolver.resolve(node.identifier, span=node.span)
@@ -195,6 +212,8 @@ async def internal_evaluate_node(node: LclAstNode, resolver: Resolver) -> object
         name = type(node).__name__
         raise LclEvaluationError(f"unsupported AST node: {name}", span=node.span)
     resolved = await resolve_awaitable(result)
+    if isinstance(node, LclName):
+        record_value_read(str(node.identifier), resolved, node.span)
     if isinstance(node, LclRecordDisplay):
         internal_check_collection(len(node.fields), node.span)
     elif isinstance(

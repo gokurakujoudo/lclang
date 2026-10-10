@@ -24,6 +24,10 @@ runtime dependencies.
   `define_module`, `define_frame`, and named Frame results.
 - Immutable Modules, Presets, standard hierarchy, Frame factories, child Frames,
   and controlled host-value overlays.
+- Immutable right-biased `Module.mixin()` composition with stable name order,
+  sticky masks, namespace reservations, and structural validation.
+- Lazy complete-expression `NEED_OVERRIDE` and `RUNTIME_OVERRIDE` markers,
+  distinguishing required replacement definitions from runtime-provided values.
 - Exact-name trailing-bang masking metadata across binding sources, hierarchy
   overrides, verbose diagnostics, and inspection rendering.
 - Qualified scoped bindings with lazy Frame proxies across Modules, presets,
@@ -48,6 +52,9 @@ runtime dependencies.
   deterministic precedence, caching, concurrency sharing, and cycle detection.
 - Optional `using?` expansion for missing literal or f-string targets, while
   preserving errors in existing files and retrying absent sources on reuse.
+- Independent `import` and `import?` subtrees with static qualified aliases,
+  scope-aware free-reference qualification, field merging, and empty namespaces.
+- Explicit defining-directory targets in documentation with `f"{__dir__}/..."`.
 - Position-sensitive f-string `using` targets evaluated from prior definitions,
   call or CLI overrides, and canonical builtins in disposable Frames.
 - Direct conversion from loaded configuration to runtime Module and Frame
@@ -64,6 +71,9 @@ runtime dependencies.
 - Non-evaluating definition lookup and variable trees with cache state, owners,
   typed values, failures, native values, canonical AST/function rendering, and
   evaluation stacks.
+- Multiline English diagnostics with complete file and evaluation routes,
+  immutable source excerpts, and protected snapshots of already-read values.
+  Failure caches preserve their first scene; rendering never evaluates or reads files.
 
 ## Standard utilities
 

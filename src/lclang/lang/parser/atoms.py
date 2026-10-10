@@ -11,6 +11,7 @@ from lclang.lang.lexer import TokenKind
 from lclang.lang.parser.displays import parse_display
 from lclang.lang.parser.fstrings import internal_parse_fstring
 from lclang.lang.parser.stream import TokenStream
+from lclang.override_markers import OverrideMarker
 from lclang.scopes import FRAME_PROXY
 from lclang.source import merge_source_spans
 from lclang.types import VarName
@@ -58,6 +59,8 @@ def parse_atom(
         stream.advance()
         if token.lexeme == "FRAME_PROXY":
             return LclConstant(value=FRAME_PROXY, span=token.span)
+        if token.lexeme in OverrideMarker.__members__:
+            return LclConstant(value=OverrideMarker[token.lexeme], span=token.span)
         return LclName(identifier=VarName(token.lexeme), span=token.span)
     if token.kind in {TokenKind.LPAREN, TokenKind.LBRACKET, TokenKind.LBRACE}:
         clause_parser = parse_nested if parse_nonconditional is None else parse_nonconditional

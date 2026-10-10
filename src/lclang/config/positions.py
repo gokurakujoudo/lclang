@@ -1,6 +1,6 @@
 """Small source-coordinate helpers for configuration parsing."""
 
-from lclang.source import SourceOrigin, SourcePosition, SourceSpan
+from lclang.source import SourceOrigin, SourcePosition, SourceSpan, advance_source_position
 
 
 def advance_position(start: SourcePosition, prefix: str) -> SourcePosition:
@@ -13,26 +13,7 @@ def advance_position(start: SourcePosition, prefix: str) -> SourcePosition:
     .. note::
        CRLF advances two offsets while counting as one physical newline.
     """
-    line = start.line
-    column = start.column
-    offset = start.offset
-    index = 0
-    while index < len(prefix):
-        if prefix[index : index + 2] == "\r\n":
-            index += 2
-            offset += 2
-            line += 1
-            column = 1
-        elif prefix[index] in "\r\n":
-            index += 1
-            offset += 1
-            line += 1
-            column = 1
-        else:
-            index += 1
-            offset += 1
-            column += 1
-    return SourcePosition(line, column, offset)
+    return advance_source_position(start, prefix)
 
 
 def physical_end(item: tuple[str, str, int, int]) -> SourcePosition:

@@ -76,13 +76,25 @@ The next command loads derived text from a temporary config, overrides one
 dependency, and asks the handler to describe rather than perform its side
 effect.
 
+<!-- lclang-doc-case: message-preview -->
+
+`message.lclcfg`:
+
+<!-- lclang-doc-file: message.lclcfg -->
+```lclcfg
+prefix: 'Hello'
+target: 'world'
+message: f"{prefix}, {target}!"
+```
+
+Run the following program beside the file:
+
 <!-- lclang-doc-exec -->
 ```python
 import asyncio
 import io
 from contextlib import redirect_stdout
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 from lclang.cli import (
     CliContext,
@@ -105,41 +117,44 @@ async def send_command(context: CliContext) -> CliResult:
 
 
 async def main() -> None:
-    with TemporaryDirectory(prefix="lclang-cli-tutorial-") as directory:
-        path = Path(directory) / "message.lclcfg"
-        path.write_text(
-            "prefix: 'Hello'\n"
-            "target: 'world'\n"
-            'message: f"{prefix}, {target}!"\n',
-            encoding="utf-8",
+    directory = str(Path.cwd())
+    path = Path(directory) / "message.lclcfg"
+    application = CliEntrance(
+        CommandGroup("root", "Messaging", [send_command]),
+        version="1.0.0",
+    )
+    output = io.StringIO()
+    with redirect_stdout(output):
+        status = await application.run(
+            [
+                "python",
+                "message.py",
+                "send",
+                "--config",
+                str(path),
+                "--override",
+                "message",
+                "LCL[prefix + ', team!']",
+                "--dryrun",
+            ]
         )
-        application = CliEntrance(
-            CommandGroup("root", "Messaging", [send_command]),
-            version="1.0.0",
-        )
-        output = io.StringIO()
-        with redirect_stdout(output):
-            status = await application.run(
-                [
-                    "python",
-                    "message.py",
-                    "send",
-                    "--config",
-                    str(path),
-                    "--override",
-                    "message",
-                    "LCL[prefix + ', team!']",
-                    "--dryrun",
-                ]
-            )
-        assert status == 0, output.getvalue()
-        assert output.getvalue() == "would send: Hello, team!\n", repr(
-            output.getvalue()
-        )
+    assert status == 0, output.getvalue()
+    assert output.getvalue() == "would send: Hello, team!\n", repr(
+        output.getvalue()
+    )
+    print(output.getvalue(), end="")
 
 
 asyncio.run(main())
 ```
+
+The program prints:
+
+<!-- lclang-doc-output: stdout -->
+```text
+would send: Hello, team!
+```
+<!-- /lclang-doc-case -->
 
 The config first defines `prefix`, `target`, and a derived `message`. The lazy
 CLI override replaces the whole `message` definition and reads `prefix` from

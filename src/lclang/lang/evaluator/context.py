@@ -13,6 +13,7 @@ from lclang.diagnostics import (
 )
 from lclang.errors import LclNameError
 from lclang.lang.evaluator.awaitables import resolve_awaitable
+from lclang.lang.evaluator.evaluation_context import record_value_read
 from lclang.masking import normalize_masked_mapping
 from lclang.source import SourceSpan
 from lclang.types import VarName
@@ -84,7 +85,9 @@ class MappingResolver:
                 internal_trace("lookup", f"name={str(name)!r} source=missing")
             raise LclNameError(f"unknown variable: {name}", span=span) from None
         if not internal_verbose_enabled():
-            return selected
+            result = await resolve_awaitable(selected)
+            record_value_read(str(name), result, span, masked=masked)
+            return result
         try:
             result = await resolve_awaitable(selected)
         except BaseException as error:

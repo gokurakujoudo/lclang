@@ -3,6 +3,8 @@
 import re
 from pathlib import Path
 
+from tests.documentation.cases import strip_file_cases
+
 # Repository location and unitless marker shared by all ordinary Python examples.
 ROOT = Path(__file__).resolve().parents[2]
 EXECUTION_MARKER = "<!-- lclang-doc-exec -->"
@@ -10,6 +12,7 @@ EXECUTION_MARKER = "<!-- lclang-doc-exec -->"
 
 def marked_blocks(text: str, marker: str = EXECUTION_MARKER, language: str = "python") -> list[str]:
     """Extract exact fenced source and reject misplaced or dangling markers."""
+    text = strip_file_cases(text)
     pattern = re.escape(marker) + r"\s*```" + re.escape(language) + r"[ \t]*\n(.*?)^```[ \t]*$"
     blocks = re.findall(pattern, text, flags=re.MULTILINE | re.DOTALL)
     assert len(blocks) == text.count(marker), f"malformed {marker} block"

@@ -12,6 +12,7 @@ from lclang.cli.commands import Command
 from lclang.cli.context import CliContext
 from lclang.cli.models import CliConfig, CliParams, CliResult, CliResultStatus
 from lclang.diagnostics import internal_verbose_scope
+from lclang.error_rendering import render_failure
 from lclang.logger import Logger, resolve_logger_config, use_logger, use_logger_handler
 from lclang.logger.formatter import FILE_ONLY_ATTRIBUTE
 
@@ -56,8 +57,9 @@ async def run_bound_command(
         if not isinstance(result, CliResult):
             raise TypeError("CLI command handler must return CliResult")
     except Exception as error:
-        logger.exception("command exception: %s", error)
-        result = CliResult(CliResultStatus.EXCEPTION, str(error))
+        diagnostic = render_failure(error, action="executing command")
+        logger.exception("%s", diagnostic)
+        result = CliResult(CliResultStatus.EXCEPTION, diagnostic)
         logged = True
     except BaseException:
         with suppress(Exception):
@@ -66,14 +68,16 @@ async def run_bound_command(
     try:
         await binding.stack.close()
     except Exception as error:
-        logger.exception("command cleanup exception: %s", error)
-        result = CliResult(CliResultStatus.EXCEPTION, str(error))
+        diagnostic = render_failure(error, action="cleaning up command")
+        logger.exception("%s", diagnostic)
+        result = CliResult(CliResultStatus.EXCEPTION, diagnostic)
         logged = True
     try:
         write_result(result, logger, log_result=not logged)
     except Exception as error:
-        logger.exception("command output exception: %s", error)
-        result = CliResult(CliResultStatus.EXCEPTION, str(error))
+        diagnostic = render_failure(error, action="writing command output")
+        logger.exception("%s", diagnostic)
+        result = CliResult(CliResultStatus.EXCEPTION, diagnostic)
     return int(result.result_status)
 
 
@@ -86,7 +90,9 @@ async def execute_command(command: Command, params: object, cli_config: CliConfi
     :returns: Process-compatible status after complete output drain.
     """
     if not isinstance(params, CliParams):
-        print("error: internal CLI params type mismatch", file=sys.stderr)
+        print(
+            "Error in executing command:\nCause: CLI parameters must be CliParams", file=sys.stderr
+        )
         return int(CliResultStatus.EXCEPTION)
     binding: CliBinding | None = None
     try:
@@ -97,7 +103,8 @@ async def execute_command(command: Command, params: object, cli_config: CliConfi
             with internal_verbose_scope(logging.getLogger(__name__) if params.verbose else None):
                 return await run_bound_command(command, params, binding, logger)
     except Exception as error:
-        print(f"error: {error}", file=sys.stderr)
+        diagnostic = render_failure(error, action="executing command")
+        print(diagnostic, file=sys.stderr)
         return int(CliResultStatus.EXCEPTION)
     finally:
         if binding is not None:

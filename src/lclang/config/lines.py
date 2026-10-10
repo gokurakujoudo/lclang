@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from lclang.config.errors import LclConfigSyntaxError
 from lclang.config.positions import end_position, physical_end, span_for_physical
-from lclang.source import SourceOrigin, SourcePosition, SourceSpan
+from lclang.source import SourceOrigin, SourcePosition, SourceSnapshot, SourceSpan
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,6 +40,7 @@ def scan_logical_lines(text: str, origin: SourceOrigin) -> tuple[LogicalLine, ..
        Blank lines are ignored only outside active continuation chains.
     """
     physical = split_physical_lines(text)
+    snapshot = SourceSnapshot(text, SourcePosition(1, 1, 0))
     output: list[LogicalLine] = []
     index = 0
     while index < len(physical):
@@ -56,14 +57,14 @@ def scan_logical_lines(text: str, origin: SourceOrigin) -> tuple[LogicalLine, ..
             if index >= len(physical):
                 raise LclConfigSyntaxError(
                     "continued definition requires another physical line",
-                    span=SourceSpan(origin, start, end_position(text)),
+                    span=SourceSpan(origin, start, end_position(text), snapshot=snapshot),
                 )
             content, newline, _, _ = physical[index]
             masked, marker = mask_physical_line(content)
             if not masked.strip():
                 raise LclConfigSyntaxError(
                     "blank or comment-only continuation fragment",
-                    span=span_for_physical(origin, physical[index]),
+                    span=replace(span_for_physical(origin, physical[index]), snapshot=snapshot),
                 )
             pieces.append(masked + newline)
         final = physical[index]
@@ -71,7 +72,7 @@ def scan_logical_lines(text: str, origin: SourceOrigin) -> tuple[LogicalLine, ..
             LogicalLine(
                 "".join(pieces),
                 start,
-                SourceSpan(origin, start, physical_end(final)),
+                SourceSpan(origin, start, physical_end(final), snapshot=snapshot),
                 continued,
             )
         )

@@ -12,6 +12,7 @@ from lclang.config.declarations import (
 )
 from lclang.config.errors import LclConfigSyntaxError, LclConfigVersionError
 from lclang.config.expressions import parse_config_expression
+from lclang.config.imports import parse_import
 from lclang.config.lines import LogicalLine, scan_logical_lines
 from lclang.config.model import ConfigDeclaration, ConfigDefinition, ConfigDocument
 from lclang.config.positions import advance_position
@@ -80,8 +81,11 @@ def parse_document(text: str, origin: SourceOrigin) -> ConfigDocument:
             continue
         meaningful_seen = True
         using_end = 6 if stripped.startswith("using?") else 5
+        import_end = 7 if stripped.startswith("import?") else 6
         if stripped.startswith("using") and following_boundary(stripped, using_end):
             declarations.append(parse_using(line, leading, len(declarations), origin))
+        elif stripped.startswith("import") and following_boundary(stripped, import_end):
+            declarations.append(parse_import(line, leading, len(declarations), origin))
         else:
             declarations.append(parse_definition(line, leading, len(declarations), origin))
     return ConfigDocument(origin, version, tuple(declarations))
@@ -120,7 +124,9 @@ def parse_definition(
         raise LclConfigSyntaxError("definition requires an expression", span=line.span)
     start = advance_position(line.start, line.text[: colon + 1])
     with internal_masked_scope(masked):
-        expression = parse_config_expression(expression_text, origin=origin, start=start)
+        expression = parse_config_expression(
+            expression_text, origin=origin, start=start, snapshot=line.span.snapshot
+        )
     return ConfigDefinition(VarName(name), expression, line.span, ordinal, masked)
 
 

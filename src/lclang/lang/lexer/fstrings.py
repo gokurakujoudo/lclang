@@ -55,6 +55,7 @@ class InternalFStringScanner:
            Triple-quoted delimiters are detected before scanning any fields.
         """
         self.text = text
+        self.quote_at = quote_at
         self.raw = raw
         self.quote = text[quote_at]
         self.triple = text.startswith(self.quote * 3, quote_at)
@@ -166,7 +167,9 @@ class InternalFStringScanner:
             if character == "#":
                 raise FStringScanError("comment in f-string expression", self.cursor + 1)
             self.cursor += 1
-        expression = self.text[start : self.cursor].strip()
+        original = self.text[start : self.cursor]
+        expression = original.strip()
+        expression_offset = start - self.quote_at + len(original) - len(original.lstrip())
         if not expression:
             raise FStringScanError("empty f-string expression", self.cursor + 1)
         if debug:
@@ -182,7 +185,9 @@ class InternalFStringScanner:
         else:
             end = min(self.cursor + 1, len(self.text))
             raise FStringScanError("unterminated f-string field", end)
-        return FStringField(expression, conversion, format_spec, debug)
+        return FStringField(
+            expression, conversion, format_spec, debug, expression_offset=expression_offset
+        )
 
     def internal_conversion(self) -> str | None:
         """Read an optional field conversion marker.

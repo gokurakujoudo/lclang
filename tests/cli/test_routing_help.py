@@ -85,7 +85,7 @@ def test_help_handles_empty_rows_and_wraps_usage_errors() -> None:
     help_text = render_group_help("tool.py", empty, (), True)
     assert "Commands:" in help_text
     combined = render_usage_error("bad", help_text)
-    assert combined.startswith("error: bad\n\nUsage:")
+    assert combined.startswith("Error in command-line usage:\nCause: bad\n\nUsage:")
 
     @cli.command(summary="")
     async def empty_command(context: CliContext) -> CliResult:

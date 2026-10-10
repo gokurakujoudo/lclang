@@ -149,7 +149,7 @@ class Frame:
         owner._lifecycle.ensure_open(None)
         if selected.kind == "proxy":
             raise LclEvaluationError(f"Frame proxy cannot be recalculated: {name}")
-        if name not in owner.module.definitions:
+        if selected.kind == "host" or name not in owner.module.definitions:
             raise LclEvaluationError(f"host binding cannot be recalculated: {name}")
         return await internal_refresh_definition(
             name,
@@ -231,7 +231,11 @@ class Frame:
         owner = find_frame(self, name)
         if owner is None:
             return None
-        return owner.module.definitions.get(name)
+        return (
+            None
+            if select_binding(self, name).kind == "host"
+            else owner.module.definitions.get(name)
+        )
 
     async def __aenter__(self) -> Self:
         """Enter an owned Frame lifecycle scope.

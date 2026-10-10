@@ -35,7 +35,9 @@ def parse_version(line: LogicalLine, leading: int, origin: SourceOrigin) -> int:
     value_text = line.text[colon + 1 :]
     start = advance_position(line.start, line.text[: colon + 1])
     try:
-        tokens = significant_tokens(scan_tokens(value_text, origin=origin, start=start))
+        tokens = significant_tokens(
+            scan_tokens(value_text, origin=origin, start=start, snapshot=line.span.snapshot)
+        )
     except LclSyntaxError as error:
         raise LclConfigVersionError(error.message, span=error.span) from error
     if len(tokens) != 2 or tokens[0].kind is not TokenKind.INTEGER:
@@ -50,6 +52,8 @@ def parse_using(
     leading: int,
     ordinal: int,
     origin: SourceOrigin,
+    *,
+    keyword: str = "using",
 ) -> ConfigUsing:
     """Parse one required or optional literal or f-string using declaration.
 
@@ -58,29 +62,36 @@ def parse_using(
     :param ordinal: Declaration position in the document.
     :param origin: Owning source origin.
     :returns: Immutable using declaration.
+    :param keyword: File-introduction keyword used for syntax and diagnostics.
     :raises LclConfigSyntaxError: If target syntax or suffix is invalid.
 
     .. note::
        Path resolution is deliberately deferred to the async loader.
     """
     if line.continued:
-        raise LclConfigSyntaxError("using declaration cannot continue", span=line.span)
-    optional = line.text[leading:].startswith("using?")
-    keyword_end = leading + (6 if optional else 5)
+        raise LclConfigSyntaxError(f"{keyword} declaration cannot continue", span=line.span)
+    optional = line.text[leading:].startswith(keyword + "?")
+    keyword_end = leading + len(keyword) + int(optional)
     target_text = line.text[keyword_end:]
     start = advance_position(line.start, line.text[:keyword_end])
-    expression = parse_config_expression(target_text, origin=origin, start=start)
+    expression = parse_config_expression(
+        target_text, origin=origin, start=start, snapshot=line.span.snapshot
+    )
     if isinstance(expression, LclConstant) and isinstance(expression.value, str):
         target = expression.value
         if not target:
-            raise LclConfigSyntaxError("using target must be non-empty text", span=expression.span)
+            raise LclConfigSyntaxError(
+                f"{keyword} target must be non-empty text", span=expression.span
+            )
         if Path(target).suffix != ".lclcfg":
-            raise LclConfigSyntaxError("using target must end in .lclcfg", span=expression.span)
+            raise LclConfigSyntaxError(
+                f"{keyword} target must end in .lclcfg", span=expression.span
+            )
         return ConfigUsing(target, line.span, ordinal, optional)
     if isinstance(expression, LclJoinedString):
         return ConfigUsing(expression, line.span, ordinal, optional)
     raise LclConfigSyntaxError(
-        "using requires exactly one string literal or f-string",
+        f"{keyword} requires exactly one string literal or f-string",
         span=expression.span,
     )
 

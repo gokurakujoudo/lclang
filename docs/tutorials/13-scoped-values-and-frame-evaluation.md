@@ -187,13 +187,28 @@ retains `<expr>` as its lexical `lhs()` owner.
 A configuration file may define dotted left-hand names directly. This complete
 example also applies a qualified CLI override.
 
+<!-- lclang-doc-case: scoped-cli-override -->
+
+`services.lclcfg`:
+
+<!-- lclang-doc-file: services.lclcfg -->
+```lclcfg
+# scope: service endpoint
+service.port: 8000 # Listener port
+service.owner: lhs() # Full winning key
+
+# scope: database capacity
+database.pool: 4 # Connection count
+```
+
+Run the following program beside the file:
+
 <!-- lclang-doc-exec -->
 ```python
 import asyncio
 import io
 from contextlib import redirect_stdout
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 from lclang.cli import CliContext, CliEntrance, CliResult, CommandGroup, cli
 
@@ -206,41 +221,41 @@ async def inspect_command(context: CliContext) -> CliResult:
 
 
 async def main() -> None:
-    with TemporaryDirectory(prefix="lclang-scopes-tutorial-") as directory:
-        path = Path(directory) / "services.lclcfg"
-        path.write_text(
-            "# scope: service endpoint\n"
-            "service.port: 8000 # Listener port\n"
-            "service.owner: lhs() # Full winning key\n"
-            "\n"
-            "# scope: database capacity\n"
-            "database.pool: 4 # Connection count\n",
-            encoding="utf-8",
+    directory = str(Path.cwd())
+    path = Path(directory) / "services.lclcfg"
+    application = CliEntrance(
+        CommandGroup("root", "Scoped inspection", [inspect_command]),
+        version="1.0.0",
+    )
+    output = io.StringIO()
+    with redirect_stdout(output):
+        status = await application.run(
+            [
+                "python",
+                "inspect.py",
+                "inspect",
+                "--config",
+                str(path),
+                "-o",
+                "service.port",
+                "9440",
+            ]
         )
-        application = CliEntrance(
-            CommandGroup("root", "Scoped inspection", [inspect_command]),
-            version="1.0.0",
-        )
-        output = io.StringIO()
-        with redirect_stdout(output):
-            status = await application.run(
-                [
-                    "python",
-                    "inspect.py",
-                    "inspect",
-                    "--config",
-                    str(path),
-                    "-o",
-                    "service.port",
-                    "9440",
-                ]
-            )
-        assert status == 0
-        assert output.getvalue() == "service.owner: 9444\n"
+    assert status == 0
+    assert output.getvalue() == "service.owner: 9444\n"
+    print(output.getvalue(), end="")
 
 
 asyncio.run(main())
 ```
+
+The program prints:
+
+<!-- lclang-doc-output: stdout -->
+```text
+service.owner: 9444
+```
+<!-- /lclang-doc-case -->
 
 The qualified leaves infer both prefixes while the standalone comments explain
 their purpose. `lhs()` records the full winning key `service.owner`. The CLI

@@ -20,14 +20,14 @@ total: (base + \ # the next physical line continues
   3)
 
 # The target is a quoted path or semantic f-string.
-using "parts/common.lclcfg"
-using f"parts/{profile}.lclcfg"
-using? "parts/local.lclcfg"
-using? f"parts/{profile}-local.lclcfg"
+using f"{__dir__}/parts/common.lclcfg"
+using f"{__dir__}/parts/{profile}.lclcfg"
+using? f"{__dir__}/parts/local.lclcfg"
+using? f"{__dir__}/parts/{profile}-local.lclcfg"
 ```
 
 Blank lines and full-line comments are ignored. A trailing `#` comment is valid
-after version metadata, a definition, a continuation marker, `using`, or `using?`. A
+after version metadata, a definition, a continuation marker, or any file introduction. A
 backslash outside literals is the only continuation mechanism; open `()`, `[]`,
 or `{}` never continues a definition by itself. Blank and comment-only lines are
 not valid inside a continuation chain.
@@ -78,11 +78,17 @@ They are not runtime variables or dependency edges. A definition expanded from
 a child file retains that child's values. Pathless `parse_config` calls reject
 these magic values.
 
-Every root and `using` target ends exactly in `.lclcfg`. Absolute targets are
-used directly; relative targets resolve from the importing file's directory.
-A quoted target beginning with `__dir__/` explicitly starts there and may use
-any number of `..` components. The optional filesystem `allowed_root` policy can
-reject the resulting path after normalization.
+Start every `using`, `using?`, `import`, and `import?` target with
+`f"{__dir__}/..."`. The defining file's directory is then explicit at each
+introduction, including nested files. For example,
+`import f"{__dir__}/services/pricing.lclcfg" as pricing` loads a sibling module,
+and `using f"{__dir__}/../shared.lclcfg"` loads a file in the parent directory.
+
+Every root and introduction target ends exactly in `.lclcfg`. Absolute targets
+are used directly. Existing relative targets still resolve from the importing
+file's directory; the legacy literal `__dir__/` prefix is also supported.
+The optional filesystem `allowed_root` policy can reject a resulting path
+after normalization.
 
 Files decode as UTF-8; a BOM is accepted only at byte zero. Loading performs no
 globbing or network access. A `using` target may be a literal string or an LCL
@@ -90,6 +96,34 @@ f-string and must evaluate to non-empty text ending in `.lclcfg`; other target
 expression forms are rejected.
 
 ## Expansion and precedence
+
+Named imports use `import f"{__dir__}/part.lclcfg" as module`, or `import?` when the
+direct target may be absent. The alias may be a qualified name. An imported
+file expands in its own configuration context; it cannot read preceding
+definitions from the importing file. Explicit loading overrides and builtins
+remain available. Its complete subtree is validated before insertion.
+
+Imported definition names and free references to locally defined roots receive
+the alias prefix. Undeclared references remain external inputs. Function
+parameters and other lexical bindings keep their original names. Repeated
+imports into an alias merge fields in source order; an empty existing file still
+establishes the namespace. An absent optional target establishes nothing.
+
+Qualification uses the complete expanded child subtree, so forward references
+to its definitions become local too. Existing inferred scopes and explicit
+empty namespaces count as local roots. Undeclared external names and function
+parameters retain their meanings. Each occurrence is qualified independently;
+introducing another file later cannot retroactively rewrite an external name.
+Physical file origins, positions, declaration history, and sticky masks remain
+attached to their original definitions. Namespaces and their ancestors cannot
+also be ordinary values. A later parent declaration cannot repair an invalid
+child subtree.
+
+`NEED_OVERRIDE` and `RUNTIME_OVERRIDE` are complete-definition placeholders.
+Both fail only when an unfilled value is requested. `NEED_OVERRIDE` requires a
+later configuration definition or CLI override. `RUNTIME_OVERRIDE` also accepts
+host inputs, including `None`; its declaration replaces an earlier configuration
+value rather than preserving that value as a default.
 
 `using` is C-style source-order expansion: the child's recursively expanded
 definitions are inserted at the declaration position. Every occurrence expands,
@@ -180,6 +214,23 @@ them as async context managers;
 from expanded declarations. The final value still follows ordinary
 last-definition-wins precedence; the mask flag is sticky across those
 overrides.
+
+`ConfigImport(target, span, ordinal, alias, optional=False)` is the immutable
+public import declaration. Its target shares `ConfigUsing`'s contract; the alias
+is a static qualified name and `optional` must be Boolean. `ConfigDeclaration`
+includes definitions, shared introductions, and independent imports.
+`Config.namespace_names` is a keyword-only frozenset, empty by default.
+`Config.to_module()` preserves those reservations. Empty-namespace proxy
+definitions are runtime metadata and do not appear in `Config.history`.
+
+Each expansion placement adds a detached `ConfigLoadFrame` to a copied
+diagnostic. Shared source tasks retain their original exceptions, so concurrent
+callers keep independent loading routes. Concrete exception classes, codes,
+direct causes, and Python tracebacks survive propagation. A dynamic child target
+failure shows both loading and evaluation routes. Loading uses the child's
+original names; evaluation after import uses the qualified runtime names.
+See [configuration composition](../tutorials/17-configuration-composition.md)
+for complete examples and expected diagnostics.
 
 Config-created Frames use the canonical lclang hierarchy by default. Definitions
 therefore have the root `lhs()` function (the current definition name), builtin

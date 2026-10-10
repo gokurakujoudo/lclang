@@ -243,7 +243,11 @@ async def test_custom_resolver_optional_absence_is_explicit(failure: BaseExcepti
             with pytest.raises((LclConfigUsingError, LclConfigSyntaxError)) as caught:
                 await loader.load(entry)
             if isinstance(failure, LclConfigSyntaxError):
-                assert caught.value is failure
+                assert caught.value is not failure
+                assert caught.value.message == failure.message
+                assert caught.value.code == failure.code
+                assert failure.config_stack == ()
+                assert len(caught.value.config_stack) == 2
             else:
                 assert caught.value.__cause__ is failure
 
