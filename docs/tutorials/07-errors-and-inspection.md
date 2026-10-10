@@ -117,7 +117,7 @@ The result is a division failure with both definition frames and the values
 
 <!-- lclang-doc-output: stdout -->
 ```text
-Error in evaluating result [LCL3001]:
+Error in evaluating result [LCL131421]:
   result at "metrics.lclcfg":4:9
     result: ratio * 100
   ratio at "metrics.lclcfg":3:8
@@ -210,3 +210,6 @@ This order respects lclang's design: observation should not accidentally cause
 the work being diagnosed.
 
 [Previous: Caching and recalculation](06-caching-and-recalculation.md) | [Next: Dependency analysis](08-dependency-analysis.md) | [Return to the series introduction](README.md)
+
+The [error reference](../reference/errors.md) lists each builtin code and shows
+how to inspect its cause, source scene, and retained context.

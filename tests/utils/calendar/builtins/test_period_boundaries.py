@@ -5,6 +5,7 @@ from datetime import date
 
 import pytest
 
+from lclang.error import LclValidationError
 from lclang.utils.calendar import (
     ALL_WEEKDAYS,
     BEGIN_OF_MONTHS,
@@ -36,5 +37,5 @@ def test_remaining_total_builtin_and_weekday_validation() -> None:
     """Year-boundary builtins and weekday validation cover their complete contract."""
     assert asyncio.run(BEGIN_OF_YEARS.get_day_type(date(2024, 1, 1))) is DayType.BusinessDay
     assert asyncio.run(END_OF_YEARS.get_day_type(date(2024, 12, 31))) is DayType.BusinessDay
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         WeekdayBDCalendar(CalendarID("BAD"), 7)

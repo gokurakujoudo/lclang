@@ -4,6 +4,7 @@ import pytest
 
 from lclang.ast import LclConstant
 from lclang.ast.primaries import LclAttribute, LclSafeAttribute, LclSlice, LclSubscript
+from lclang.error import LclValidationError
 from lclang.types import VarName
 
 
@@ -26,5 +27,5 @@ def test_attribute_nodes_reject_empty_names(
     node: type[LclAttribute] | type[LclSafeAttribute],
 ) -> None:
     """Attribute syntax cannot carry an unusable member name."""
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         node(LclConstant(value=None), VarName(""))

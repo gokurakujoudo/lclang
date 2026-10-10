@@ -3,6 +3,11 @@
 from threading import Lock
 from time import time_ns
 
+from lclang.error import LclUtilityError
+from lclang.error.base import LclStateError, LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.utilities import Code as utilities_codes
+
 # Unitless export names identify the supported downstream interface; layout constants stay local.
 __all__ = ["SnowflakeGenerator"]
 
@@ -19,14 +24,15 @@ WORKER_SHIFT = 12
 TIMESTAMP_SHIFT = 22
 
 
+@guard_constructor(LclValidationError, utilities_codes.NATIVE_741)
 class SnowflakeGenerator:
     """Generate increasing IDs with one retained instance per worker.
 
     :param worker_id: Application-assigned integer worker in 0..1023, excluding bool.
     :param epoch_ms: Nonnegative Unix millisecond epoch, excluding bool; defaults to
        2024-01-01 UTC. All generators in an ID domain must use the same epoch.
-    :raises TypeError: If either argument is not an integer or is bool.
-    :raises ValueError: If either argument is outside its supported range.
+    :raises LclValidationError: If either argument is not an integer or is bool.
+    :raises LclValidationError: If either argument is outside its supported range.
 
     .. note::
        Instances coordinate threads, not processes. Assign distinct workers to
@@ -42,16 +48,25 @@ class SnowflakeGenerator:
 
         :param worker_id: Integer worker in 0..1023, excluding bool.
         :param epoch_ms: Nonnegative integer Unix milliseconds, excluding bool.
-        :raises TypeError: If an argument is not an integer or is bool.
-        :raises ValueError: If an argument is outside its supported range.
+        :raises LclValidationError: If an argument is not an integer or is bool.
+        :raises LclValidationError: If an argument is outside its supported range.
         """
         for name, value in (("worker_id", worker_id), ("epoch_ms", epoch_ms)):
             if isinstance(value, bool) or not isinstance(value, int):
-                raise TypeError(f"{name} must be an integer excluding bool")
+                raise LclValidationError(
+                    f"{name} must be an integer excluding bool",
+                    code=utilities_codes.E41_VALUE_MUST_BE_AN_INTEGER_EXCLUDING_BOOL,
+                )
             if value < 0:
-                raise ValueError(f"{name} must be nonnegative")
+                raise LclValidationError(
+                    f"{name} must be nonnegative",
+                    code=utilities_codes.E41_VALUE_MUST_BE_NONNEGATIVE,
+                )
         if worker_id > MAX_WORKER_ID:
-            raise ValueError(f"worker_id must be at most {MAX_WORKER_ID}")
+            raise LclValidationError(
+                f"worker_id must be at most {MAX_WORKER_ID}",
+                code=utilities_codes.E41_WORKER_ID_MUST_BE_AT_MOST_VALUE,
+            )
         self._worker_id = worker_id
         self._epoch_ms = epoch_ms
         self._lock = Lock()
@@ -59,6 +74,7 @@ class SnowflakeGenerator:
         self._sequence = 0
 
     @property
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_741)
     def worker_id(self) -> int:
         """Read the immutable worker identifier.
 
@@ -67,6 +83,7 @@ class SnowflakeGenerator:
         return self._worker_id
 
     @property
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_741)
     def epoch_ms(self) -> int:
         """Read the immutable timestamp origin.
 
@@ -74,6 +91,7 @@ class SnowflakeGenerator:
         """
         return self._epoch_ms
 
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_741)
     def next_id(self) -> int:
         """Read wall time and atomically allocate the next 63-bit integer.
 
@@ -81,21 +99,33 @@ class SnowflakeGenerator:
         successful state; no clock waiting, sleeping, or logical time is used.
 
         :returns: Nonnegative ID packing elapsed milliseconds, worker, and sequence.
-        :raises ValueError: If wall time precedes the configured epoch.
-        :raises RuntimeError: If wall time moves behind the last successful timestamp.
-        :raises OverflowError: If the 41-bit timestamp or 12-bit sequence is exhausted.
+        :raises LclValidationError: If wall time precedes the configured epoch.
+        :raises LclStateError: If wall time moves behind the last successful timestamp.
+        :raises LclUtilityError: If the 41-bit timestamp or 12-bit sequence is exhausted.
         """
         with self._lock:
             timestamp_ms = time_ns() // 1_000_000 - self._epoch_ms
             if timestamp_ms < 0:
-                raise ValueError("clock precedes the Snowflake epoch")
+                raise LclValidationError(
+                    "clock precedes the Snowflake epoch",
+                    code=utilities_codes.E41_CLOCK_PRECEDES_THE_SNOWFLAKE_EPOCH,
+                )
             if timestamp_ms > MAX_TIMESTAMP_MS:
-                raise OverflowError("Snowflake timestamp exhausted")
+                raise LclUtilityError(
+                    "Snowflake timestamp exhausted",
+                    code=utilities_codes.E41_SNOWFLAKE_TIMESTAMP_EXHAUSTED,
+                )
             if timestamp_ms < self._last_timestamp_ms:
-                raise RuntimeError("clock moved backward during Snowflake generation")
+                raise LclStateError(
+                    "clock moved backward during Snowflake generation",
+                    code=utilities_codes.E41_CLOCK_MOVED_BACKWARD_DURING_SNOWFLAKE_GENERATION,
+                )
             sequence = self._sequence + 1 if timestamp_ms == self._last_timestamp_ms else 0
             if sequence > MAX_SEQUENCE:
-                raise OverflowError("Snowflake sequence exhausted; retry after the clock advances")
+                raise LclUtilityError(
+                    "Snowflake sequence exhausted; retry after the clock advances",
+                    code=utilities_codes.E41_SNOWFLAKE_SEQUENCE_EXHAUSTED_RETRY_AFTER_THE_CLOCK_ADVANCES,
+                )
             self._last_timestamp_ms = timestamp_ms
             self._sequence = sequence
             return (timestamp_ms << TIMESTAMP_SHIFT) | (self._worker_id << WORKER_SHIFT) | sequence

@@ -7,6 +7,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from lclang.error import LclUtilityError
+from lclang.error.base import LclAttributeError, LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.codes.utilities import Code as utilities_codes
 from lclang.scopes import LCL_RESERVED_NAMES, ScopedProxyFactory, ScopedProxyValue
 from lclang.source import SourceSpan
 
@@ -27,29 +31,35 @@ class EnvironmentFrame(Protocol):
 class Environment(ScopedProxyFactory):
     """Expose current process environment variables without mutation."""
 
+    @guard_failure(LclAttributeError, utilities_codes.NATIVE_731)
     def __getattr__(self, name: str) -> str | None:
         """Return one live environment value through attribute syntax.
 
         :param name: Environment variable name.
         :returns: Current text value, or ``None`` when absent.
-        :raises AttributeError: If Python requests a private protocol attribute.
+        :raises LclAttributeError: If Python requests a private protocol attribute.
         """
         if name.startswith("__"):
-            raise AttributeError(name)
+            raise LclAttributeError(name, code=utilities_codes.E31___GETATTR___FAILURE)
         return os.environ.get(name)
 
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_731)
     def get(self, name: str, default: object = None) -> object:
         """Return one live environment value or a caller-supplied default.
 
         :param name: Environment variable name, including non-LCL identifiers.
         :param default: Value returned unchanged when the variable is absent.
         :returns: Current text value or *default*.
-        :raises TypeError: If *name* is not text.
+        :raises LclValidationError: If *name* is not text.
         """
         if not isinstance(name, str):
-            raise TypeError("environment variable name must be text")
+            raise LclValidationError(
+                "environment variable name must be text",
+                code=utilities_codes.E31_ENVIRONMENT_VARIABLE_NAME_MUST_BE_TEXT,
+            )
         return os.environ.get(name, default)
 
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_731)
     def field_names(self) -> list[str]:
         """Return current environment names usable through LCL attributes.
 
@@ -59,6 +69,7 @@ class Environment(ScopedProxyFactory):
             name for name in os.environ if name.isidentifier() and name not in LCL_RESERVED_NAMES
         )
 
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_731)
     def bind(self, frame: object, path: tuple[str, ...]) -> ScopedProxyValue:
         """Create a Frame-bound environment view for LCL lookup.
 
@@ -69,6 +80,7 @@ class Environment(ScopedProxyFactory):
         return BoundEnvironment(frame, path, self)  # type: ignore[arg-type]
 
 
+@guard_constructor(LclValidationError, utilities_codes.NATIVE_731)
 @dataclass(frozen=True, slots=True)
 class BoundEnvironment(ScopedProxyValue):
     """Combine scoped Frame overrides with live environment fallback.
@@ -91,30 +103,35 @@ class BoundEnvironment(ScopedProxyValue):
         """
         return f"BoundEnvironment({'.'.join(self.path)})"
 
+    @guard_failure(LclAttributeError, utilities_codes.NATIVE_731)
     def __getattr__(self, name: str) -> Any:
         """Return a scoped override or live environment lookup awaitable.
 
         :param name: Direct environment variable identifier.
         :returns: Coroutine resolving an override, live value, or ``None``.
-        :raises AttributeError: If Python requests a private protocol attribute.
+        :raises LclAttributeError: If Python requests a private protocol attribute.
         """
         if name.startswith("__"):
-            raise AttributeError(name)
+            raise LclAttributeError(name, code=utilities_codes.E31___GETATTR___FAILURE)
         return self.get(name)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_731)
     async def get(self, name: str, default: object = None) -> object:
         """Resolve a direct override before consulting the live environment.
 
         :param name: Environment variable name, including non-LCL identifiers.
         :param default: Value returned when no override or live value exists.
         :returns: Scoped value, nested proxy, live text, or *default*.
-        :raises TypeError: If *name* is not text.
+        :raises LclValidationError: If *name* is not text.
         """
         from lclang.runtime.frame.binding_lookup import find_scoped_binding
         from lclang.scope_proxy import FrameProxy
 
         if not isinstance(name, str):
-            raise TypeError("environment variable name must be text")
+            raise LclValidationError(
+                "environment variable name must be text",
+                code=utilities_codes.E31_ENVIRONMENT_VARIABLE_NAME_MUST_BE_TEXT,
+            )
         full = ".".join((*self.path, name))
         owner, kind = find_scoped_binding(self.frame, full)
         if owner is None:
@@ -123,6 +140,7 @@ class BoundEnvironment(ScopedProxyValue):
             return FrameProxy(self.frame, (*self.path, name), self.trace)
         return await self.frame.get_resolved(full, None)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_731)
     async def field_names(self) -> list[str]:
         """Return sorted live and scoped direct environment identifiers.
 
@@ -139,6 +157,7 @@ class BoundEnvironment(ScopedProxyValue):
         names.update(self.environment.field_names())
         return sorted(names)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_731)
     async def resolve_attribute(
         self,
         name: str,
@@ -172,6 +191,7 @@ class BoundEnvironment(ScopedProxyValue):
             self.trace(full, span)
         return await self.frame.get_resolved(full, span)
 
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_731)
     def with_trace(
         self,
         trace: Callable[[str, SourceSpan], None],

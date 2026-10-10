@@ -6,9 +6,13 @@ import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from lclang.errors import LclCliUsageError
+from lclang.error import LclCliError, LclCliUsageError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.cli import Code as cli_codes
 
 
+@guard_constructor(LclValidationError, cli_codes.NATIVE_432)
 @dataclass(frozen=True, slots=True)
 class ArgvParts:
     """Separate executable, script, and post-script tokens.
@@ -23,6 +27,7 @@ class ArgvParts:
     tokens: tuple[str, ...]
 
     @property
+    @guard_failure(LclCliError, cli_codes.NATIVE_432)
     def script_label(self) -> str:
         """Return the script basename used in help and version output.
 
@@ -31,6 +36,7 @@ class ArgvParts:
         return self.script_path.replace("\\", "/").rsplit("/", 1)[-1]
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_432)
 def split_argv(args: Sequence[str] | None = None) -> ArgvParts:
     """Snapshot and validate one full Python-script argv.
 
@@ -40,9 +46,17 @@ def split_argv(args: Sequence[str] | None = None) -> ArgvParts:
     """
     values = (sys.executable, *sys.argv) if args is None else tuple(args)
     if len(values) < 2:
-        raise LclCliUsageError("full argv requires executable and .py script")
+        raise LclCliUsageError(
+            "full argv requires executable and .py script",
+            code=cli_codes.E32_FULL_ARGV_REQUIRES_EXECUTABLE_AND_PY_SCRIPT,
+        )
     if any(not isinstance(item, str) or not item for item in values):
-        raise LclCliUsageError("argv tokens must be non-empty text")
+        raise LclCliUsageError(
+            "argv tokens must be non-empty text",
+            code=cli_codes.E32_ARGV_TOKENS_MUST_BE_NON_EMPTY_TEXT,
+        )
     if not values[1].endswith(".py"):
-        raise LclCliUsageError("script path must end in .py")
+        raise LclCliUsageError(
+            "script path must end in .py", code=cli_codes.E32_SCRIPT_PATH_MUST_END_IN_PY
+        )
     return ArgvParts(values[0], values[1], tuple(values[2:]))

@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor
+from lclang.error.codes.language import Code as language_codes
 
+
+@guard_constructor(LclValidationError, language_codes.NATIVE_111)
 @dataclass(frozen=True, slots=True)
 class FStringText:
     """Represent one non-empty decoded text segment.
@@ -18,6 +23,7 @@ class FStringText:
     text: str
 
 
+@guard_constructor(LclValidationError, language_codes.NATIVE_111)
 @dataclass(frozen=True, slots=True)
 class FStringField:
     """Preserve one replacement expression and its lexical modifiers.
@@ -39,6 +45,7 @@ class FStringField:
     expression_offset: int | None = field(default=None, kw_only=True, compare=False)
 
 
+@guard_constructor(LclValidationError, language_codes.NATIVE_111)
 @dataclass(frozen=True, slots=True)
 class FStringValue:
     """Represent ordered lexical parts and raw-string mode.
@@ -54,6 +61,7 @@ class FStringValue:
     raw: bool
 
 
+@guard_constructor(LclValidationError, language_codes.NATIVE_111)
 @dataclass(frozen=True, slots=True)
 class FStringMatch:
     """Return an f-string value with its exclusive source boundary.

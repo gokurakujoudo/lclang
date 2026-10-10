@@ -7,6 +7,8 @@ modules:
 
 ```text
 src/lclang/
+  error/           exception roots, families, contexts, wrapping and rendering
+    codes/         domain tables and parent-relative classification labels
   ast/             immutable node values and visitor contracts
   lang/
     lexer/         tokens, string scanning and f-string scanning
@@ -26,7 +28,9 @@ src/lclang/
     calendar/      async calendars, mappings, loaders, and manager utilities
 ```
 
-Shared public value objects and errors remain small top-level modules. Package
+Shared public value objects remain small top-level modules. Errors live in
+`error/`; its root depends on primitive code and masking values. Source-aware
+records and presentation adapters resolve their types after root initialization. Package
 `__init__.py` files only re-export names; they contain no behavioural logic.
 Each production Python file has at most 200 code-bearing physical lines,
 excluding imports, docstrings, pure comments, and blank lines. Multiline
@@ -46,6 +50,7 @@ Tests mirror subsystem ownership:
 
 ```text
 tests/
+  error/           code registry, constructor, protocol, cause and cleanup contracts
   ast/             node, visitor and round-trip contracts
   lang/            lexer/parser/printer/evaluator behaviour
   runtime/         module and preset behaviour

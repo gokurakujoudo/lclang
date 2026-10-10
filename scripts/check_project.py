@@ -11,6 +11,8 @@ import tokenize
 from collections.abc import Iterator
 from pathlib import Path
 
+from scripts.check_errors import check_error_contract
+
 # Maximum code-bearing physical lines per production module.
 MAX_SOURCE_LINES = 200
 # Python and dataclass protocol methods supported by production objects.
@@ -373,6 +375,7 @@ def main() -> int:
         for path in sorted((ROOT / "src" / "lclang").rglob("*.py"))
         for failure in check_file(path)
     ]
+    failures.extend(check_error_contract())
     for failure in failures:
         print(failure)
     return int(bool(failures))

@@ -4,11 +4,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from lclang.config.errors import LclConfigSyntaxError
 from lclang.config.positions import end_position, physical_end, span_for_physical
+from lclang.error import LclConfigError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.configuration import Code as configuration_codes
+from lclang.error.configuration import LclConfigSyntaxError
 from lclang.source import SourceOrigin, SourcePosition, SourceSnapshot, SourceSpan
 
 
+@guard_constructor(LclValidationError, configuration_codes.NATIVE_312)
 @dataclass(frozen=True, slots=True)
 class LogicalLine:
     """Hold one position-preserving logical declaration.
@@ -28,6 +33,7 @@ class LogicalLine:
     continued: bool = False
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_312)
 def scan_logical_lines(text: str, origin: SourceOrigin) -> tuple[LogicalLine, ...]:
     """Scan meaningful logical declarations with explicit continuation.
 
@@ -58,6 +64,7 @@ def scan_logical_lines(text: str, origin: SourceOrigin) -> tuple[LogicalLine, ..
                 raise LclConfigSyntaxError(
                     "continued definition requires another physical line",
                     span=SourceSpan(origin, start, end_position(text), snapshot=snapshot),
+                    code=configuration_codes.E12_CONTINUED_DEFINITION_REQUIRES_ANOTHER_PHYSICAL_LINE,
                 )
             content, newline, _, _ = physical[index]
             masked, marker = mask_physical_line(content)
@@ -65,6 +72,7 @@ def scan_logical_lines(text: str, origin: SourceOrigin) -> tuple[LogicalLine, ..
                 raise LclConfigSyntaxError(
                     "blank or comment-only continuation fragment",
                     span=replace(span_for_physical(origin, physical[index]), snapshot=snapshot),
+                    code=configuration_codes.E12_BLANK_OR_COMMENT_ONLY_CONTINUATION_FRAGMENT,
                 )
             pieces.append(masked + newline)
         final = physical[index]
@@ -80,6 +88,7 @@ def scan_logical_lines(text: str, origin: SourceOrigin) -> tuple[LogicalLine, ..
     return tuple(output)
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_312)
 def split_physical_lines(text: str) -> list[tuple[str, str, int, int]]:
     """Split text while retaining newline spellings and source offsets.
 
@@ -103,6 +112,7 @@ def split_physical_lines(text: str) -> list[tuple[str, str, int, int]]:
     return result
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_312)
 def mask_physical_line(content: str) -> tuple[str, bool]:
     """Mask comments and a final outside-literal continuation marker.
 
@@ -125,6 +135,7 @@ def mask_physical_line(content: str) -> tuple[str, bool]:
     return "".join(chars), marker
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_312)
 def comment_offset(content: str) -> int | None:
     """Locate the first comment marker outside a quoted literal.
 

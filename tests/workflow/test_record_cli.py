@@ -15,6 +15,7 @@ from lclang.cli.audit import redacted_overrides
 from lclang.cli.binding import build_binding
 from lclang.cli.help import render_command_help
 from lclang.cli.parameter_details import DerivedParameterDoc
+from lclang.error import LclValidationError
 from lclang.utils import ValueBox, flatten_to_dict
 from lclang.workflow import ExecutionStatus, TaskID, WorkflowExecutionContext, define_variable
 from lclang.workflow.cli_parameters import expand_record_parameters
@@ -115,7 +116,7 @@ async def test_flattened_presets_and_unknown_override_paths() -> None:
     finally:
         await binding.stack.close()
     assert await command.run(["python", "tool.py", "-o", "csv.delimter", ";"]) == 2
-    with pytest.raises(ValueError, match="non-external"):
+    with pytest.raises(LclValidationError, match="non-external"):
         workflow.to_cli("convert", "Convert", preset={"csv.typo": 1})
 
 
@@ -135,7 +136,7 @@ async def test_entity_and_child_paths_remain_mutually_exclusive() -> None:
         None,
         {"csv.encoding": "ascii"},
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         await build_binding(command, params, CliConfig())
 
 
@@ -188,7 +189,7 @@ def test_generics_cycles_boxes_and_explicit_field_precedence() -> None:
     )
     chosen = next(item for item in combined if item.name == "csv.encoding")
     assert chosen.description == "Explicit" and chosen.masked
-    with pytest.raises(TypeError, match="conflicting"):
+    with pytest.raises(LclValidationError, match="conflicting"):
         expand_record_parameters(
             (
                 ParameterDoc("csv", CsvOptions, False, "CSV"),
@@ -208,7 +209,7 @@ def test_generics_cycles_boxes_and_explicit_field_precedence() -> None:
     class InvalidHelp:
         value: str = field(default="", metadata={"help": 42})
 
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         expand_record_parameters((ParameterDoc("invalid", InvalidHelp, False, "Invalid"),))
 
 

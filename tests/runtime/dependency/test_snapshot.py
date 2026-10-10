@@ -4,6 +4,7 @@ from dataclasses import FrozenInstanceError, replace
 
 import pytest
 
+from lclang.error import LclValidationError
 from lclang.lang.parser import parse_expression
 from lclang.runtime import (
     DependencyEdge,
@@ -40,11 +41,11 @@ def test_dependency_snapshot_rejects_inconsistent_manual_values() -> None:
     """Sources, channels, and reconciliation cannot contradict edge evidence."""
     static, dynamic = _evidence()
     reconciliation = reconcile_dependency_edges((static,), (dynamic,))
-    with pytest.raises(ValueError, match="source"):
+    with pytest.raises(LclValidationError, match="source"):
         DependencySnapshot(VarName(""), (), (), reconcile_dependency_edges((), ()))
-    with pytest.raises(ValueError, match="source"):
+    with pytest.raises(LclValidationError, match="source"):
         DependencySnapshot(VarName("other"), (static,), (), reconciliation)
-    with pytest.raises(ValueError, match="reconciliation"):
+    with pytest.raises(LclValidationError, match="reconciliation"):
         DependencySnapshot(
             VarName("source"),
             (static,),

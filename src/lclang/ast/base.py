@@ -6,6 +6,9 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import Protocol, TypeVar
 
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.core import Code as core_codes
 from lclang.source import UNKNOWN_SPAN, SourceSpan
 
 ResultT_co = TypeVar("ResultT_co", covariant=True)
@@ -30,6 +33,7 @@ class LclVisitor(Protocol[ResultT_co]):
         ...
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_821)
 @dataclass(frozen=True, slots=True)
 class LclAstNode:
     """Base value for every LCL abstract-syntax-tree node.
@@ -42,6 +46,7 @@ class LclAstNode:
 
     span: SourceSpan = field(default=UNKNOWN_SPAN, kw_only=True)
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_821)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return direct child nodes in source order.
 
@@ -64,6 +69,7 @@ class LclAstNode:
         for child in self.children():
             yield from child.walk()
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_821)
     def accept(self, visitor: LclVisitor[ResultT_co]) -> ResultT_co:
         """Delegate this node to a generic visitor.
 

@@ -5,9 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from lclang.ast.base import LclAstNode
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.core import Code as core_codes
 from lclang.types import VarName
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_824)
 @dataclass(frozen=True, slots=True)
 class LclExceptHandler(LclAstNode):
     """Represent one typed or bare exception handler.
@@ -15,7 +19,7 @@ class LclExceptHandler(LclAstNode):
     :param exception: Optional expression matched against the failure.
     :param name: Optional name bound to the matched failure.
     :param body: Expression evaluated after a match.
-    :raises ValueError: If *name* is present without *exception*.
+    :raises LclValidationError: If *name* is present without *exception*.
 
     .. note::
        A handler with no exception is the final catch-all handler.
@@ -25,16 +29,24 @@ class LclExceptHandler(LclAstNode):
     name: VarName | None
     body: LclAstNode
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_824)
     def __post_init__(self) -> None:
         """Validate the optional exception binding.
 
-        :raises ValueError: If a binding is empty or belongs to a bare handler.
+        :raises LclValidationError: If a binding is empty or belongs to a bare handler.
         """
         if self.name is not None and not self.name:
-            raise ValueError("except binding name cannot be empty")
+            raise LclValidationError(
+                "except binding name cannot be empty",
+                code=core_codes.E24_EXCEPT_BINDING_NAME_CANNOT_BE_EMPTY,
+            )
         if self.name is not None and self.exception is None:
-            raise ValueError("bare except handler cannot bind a name")
+            raise LclValidationError(
+                "bare except handler cannot bind a name",
+                code=core_codes.E24_BARE_EXCEPT_HANDLER_CANNOT_BIND_A_NAME,
+            )
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_824)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return optional matcher then body.
 
@@ -48,6 +60,7 @@ class LclExceptHandler(LclAstNode):
         return (self.exception, self.body)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_824)
 @dataclass(frozen=True, slots=True)
 class LclTry(LclAstNode):
     """Represent recovery handlers and optional finalization.
@@ -55,7 +68,7 @@ class LclTry(LclAstNode):
     :param body: Protected expression.
     :param handlers: Ordered typed and optional final bare handlers.
     :param finally_body: Optional expression always evaluated before completion.
-    :raises ValueError: If neither handlers nor a finalizer is present.
+    :raises LclValidationError: If neither handlers nor a finalizer is present.
 
     .. note::
        Parser validation ensures a bare handler is last.
@@ -65,14 +78,19 @@ class LclTry(LclAstNode):
     handlers: tuple[LclExceptHandler, ...]
     finally_body: LclAstNode | None = None
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_824)
     def __post_init__(self) -> None:
         """Require recovery or finalization behaviour.
 
-        :raises ValueError: If both handlers and finalization are absent.
+        :raises LclValidationError: If both handlers and finalization are absent.
         """
         if not self.handlers and self.finally_body is None:
-            raise ValueError("try form requires except or finally")
+            raise LclValidationError(
+                "try form requires except or finally",
+                code=core_codes.E24_TRY_FORM_REQUIRES_EXCEPT_OR_FINALLY,
+            )
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_824)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return body, handlers, then optional finalizer.
 
@@ -87,13 +105,14 @@ class LclTry(LclAstNode):
         return (*children, self.finally_body)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_824)
 @dataclass(frozen=True, slots=True)
 class LclWithItem(LclAstNode):
     """Represent one context expression and optional binding.
 
     :param context: Expression producing a context manager.
     :param target: Optional non-empty bound name.
-    :raises ValueError: If *target* is empty.
+    :raises LclValidationError: If *target* is empty.
 
     .. note::
        Enter and exit protocol behaviour belongs to the evaluator.
@@ -102,14 +121,19 @@ class LclWithItem(LclAstNode):
     context: LclAstNode
     target: VarName | None = None
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_824)
     def __post_init__(self) -> None:
         """Reject an empty optional binding name.
 
-        :raises ValueError: If a supplied target is empty.
+        :raises LclValidationError: If a supplied target is empty.
         """
         if self.target is not None and not self.target:
-            raise ValueError("with target name cannot be empty")
+            raise LclValidationError(
+                "with target name cannot be empty",
+                code=core_codes.E24_EXCEPT_BINDING_NAME_CANNOT_BE_EMPTY,
+            )
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_824)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return the context expression.
 
@@ -121,13 +145,14 @@ class LclWithItem(LclAstNode):
         return (self.context,)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_824)
 @dataclass(frozen=True, slots=True)
 class LclWith(LclAstNode):
     """Represent ordered context management around one body.
 
     :param items: Non-empty context items in enter order.
     :param body: Expression evaluated while contexts are active.
-    :raises ValueError: If *items* is empty.
+    :raises LclValidationError: If *items* is empty.
 
     .. note::
        Contexts later exit in reverse order even though children retain source order.
@@ -136,14 +161,19 @@ class LclWith(LclAstNode):
     items: tuple[LclWithItem, ...]
     body: LclAstNode
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_824)
     def __post_init__(self) -> None:
         """Require at least one context item.
 
-        :raises ValueError: If the item sequence is empty.
+        :raises LclValidationError: If the item sequence is empty.
         """
         if not self.items:
-            raise ValueError("with form requires at least one context item")
+            raise LclValidationError(
+                "with form requires at least one context item",
+                code=core_codes.E24_WITH_FORM_REQUIRES_AT_LEAST_ONE_CONTEXT_ITEM,
+            )
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_824)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return context items then body.
 

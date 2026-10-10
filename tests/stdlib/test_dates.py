@@ -5,6 +5,7 @@ from datetime import date
 import pytest
 
 import lclang
+from lclang.error import LclValidationError
 from lclang.stdlib.dates import parse_ymd, to_ymd
 
 
@@ -21,15 +22,15 @@ def test_date_helpers_round_trip_leap_day_and_early_year() -> None:
 )
 def test_parse_ymd_rejects_malformed_or_impossible_dates(value: str) -> None:
     """Malformed width/alphabet and Gregorian calendar errors stay explicit."""
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         parse_ymd(value)
 
 
 def test_date_helpers_reject_wrong_types() -> None:
     """Helper boundaries fail before coercing unrelated host values."""
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         parse_ymd(20240229)  # type: ignore[arg-type]
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         to_ymd("20240229")  # type: ignore[arg-type]
 
 

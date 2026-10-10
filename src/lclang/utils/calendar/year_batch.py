@@ -5,9 +5,17 @@ from collections.abc import Mapping
 from datetime import date
 from types import MappingProxyType
 
+from lclang.error import LclError, LclUtilityError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor
+from lclang.error.calendar import (
+    CalendarLogicException,
+    DateOperationOutOfScopeException,
+    wrap_calendar_failure,
+)
+from lclang.error.codes.utilities import Code as utilities_codes
 from lclang.utils.calendar.base import BDCalendar
 from lclang.utils.calendar.constants import MAX_BUSINESS_DAY_GAP_DAYS
-from lclang.utils.calendar.errors import CalendarLogicException, DateOperationOutOfScopeException
 from lclang.utils.calendar.helpers import (
     CALENDAR_ERRORS,
     require_day_type,
@@ -17,6 +25,7 @@ from lclang.utils.calendar.helpers import (
 from lclang.utils.calendar.types import CalendarID, DayType
 
 
+@guard_constructor(LclValidationError, utilities_codes.NATIVE_718)
 class YearBatchBDCalendar(BDCalendar):
     """Implement date lookup around abstract whole-year generation.
 
@@ -38,6 +47,7 @@ class YearBatchBDCalendar(BDCalendar):
         )
 
     @abstractmethod
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_718)
     async def gen_year(self, year: int) -> dict[date, DayType]:
         """Load one year from the concrete source.
 
@@ -45,14 +55,15 @@ class YearBatchBDCalendar(BDCalendar):
         :returns: Date-to-day-type mapping for the requested year.
         """
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_718)
     async def loaded_year(self, year: int) -> Mapping[date, DayType]:
         """Return one validated cached year batch.
 
         :param year: Gregorian year from 1 through 9999.
         :returns: Detached normalized year mapping.
         :raises CalendarLogicException: If generation returns invalid content.
-        :raises TypeError: If generated content has incompatible types.
-        :raises ValueError: If generated dates are outside the requested year.
+        :raises LclValidationError: If generated content has incompatible types.
+        :raises LclValidationError: If generated dates are outside the requested year.
         """
         next(year_dates(year), None)
         cached = self._loaded_year_batches.get(year)
@@ -61,22 +72,40 @@ class YearBatchBDCalendar(BDCalendar):
         try:
             raw = await self.gen_year(year)
             if not isinstance(raw, dict):
-                raise TypeError("year generator must return a dictionary")
+                raise LclValidationError(
+                    "year generator must return a dictionary",
+                    code=utilities_codes.E18_YEAR_GENERATOR_MUST_RETURN_A_DICTIONARY,
+                )
             normalized: dict[date, DayType] = {}
             for d, value in raw.items():
                 if not isinstance(d, date) or d.year != year:
-                    raise ValueError("year batch contains a date outside its year")
+                    raise LclValidationError(
+                        "year batch contains a date outside its year",
+                        code=utilities_codes.E18_YEAR_BATCH_CONTAINS_A_DATE_OUTSIDE_ITS_YEAR,
+                    )
                 selected = require_day_type(value)
                 if selected is not DayType.Undefined:
                     normalized[d] = selected
         except CALENDAR_ERRORS:
             raise
         except Exception as error:
-            raise CalendarLogicException(self.calendar_id) from error
+            failure = wrap_calendar_failure(
+                error,
+                CalendarLogicException(
+                    self.calendar_id,
+                    code=(
+                        error.code
+                        if isinstance(error, LclError)
+                        else utilities_codes.E18_SELF_CALENDAR_ID
+                    ),
+                ),
+            )
+            raise failure from failure.__cause__
         published: Mapping[date, DayType] = MappingProxyType(normalized)
         self._loaded_year_batches[year] = published
         return published
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_718)
     async def get_day_type(self, d: date) -> DayType:
         """Return a date from its cached year batch.
 
@@ -85,6 +114,7 @@ class YearBatchBDCalendar(BDCalendar):
         """
         return (await self.loaded_year(d.year)).get(d, DayType.Undefined)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_718)
     async def next_bd(self, d: date) -> date:
         """Search forward within the configured gap bound.
 
@@ -98,8 +128,9 @@ class YearBatchBDCalendar(BDCalendar):
                 break
             if await self.get_day_type(candidate) is DayType.BusinessDay:
                 return candidate
-        raise DateOperationOutOfScopeException(d, self)
+        raise DateOperationOutOfScopeException(d, self, code=utilities_codes.E18_D)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_718)
     async def prev_bd(self, d: date) -> date:
         """Search backward within the configured gap bound.
 
@@ -113,4 +144,4 @@ class YearBatchBDCalendar(BDCalendar):
                 break
             if await self.get_day_type(candidate) is DayType.BusinessDay:
                 return candidate
-        raise DateOperationOutOfScopeException(d, self)
+        raise DateOperationOutOfScopeException(d, self, code=utilities_codes.E18_D)

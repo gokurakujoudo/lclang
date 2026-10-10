@@ -6,7 +6,9 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from contextvars import ContextVar
 
-from lclang.errors import LclEvaluationError
+from lclang.error import LclEvaluationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.language import Code as language_codes
 
 # Active ordered Frame and lexical-function definition owners.
 # Unitless context key names identify task-local lexical definition state. An empty initial
@@ -24,13 +26,16 @@ def definition_scope(name: str) -> Generator[None]:
 
     :param name: Non-empty definition name owned by the active Frame.
     :returns: Context manager iterator restoring the previous task-local name.
-    :raises ValueError: If *name* is empty.
+    :raises LclEvaluationError: If *name* is empty.
 
     .. note::
        Nested definitions temporarily replace their dependant and restore it.
     """
     if not name:
-        raise ValueError("definition name cannot be empty")
+        raise LclEvaluationError(
+            "definition name cannot be empty",
+            code=language_codes.E33_DEFINITION_NAME_CANNOT_BE_EMPTY,
+        )
     stack = ACTIVE_DEFINITION_STACK.get()
     selected = stack if stack[-1:] == (name,) else (*stack, name)
     token = ACTIVE_DEFINITION_STACK.set(selected)
@@ -40,6 +45,7 @@ def definition_scope(name: str) -> Generator[None]:
         ACTIVE_DEFINITION_STACK.reset(token)
 
 
+@guard_failure(LclEvaluationError, language_codes.NATIVE_133)
 def lhs() -> str:
     """Return the name of the Frame definition currently being evaluated.
 
@@ -52,10 +58,11 @@ def lhs() -> str:
     stack = ACTIVE_DEFINITION_STACK.get()
     if not stack:
         message = "lhs() is only available while evaluating a Frame definition"
-        raise LclEvaluationError(message)
+        raise LclEvaluationError(message, code=language_codes.E33_LHS_FAILURE)
     return stack[-1]
 
 
+@guard_failure(LclEvaluationError, language_codes.NATIVE_133)
 def active_definition() -> str | None:
     """Return the optional definition owner active in this task.
 
@@ -68,6 +75,7 @@ def active_definition() -> str | None:
     return stack[-1] if stack else None
 
 
+@guard_failure(LclEvaluationError, language_codes.NATIVE_133)
 def active_definition_stack() -> tuple[str, ...]:
     """Return the ordered variable owners active in this task.
 

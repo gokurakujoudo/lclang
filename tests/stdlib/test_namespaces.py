@@ -4,6 +4,7 @@ from collections.abc import Iterator
 
 import pytest
 
+from lclang.error import LclAttributeError, LclValidationError
 from lclang.lang.parser import parse_expression
 from lclang.runtime import FrameFactory, Module
 from lclang.stdlib import (
@@ -32,7 +33,7 @@ def test_namespace_is_an_ordered_mapping_and_attribute_view() -> None:
     assert namespace.first == 1
     assert repr(namespace) == "StdlibNamespace(namespace='tools')"
     missing = "missing"
-    with pytest.raises(AttributeError, match="tools"):
+    with pytest.raises(LclAttributeError, match="tools"):
         getattr(namespace, missing)
     with pytest.raises(TypeError):
         namespace.members["other"] = 2  # type: ignore[index]
@@ -44,9 +45,9 @@ def test_namespace_validates_public_names_and_detaches_input() -> None:
     namespace = StdlibNamespace("tools", members)
     members["value"] = 2
     assert namespace.value == 1
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         StdlibNamespace("", {})
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         StdlibNamespace("tools", {"items": 1})
 
 
@@ -64,7 +65,7 @@ def test_assembly_is_one_pass_ordered_and_rejects_duplicate_namespaces() -> None
     assert preset.name == "reviewed"
     assert tuple(preset.values) == ("alpha", "beta")
     assert preset.values["alpha"].one == 1  # type: ignore[attr-defined]
-    with pytest.raises(ValueError, match="duplicate"):
+    with pytest.raises(LclValidationError, match="duplicate"):
         assemble_stdlib((_manifest("same", "one", 1), _manifest("same", "two", 2)))
 
 
@@ -86,7 +87,7 @@ async def test_assembled_preset_evaluates_through_namespace_attributes() -> None
 
 def test_assembly_validates_manifest_objects_and_preset_name() -> None:
     """Malformed assembly inputs fail before constructing partial namespaces."""
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         assemble_stdlib((object(),))  # type: ignore[arg-type]
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         assemble_stdlib((), name="")

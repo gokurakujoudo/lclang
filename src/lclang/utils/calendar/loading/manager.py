@@ -8,18 +8,28 @@ from contextvars import ContextVar
 from types import MappingProxyType
 from typing import final
 
+from lclang.error import LclError, LclUtilityError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.calendar import (
+    CalendarCannotLoadException,
+    CalendarLogicException,
+    wrap_calendar_failure,
+)
+from lclang.error.codes.utilities import Code as utilities_codes
 from lclang.utils.calendar.base import BDCalendar
-from lclang.utils.calendar.errors import CalendarCannotLoadException, CalendarLogicException
+from lclang.utils.calendar.helpers import CALENDAR_ERRORS
 from lclang.utils.calendar.loading.base import BDCalendarLoader
 from lclang.utils.calendar.loading.builtin import BuiltinBDCalendarLoader
 from lclang.utils.calendar.types import CalendarID
 
-# Task-local named-calendar dependency path used for cycle detection.
+# Unitless task-local dependency path starts empty and detects recursive named loads.
 ACTIVE_CALENDAR_LOADS: ContextVar[tuple[CalendarID, ...]] = ContextVar(
     "active_calendar_loads", default=()
 )
 
 
+@guard_constructor(LclValidationError, utilities_codes.NATIVE_712)
 @final
 class BDCalendarManager:
     """Coordinate calendar loaders, successful cache entries, and retirement.
@@ -34,11 +44,14 @@ class BDCalendarManager:
 
         :param loaders: Ordered loader instances.
         :returns: ``None``.
-        :raises TypeError: If an item is not a calendar loader.
+        :raises LclValidationError: If an item is not a calendar loader.
         """
         values = tuple(loaders)
         if any(not isinstance(loader, BDCalendarLoader) for loader in values):
-            raise TypeError("calendar manager loaders must be BDCalendarLoader values")
+            raise LclValidationError(
+                "calendar manager loaders must be BDCalendarLoader values",
+                code=utilities_codes.E12_CALENDAR_MANAGER_LOADERS_MUST_BE_BDCALENDARLOADER_VALUES,
+            )
         self.loaders = values
         self._cached_calendars: dict[CalendarID, BDCalendar] = {}
         self.cached_calendars: Mapping[CalendarID, BDCalendar] = MappingProxyType(
@@ -49,6 +62,7 @@ class BDCalendarManager:
             asyncio.Task[BDCalendar | None],
         ] = {}
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_712)
     async def use_calendar(
         self,
         calendar_id: CalendarID,
@@ -59,17 +73,20 @@ class BDCalendarManager:
         :param calendar_id: Requested calendar identifier.
         :param fallback: Calendar, calendar ID, or ``None``.
         :returns: Resolved calendar instance.
-        :raises TypeError: If *calendar_id* is not non-empty text.
+        :raises LclValidationError: If *calendar_id* is not non-empty text.
         :raises CalendarCannotLoadException: If no loader or fallback resolves it.
         """
         if not isinstance(calendar_id, str) or not calendar_id:
-            raise TypeError("calendar ID must be non-empty text")
+            raise LclValidationError(
+                "calendar ID must be non-empty text",
+                code=utilities_codes.E12_CALENDAR_ID_MUST_BE_NON_EMPTY_TEXT,
+            )
         selected_id = CalendarID(calendar_id)
         cached = self._cached_calendars.get(selected_id)
         if cached is not None:
             return cached
         if selected_id in ACTIVE_CALENDAR_LOADS.get():
-            raise CalendarCannotLoadException(selected_id)
+            raise CalendarCannotLoadException(selected_id, code=utilities_codes.E12_SELECTED_ID)
         flight_key = (asyncio.get_running_loop(), selected_id)
         task = self._flights.get(flight_key)
         if task is None:
@@ -82,8 +99,9 @@ class BDCalendarManager:
             return fallback
         if isinstance(fallback, str):
             return await self.use_calendar(CalendarID(fallback))
-        raise CalendarCannotLoadException(selected_id)
+        raise CalendarCannotLoadException(selected_id, code=utilities_codes.E12_SELECTED_ID)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_712)
     async def load_named_calendar(self, calendar_id: CalendarID) -> BDCalendar | None:
         """Own one shared loader traversal and successful cache commit.
 
@@ -98,15 +116,35 @@ class BDCalendarManager:
                     calendar = await loader.load_calendar(calendar_id, self)
                 except asyncio.CancelledError:
                     raise
-                except CalendarCannotLoadException:
+                except CALENDAR_ERRORS:
                     raise
                 except Exception as error:
-                    raise CalendarCannotLoadException(calendar_id) from error
+                    failure = wrap_calendar_failure(
+                        error,
+                        CalendarCannotLoadException(
+                            calendar_id,
+                            code=(
+                                error.code
+                                if isinstance(error, LclError)
+                                else utilities_codes.E12_LOAD_CALENDAR_FAILURE
+                            ),
+                        ),
+                    )
+                    raise failure from failure.__cause__
                 if calendar is None:
                     continue
                 if calendar.calendar_id != calendar_id:
-                    mismatch = ValueError("loader returned a mismatched calendar ID")
-                    raise CalendarCannotLoadException(calendar_id) from mismatch
+                    mismatch = LclValidationError(
+                        "loader returned a mismatched calendar ID",
+                        code=utilities_codes.E12_LOADER_RETURNED_A_MISMATCHED_CALENDAR_ID,
+                    )
+                    failure = wrap_calendar_failure(
+                        mismatch,
+                        CalendarCannotLoadException(
+                            calendar_id, code=utilities_codes.E12_LOAD_CALENDAR_FAILURE
+                        ),
+                    )
+                    raise failure from failure.__cause__
                 self._cached_calendars[calendar_id] = calendar
                 return calendar
             return None
@@ -117,6 +155,7 @@ class BDCalendarManager:
             if self._flights.get(flight_key) is current:
                 self._flights.pop(flight_key, None)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_712)
     async def retire_calendar(
         self,
         calendar_id: CalendarID,
@@ -143,7 +182,18 @@ class BDCalendarManager:
                 try:
                     dependencies = await calendar.get_dependency_ids()
                 except Exception as error:
-                    raise CalendarLogicException(calendar.calendar_id) from error
+                    failure = wrap_calendar_failure(
+                        error,
+                        CalendarLogicException(
+                            calendar.calendar_id,
+                            code=(
+                                error.code
+                                if isinstance(error, LclError)
+                                else utilities_codes.E12_RETIRE_CALENDAR_FAILURE
+                            ),
+                        ),
+                    )
+                    raise failure from failure.__cause__
                 if removed & set(dependencies):
                     removed.add(key)
                     changed = True
@@ -154,6 +204,7 @@ class BDCalendarManager:
         return frozenset(removed)
 
 
+@guard_failure(LclUtilityError, utilities_codes.NATIVE_712)
 def use_calendar_manager(loaders: Iterable[BDCalendarLoader]) -> BDCalendarManager:
     """Create a manager with a builtin loader last.
 

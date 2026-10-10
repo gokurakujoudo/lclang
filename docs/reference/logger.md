@@ -27,8 +27,8 @@ Formats without `%(asctime)s` do not show a timestamp.
 Set `LoggerHandlerConfig(timezone="utc")`, pass `{"timezone": "utc"}` to the
 handler scope, declare `logger.timezone: "utc"` in LCL, or use CLI
 `-o logger.timezone utc` to retain the previous UTC-only behavior. The default
-has changed to local time. Non-text values raise `TypeError`; other strings,
-including `"UTC"` and named zones, raise `ValueError` before sink initialization.
+has changed to local time. Non-text values raise `LclValidationError`; other strings,
+including `"UTC"` and named zones, raise `LclValidationError` before sink initialization.
 Verbose mode preserves the timezone. Segment filenames and aligned rotation
 continue to use UTC; CLI execution-time variables retain their existing meaning.
 
@@ -78,8 +78,8 @@ using the supplied Frame's hierarchy, overrides and cached snapshots. Missing
 fields use the ordinary handler defaults; an absent logger namespace returns
 `LoggerHandlerConfig()` settings. If present, `logger` must be a scoped
 `FrameProxy`, not a scalar or a nested Python mapping. Invalid namespace or
-field types raise `TypeError`; invalid values and failing leaf expressions raise
-`ValueError`. Field validation includes source metadata when available, and
+field types raise `LclValidationError`; invalid values and failing leaf expressions raise
+`LclValidationError`. Field validation includes source metadata when available, and
 leaf evaluation errors include the logger path and retain their cause.
 
 Resolution does not enter a handler scope, initialize sinks, modify bindings,
@@ -294,3 +294,8 @@ outside the producer measurement. This measures admission capacity, not sustaine
 disk throughput; an unbounded queue can grow when producers outpace the writer.
 The checked-in [measurement sample](../development/logger-benchmark.json) records
 the host and Python version and is not a portable performance guarantee.
+
+See [errors and diagnostic codes](errors.md) for exception fields, specific
+codes, cause chains, and executable troubleshooting examples. Ordinary library
+validation uses `LclValidationError`; native callback and operation failures
+retain their original exception in `__cause__`.

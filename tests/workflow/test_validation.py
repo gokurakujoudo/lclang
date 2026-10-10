@@ -11,8 +11,23 @@ import pytest
 
 import lclang
 import lclang.workflow as wf
+from lclang.error import LclValidationError
 from lclang.utils import safe_repr
 from lclang.workflow.mappings import mapped_outputs, materialize_args
+
+
+def test_uninspectable_callable_has_a_distinct_validation_code() -> None:
+    """Callable availability and signature inspection are separate definition failures."""
+
+    class Callback:
+        __signature__ = object()
+
+        def __call__(self) -> None:
+            pass
+
+    with pytest.raises(LclValidationError) as caught:
+        wf.define_context_task("context", "Context", cast(Any, Callback()), Pair(1))
+    assert caught.value.code == "LCL511183" and isinstance(caught.value.__cause__, TypeError)
 
 
 @dataclass
@@ -80,27 +95,27 @@ def test_variable_and_scalar_declarations_validate_and_normalize() -> None:
     variable = wf.define_variable[int]("scope.value", "  useful   value  ")
     assert variable.description == "useful value"
     assert cast(object, variable.quote) is variable
-    with pytest.raises(TypeError, match="description"):
+    with pytest.raises(LclValidationError, match="description"):
         wf.define_variable[int]("value", cast(Any, 1))
-    with pytest.raises(TypeError, match="Boolean"):
+    with pytest.raises(LclValidationError, match="Boolean"):
         wf.define_variable[int]("value", is_masked=cast(Any, 1))
-    with pytest.raises(ValueError, match="unqualified"):
+    with pytest.raises(LclValidationError, match="unqualified"):
         wf.define_task("scope.task", "Task")
-    with pytest.raises(TypeError, match="title"):
+    with pytest.raises(LclValidationError, match="title"):
         wf.define_task("task", cast(Any, 1))
-    with pytest.raises(ValueError, match="empty"):
+    with pytest.raises(LclValidationError, match="empty"):
         wf.define_task("task", "  ")
 
 
 def test_factories_reject_inconsistent_mappings_and_callables() -> None:
     """Malformed callable and container shapes fail during definition."""
-    with pytest.raises(ValueError, match="structural"):
+    with pytest.raises(LclValidationError, match="structural"):
         wf.define_task("task", "Task", args_mapping=Pair(1))
-    with pytest.raises(ValueError, match="required"):
+    with pytest.raises(LclValidationError, match="required"):
         wf.define_task("task", "Task", task_action=valid_action)
-    with pytest.raises(TypeError, match="dataclass"):
+    with pytest.raises(LclValidationError, match="dataclass"):
         wf.define_task("task", "Task", task_action=valid_action, args_mapping=cast(Any, 1))
-    with pytest.raises(TypeError, match="dataclass"):
+    with pytest.raises(LclValidationError, match="dataclass"):
         wf.define_task(
             "task",
             "Task",
@@ -145,25 +160,26 @@ def test_factories_reject_inconsistent_mappings_and_callables() -> None:
         (wrong_annotations, "annotations"),
         (unresolved, "resolved"),
     ):
-        with pytest.raises(TypeError, match=message):
+        with pytest.raises(LclValidationError, match=message):
             wf.define_task("task", "Task", task_action=cast(Any, action), args_mapping=Pair(1))
 
-    with pytest.raises(TypeError, match="context task"):
+    with pytest.raises(LclValidationError, match="callable") as callback:
         wf.define_context_task("context", "Context", cast(Any, 1), Pair(1))
-    with pytest.raises(TypeError, match="context output"):
+    assert callback.value.code == "LCL511163"
+    with pytest.raises(LclValidationError, match="context output"):
         wf.define_context_task("context", "Context", valid_context, Pair(1), cast(Any, Pair))
     assert wf.define_context_task(
         "context", "Context", cast(Any, CallableContext()), Pair(1)
     ).task_id == wf.TaskID("context")
-    with pytest.raises(TypeError, match="ContextTask"):
+    with pytest.raises(LclValidationError, match="ContextTask"):
         wf.define_task("task", "Task", context_tasks=cast(Any, [object()]))
-    with pytest.raises(TypeError, match="TaskNode"):
+    with pytest.raises(LclValidationError, match="TaskNode"):
         wf.define_task("task", "Task", children=cast(Any, [object()]))
 
 
 def test_workflow_graph_rejects_wrong_roots_cycles_and_variable_aliases() -> None:
     """Tree-wide identity checks reject ambiguous reusable declarations."""
-    with pytest.raises(TypeError, match="root"):
+    with pytest.raises(LclValidationError, match="root"):
         wf.define_workflow("Workflow", cast(Any, object()))
 
     first = wf.define_variable[int]("same")
@@ -178,12 +194,12 @@ def test_workflow_graph_rejects_wrong_roots_cycles_and_variable_aliases() -> Non
         args_mapping=Pair(first.quote),
         children=[child],
     )
-    with pytest.raises(ValueError, match="variable declaration"):
+    with pytest.raises(LclValidationError, match="variable declaration"):
         wf.define_workflow("Workflow", root)
 
     cyclic = wf.define_task("cycle", "Cycle")
     object.__setattr__(cyclic, "children", (cyclic,))
-    with pytest.raises(ValueError, match="cycle"):
+    with pytest.raises(LclValidationError, match="cycle"):
         wf.define_workflow("Workflow", cyclic)
 
 
@@ -193,9 +209,9 @@ async def test_mapping_edges_are_explicit_safe_and_bounded() -> None:
     target = wf.define_variable[int]("target", is_masked=True)
     async with lclang.define_frame() as frame:
         assert await mapped_outputs(None, Pair(1), frame) == {}
-        with pytest.raises(TypeError, match="mapping dataclass"):
+        with pytest.raises(LclValidationError, match="mapping dataclass"):
             await mapped_outputs(Pair(target.quote), object(), frame)
-        with pytest.raises(ValueError, match="duplicate"):
+        with pytest.raises(LclValidationError, match="duplicate"):
             await mapped_outputs(Pair(target.quote, target.quote), Pair(1, 2), frame)
         assert await mapped_outputs(Pair(1, target.quote), Pair(3, 4), frame) == {"target!": 4}
         assert await materialize_args(Pair(1, 2), frame) == Pair(1, 2)

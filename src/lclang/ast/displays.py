@@ -5,9 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from lclang.ast.base import LclAstNode
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.core import Code as core_codes
 from lclang.types import VarName
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_823)
 @dataclass(frozen=True, slots=True)
 class LclStarred(LclAstNode):
     """Represent iterable unpacking inside a sequence display.
@@ -20,6 +24,7 @@ class LclStarred(LclAstNode):
 
     value: LclAstNode
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_823)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return the unpacked expression.
 
@@ -31,6 +36,7 @@ class LclStarred(LclAstNode):
         return (self.value,)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_823)
 @dataclass(frozen=True, slots=True)
 class LclList(LclAstNode):
     """Represent a list display.
@@ -43,6 +49,7 @@ class LclList(LclAstNode):
 
     elements: tuple[LclAstNode, ...] = ()
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_823)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return list elements.
 
@@ -54,26 +61,32 @@ class LclList(LclAstNode):
         return self.elements
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_823)
 @dataclass(frozen=True, slots=True)
 class LclRecordField(LclAstNode):
     """Represent one named record field.
 
     :param name: Non-empty field name before ``=``.
     :param value: Expression supplying the retained field value.
-    :raises ValueError: If *name* is empty.
+    :raises LclValidationError: If *name* is empty.
     """
 
     name: VarName
     value: LclAstNode
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_823)
     def __post_init__(self) -> None:
         """Reject an empty field name.
 
-        :raises ValueError: If the field name is empty.
+        :raises LclValidationError: If the field name is empty.
         """
         if not self.name:
-            raise ValueError("record field name cannot be empty")
+            raise LclValidationError(
+                "record field name cannot be empty",
+                code=core_codes.E23_RECORD_FIELD_NAME_CANNOT_BE_EMPTY,
+            )
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_823)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return the field value expression.
 
@@ -82,24 +95,30 @@ class LclRecordField(LclAstNode):
         return (self.value,)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_823)
 @dataclass(frozen=True, slots=True)
 class LclRecordDisplay(LclAstNode):
     """Represent a non-empty immutable record display.
 
     :param fields: Named fields in source declaration order.
-    :raises ValueError: If no field is supplied.
+    :raises LclValidationError: If no field is supplied.
     """
 
     fields: tuple[LclRecordField, ...]
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_823)
     def __post_init__(self) -> None:
         """Reject an empty record display.
 
-        :raises ValueError: If no field is supplied.
+        :raises LclValidationError: If no field is supplied.
         """
         if not self.fields:
-            raise ValueError("record display requires at least one field")
+            raise LclValidationError(
+                "record display requires at least one field",
+                code=core_codes.E23_RECORD_DISPLAY_REQUIRES_AT_LEAST_ONE_FIELD,
+            )
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_823)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return fields in declaration order.
 
@@ -108,6 +127,7 @@ class LclRecordDisplay(LclAstNode):
         return self.fields
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_823)
 @dataclass(frozen=True, slots=True)
 class LclSet(LclAstNode):
     """Represent a non-empty set display.
@@ -120,6 +140,7 @@ class LclSet(LclAstNode):
 
     elements: tuple[LclAstNode, ...]
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_823)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return set elements.
 
@@ -131,6 +152,7 @@ class LclSet(LclAstNode):
         return self.elements
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_823)
 @dataclass(frozen=True, slots=True)
 class LclKeyValue(LclAstNode):
     """Represent one explicit dictionary key/value entry.
@@ -145,6 +167,7 @@ class LclKeyValue(LclAstNode):
     key: LclAstNode
     value: LclAstNode
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_823)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return key then value expression.
 
@@ -156,6 +179,7 @@ class LclKeyValue(LclAstNode):
         return (self.key, self.value)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_823)
 @dataclass(frozen=True, slots=True)
 class LclDictUnpack(LclAstNode):
     """Represent mapping unpacking inside a dictionary display.
@@ -168,6 +192,7 @@ class LclDictUnpack(LclAstNode):
 
     value: LclAstNode
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_823)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return the mapping expression.
 
@@ -182,6 +207,7 @@ class LclDictUnpack(LclAstNode):
 type LclDictEntry = LclKeyValue | LclDictUnpack
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_823)
 @dataclass(frozen=True, slots=True)
 class LclDict(LclAstNode):
     """Represent a dictionary display with explicit entry forms.
@@ -194,6 +220,7 @@ class LclDict(LclAstNode):
 
     entries: tuple[LclDictEntry, ...] = ()
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_823)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return explicit dictionary entries.
 

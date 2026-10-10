@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 import lclang
-from lclang.errors import LclCircularDependencyError
+from lclang.error import LclCircularDependencyError
 from lclang.runtime import build_dependency_graph, topological_order
 
 

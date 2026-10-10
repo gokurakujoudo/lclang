@@ -5,6 +5,8 @@ from typing import cast
 
 import pytest
 
+from lclang.error import LclAttributeError, LclErrorGroup, LclValidationError
+from lclang.error.calendar import wrap_calendar_failure
 from lclang.utils.calendar import (
     MAX_BUSINESS_DAY_GAP_DAYS,
     CalendarID,
@@ -16,6 +18,18 @@ from lclang.utils.calendar import (
     HardcodedBDCalendar,
     YearBatchBDCalendar,
 )
+
+
+def test_calendar_group_retains_codes_causes_and_single_calendar_context() -> None:
+    """Calendar adapters keep grouped members and append their calendar ID once."""
+    original = ExceptionGroup("calendar", [OSError("first"), ValueError("second")])
+    template = CalendarLogicException(CalendarID("GROUPED"))
+    wrapped = wrap_calendar_failure(original, template)
+    assert isinstance(wrapped, LclErrorGroup) and wrapped.__cause__ is original
+    assert [item.__cause__ for item in wrapped.exceptions] == list(original.exceptions)
+    assert wrapped.code == template.code
+    assert wrap_calendar_failure(wrapped, template) is wrapped
+    assert wrapped.__notes__ == [template.message]
 
 
 class WeekendCalendar(FunctionalBDCalendar):
@@ -71,7 +85,7 @@ async def test_day_types_identity_and_hardcoded_navigation() -> None:
         first: DayType.BusinessDay,
         last: DayType.BusinessDay,
     }
-    with pytest.raises(AttributeError):
+    with pytest.raises(LclAttributeError):
         calendar.calendar_id = CalendarID("OTHER")
     with pytest.raises(DateOperationOutOfScopeException):
         await calendar.next_bd(last)
@@ -92,7 +106,7 @@ async def test_functional_strategy_caches_and_bounds_searches() -> None:
     assert MAX_BUSINESS_DAY_GAP_DAYS == 1000
     with pytest.raises(CalendarLogicException) as failure:
         await BrokenCalendar(CalendarID("BROKEN")).next_bd(date(2024, 1, 1))
-    assert isinstance(failure.value.__cause__, TypeError)
+    assert isinstance(failure.value.__cause__, LclValidationError)
 
 
 @pytest.mark.asyncio
@@ -124,5 +138,5 @@ async def test_forward_and_year_batch_strategies_cover_sparse_boundaries() -> No
 async def test_year_generation_rejects_values_outside_datetime_range(year: int) -> None:
     """Every strategy rejects unsupported Gregorian years consistently."""
     calendar = HardcodedBDCalendar(CalendarID("EMPTY"), {})
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         await calendar.gen_year(year)

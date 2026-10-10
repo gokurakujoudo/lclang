@@ -11,8 +11,12 @@ from lclang.ast.operators import (
     ComparisonOperator,
     UnaryOperator,
 )
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.core import Code as core_codes
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_827)
 @dataclass(frozen=True, slots=True)
 class LclUnary(LclAstNode):
     """Represent one unary operation.
@@ -27,6 +31,7 @@ class LclUnary(LclAstNode):
     operator: UnaryOperator
     operand: LclAstNode
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_827)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return the single operand.
 
@@ -38,6 +43,7 @@ class LclUnary(LclAstNode):
         return (self.operand,)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_827)
 @dataclass(frozen=True, slots=True)
 class LclBinary(LclAstNode):
     """Represent one binary operation.
@@ -54,6 +60,7 @@ class LclBinary(LclAstNode):
     operator: BinaryOperator
     right: LclAstNode
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_827)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return left then right operand.
 
@@ -65,13 +72,14 @@ class LclBinary(LclAstNode):
         return (self.left, self.right)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_827)
 @dataclass(frozen=True, slots=True)
 class LclBoolean(LclAstNode):
     """Represent a flattened short-circuit Boolean operation.
 
     :param operator: Shared ``and`` or ``or`` operator.
     :param values: At least two operands in source order.
-    :raises ValueError: If fewer than two operands are supplied.
+    :raises LclValidationError: If fewer than two operands are supplied.
 
     .. note::
        Flattening applies only to adjacent identical Boolean operators.
@@ -80,14 +88,19 @@ class LclBoolean(LclAstNode):
     operator: BooleanOperator
     values: tuple[LclAstNode, ...]
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_827)
     def __post_init__(self) -> None:
         """Enforce Boolean expression cardinality.
 
-        :raises ValueError: If fewer than two operands are supplied.
+        :raises LclValidationError: If fewer than two operands are supplied.
         """
         if len(self.values) < 2:
-            raise ValueError("Boolean expression requires at least two operands")
+            raise LclValidationError(
+                "Boolean expression requires at least two operands",
+                code=core_codes.E27_BOOLEAN_EXPRESSION_REQUIRES_AT_LEAST_TWO_OPERANDS,
+            )
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_827)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return all Boolean operands.
 
@@ -99,6 +112,7 @@ class LclBoolean(LclAstNode):
         return self.values
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_827)
 @dataclass(frozen=True, slots=True)
 class LclCompare(LclAstNode):
     """Represent one comparison chain.
@@ -106,7 +120,7 @@ class LclCompare(LclAstNode):
     :param left: First comparison operand.
     :param operators: One operator per comparator.
     :param comparators: Non-empty right-hand operand sequence.
-    :raises ValueError: If operators and comparators differ or are empty.
+    :raises LclValidationError: If operators and comparators differ or are empty.
 
     .. note::
        Chained middle operands are evaluated once by the interpreter.
@@ -116,14 +130,19 @@ class LclCompare(LclAstNode):
     operators: tuple[ComparisonOperator, ...]
     comparators: tuple[LclAstNode, ...]
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_827)
     def __post_init__(self) -> None:
         """Enforce comparison-chain cardinality.
 
-        :raises ValueError: If operators and comparators are empty or mismatched.
+        :raises LclValidationError: If operators and comparators are empty or mismatched.
         """
         if not self.operators or len(self.operators) != len(self.comparators):
-            raise ValueError("comparison requires one comparator per operator")
+            raise LclValidationError(
+                "comparison requires one comparator per operator",
+                code=core_codes.E27_COMPARISON_REQUIRES_ONE_COMPARATOR_PER_OPERATOR,
+            )
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_827)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return the left value followed by comparators.
 
@@ -135,6 +154,7 @@ class LclCompare(LclAstNode):
         return (self.left, *self.comparators)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_827)
 @dataclass(frozen=True, slots=True)
 class LclConditional(LclAstNode):
     """Represent ``when_true if condition else when_false``.
@@ -151,6 +171,7 @@ class LclConditional(LclAstNode):
     condition: LclAstNode
     when_false: LclAstNode
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_827)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return the three source-order expressions.
 
@@ -162,6 +183,7 @@ class LclConditional(LclAstNode):
         return (self.when_true, self.condition, self.when_false)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_827)
 @dataclass(frozen=True, slots=True)
 class LclCoalesce(LclAstNode):
     """Represent null-coalescing ``left ?? right``.
@@ -176,6 +198,7 @@ class LclCoalesce(LclAstNode):
     left: LclAstNode
     right: LclAstNode
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_827)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return preferred then fallback expression.
 

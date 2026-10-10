@@ -5,6 +5,10 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from lclang.ast import LclAstNode
+from lclang.error import LclEvaluationError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.printer._types import RenderResult
 from lclang.lang.printer.atoms import render_atom
 from lclang.lang.printer.collections import render_collection
@@ -25,12 +29,13 @@ _RENDERERS: tuple[FamilyRenderer, ...] = (
 )
 
 
+@guard_failure(LclEvaluationError, language_codes.NATIVE_141)
 def to_source(node: LclAstNode) -> str:
     """Return deterministic canonical source for one semantic AST node.
 
     :param node: Root node to render.
     :returns: Canonical LCL V1 expression source.
-    :raises TypeError: If the tree contains an unsupported node or value.
+    :raises LclValidationError: If the tree contains an unsupported node or value.
 
     .. note::
        Source spans are intentionally omitted because canonicalization may alter them.
@@ -44,7 +49,7 @@ def internal_render(node: LclAstNode, parent_precedence: int) -> str:
     :param node: AST node to render.
     :param parent_precedence: Minimum precedence accepted without grouping.
     :returns: Canonical source text for the node.
-    :raises TypeError: If no registered renderer supports the node.
+    :raises LclValidationError: If no registered renderer supports the node.
 
     .. note::
        Renderer order resolves node families, while the returned precedence
@@ -55,4 +60,7 @@ def internal_render(node: LclAstNode, parent_precedence: int) -> str:
         if result is not None:
             text, precedence = result
             return f"({text})" if precedence < parent_precedence else text
-    raise TypeError(f"unsupported AST node: {type(node).__name__}")
+    raise LclValidationError(
+        f"unsupported AST node: {type(node).__name__}",
+        code=language_codes.E41_UNSUPPORTED_AST_NODE_VALUE,
+    )

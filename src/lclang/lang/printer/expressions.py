@@ -12,6 +12,9 @@ from lclang.ast import (
     LclUnary,
 )
 from lclang.ast.operators import BinaryOperator, BooleanOperator, UnaryOperator
+from lclang.error import LclEvaluationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.printer._types import Render, RenderResult
 
 # Unitless operator ranks match Pratt binding powers; matching ranks preserve meaning when
@@ -33,6 +36,7 @@ _BINARY_PRECEDENCE = {
 }
 
 
+@guard_failure(LclEvaluationError, language_codes.NATIVE_141)
 def render_expression(node: LclAstNode, render: Render) -> RenderResult | None:
     """Render one ordinary operator expression.
 

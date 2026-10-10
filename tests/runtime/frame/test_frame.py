@@ -5,7 +5,7 @@ from typing import cast
 
 import pytest
 
-from lclang.errors import LclEvaluationError, LclNameError
+from lclang.error import LclEvaluationError, LclNameError, LclValidationError
 from lclang.lang.parser import parse_expression
 from lclang.types import FrameId, ModuleName
 
@@ -15,15 +15,15 @@ def test_frame_rejects_empty_frame_and_host_binding_names() -> None:
     from lclang.runtime import Frame, Module
 
     module = Module(ModuleName("app"), {})
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         Frame(module, FrameId(""))
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         Frame(module, FrameId("frame:1"), values={"": 1})
-    with pytest.raises(TypeError, match="host binding names must be strings"):
+    with pytest.raises(LclValidationError, match="host binding names must be strings"):
         Frame(module, values=cast(dict[str, object], {1: 1}))
     overlay = Frame(module, masked_names={"missing"})
     assert overlay.is_masked("missing") is True
-    with pytest.raises(ValueError, match="cannot be empty"):
+    with pytest.raises(LclValidationError, match="cannot be empty"):
         Frame(module).is_masked("")
 
 
@@ -35,9 +35,9 @@ def test_frame_normalizes_optional_and_string_identifiers() -> None:
     assert Frame(module).frame_id == FrameId("frame-app")
     assert Frame(module, "custom").frame_id == FrameId("custom")
     assert Frame(module, native_values=True).native_values is True
-    with pytest.raises(TypeError, match="frame identifier must be a string"):
+    with pytest.raises(LclValidationError, match="frame identifier must be a string"):
         Frame(module, 42)  # type: ignore[arg-type]
-    with pytest.raises(TypeError, match="native-values"):
+    with pytest.raises(LclValidationError, match="native-values"):
         Frame(module, native_values=1)  # type: ignore[arg-type]
 
 
@@ -47,9 +47,9 @@ async def test_frame_get_rejects_empty_variable_name() -> None:
     from lclang.runtime import Frame, Module
 
     frame = Frame(Module(ModuleName("app"), {}), FrameId("frame:1"))
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         await frame.get("")
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         await frame.get("", fallback=42)
 
 

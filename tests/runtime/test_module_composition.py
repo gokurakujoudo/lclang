@@ -5,7 +5,7 @@ from typing import Any, cast
 import pytest
 
 from lclang import NEED_OVERRIDE, RUNTIME_OVERRIDE, define_frame, define_module
-from lclang.errors import LclEvaluationError
+from lclang.error import LclEvaluationError, LclValidationError
 from lclang.runtime import Module, VariableInspectionStatus
 from lclang.types import ModuleName
 
@@ -57,17 +57,17 @@ def test_module_mixin_validates_arguments_and_preserves_masks_namespaces() -> No
     assert combined.masked_names == frozenset({"secret"})
     assert combined.namespace_names == frozenset({"empty"})
     assert list(combined.definitions) == ["secret", "empty"]
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         base.mixin(cast(Any, {}))
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         base.mixin(patch, name=cast(Any, 1))
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         base.mixin(patch, name="")
-    with pytest.raises(ValueError, match="namespace"):
+    with pytest.raises(LclValidationError, match="namespace"):
         combined.mixin(define_module("invalid", {"empty": "1"}))
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         Module(ModuleName("invalid"), {}, namespace_names=cast(Any, set()))
-    with pytest.raises(ValueError, match="reserved"):
+    with pytest.raises(LclValidationError, match="reserved"):
         Module(ModuleName("invalid"), {}, namespace_names=frozenset({"__private"}))
 
 

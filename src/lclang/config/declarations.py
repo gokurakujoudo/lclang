@@ -3,17 +3,21 @@
 from pathlib import Path
 
 from lclang.ast import LclConstant, LclJoinedString
-from lclang.config.errors import LclConfigSyntaxError, LclConfigVersionError
 from lclang.config.expressions import parse_config_expression
 from lclang.config.lines import LogicalLine
 from lclang.config.model import ConfigUsing
 from lclang.config.positions import advance_position
-from lclang.errors import LclSyntaxError
+from lclang.error import LclConfigError, LclSyntaxError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.configuration import Code as configuration_codes
+from lclang.error.configuration import LclConfigSyntaxError, LclConfigVersionError
 from lclang.lang.lexer import Token, TokenKind, scan_tokens
 from lclang.scopes import validate_qualified_name
 from lclang.source import SourceOrigin
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_313)
 def parse_version(line: LogicalLine, leading: int, origin: SourceOrigin) -> int:
     """Parse the optional leading version metadata line.
 
@@ -27,10 +31,18 @@ def parse_version(line: LogicalLine, leading: int, origin: SourceOrigin) -> int:
        Version metadata is consumed before ordinary declarations are built.
     """
     if line.continued:
-        raise LclConfigVersionError("version metadata cannot continue", span=line.span)
+        raise LclConfigVersionError(
+            "version metadata cannot continue",
+            span=line.span,
+            code=configuration_codes.E13_VERSION_METADATA_CANNOT_CONTINUE,
+        )
     rest = line.text[leading + len("__LCL_VERSION__") :]
     if not rest.lstrip(" \t\f").startswith(":"):
-        raise LclConfigVersionError("version metadata requires colon", span=line.span)
+        raise LclConfigVersionError(
+            "version metadata requires colon",
+            span=line.span,
+            code=configuration_codes.E13_VERSION_METADATA_REQUIRES_COLON,
+        )
     colon = leading + len("__LCL_VERSION__") + len(rest) - len(rest.lstrip(" \t\f"))
     value_text = line.text[colon + 1 :]
     start = advance_position(line.start, line.text[: colon + 1])
@@ -39,14 +51,23 @@ def parse_version(line: LogicalLine, leading: int, origin: SourceOrigin) -> int:
             scan_tokens(value_text, origin=origin, start=start, snapshot=line.span.snapshot)
         )
     except LclSyntaxError as error:
-        raise LclConfigVersionError(error.message, span=error.span) from error
+        raise LclConfigVersionError(error.message, span=error.span, code=error.code) from error
     if len(tokens) != 2 or tokens[0].kind is not TokenKind.INTEGER:
-        raise LclConfigVersionError("version metadata requires one integer", span=line.span)
+        raise LclConfigVersionError(
+            "version metadata requires one integer",
+            span=line.span,
+            code=configuration_codes.E13_VERSION_METADATA_REQUIRES_ONE_INTEGER,
+        )
     if tokens[0].value != 1:
-        raise LclConfigVersionError("unsupported config version", span=tokens[0].span)
+        raise LclConfigVersionError(
+            "unsupported config version",
+            span=tokens[0].span,
+            code=configuration_codes.E13_UNSUPPORTED_CONFIG_VERSION,
+        )
     return 1
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_313)
 def parse_using(
     line: LogicalLine,
     leading: int,
@@ -69,7 +90,11 @@ def parse_using(
        Path resolution is deliberately deferred to the async loader.
     """
     if line.continued:
-        raise LclConfigSyntaxError(f"{keyword} declaration cannot continue", span=line.span)
+        raise LclConfigSyntaxError(
+            f"{keyword} declaration cannot continue",
+            span=line.span,
+            code=configuration_codes.E13_VALUE_DECLARATION_CANNOT_CONTINUE,
+        )
     optional = line.text[leading:].startswith(keyword + "?")
     keyword_end = leading + len(keyword) + int(optional)
     target_text = line.text[keyword_end:]
@@ -81,11 +106,15 @@ def parse_using(
         target = expression.value
         if not target:
             raise LclConfigSyntaxError(
-                f"{keyword} target must be non-empty text", span=expression.span
+                f"{keyword} target must be non-empty text",
+                span=expression.span,
+                code=configuration_codes.E13_VALUE_TARGET_MUST_BE_NON_EMPTY_TEXT,
             )
         if Path(target).suffix != ".lclcfg":
             raise LclConfigSyntaxError(
-                f"{keyword} target must end in .lclcfg", span=expression.span
+                f"{keyword} target must end in .lclcfg",
+                span=expression.span,
+                code=configuration_codes.E13_VALUE_TARGET_MUST_END_IN_LCLCFG,
             )
         return ConfigUsing(target, line.span, ordinal, optional)
     if isinstance(expression, LclJoinedString):
@@ -93,9 +122,11 @@ def parse_using(
     raise LclConfigSyntaxError(
         f"{keyword} requires exactly one string literal or f-string",
         span=expression.span,
+        code=configuration_codes.E13_VALUE_REQUIRES_EXACTLY_ONE_STRING_LITERAL_OR_F_STRING,
     )
 
 
+@guard_failure(LclValidationError, configuration_codes.NATIVE_313)
 def validate_definition_name(name: str, line: LogicalLine, origin: SourceOrigin) -> None:
     """Validate one top-level configuration binding spelling.
 
@@ -110,12 +141,21 @@ def validate_definition_name(name: str, line: LogicalLine, origin: SourceOrigin)
     """
     try:
         validate_qualified_name(name)
-    except (TypeError, ValueError) as error:
-        raise LclConfigSyntaxError("invalid config definition name", span=line.span) from error
+    except LclValidationError as error:
+        raise LclConfigSyntaxError(
+            "invalid config definition name",
+            span=line.span,
+            code=error.code,
+        ) from error
     if name.startswith("__"):
-        raise LclConfigSyntaxError("invalid or reserved config definition name", span=line.span)
+        raise LclConfigSyntaxError(
+            "invalid or reserved config definition name",
+            span=line.span,
+            code=configuration_codes.E13_INVALID_OR_RESERVED_CONFIG_DEFINITION_NAME,
+        )
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_313)
 def following_boundary(text: str, index: int) -> bool:
     """Check that a recognized declaration word ends at whitespace.
 
@@ -129,6 +169,7 @@ def following_boundary(text: str, index: int) -> bool:
     return len(text) == index or text[index] in " \t\f\r\n"
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_313)
 def significant_tokens(tokens: list[Token]) -> list[Token]:
     """Discard physical newline tokens for declaration-level validation.
 

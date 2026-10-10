@@ -15,6 +15,7 @@ from lclang.cli import (
     ParameterDoc,
     cli,
 )
+from lclang.error import LclValidationError
 
 InvalidCommand = cast(Any, Command)
 InvalidCommandGroup = cast(Any, CommandGroup)
@@ -55,13 +56,13 @@ def test_groups_snapshot_children_and_reject_collisions() -> None:
     group = CommandGroup("root", "Root tools", children)
     children.clear()
     assert group.commands == (first_command,)
-    with pytest.raises(ValueError, match="duplicate"):
+    with pytest.raises(LclValidationError, match="duplicate"):
         CommandGroup("root", "Root tools", [first_command, first_command])
 
 
 def test_decorator_rejects_non_async_or_wrong_annotations() -> None:
     """Incompatible handlers fail during declaration rather than execution."""
-    with pytest.raises(TypeError, match="async"):
+    with pytest.raises(LclValidationError, match="async"):
 
         @cli.command()  # type: ignore[arg-type]
         def invalid_command(context: CliContext) -> CliResult:
@@ -98,7 +99,7 @@ def test_command_snapshots_inputs_and_validates_handler_once() -> None:
     assert command.preset == {"token": "secret"}
     assert command.masked_names == frozenset({"token"})
     assert len(command.parameter_docs) == 1
-    with pytest.raises(TypeError, match="mapping"):
+    with pytest.raises(LclValidationError, match="mapping"):
         InvalidCommand("run", "", (), [], valid_handler)
 
 
@@ -139,7 +140,7 @@ def test_command_snapshots_inputs_and_validates_handler_once() -> None:
 )
 def test_declarations_reject_invalid_names_and_children(factory: object, message: str) -> None:
     """Declaration validation covers collisions, reserved names, and child types."""
-    with pytest.raises((TypeError, ValueError), match=message):
+    with pytest.raises((LclValidationError, LclValidationError), match=message):
         factory()  # type: ignore[operator]
 
 
@@ -162,9 +163,9 @@ def test_handler_shape_and_docstring_boundaries_are_strict() -> None:
         """
         return 0
 
-    with pytest.raises(TypeError, match="exactly context"):
+    with pytest.raises(LclValidationError, match="exactly context"):
         cli.command()(wrong_name)
-    with pytest.raises(TypeError, match="annotations"):
+    with pytest.raises(LclValidationError, match="annotations"):
         cli.command()(wrong_return)  # type: ignore[arg-type]
     command = cli.command()(valid_handler)
     assert command.summary == "Return a reusable valid result."
@@ -178,7 +179,7 @@ def test_handler_shape_and_docstring_boundaries_are_strict() -> None:
         return CliResult(CliResultStatus.SUCCESS, "")
 
     unresolved.__annotations__["return"] = "MissingCliResult"
-    with pytest.raises(TypeError, match="cannot be resolved"):
+    with pytest.raises(LclValidationError, match="cannot be resolved"):
         cli.command()(unresolved)
 
     unresolved.__doc__ = None

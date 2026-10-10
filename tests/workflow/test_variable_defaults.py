@@ -8,6 +8,7 @@ import pytest
 
 import lclang
 import lclang.workflow as wf
+from lclang.error import LclValidationError
 from tests.workflow.default_support import Value, echo, execution_context, workflow_for
 
 
@@ -153,11 +154,11 @@ async def test_concurrent_and_repeated_borrowed_frame_runs_are_isolated() -> Non
 
 def test_mutually_exclusive_defaults_and_callable_contract() -> None:
     """Invalid declaration shapes fail before workflow execution."""
-    with pytest.raises(TypeError, match="mutually exclusive"):
+    with pytest.raises(LclValidationError, match="mutually exclusive"):
         wf.define_variable[object]("value", default=None, default_factory=list)
-    with pytest.raises(TypeError, match="callable"):
+    with pytest.raises(LclValidationError, match="callable"):
         wf.define_variable[object]("value", default_factory=cast(object, 3))  # type: ignore[arg-type]
-    with pytest.raises(TypeError, match="callable"):
+    with pytest.raises(LclValidationError, match="callable"):
         wf.define_variable[object]("value", default_factory=None)  # type: ignore[arg-type]
 
 

@@ -500,14 +500,14 @@ async def main() -> None:
     )
     assert rainy_status == 2
     assert "[SKIPPED] calculate_subtotal" in rainy_stderr
-    assert "Error in running workflow task 'settlement.calculate_usage':" in rainy_stderr
+    assert "Error in running workflow task 'settlement.calculate_usage' [LCL531811]:" in rainy_stderr
     assert "ValueError: end reading 900.0" in rainy_stderr
     assert "[ERROR] Energy settlement workflow" in rainy_stderr
     assert "lunch option: no lunch!" in rainy_stderr
     assert not (result_dir / "rainy.txt").exists()
     rainy_log = sorted(root.glob("settlement.*.log"))[-1].read_text(encoding="utf-8")
     assert "end reading 900.0 must exceed start reading 1000.0" in rainy_log
-    assert "Error in running workflow task 'settlement.calculate_usage':" in rainy_log
+    assert "Error in running workflow task 'settlement.calculate_usage' [LCL531811]:" in rainy_log
     assert "task complete: [settlement.calculate_usage] ERROR" in rainy_log
     assert "[ERROR] Energy settlement workflow" in rainy_log
     assert "[SKIPPED] calculate_subtotal" in rainy_log
@@ -615,7 +615,7 @@ logger, returns exit status `2`, prints the error records to stderr, and appends
 the same evidence to the configured file:
 
 ```text
-Error in running workflow task 'settlement.calculate_usage':
+Error in running workflow task 'settlement.calculate_usage' [LCL531811]:
 Traceback (most recent call last):
 ...
 ValueError: end reading 900.0 must exceed start reading 1000.0

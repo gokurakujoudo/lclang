@@ -6,6 +6,9 @@ from collections.abc import Mapping
 from types import MappingProxyType
 from typing import Any
 
+from lclang.error.base import LclAttributeError, LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.core import Code as core_codes
 from lclang.lang.lexer.tokens import TokenKind
 
 # LCL keywords and canonical constant spellings unavailable as dotted field names.
@@ -16,12 +19,13 @@ RECORD_RESERVED_NAMES = frozenset(
 )
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_861)
 class LclRecord:
     """Expose a shallow immutable snapshot through named attributes.
 
     :param fields: Non-empty mapping of valid LCL field names to retained values.
-    :raises TypeError: If *fields* is not a mapping or contains a non-string key.
-    :raises ValueError: If no field is supplied or a name is unavailable in LCL.
+    :raises LclValidationError: If *fields* is not a mapping or contains a non-string key.
+    :raises LclValidationError: If no field is supplied or a name is unavailable in LCL.
 
     .. note::
        Field values are retained by reference. Equality and hashing ignore
@@ -36,52 +40,70 @@ class LclRecord:
         """Validate and detach one declaration-ordered field mapping.
 
         :param fields: Non-empty mapping copied before the record is published.
-        :raises TypeError: If *fields* is not a mapping or has a non-string key.
-        :raises ValueError: If a field name is invalid or reserved.
+        :raises LclValidationError: If *fields* is not a mapping or has a non-string key.
+        :raises LclValidationError: If a field name is invalid or reserved.
         """
         if not isinstance(fields, Mapping):
-            raise TypeError("record fields must be a mapping")
+            raise LclValidationError(
+                "record fields must be a mapping",
+                code=core_codes.E61_RECORD_FIELDS_MUST_BE_A_MAPPING,
+            )
         snapshot = dict(fields)
         if not snapshot:
-            raise ValueError("record requires at least one field")
+            raise LclValidationError(
+                "record requires at least one field",
+                code=core_codes.E61_RECORD_REQUIRES_AT_LEAST_ONE_FIELD,
+            )
         for name in snapshot:
             if not isinstance(name, str):
-                raise TypeError("record field names must be strings")
+                raise LclValidationError(
+                    "record field names must be strings",
+                    code=core_codes.E61_RECORD_FIELD_NAMES_MUST_BE_STRINGS,
+                )
             if not name.isidentifier() or name.startswith("__") or name in RECORD_RESERVED_NAMES:
-                raise ValueError(f"invalid record field name: {name!r}")
+                raise LclValidationError(
+                    f"invalid record field name: {name!r}",
+                    code=core_codes.E61_INVALID_RECORD_FIELD_NAME_VALUE,
+                )
         object.__setattr__(self, "_fields", MappingProxyType(snapshot))
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_861)
     def __setattr__(self, name: str, value: object) -> None:
         """Reject every field or implementation-attribute replacement.
 
         :param name: Attribute name requested for assignment.
         :param value: Candidate replacement value.
-        :raises AttributeError: Always, because records are immutable.
+        :raises LclAttributeError: Always, because records are immutable.
         """
         del name, value
-        raise AttributeError("LclRecord is immutable")
+        raise LclAttributeError(
+            "LclRecord is immutable", code=core_codes.E61_LCLRECORD_IS_IMMUTABLE
+        )
 
     def __delattr__(self, name: str) -> None:
         """Reject every field or implementation-attribute deletion.
 
         :param name: Attribute name requested for deletion.
-        :raises AttributeError: Always, because records are immutable.
+        :raises LclAttributeError: Always, because records are immutable.
         """
         del name
-        raise AttributeError("LclRecord is immutable")
+        raise LclAttributeError(
+            "LclRecord is immutable", code=core_codes.E61_LCLRECORD_IS_IMMUTABLE
+        )
 
+    @guard_failure(LclAttributeError, core_codes.NATIVE_861)
     def __getattribute__(self, name: str) -> Any:
         """Return a field before falling back to the record's Python attributes.
 
         :param name: Requested Python attribute name.
         :returns: Matching field value or an implementation attribute.
-        :raises AttributeError: If neither a field nor implementation attribute exists.
+        :raises LclAttributeError: If neither a field nor implementation attribute exists.
         """
         fields = object.__getattribute__(self, "_fields")
         if name in fields:
             return fields[name]
         if name == "_fields":
-            raise AttributeError(name)
+            raise LclAttributeError(name, code=core_codes.E61___GETATTRIBUTE___FAILURE)
         return object.__getattribute__(self, name)
 
     def __repr__(self) -> str:
@@ -105,11 +127,12 @@ class LclRecord:
         other_fields = object.__getattribute__(other, "_fields")
         return bool(fields == other_fields)
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_861)
     def __hash__(self) -> int:
         """Hash the unordered field-name/value pairs.
 
         :returns: Hash compatible with record equality.
-        :raises TypeError: If any retained field value is unhashable.
+        :raises LclValidationError: If any retained field value is unhashable.
         """
         fields = object.__getattribute__(self, "_fields")
         return hash(frozenset(fields.items()))

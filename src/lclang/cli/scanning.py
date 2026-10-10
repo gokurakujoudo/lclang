@@ -7,8 +7,13 @@ from types import ModuleType
 from typing import cast
 
 from lclang.cli.commands import Command, CommandGroup
+from lclang.error import LclCliError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.cli import Code as cli_codes
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_461)
 def scan_commands(
     module: ModuleType,
     name: str,
@@ -20,11 +25,14 @@ def scan_commands(
     :param name: Resulting command-group name.
     :param description: Human-readable group description.
     :returns: Deterministically ordered command group.
-    :raises TypeError: If *module* is not a module.
-    :raises ValueError: If distinct commands share one name.
+    :raises LclValidationError: If *module* is not a module.
+    :raises LclValidationError: If distinct commands share one name.
     """
     if not isinstance(module, ModuleType):
-        raise TypeError("command scan root must be a module")
+        raise LclValidationError(
+            "command scan root must be a module",
+            code=cli_codes.E61_COMMAND_SCAN_ROOT_MUST_BE_A_MODULE,
+        )
     modules = [module]
     package_path = getattr(module, "__path__", None)
     if package_path is not None:
@@ -43,7 +51,10 @@ def scan_commands(
             if not isinstance(value, Command) or id(value) in seen_objects:
                 continue
             if value.name in seen_names:
-                raise ValueError(f"duplicate scanned command name: {value.name}")
+                raise LclValidationError(
+                    f"duplicate scanned command name: {value.name}",
+                    code=cli_codes.E61_DUPLICATE_SCANNED_COMMAND_NAME_VALUE,
+                )
             seen_objects.add(id(value))
             seen_names.add(value.name)
             commands.append(value)

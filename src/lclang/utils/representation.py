@@ -4,6 +4,10 @@ from collections.abc import Callable, Iterable, Set
 from dataclasses import fields, is_dataclass
 from typing import cast
 
+from lclang.error import LclUtilityError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.utilities import Code as utilities_codes
 from lclang.masking import MASKED_VALUE
 
 # Unitless names identify this module's public downstream interface; helper constants stay local.
@@ -15,6 +19,7 @@ DEFAULT_REPR_LENGTH = 200
 TRUNCATION_MARKER = "...<truncated>"
 
 
+@guard_failure(LclUtilityError, utilities_codes.NATIVE_761)
 def safe_repr(
     value: object,
     *,
@@ -33,20 +38,29 @@ def safe_repr(
     :returns: CR/LF-escaped text, with any truncation marker included in the limit.
        Renderer failures, including BaseException and non-string results, become
        a stable failure description. No type label or task-local policy is added.
-    :raises TypeError: If max_length is neither an integer nor None, including bool.
-    :raises ValueError: If max_length is negative.
+    :raises LclValidationError: If max_length is neither an integer nor None, including bool.
+    :raises LclValidationError: If max_length is negative.
     """
     if max_length is not None:
         if isinstance(max_length, bool) or not isinstance(max_length, int):
-            raise TypeError("representation length must be an integer or None")
+            raise LclValidationError(
+                "representation length must be an integer or None",
+                code=utilities_codes.E61_REPRESENTATION_LENGTH_MUST_BE_AN_INTEGER_OR_NONE,
+            )
         if max_length < 0:
-            raise ValueError("representation length cannot be negative")
+            raise LclValidationError(
+                "representation length cannot be negative",
+                code=utilities_codes.E61_REPRESENTATION_LENGTH_CANNOT_BE_NEGATIVE,
+            )
     if masked:
         return MASKED_VALUE
     try:
         rendered = repr(value) if renderer is None else renderer(value)
         if not isinstance(rendered, str):
-            raise TypeError("representation renderer must return text")
+            raise LclValidationError(
+                "representation renderer must return text",
+                code=utilities_codes.E61_REPRESENTATION_RENDERER_MUST_RETURN_TEXT,
+            )
         payload = str.__str__(rendered)
     except BaseException as error:
         payload = f"<repr failed: {type(error).__name__}>"
@@ -57,6 +71,7 @@ def safe_repr(
     return payload
 
 
+@guard_failure(LclUtilityError, utilities_codes.NATIVE_761)
 def make_multi_log_lines(
     title: str,
     lines: Iterable[str],
@@ -73,6 +88,7 @@ def make_multi_log_lines(
     return "\n".join([title, *body])
 
 
+@guard_failure(LclUtilityError, utilities_codes.NATIVE_761)
 def align_repr_fields(
     items: Iterable[tuple[str, str]],
     key_column_length: int | None = None,
@@ -82,20 +98,27 @@ def align_repr_fields(
     :param items: Ordered field names and protected value text.
     :param key_column_length: Optional nonnegative minimum key width in characters.
     :returns: Aligned name-colon-value lines retaining duplicate names.
-    :raises TypeError: If the width is not an integer or None, including bool.
-    :raises ValueError: If the width is negative.
+    :raises LclValidationError: If the width is not an integer or None, including bool.
+    :raises LclValidationError: If the width is negative.
     """
     if key_column_length is not None:
         if isinstance(key_column_length, bool) or not isinstance(key_column_length, int):
-            raise TypeError("key column length must be an integer or None")
+            raise LclValidationError(
+                "key column length must be an integer or None",
+                code=utilities_codes.E61_REPRESENTATION_LENGTH_MUST_BE_AN_INTEGER_OR_NONE,
+            )
         if key_column_length < 0:
-            raise ValueError("key column length cannot be negative")
+            raise LclValidationError(
+                "key column length cannot be negative",
+                code=utilities_codes.E61_KEY_COLUMN_LENGTH_CANNOT_BE_NEGATIVE,
+            )
     values = list(items)
     width = max((len(name) for name, _ in values), default=0)
     width = max(width, key_column_length or 0)
     return [f"{name.ljust(width)}: {value}" for name, value in values]
 
 
+@guard_failure(LclUtilityError, utilities_codes.NATIVE_761)
 def make_repr_lines(
     instances: object,
     key_column_length: int | None = None,
@@ -109,8 +132,8 @@ def make_repr_lines(
     :param sort_keys: Stably sort all fields by name rather than encounter order.
     :param masked_keys: Direct names redacted before reading or representing values.
     :returns: Aligned lines using safe_repr's default protections, without recursion.
-    :raises TypeError: If a record, dictionary key or width has an unsupported type.
-    :raises ValueError: If the minimum width is negative.
+    :raises LclValidationError: If a record, dictionary key or width has an unsupported type.
+    :raises LclValidationError: If the minimum width is negative.
     :raises Exception: If an unmasked getter or input iterator fails.
     """
     align_repr_fields((), key_column_length)
@@ -119,7 +142,10 @@ def make_repr_lines(
     elif isinstance(instances, Iterable) and not isinstance(instances, (str, bytes)):
         records = cast(Iterable[object], instances)
     else:
-        raise TypeError("representations require dataclass instances or dictionaries")
+        raise LclValidationError(
+            "representations require dataclass instances or dictionaries",
+            code=utilities_codes.E61_REPRESENTATIONS_REQUIRE_DATACLASS_INSTANCES_OR_DICTIONARIES,
+        )
     masked = frozenset[str]() if masked_keys is None else masked_keys
     rendered: list[tuple[str, str]] = []
     for record in records:
@@ -128,10 +154,16 @@ def make_repr_lines(
         elif is_dataclass(record) and not isinstance(record, type):
             names = [item.name for item in fields(record)]
         else:
-            raise TypeError("representations require dataclass instances or dictionaries")
+            raise LclValidationError(
+                "representations require dataclass instances or dictionaries",
+                code=utilities_codes.E61_REPRESENTATIONS_REQUIRE_DATACLASS_INSTANCES_OR_DICTIONARIES,
+            )
         for name in names:
             if not isinstance(name, str):
-                raise TypeError("representation field names must be strings")
+                raise LclValidationError(
+                    "representation field names must be strings",
+                    code=utilities_codes.E61_REPRESENTATION_FIELD_NAMES_MUST_BE_STRINGS,
+                )
             if name in masked:
                 value = None
             else:

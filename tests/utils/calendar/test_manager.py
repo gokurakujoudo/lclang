@@ -6,6 +6,7 @@ from typing import cast
 
 import pytest
 
+from lclang.error import LclValidationError
 from lclang.utils.calendar import (
     ALL_DAYS,
     ALL_WEEKDAYS,
@@ -34,11 +35,11 @@ from tests.utils.calendar.calendar_support import (
 @pytest.mark.asyncio
 async def test_manager_validation_cycles_failures_and_retirement() -> None:
     """Manager covers validation, recursion, loader failures, and replacements."""
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         BDCalendarManager((cast(BDCalendarLoader, object()),))
     manager = use_calendar_manager(())
     for invalid in (cast(CalendarID, 1), CalendarID("")):
-        with pytest.raises(TypeError):
+        with pytest.raises(LclValidationError):
             await manager.use_calendar(invalid)
     assert await manager.use_calendar(CalendarID("ALL_DAYS")) is ALL_DAYS
     assert await manager.use_calendar(CalendarID("ALL_DAYS")) is ALL_DAYS
@@ -61,7 +62,7 @@ async def test_manager_validation_cycles_failures_and_retirement() -> None:
     mismatched = BDCalendarManager((DictionaryLoader({CalendarID("WANTED"): ALL_DAYS}),))
     with pytest.raises(CalendarCannotLoadException) as mismatch:
         await mismatched.use_calendar(CalendarID("WANTED"))
-    assert isinstance(mismatch.value.__cause__, ValueError)
+    assert isinstance(mismatch.value.__cause__, LclValidationError)
     assert await manager.retire_calendar(CalendarID("NONE"), ALL_WEEKDAYS) == set()
     assert manager.cached_calendars[CalendarID("NONE")] is ALL_WEEKDAYS
 

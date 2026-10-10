@@ -1,10 +1,14 @@
 """Detached status attachment and monotonic severity for dynamic workflow calls."""
 
+from lclang.error import LclWorkflowError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.workflow import Code as workflow_codes
 from lclang.workflow.definitions import TaskNode
 from lclang.workflow.manager import ExecutionStatusManager
 from lclang.workflow.models import ExecutionStatus, ExecutionStatusTree
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def copy_status_tree(node: ExecutionStatusTree) -> ExecutionStatusTree:
     """Copy status nodes and child containers without sharing mutable tree state.
 
@@ -20,6 +24,7 @@ def copy_status_tree(node: ExecutionStatusTree) -> ExecutionStatusTree:
     )
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def attach_call_status(
     manager: ExecutionStatusManager,
     status: ExecutionStatusTree,
@@ -38,6 +43,7 @@ def attach_call_status(
     manager.update(status.status, status.task_description)
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def propagate_call_status(parent: ExecutionStatusManager, status: ExecutionStatus) -> None:
     """Raise the parent's severity without clearing a previous call's failure.
 

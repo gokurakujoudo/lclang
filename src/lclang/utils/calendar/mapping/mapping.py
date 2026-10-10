@@ -4,11 +4,15 @@ from collections.abc import Iterable, Set
 from datetime import date
 from typing import final
 
-from lclang.utils.calendar.base import BDCalendar
-from lclang.utils.calendar.errors import (
+from lclang.error import LclUtilityError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.calendar import (
     DateOperationOutOfScopeException,
     UnappliedCalendarOperationException,
 )
+from lclang.error.codes.utilities import Code as utilities_codes
+from lclang.utils.calendar.base import BDCalendar
 from lclang.utils.calendar.mapping.base import BDCalendarMapOperation
 from lclang.utils.calendar.mapping.business_day_adjustment import (
     ThisOrNextMapOperation,
@@ -19,6 +23,7 @@ from lclang.utils.calendar.mapping.shift import ShiftNDaysMapOperation
 from lclang.utils.calendar.types import CalendarID
 
 
+@guard_constructor(LclValidationError, utilities_codes.NATIVE_713)
 @final
 class BDCalendarMapping(BDCalendarMapOperation):
     """Apply an immutable ordered chain of mapping operations.
@@ -39,12 +44,15 @@ class BDCalendarMapping(BDCalendarMapOperation):
         :param base_calendar: Source calendar or unapplied sentinel.
         :param operations: Operations in forward application order.
         :returns: ``None``.
-        :raises TypeError: If an operation has an incompatible type.
+        :raises LclValidationError: If an operation has an incompatible type.
         """
         super().__init__(base_calendar)
         values = tuple(operations)
         if any(not isinstance(item, BDCalendarMapOperation) for item in values):
-            raise TypeError("mapping operations must be BDCalendarMapOperation values")
+            raise LclValidationError(
+                "mapping operations must be BDCalendarMapOperation values",
+                code=utilities_codes.E13_MAPPING_OPERATIONS_MUST_BE_BDCALENDARMAPOPERATION_VALUES,
+            )
         if base_calendar is not SELF_CALENDAR:
             values = tuple(
                 (
@@ -57,6 +65,7 @@ class BDCalendarMapping(BDCalendarMapOperation):
         self.operations = values
 
     @property
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_713)
     def has_applied(self) -> bool:
         """Return whether the mapping owns a concrete source calendar.
 
@@ -64,6 +73,7 @@ class BDCalendarMapping(BDCalendarMapOperation):
         """
         return self.base_calendar is not SELF_CALENDAR
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_713)
     async def map_date(self, base_date: date) -> date:
         """Map a date through every operation.
 
@@ -72,7 +82,9 @@ class BDCalendarMapping(BDCalendarMapOperation):
         :raises UnappliedCalendarOperationException: If no source calendar is applied.
         """
         if not self.has_applied:
-            raise UnappliedCalendarOperationException()
+            raise UnappliedCalendarOperationException(
+                code=utilities_codes.E13_OPERATION_IS_UNAVAILABLE
+            )
         cached = self._mapped_dates.get(base_date)
         if cached is not None:
             return cached
@@ -82,6 +94,7 @@ class BDCalendarMapping(BDCalendarMapOperation):
         self._mapped_dates[base_date] = target
         return target
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_713)
     async def map_date_reverse(self, target_date: date) -> tuple[date, date]:
         """Find the inclusive source range mapped to a target.
 
@@ -91,7 +104,9 @@ class BDCalendarMapping(BDCalendarMapOperation):
         :raises DateOperationOutOfScopeException: If the target has no preimage.
         """
         if not self.has_applied:
-            raise UnappliedCalendarOperationException()
+            raise UnappliedCalendarOperationException(
+                code=utilities_codes.E13_OPERATION_IS_UNAVAILABLE
+            )
         first = target_date
         last = target_date
         for operation in reversed(self.operations):
@@ -111,11 +126,14 @@ class BDCalendarMapping(BDCalendarMapOperation):
                     break
                 current = date.fromordinal(current.toordinal() + 1)
             if source_first is None or source_last is None:
-                raise DateOperationOutOfScopeException(target_date, self.base_calendar)
+                raise DateOperationOutOfScopeException(
+                    target_date, self.base_calendar, code=utilities_codes.E13_TARGET_DATE
+                )
             first = source_first
             last = source_last
         return first, last
 
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_713)
     def with_base_calendar(self, calendar: BDCalendar) -> BDCalendarMapping:
         """Return an applied copy of the complete mapping.
 
@@ -124,6 +142,7 @@ class BDCalendarMapping(BDCalendarMapOperation):
         """
         return BDCalendarMapping(calendar, self.operations)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_713)
     async def apply(self, calendar: BDCalendar) -> BDCalendarMapping:
         """Apply a source calendar without mutating this mapping.
 
@@ -132,6 +151,7 @@ class BDCalendarMapping(BDCalendarMapOperation):
         """
         return self.with_base_calendar(calendar)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_713)
     async def get_dependency_ids(self) -> Set[CalendarID]:
         """Collect direct source and operation calendar IDs.
 
@@ -144,6 +164,7 @@ class BDCalendarMapping(BDCalendarMapOperation):
             values.update(await operation.get_dependency_ids())
         return frozenset(values)
 
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_713)
     def map_this_or_next(self, calendar: BDCalendar | None = None) -> BDCalendarMapping:
         """Append a this-or-next operation.
 
@@ -154,6 +175,7 @@ class BDCalendarMapping(BDCalendarMapOperation):
         operation = ThisOrNextMapOperation(selected)
         return BDCalendarMapping(self.base_calendar, (*self.operations, operation))
 
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_713)
     def map_this_or_prev(self, calendar: BDCalendar | None = None) -> BDCalendarMapping:
         """Append a this-or-previous operation.
 
@@ -164,6 +186,7 @@ class BDCalendarMapping(BDCalendarMapOperation):
         operation = ThisOrPrevMapOperation(selected)
         return BDCalendarMapping(self.base_calendar, (*self.operations, operation))
 
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_713)
     def shift_n_days(self, n: int, calendar: BDCalendar | None = None) -> BDCalendarMapping:
         """Append a signed business-day shift.
 
@@ -175,6 +198,7 @@ class BDCalendarMapping(BDCalendarMapOperation):
         operation = ShiftNDaysMapOperation(n, selected)
         return BDCalendarMapping(self.base_calendar, (*self.operations, operation))
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_713)
     async def as_calendar(self, calendar_id: CalendarID | None = None) -> BDCalendar:
         """Expose mapped source business dates as a calendar.
 
@@ -183,7 +207,9 @@ class BDCalendarMapping(BDCalendarMapOperation):
         :raises UnappliedCalendarOperationException: If no source calendar is applied.
         """
         if not self.has_applied:
-            raise UnappliedCalendarOperationException()
+            raise UnappliedCalendarOperationException(
+                code=utilities_codes.E13_OPERATION_IS_UNAVAILABLE
+            )
         from lclang.utils.calendar.mapping.result_calendar import CalendarMapBDCalendar
 
         selected = CalendarID(f"{self!r}.as_calendar()") if calendar_id is None else calendar_id

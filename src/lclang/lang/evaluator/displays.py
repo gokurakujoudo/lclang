@@ -16,6 +16,8 @@ from lclang.ast import (
     LclStarred,
     LclTuple,
 )
+from lclang.error import LclEvaluationError
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.evaluator._types import EvaluateNode
 from lclang.lang.evaluator.context import Resolver
 from lclang.lang.evaluator.iteration import iterate_values
@@ -92,7 +94,7 @@ async def internal_dictionary(
     :param resolver: Resolver providing values for keys, values, and unpacking.
     :param evaluate: Recursive evaluator for dictionary entry expressions.
     :returns: Materialized dictionary assembled in source order.
-    :raises TypeError: If an entry has an unsupported AST type or a
+    :raises LclEvaluationError: If an entry has an unsupported AST type or a
        dictionary-unpacking value is not a mapping.
 
     .. note::
@@ -107,8 +109,14 @@ async def internal_dictionary(
         elif isinstance(entry, LclDictUnpack):
             value = await evaluate(entry.value, resolver)
             if not isinstance(value, Mapping):
-                raise TypeError("dictionary unpacking requires a mapping")
+                raise LclEvaluationError(
+                    "dictionary unpacking requires a mapping",
+                    code=language_codes.E34_DICTIONARY_UNPACKING_REQUIRES_A_MAPPING,
+                )
             result.update(cast(Mapping[object, object], value))
         else:
-            raise TypeError("unsupported dictionary display entry")
+            raise LclEvaluationError(
+                "unsupported dictionary display entry",
+                code=language_codes.E34_UNSUPPORTED_DICTIONARY_DISPLAY_ENTRY,
+            )
     return result

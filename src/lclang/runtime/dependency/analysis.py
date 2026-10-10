@@ -21,6 +21,9 @@ from lclang.ast import (
     LclTry,
     LclWith,
 )
+from lclang.error import LclEvaluationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.runtime import Code as runtime_codes
 from lclang.runtime.dependency.model import DependencyKind, DependencyReference
 from lclang.runtime.dependency.scoped import qualify_dependency_references
 
@@ -38,6 +41,7 @@ _STRENGTH = {
 }
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_241)
 def analyze_dependencies(
     node: LclAstNode,
     *,

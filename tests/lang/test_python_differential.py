@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 import lclang
-from lclang.errors import LclEvaluationError
+from lclang.error import LclEvaluationError
 from lclang.lang.evaluator.dispatch import interpret_expression
 from tests.support.python_differential import (
     DIFFERENTIAL_CASES,

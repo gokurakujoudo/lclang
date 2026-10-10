@@ -5,6 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.runtime import Code as runtime_codes
 from lclang.source import SourceSpan
 from lclang.types import VarName
 
@@ -24,6 +27,7 @@ class DependencyKind(StrEnum):
     DYNAMIC = "dynamic"
 
 
+@guard_constructor(LclValidationError, runtime_codes.NATIVE_243)
 @dataclass(frozen=True, slots=True)
 class DependencyReference:
     """Identify one free-name occurrence and its evaluation class.
@@ -31,7 +35,7 @@ class DependencyReference:
     :param name: Non-empty referenced variable name.
     :param kind: Static or runtime dependency classification.
     :param span: Exact source range of this occurrence.
-    :raises ValueError: If *name* is empty or *kind* is not a dependency kind.
+    :raises LclValidationError: If *name* is empty or *kind* is not a dependency kind.
 
     .. note::
        Equal names at distinct spans remain distinct diagnostic evidence.
@@ -41,17 +45,25 @@ class DependencyReference:
     kind: DependencyKind
     span: SourceSpan
 
+    @guard_failure(LclValidationError, runtime_codes.NATIVE_243)
     def __post_init__(self) -> None:
         """Validate public dependency vocabulary and identifiers.
 
-        :raises ValueError: If the name is empty or kind is invalid.
+        :raises LclValidationError: If the name is empty or kind is invalid.
         """
         if not self.name:
-            raise ValueError("dependency name cannot be empty")
+            raise LclValidationError(
+                "dependency name cannot be empty",
+                code=runtime_codes.E43_FRAME_BINDING_PATH_CANNOT_BE_EMPTY,
+            )
         if not isinstance(self.kind, DependencyKind):
-            raise ValueError("dependency kind must be a DependencyKind")
+            raise LclValidationError(
+                "dependency kind must be a DependencyKind",
+                code=runtime_codes.E43_DEPENDENCY_KIND_MUST_BE_A_DEPENDENCYKIND,
+            )
 
 
+@guard_constructor(LclValidationError, runtime_codes.NATIVE_243)
 @dataclass(frozen=True, slots=True)
 class DependencyEdge:
     """Connect one definition to one referenced name occurrence.
@@ -60,7 +72,7 @@ class DependencyEdge:
     :param target: Non-empty referenced variable name.
     :param kind: Static or runtime dependency classification.
     :param span: Exact source range of the target occurrence.
-    :raises ValueError: If an endpoint is empty or *kind* is invalid.
+    :raises LclValidationError: If an endpoint is empty or *kind* is invalid.
 
     .. note::
        Repeated endpoint pairs remain distinct edges when spans differ.
@@ -71,12 +83,19 @@ class DependencyEdge:
     kind: DependencyKind
     span: SourceSpan
 
+    @guard_failure(LclValidationError, runtime_codes.NATIVE_243)
     def __post_init__(self) -> None:
         """Validate endpoints and dependency vocabulary.
 
-        :raises ValueError: If an endpoint is empty or kind is invalid.
+        :raises LclValidationError: If an endpoint is empty or kind is invalid.
         """
         if not self.source or not self.target:
-            raise ValueError("dependency edge endpoints cannot be empty")
+            raise LclValidationError(
+                "dependency edge endpoints cannot be empty",
+                code=runtime_codes.E43_FRAME_BINDING_PATH_CANNOT_BE_EMPTY,
+            )
         if not isinstance(self.kind, DependencyKind):
-            raise ValueError("dependency kind must be a DependencyKind")
+            raise LclValidationError(
+                "dependency kind must be a DependencyKind",
+                code=runtime_codes.E43_DEPENDENCY_KIND_MUST_BE_A_DEPENDENCYKIND,
+            )

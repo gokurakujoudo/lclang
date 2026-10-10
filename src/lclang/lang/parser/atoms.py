@@ -6,7 +6,9 @@ from collections.abc import Callable
 from typing import Any, cast
 
 from lclang.ast import LclAstNode, LclConstant, LclName
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.lexer import TokenKind
 from lclang.lang.parser.displays import parse_display
 from lclang.lang.parser.fstrings import internal_parse_fstring
@@ -33,6 +35,7 @@ _CONSTANT_KEYWORDS = {
 }
 
 
+@guard_failure(LclSyntaxError, language_codes.NATIVE_121)
 def parse_atom(
     stream: TokenStream,
     parse_nested: Callable[[], LclAstNode],
@@ -68,7 +71,11 @@ def parse_atom(
     if token.kind is TokenKind.FSTRING:
         stream.advance()
         return internal_parse_fstring(token)
-    raise LclSyntaxError("expected an expression atom", span=token.span)
+    raise LclSyntaxError(
+        "expected an expression atom",
+        span=token.span,
+        code=language_codes.E21_EXPECTED_AN_EXPRESSION_ATOM,
+    )
 
 
 def internal_parse_literal(stream: TokenStream) -> LclConstant:
@@ -94,5 +101,6 @@ def internal_parse_literal(stream: TokenStream) -> LclConstant:
             raise LclSyntaxError(
                 "cannot mix adjacent text and bytes literals",
                 span=stream.current.span,
+                code=language_codes.E21_CANNOT_MIX_ADJACENT_TEXT_AND_BYTES_LITERALS,
             )
     return LclConstant(value=value, span=merge_source_spans(first.span, last.span))

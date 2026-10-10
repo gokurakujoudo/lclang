@@ -13,7 +13,7 @@ from lclang.ast import (
     LclUnary,
 )
 from lclang.ast.operators import BooleanOperator, ComparisonOperator, UnaryOperator
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError
 from lclang.lang.parser import parse_expression
 
 

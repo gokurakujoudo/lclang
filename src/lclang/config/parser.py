@@ -10,18 +10,23 @@ from lclang.config.declarations import (
     parse_version,
     validate_definition_name,
 )
-from lclang.config.errors import LclConfigSyntaxError, LclConfigVersionError
 from lclang.config.expressions import parse_config_expression
 from lclang.config.imports import parse_import
 from lclang.config.lines import LogicalLine, scan_logical_lines
 from lclang.config.model import ConfigDeclaration, ConfigDefinition, ConfigDocument
 from lclang.config.positions import advance_position
 from lclang.diagnostics import internal_masked_scope
+from lclang.error import LclConfigError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.configuration import Code as configuration_codes
+from lclang.error.configuration import LclConfigSyntaxError, LclConfigVersionError
 from lclang.masking import split_masked_name
 from lclang.source import SourceOrigin
 from lclang.types import SourceName, VarName
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_311)
 def parse_config(
     text: str,
     *,
@@ -34,8 +39,8 @@ def parse_config(
     :param source_name: Non-empty diagnostic display name.
     :param source_path: Optional physical path enabling eager file magic.
     :returns: Immutable source-ordered configuration document.
-    :raises TypeError: If arguments have unsupported public types.
-    :raises ValueError: If the source name is empty.
+    :raises LclValidationError: If arguments have unsupported public types.
+    :raises LclValidationError: If the source name is empty.
     :raises LclConfigSyntaxError: If declarations or expressions are malformed.
     :raises LclConfigVersionError: If version metadata is invalid.
 
@@ -43,16 +48,26 @@ def parse_config(
        Supplying a path enables magic but never causes file I/O.
     """
     if not isinstance(text, str):
-        raise TypeError("config text must be a string")
+        raise LclValidationError(
+            "config text must be a string",
+            code=configuration_codes.E11_CONFIG_TEXT_MUST_BE_A_STRING,
+        )
     if not isinstance(source_name, str):
-        raise TypeError("config source name must be a string")
+        raise LclValidationError(
+            "config source name must be a string",
+            code=configuration_codes.E11_CONFIG_TEXT_MUST_BE_A_STRING,
+        )
     if not source_name:
-        raise ValueError("config source name cannot be empty")
+        raise LclValidationError(
+            "config source name cannot be empty",
+            code=configuration_codes.E11_CONFIG_SOURCE_NAME_CANNOT_BE_EMPTY,
+        )
     path = normalize_source_path(source_path)
     origin = SourceOrigin(SourceName(source_name), path)
     return parse_document(text, origin)
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_311)
 def parse_document(text: str, origin: SourceOrigin) -> ConfigDocument:
     """Parse text whose final origin was already selected by a loader.
 
@@ -74,7 +89,11 @@ def parse_document(text: str, origin: SourceOrigin) -> ConfigDocument:
         leading = len(line.text) - len(stripped)
         if stripped.startswith("__LCL_VERSION__"):
             if meaningful_seen or version_seen:
-                raise LclConfigVersionError("version metadata must be first", span=line.span)
+                raise LclConfigVersionError(
+                    "version metadata must be first",
+                    span=line.span,
+                    code=configuration_codes.E11_VERSION_METADATA_MUST_BE_FIRST,
+                )
             version = parse_version(line, leading, origin)
             version_seen = True
             meaningful_seen = True
@@ -91,6 +110,7 @@ def parse_document(text: str, origin: SourceOrigin) -> ConfigDocument:
     return ConfigDocument(origin, version, tuple(declarations))
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_311)
 def parse_definition(
     line: LogicalLine,
     leading: int,
@@ -112,16 +132,28 @@ def parse_definition(
     first_line = line.text.splitlines(keepends=False)[0]
     colon = first_line.find(":", leading)
     if colon < 0:
-        raise LclConfigSyntaxError("definition requires colon", span=line.span)
+        raise LclConfigSyntaxError(
+            "definition requires colon",
+            span=line.span,
+            code=configuration_codes.E11_DEFINITION_REQUIRES_COLON,
+        )
     raw_name = first_line[leading:colon].strip(" \t\f")
     try:
         name, masked = split_masked_name(raw_name)
-    except (TypeError, ValueError) as error:
-        raise LclConfigSyntaxError("invalid config definition name", span=line.span) from error
+    except LclValidationError as error:
+        raise LclConfigSyntaxError(
+            "invalid config definition name",
+            span=line.span,
+            code=error.code,
+        ) from error
     validate_definition_name(name, line, origin)
     expression_text = line.text[colon + 1 :]
     if not expression_text.strip():
-        raise LclConfigSyntaxError("definition requires an expression", span=line.span)
+        raise LclConfigSyntaxError(
+            "definition requires an expression",
+            span=line.span,
+            code=configuration_codes.E11_DEFINITION_REQUIRES_AN_EXPRESSION,
+        )
     start = advance_position(line.start, line.text[: colon + 1])
     with internal_masked_scope(masked):
         expression = parse_config_expression(
@@ -130,13 +162,14 @@ def parse_definition(
     return ConfigDefinition(VarName(name), expression, line.span, ordinal, masked)
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_311)
 def normalize_source_path(source_path: str | Path | None) -> Path | None:
     """Normalize optional file-backed parsing identity without reading it.
 
     :param source_path: Optional path-like public argument.
     :returns: Canonical absolute path or ``None``.
-    :raises TypeError: If the argument is not text or a Path.
-    :raises ValueError: If its suffix is not exactly `.lclcfg`.
+    :raises LclValidationError: If the argument is not text or a Path.
+    :raises LclValidationError: If its suffix is not exactly `.lclcfg`.
 
     .. note::
        Canonicalization uses non-strict resolution and performs no read.
@@ -144,8 +177,14 @@ def normalize_source_path(source_path: str | Path | None) -> Path | None:
     if source_path is None:
         return None
     if not isinstance(source_path, (str, Path)):
-        raise TypeError("config source path must be text or Path")
+        raise LclValidationError(
+            "config source path must be text or Path",
+            code=configuration_codes.E11_CONFIG_TEXT_MUST_BE_A_STRING,
+        )
     path = Path(source_path).resolve(strict=False)
     if path.suffix != ".lclcfg":
-        raise ValueError("config source path must end in .lclcfg")
+        raise LclValidationError(
+            "config source path must end in .lclcfg",
+            code=configuration_codes.E11_CONFIG_SOURCE_PATH_MUST_END_IN_LCLCFG,
+        )
     return path

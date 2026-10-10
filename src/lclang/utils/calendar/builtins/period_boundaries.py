@@ -6,6 +6,9 @@ from calendar import monthrange
 from datetime import date
 from typing import final
 
+from lclang.error import LclUtilityError
+from lclang.error.boundary import guard_async_failure
+from lclang.error.codes.utilities import Code as utilities_codes
 from lclang.utils.calendar.functional import FunctionalBDCalendar
 from lclang.utils.calendar.types import CalendarID, DayType
 
@@ -14,6 +17,7 @@ from lclang.utils.calendar.types import CalendarID, DayType
 class BeginOfMonthCalendar(FunctionalBDCalendar):
     """Classify the first calendar day of every month as business."""
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_716)
     async def get_day_type(self, d: date) -> DayType:
         """Classify the first day of a month.
 
@@ -34,6 +38,7 @@ BEGIN_OF_MONTHS = BeginOfMonthCalendar(CalendarID("BEGIN_OF_MONTHS"))
 class EndOfMonthCalendar(FunctionalBDCalendar):
     """Classify the last calendar day of every month as business."""
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_716)
     async def get_day_type(self, d: date) -> DayType:
         """Classify the last day of a month.
 
@@ -51,6 +56,7 @@ END_OF_MONTHS = EndOfMonthCalendar(CalendarID("END_OF_MONTHS"))
 class BeginOfYearCalendar(FunctionalBDCalendar):
     """Classify January first as business."""
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_716)
     async def get_day_type(self, d: date) -> DayType:
         """Classify the first day of a year.
 
@@ -68,6 +74,7 @@ BEGIN_OF_YEARS = BeginOfYearCalendar(CalendarID("BEGIN_OF_YEARS"))
 class EndOfYearCalendar(FunctionalBDCalendar):
     """Classify December thirty-first as business."""
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_716)
     async def get_day_type(self, d: date) -> DayType:
         """Classify the last day of a year.
 

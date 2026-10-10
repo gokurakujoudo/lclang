@@ -7,6 +7,10 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from lclang.ast import LclAstNode
+from lclang.error import LclEvaluationError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.runtime import Code as runtime_codes
 from lclang.types import FrameId, VarName
 
 if TYPE_CHECKING:
@@ -35,6 +39,7 @@ class VariableInspectionStatus(StrEnum):
     FRAME_PROXY = "FrameProxy"
 
 
+@guard_constructor(LclValidationError, runtime_codes.NATIVE_251)
 @dataclass(slots=True)
 class VariableInspectionTree:
     """Describe one variable and its unevaluated dependency descendants.
@@ -76,24 +81,34 @@ class VariableInspectionTree:
 
         return render_inspection(self)
 
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_251)
     def to_lines(self, depth: int = 0, prefix: str = "- ") -> list[str]:
         """Render this tree as a markdown-style nested list.
 
         :param depth: Non-negative initial indentation level.
         :param prefix: Marker inserted after each level's indentation.
         :returns: Detached depth-first list containing one line per tree node.
-        :raises TypeError: If *depth* is not an integer or *prefix* is not a string.
-        :raises ValueError: If *depth* is negative.
+        :raises LclValidationError: If *depth* is not an integer or *prefix* is not a string.
+        :raises LclValidationError: If *depth* is negative.
 
         .. note::
            Every recursive level adds two spaces and reuses the same prefix.
         """
         if not isinstance(depth, int):
-            raise TypeError("inspection depth must be an integer")
+            raise LclValidationError(
+                "inspection depth must be an integer",
+                code=runtime_codes.E51_INSPECTION_DEPTH_MUST_BE_AN_INTEGER,
+            )
         if depth < 0:
-            raise ValueError("inspection depth cannot be negative")
+            raise LclValidationError(
+                "inspection depth cannot be negative",
+                code=runtime_codes.E51_INSPECTION_DEPTH_CANNOT_BE_NEGATIVE,
+            )
         if not isinstance(prefix, str):
-            raise TypeError("inspection prefix must be a string")
+            raise LclValidationError(
+                "inspection prefix must be a string",
+                code=runtime_codes.E51_VARIABLE_NAME_MUST_BE_A_STRING,
+            )
         lines = [f"{'  ' * depth}{prefix}{self!r}"]
         if self.masked:
             return lines

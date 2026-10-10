@@ -14,6 +14,17 @@
 
 ### Diagnostics and documentation
 
+- Replace builtin codes with six-digit classifications and centralize error
+  types, context, rendering, and domain code tables in `lclang.error`.
+- Add structured validation and subsystem failures, original native causes,
+  operation/task context, and `LclErrorGroup` for ordinary combined failures.
+  Validation now uses LCL exception types; attribute fallback and native control
+  signals retain Python behavior. Cleanup attempts all owned resources.
+- Add the complete error-code reference with causes, triggers, handling, types,
+  and executable diagnostic examples; audit production sources for uncoded failures.
+- Distinguish unsupported JSON values/keys, nonfinite numbers, container cycles,
+  and malformed text. Strict decoding rejects nonstandard float constants.
+
 - Unify production diagnostic presentation in English with complete loading
   and evaluation stacks, retained source, and masked snapshots of already-read
   values. Preserve concrete exceptions, codes, causes, and Python tracebacks.

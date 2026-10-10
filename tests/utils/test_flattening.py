@@ -5,6 +5,7 @@ from typing import Any, cast
 
 import pytest
 
+from lclang.error import LclValidationError
 from lclang.utils import flatten_to_dict
 
 
@@ -64,7 +65,7 @@ def test_flattening_modes_and_relative_selection() -> None:
 )
 def test_invalid_selected_paths_fail(path: str) -> None:
     """Typos and scalar targets cannot silently change the requested shape."""
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         flatten_to_dict(Root(), nested={path})
 
 
@@ -72,12 +73,12 @@ def test_invalid_argument_types_fail() -> None:
     """Classes, mappings and malformed expansion controls are not accepted."""
     invalid: tuple[object, ...] = (Root, {}, None)
     for value in invalid:
-        with pytest.raises(TypeError):
+        with pytest.raises(LclValidationError):
             flatten_to_dict(value)
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         flatten_to_dict(Root(), prefix=cast(Any, 1))
     for nested in (None, ["branch"], {1}):
-        with pytest.raises(TypeError):
+        with pytest.raises(LclValidationError):
             flatten_to_dict(Root(), nested=cast(Any, nested))
 
 
@@ -94,7 +95,7 @@ def test_cycles_shared_records_empty_records_and_class_values() -> None:
 
     cyclic = Node(None)
     cyclic.child = cyclic
-    with pytest.raises(ValueError, match="cyclic"):
+    with pytest.raises(LclValidationError, match="cyclic"):
         flatten_to_dict(cyclic)
     assert flatten_to_dict(cyclic, nested=False)["child"] is cyclic
     empty = Empty()

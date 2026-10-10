@@ -2,7 +2,7 @@
 
 import pytest
 
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError
 from lclang.lang.lexer import TokenKind, scan_tokens
 from lclang.lang.lexer.fstring_values import FStringField, FStringText, FStringValue
 

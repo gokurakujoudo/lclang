@@ -5,6 +5,7 @@ from typing import cast
 
 import pytest
 
+from lclang.error import LclValidationError
 from lclang.utils.calendar import (
     ALL_DAYS,
     ALL_WEEKDAYS,
@@ -27,13 +28,13 @@ from tests.utils.calendar.calendar_support import (
 @pytest.mark.asyncio
 async def test_core_validation_and_boundary_search_failures() -> None:
     """Core strategies reject invalid identity, mapping, and date boundaries."""
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         HardcodedBDCalendar(cast(CalendarID, 1), {})
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         HardcodedBDCalendar(CalendarID(""), {})
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         HardcodedBDCalendar(CalendarID("BAD"), {cast(date, "bad"): DayType.Holiday})
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         HardcodedBDCalendar(CalendarID("BAD"), {date.today(): cast(DayType, "bad")})
     empty = HardcodedBDCalendar(CalendarID("EMPTY"), {})
     with pytest.raises(DateOperationOutOfScopeException):
@@ -59,7 +60,7 @@ async def test_core_validation_and_boundary_search_failures() -> None:
 @pytest.mark.asyncio
 async def test_forward_and_year_batch_reject_malformed_generation() -> None:
     """Generated strategies wrap unexpected results and preserve domain failures."""
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         SimpleForwardCalendar(CalendarID("BAD"), cast(date, "bad"))
     for result in (date(2024, 1, 1), "bad", RuntimeError("boom")):
         calendar = InvalidForwardCalendar(result)

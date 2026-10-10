@@ -7,8 +7,12 @@ from dataclasses import dataclass
 from lclang.ast.atoms import LclName
 from lclang.ast.base import LclAstNode
 from lclang.ast.displays import LclDictEntry
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.core import Code as core_codes
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_825)
 @dataclass(frozen=True, slots=True)
 class LclComprehensionClause(LclAstNode):
     """Represent one ordered ``for`` clause and its filters.
@@ -25,6 +29,7 @@ class LclComprehensionClause(LclAstNode):
     iterable: LclAstNode
     conditions: tuple[LclAstNode, ...] = ()
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_825)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return target, iterable, then filters.
 
@@ -36,13 +41,14 @@ class LclComprehensionClause(LclAstNode):
         return (self.target, self.iterable, *self.conditions)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_825)
 @dataclass(frozen=True, slots=True)
 class InternalSequenceComprehension(LclAstNode):
     """Share sequence-comprehension storage and traversal.
 
     :param element: Expression emitted for each accepted binding.
     :param clauses: Non-empty ordered comprehension clauses.
-    :raises ValueError: If no clause is supplied.
+    :raises LclValidationError: If no clause is supplied.
 
     .. note::
        Concrete subclasses select generator, list, or set materialization.
@@ -51,14 +57,19 @@ class InternalSequenceComprehension(LclAstNode):
     element: LclAstNode
     clauses: tuple[LclComprehensionClause, ...]
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_825)
     def __post_init__(self) -> None:
         """Require at least one iteration clause.
 
-        :raises ValueError: If no clause is supplied.
+        :raises LclValidationError: If no clause is supplied.
         """
         if not self.clauses:
-            raise ValueError("comprehension requires at least one for clause")
+            raise LclValidationError(
+                "comprehension requires at least one for clause",
+                code=core_codes.E25_COMPREHENSION_REQUIRES_AT_LEAST_ONE_FOR_CLAUSE,
+            )
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_825)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return the element followed by its clauses.
 
@@ -67,52 +78,56 @@ class InternalSequenceComprehension(LclAstNode):
         return (self.element, *self.clauses)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_825)
 @dataclass(frozen=True, slots=True)
 class LclGenerator(InternalSequenceComprehension):
     """Represent a lazy generator expression.
 
     :param element: Ordinary expression yielded for each accepted binding.
     :param clauses: Non-empty ordered comprehension clauses.
-    :raises ValueError: If *clauses* is empty.
+    :raises LclValidationError: If *clauses* is empty.
 
     .. note::
        Evaluation returns an async iterator in the LCL runtime.
     """
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_825)
 @dataclass(frozen=True, slots=True)
 class LclListComprehension(InternalSequenceComprehension):
     """Represent a list comprehension, including iterable unpack heads.
 
     :param element: Ordinary or starred output expression.
     :param clauses: Non-empty ordered comprehension clauses.
-    :raises ValueError: If *clauses* is empty.
+    :raises LclValidationError: If *clauses* is empty.
 
     .. note::
        A starred head follows PEP 798 flattening semantics.
     """
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_825)
 @dataclass(frozen=True, slots=True)
 class LclSetComprehension(InternalSequenceComprehension):
     """Represent a set comprehension, including iterable unpack heads.
 
     :param element: Ordinary or starred output expression.
     :param clauses: Non-empty ordered comprehension clauses.
-    :raises ValueError: If *clauses* is empty.
+    :raises LclValidationError: If *clauses* is empty.
 
     .. note::
        Runtime uniqueness does not alter source-order AST traversal.
     """
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_825)
 @dataclass(frozen=True, slots=True)
 class LclDictComprehension(LclAstNode):
     """Represent key/value or mapping-unpack dictionary comprehension.
 
     :param entry: Explicit pair or PEP 798 mapping-unpack head.
     :param clauses: Non-empty ordered comprehension clauses.
-    :raises ValueError: If *clauses* is empty.
+    :raises LclValidationError: If *clauses* is empty.
 
     .. note::
        Mapping unpack expansion occurs once per accepted binding.
@@ -121,14 +136,19 @@ class LclDictComprehension(LclAstNode):
     entry: LclDictEntry
     clauses: tuple[LclComprehensionClause, ...]
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_825)
     def __post_init__(self) -> None:
         """Enforce comprehension-clause cardinality.
 
-        :raises ValueError: If no clause is supplied.
+        :raises LclValidationError: If no clause is supplied.
         """
         if not self.clauses:
-            raise ValueError("dict comprehension requires at least one for clause")
+            raise LclValidationError(
+                "dict comprehension requires at least one for clause",
+                code=core_codes.E25_DICT_COMPREHENSION_REQUIRES_AT_LEAST_ONE_FOR_CLAUSE,
+            )
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_825)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return entry then ordered clauses.
 

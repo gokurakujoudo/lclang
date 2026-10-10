@@ -12,6 +12,7 @@ import pytest
 
 import lclang
 import lclang.workflow as wf
+from lclang.error import LclError
 
 
 @dataclass
@@ -130,7 +131,9 @@ def exception_leaves(error: BaseException) -> list[BaseException]:
             for child in cast(BaseExceptionGroup[BaseException], error).exceptions
             for leaf in exception_leaves(child)
         ]
-    return [error]
+    return [
+        error.__cause__ if isinstance(error, LclError) and error.__cause__ is not None else error
+    ]
 
 
 @pytest.mark.asyncio
@@ -229,7 +232,11 @@ async def test_task_frame_close_keeps_prior_failure(
         if pending_kind == "cancel":
             with pytest.raises(asyncio.CancelledError) as caught:
                 await workflow.execute(execution_context(frame))
-            assert caught.value is prior and caught.value.__cause__ is cleanup
+            assert (
+                caught.value is prior
+                and caught.value.__cause__ is not None
+                and caught.value.__cause__.__cause__ is cleanup
+            )
         else:
             result = await workflow.execute(execution_context(frame))
             assert result.execution_status.status is wf.ExecutionStatus.ERROR
@@ -295,13 +302,15 @@ async def test_cancellation_at_lifecycle_boundaries_unwinds_outer_resources(
     assert caught.value is cancellation
     assert exited == (["0"] if during == "enter" else ["1", "0"])
     if during != "enter":
-        assert cancellation.__cause__ is ordinary
+        assert cancellation.__cause__ is not None and cancellation.__cause__.__cause__ is ordinary
 
 
 @pytest.mark.asyncio
 async def test_reraised_original_failure_is_not_duplicated() -> None:
-    """A context reraising the same exception preserves its identity."""
+    """A reraised native failure is wrapped once without duplicate group members."""
     from lclang.workflow.failures import combine_failures
 
     error = ValueError("original")
-    assert combine_failures(error, error) is error
+    wrapped = combine_failures(error, error)
+    assert isinstance(wrapped, lclang.LclError) and wrapped.__cause__ is error
+    assert combine_failures(wrapped, wrapped) is wrapped

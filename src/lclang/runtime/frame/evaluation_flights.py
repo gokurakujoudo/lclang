@@ -6,12 +6,14 @@ import asyncio
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING
 
+from lclang.error.codes.runtime import Code as runtime_codes
+
 if TYPE_CHECKING:
     pass
 
 from contextvars import ContextVar, Token
 
-from lclang.errors import LclCircularDependencyError
+from lclang.error import LclCircularDependencyError
 from lclang.source import SourceSpan
 
 type FlightKey = tuple[int, str]
@@ -41,7 +43,7 @@ def internal_check_cycle(owner: object, name: str, span: SourceSpan | None) -> N
     names = [entry_name for _, entry_name in path[start:]]
     names.append(name)
     message = f"circular dependency: {' -> '.join(names)}"
-    raise LclCircularDependencyError(message, span=span)
+    raise LclCircularDependencyError(message, span=span, code=runtime_codes.E33_CHECK_CYCLE_FAILURE)
 
 
 def internal_enter_flight(owner: object, name: str) -> Token[FlightPath]:

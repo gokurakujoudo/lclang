@@ -6,6 +6,7 @@ from io import StringIO
 import pytest
 
 from lclang import define_frame, define_module
+from lclang.error import LclValidationError
 from lclang.logger import (
     ConsoleConfig,
     FileConfig,
@@ -81,10 +82,10 @@ async def test_public_types_and_layered_configuration() -> None:
 @pytest.mark.parametrize("source", ["None", "{}", "1 / 0"])
 async def test_present_namespace_is_never_treated_as_absent(source: str) -> None:
     """Defaults do not hide malformed or failing logger definitions."""
-    from lclang.errors import LclEvaluationError
+    from lclang.error import LclEvaluationError
 
     async with define_frame(define_module("bad", {"logger": source})) as frame:
-        with pytest.raises((TypeError, LclEvaluationError)):
+        with pytest.raises((LclValidationError, LclEvaluationError)):
             await resolve_logger_config(frame)
 
 
@@ -92,10 +93,10 @@ async def test_present_namespace_is_never_treated_as_absent(source: str) -> None
 async def test_invalid_logger_namespace_and_expression_report_paths() -> None:
     """Scalar replacement and failing configuration expressions fail before entry."""
     async with define_frame(define_module("bad", {"logger": "1"})) as frame:
-        with pytest.raises(TypeError, match="FrameProxy"):
+        with pytest.raises(LclValidationError, match="FrameProxy"):
             await resolve_logger_config(frame)
     async with define_frame(define_module("bad", {"logger.console.level": "1 / 0"})) as frame:
-        with pytest.raises(ValueError, match="logger.console.level"):
+        with pytest.raises(LclValidationError, match="logger.console.level"):
             await resolve_logger_config(frame)
 
 
@@ -109,10 +110,10 @@ def test_verbose_preserves_disabled_console_level() -> None:
 async def test_invalid_fields_include_defining_source() -> None:
     """Validation attaches source information without evaluating unrelated bindings."""
     async with define_frame(define_module("bad_settings", {"logger.level": '"NOPE"'})) as frame:
-        with pytest.raises(ValueError, match="logger.level.*bad_settings"):
+        with pytest.raises(LclValidationError, match="logger.level.*bad_settings"):
             await resolve_logger_config(frame)
     async with Frame(define_module("override_layer", {}), values={"logger.level": "NOPE"}) as frame:
-        with pytest.raises(ValueError, match="logger.level.*override_layer"):
+        with pytest.raises(LclValidationError, match="logger.level.*override_layer"):
             await resolve_logger_config(frame)
 
 
@@ -122,7 +123,7 @@ async def test_source_for_absent_and_inherited_fields() -> None:
     async with define_frame(define_module("empty_layer", {})) as frame:
         assert logger_source(frame, "logger.level") == "empty_layer"
     async with define_frame(define_module("partial", {"logger.file.app.enabled": "True"})) as frame:
-        with pytest.raises(ValueError, match="logger.file.app.directory.*partial"):
+        with pytest.raises(LclValidationError, match="logger.file.app.directory.*partial"):
             await resolve_logger_config(frame)
     async with (
         define_frame(
@@ -138,5 +139,5 @@ async def test_source_for_absent_and_inherited_fields() -> None:
             )
         ) as frame,
     ):
-        with pytest.raises(ValueError, match="logger.file.app.rotation.align.*template"):
+        with pytest.raises(LclValidationError, match="logger.file.app.rotation.align.*template"):
             await resolve_logger_config(frame)

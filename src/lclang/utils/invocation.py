@@ -3,6 +3,10 @@
 from collections.abc import Awaitable, Callable
 from typing import overload
 
+from lclang.error import LclUtilityError
+from lclang.error.boundary import guard_async_failure
+from lclang.error.codes.utilities import Code as utilities_codes
+
 
 @overload
 async def invoke[**Params, Result](  # noqa: D418
@@ -36,6 +40,7 @@ async def invoke[**Params, Result](  # noqa: D418
     ...
 
 
+@guard_async_failure(LclUtilityError, utilities_codes.INVOCATION_FAILURE)
 async def invoke[**Params](
     callback: Callable[Params, object],
     *args: Params.args,

@@ -2,7 +2,7 @@
 
 import pytest
 
-from lclang.errors import LclCircularDependencyError
+from lclang.error import LclCircularDependencyError
 from lclang.lang.parser import parse_expression
 from lclang.runtime import (
     DependencyGraph,

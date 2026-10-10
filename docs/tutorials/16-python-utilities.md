@@ -136,7 +136,8 @@ asyncio.run(main())
 
 Each Frame owns its cached `id` and closes independently. The preset borrows
 the same generator, so closing the first Frame does not reset the sequence.
-Clock rollback raises `RuntimeError`; a pre-epoch clock raises `ValueError`.
+Clock rollback raises `LclStateError`; a pre-epoch clock raises
+`LclValidationError`. Both include a specific utility code.
 Exhausting 4096 sequences in one millisecond or the 41-bit timestamp raises
 `OverflowError`. These failures preserve state and never wait for the clock.
 After sequence exhaustion, retry only when time advances. See the

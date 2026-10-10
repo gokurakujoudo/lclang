@@ -10,6 +10,7 @@ from lclang.ast.call_arguments import (
     LclStarArgument,
 )
 from lclang.ast.primaries import LclCall
+from lclang.error import LclValidationError
 from lclang.types import VarName
 
 
@@ -36,5 +37,5 @@ def test_call_children_preserve_receiver_then_arguments() -> None:
 
 def test_keyword_argument_rejects_empty_name() -> None:
     """Explicit keyword arguments always have a usable identifier."""
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         LclKeywordArgument(VarName(""), LclConstant(value=None))

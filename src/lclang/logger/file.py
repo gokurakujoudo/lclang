@@ -6,6 +6,10 @@ import logging
 import time
 from typing import BinaryIO
 
+from lclang.error import LclLoggerError
+from lclang.error.base import LclStateError, LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.logging import Code as logging_codes
 from lclang.logger.formatter import RecordFormatter
 from lclang.logger.metrics import Counters
 from lclang.logger.rotation import RotationTimer
@@ -13,6 +17,7 @@ from lclang.logger.segments import create_segment, path_line
 from lclang.logger.sink_config import FileConfig
 
 
+@guard_constructor(LclValidationError, logging_codes.NATIVE_633)
 class FileSink:
     """Own one file stream and its independent size, flush, and time state."""
 
@@ -35,12 +40,14 @@ class FileSink:
         self.next_flush = time.monotonic() + config.flush_interval
         self.open_segment()
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_633)
     def open_segment(self) -> None:
         """Create a new permanent segment without reopening old output."""
         self.path, self.stream, self.current_size = create_segment(self.config)
         self.records = 0
         self.counters.set_path(self.key, self.path)
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_633)
     def accepts(self, record: logging.LogRecord) -> bool:
         """Filter by minimum level and exact/dotted ancestor names.
 
@@ -55,6 +62,7 @@ class FileSink:
             )
         )
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_633)
     def rollover(self) -> None:
         """Create the successor before sealing the previous segment.
 
@@ -74,10 +82,12 @@ class FileSink:
         self.counters.add("rollover_count", self.key)
         self.counters.add("rollover_count")
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_633)
     def write(self, record: logging.LogRecord) -> None:
         """Write an intact encoded record, rotating before size overflow.
 
         :param record: Selected queue record.
+        :raises LclStateError: If stream initialization produces no open stream.
         """
         data = (self.formatter.format(record) + "\n").encode(
             self.config.encoding, "backslashreplace"
@@ -91,11 +101,13 @@ class FileSink:
             and self.current_size + len(data) > rotation.max_bytes
         ):
             self.rollover()
-        assert self.stream is not None
+        if self.stream is None:
+            raise LclStateError("file sink has no open stream", code=logging_codes.SINK_NOT_OPEN)
         self.stream.write(data)
         self.current_size += len(data)
         self.records += 1
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_633)
     def process_timers(self, monotonic: float, wall: float) -> None:
         """Process scheduled rollover and periodic flushing even when idle.
 
@@ -110,6 +122,7 @@ class FileSink:
             if self.stream is not None:
                 self.stream.flush()
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_633)
     def timeout(self, monotonic: float, wall: float) -> float:
         """Compute a nonnegative wait before the next required operation.
 
@@ -121,6 +134,7 @@ class FileSink:
             0.0, min(1.0, self.next_flush - monotonic, self.timer.remaining(monotonic, wall))
         )
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_633)
     def close(self) -> None:
         """Detach first, then flush and close without allowing future appends."""
         stream, self.stream = self.stream, None

@@ -6,22 +6,23 @@ import pytest
 
 from lclang.config import LclConfigUsingError, ResolvedConfigSource
 from lclang.config.sources import canonical_config_path, resolve_using_path
+from lclang.error import LclValidationError
 
 
 def test_resolved_source_and_root_path_validation(tmp_path: Path) -> None:
     """Resolver results require stable identity, display text, Unicode, and suffix."""
     path = tmp_path / "source.lclcfg"
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         ResolvedConfigSource("", "source", path, "")
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         ResolvedConfigSource("id", "", path, "")
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         ResolvedConfigSource("id", "source", "bad", "")  # type: ignore[arg-type]
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         ResolvedConfigSource("id", "source", tmp_path / "bad.txt", "")
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         ResolvedConfigSource("id", "source", path, b"bad")  # type: ignore[arg-type]
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         canonical_config_path(1)  # type: ignore[arg-type]
     with pytest.raises(LclConfigUsingError):
         canonical_config_path(tmp_path / "bad.txt")

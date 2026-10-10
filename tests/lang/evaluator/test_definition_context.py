@@ -5,6 +5,7 @@ import asyncio
 import pytest
 
 import lclang
+from lclang.error import LclEvaluationError
 from lclang.lang.evaluator.definition_context import definition_scope
 
 
@@ -79,5 +80,5 @@ def test_lhs_rejects_calls_outside_frame_definition_evaluation() -> None:
 
 def test_definition_scope_rejects_an_empty_owner_name() -> None:
     """Definition context setup rejects a missing owner deterministically."""
-    with pytest.raises(ValueError, match="cannot be empty"), definition_scope(""):
+    with pytest.raises(LclEvaluationError, match="cannot be empty"), definition_scope(""):
         pass

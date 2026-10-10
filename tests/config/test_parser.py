@@ -15,6 +15,7 @@ from lclang.config import (
     parse_config,
 )
 from lclang.diagnostics import internal_verbose_scope
+from lclang.error import LclValidationError
 from lclang.runtime import analyze_dependencies
 
 
@@ -200,15 +201,15 @@ def test_invalid_documents_are_structured(text: str, error: type[Exception]) -> 
 
 def test_parser_public_validation_and_declaration_rainy_branches(tmp_path: Path) -> None:
     """Public input types and declaration-specific malformed forms are rejected."""
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         parse_config(b"value: 1")  # type: ignore[arg-type]
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         parse_config("", source_name=1)  # type: ignore[arg-type]
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         parse_config("", source_name="")
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         parse_config("", source_path=1)  # type: ignore[arg-type]
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         parse_config("", source_path=tmp_path / "bad.txt")
     for text in (
         "__LCL_VERSION__ 1\n",

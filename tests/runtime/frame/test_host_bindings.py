@@ -5,6 +5,7 @@ from typing import Any, cast
 import pytest
 
 import lclang
+from lclang.error import LclValidationError
 
 
 @pytest.mark.asyncio
@@ -34,7 +35,7 @@ async def test_marked_frame_values_and_mixins_normalize_and_stay_masked() -> Non
     assert await frame.get("other") == "third"
     assert frame.masked_names == frozenset({"other"})
     assert frame.is_masked("token") is True
-    with pytest.raises(ValueError, match="duplicate"):
+    with pytest.raises(LclValidationError, match="duplicate"):
         frame.mixin({"same": 1, "same!": 2})
 
 
@@ -73,11 +74,11 @@ def test_mixin_validates_atomically_and_rejects_wrong_types() -> None:
     """Rainy: invalid updates neither mutate nor partially populate values."""
     frame = lclang.define_frame(preset={"stable": 1})
     before = dict(frame.values)
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         frame.mixin(cast(Any, [("value", 2)]))
-    with pytest.raises(TypeError, match="mixin names must be strings"):
+    with pytest.raises(LclValidationError, match="mixin names must be strings"):
         frame.mixin(cast(Any, {1: "value"}))
-    with pytest.raises(ValueError, match="host binding name cannot be empty"):
+    with pytest.raises(LclValidationError, match="host binding name cannot be empty"):
         frame.mixin({"valid": 2, "": 3})
     assert frame.values == before
 

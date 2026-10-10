@@ -9,7 +9,11 @@ from typing import Self
 from weakref import WeakSet
 
 from lclang.ast import LclAstNode
-from lclang.errors import LclEvaluationError, LclNameError
+from lclang.error import LclEvaluationError, LclNameError
+from lclang.error.aggregation import combine_failures
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.codes.runtime import Code as runtime_codes
 from lclang.masking import normalize_masked_mapping, normalize_masked_names
 from lclang.runtime.dependency.snapshot import DependencySnapshot
 from lclang.runtime.frame.binding_lookup import (
@@ -42,6 +46,7 @@ from lclang.source import SourceSpan
 from lclang.types import FrameId, VarName
 
 
+@guard_constructor(LclValidationError, runtime_codes.NATIVE_231)
 class Frame:
     """Cache lazy evaluations for one runtime module instance.
 
@@ -51,8 +56,8 @@ class Frame:
     :param parent: Optional ancestor used after local definitions and bindings.
     :param limits: Optional resource ceilings, or stable defaults when omitted.
     :param native_values: Whether local host bindings are canonical lclang values.
-    :raises TypeError: If an optional identifier or native flag has the wrong type.
-    :raises ValueError: If *frame_id* or any host binding name is empty.
+    :raises LclValidationError: If an optional identifier or native flag has the wrong type.
+    :raises LclValidationError: If *frame_id* or any host binding name is empty.
 
     .. note::
        Parent-owned definitions always evaluate and cache in their parent Frame.
@@ -79,25 +84,40 @@ class Frame:
         :param native_values: Whether local host bindings are canonical lclang values.
         :param masked_names: Additional normalized local names to redact.
         :returns: ``None`` after independent runtime state is initialized.
-        :raises TypeError: If *frame_id* or *native_values* has the wrong type.
-        :raises ValueError: If the effective ID or a host binding name is empty.
+        :raises LclValidationError: If *frame_id* or *native_values* has the wrong type.
+        :raises LclValidationError: If the effective ID or a host binding name is empty.
 
         .. note::
            Omitting *frame_id* derives ``frame-<module name>`` deterministically.
         """
         if frame_id is not None and not isinstance(frame_id, str):
-            raise TypeError("frame identifier must be a string")
+            raise LclValidationError(
+                "frame identifier must be a string",
+                code=runtime_codes.E31_FRAME_IDENTIFIER_MUST_BE_A_STRING,
+            )
         if not isinstance(native_values, bool):
-            raise TypeError("native-values flag must be Boolean")
+            raise LclValidationError(
+                "native-values flag must be Boolean",
+                code=runtime_codes.E31_NATIVE_VALUES_FLAG_MUST_BE_BOOLEAN,
+            )
         effective_id = FrameId(f"frame-{module.name}") if frame_id is None else FrameId(frame_id)
         if not effective_id:
-            raise ValueError("frame identifier cannot be empty")
+            raise LclValidationError(
+                "frame identifier cannot be empty",
+                code=runtime_codes.E31_FRAME_IDENTIFIER_CANNOT_BE_EMPTY,
+            )
         raw_values: Mapping[str, object] = {} if values is None else values
         if any(not isinstance(name, str) for name in raw_values):
-            raise TypeError("host binding names must be strings")
+            raise LclValidationError(
+                "host binding names must be strings",
+                code=runtime_codes.E31_FRAME_IDENTIFIER_MUST_BE_A_STRING,
+            )
         snapshot, value_masks = normalize_masked_mapping(raw_values)
         if any(not name for name in snapshot):
-            raise ValueError("host binding name cannot be empty")
+            raise LclValidationError(
+                "host binding name cannot be empty",
+                code=runtime_codes.E31_FRAME_IDENTIFIER_CANNOT_BE_EMPTY,
+            )
         validate_binding_names(snapshot)
         explicit_masks = normalize_masked_names(masked_names)
         validate_binding_names(explicit_masks)
@@ -127,12 +147,13 @@ class Frame:
         if parent is not None:
             parent._children.add(self)
 
+    @guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_231)
     async def recalculate(self, name: str) -> object:
         """Explicitly refresh one owned definition snapshot.
 
         :param name: Non-empty definition name to refresh.
         :returns: Newly evaluated result after its atomic cache commit.
-        :raises ValueError: If *name* is empty.
+        :raises LclValidationError: If *name* is empty.
         :raises LclEvaluationError: If *name* selects a host binding or fails.
         :raises LclNameError: If *name* is absent from the Frame hierarchy.
 
@@ -141,16 +162,27 @@ class Frame:
         """
         self._lifecycle.ensure_open(None)
         if not name:
-            raise ValueError("variable name cannot be empty")
+            raise LclValidationError(
+                "variable name cannot be empty",
+                code=runtime_codes.E31_FRAME_IDENTIFIER_CANNOT_BE_EMPTY,
+            )
         selected = select_binding(self, name)
         owner = selected.owner
         if owner is None:
-            raise LclNameError(f"unknown variable: {name}")
+            raise LclNameError(
+                f"unknown variable: {name}", code=runtime_codes.E31_UNKNOWN_VARIABLE_VALUE
+            )
         owner._lifecycle.ensure_open(None)
         if selected.kind == "proxy":
-            raise LclEvaluationError(f"Frame proxy cannot be recalculated: {name}")
+            raise LclEvaluationError(
+                f"Frame proxy cannot be recalculated: {name}",
+                code=runtime_codes.E31_FRAME_PROXY_CANNOT_BE_RECALCULATED_VALUE,
+            )
         if selected.kind == "host" or name not in owner.module.definitions:
-            raise LclEvaluationError(f"host binding cannot be recalculated: {name}")
+            raise LclEvaluationError(
+                f"host binding cannot be recalculated: {name}",
+                code=runtime_codes.E31_HOST_BINDING_CANNOT_BE_RECALCULATED_VALUE,
+            )
         return await internal_refresh_definition(
             name,
             owner._inflight,
@@ -159,6 +191,7 @@ class Frame:
             lambda: owner._lifecycle.ensure_open(None),
         )
 
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_231)
     def derive(
         self,
         module: Module,
@@ -172,8 +205,8 @@ class Frame:
         :param values: Local host bindings copied into the child.
         :param masked_names: Additional normalized hierarchy names to redact.
         :returns: Independent child Frame whose parent is this Frame.
-        :raises TypeError: If *module* is not a Module or *values* is not a dict.
-        :raises ValueError: If a local host-binding name is empty.
+        :raises LclValidationError: If *module* is not a Module or *values* is not a dict.
+        :raises LclValidationError: If a local host-binding name is empty.
 
         .. note::
            The default and caller dictionary are never mutated or retained;
@@ -184,9 +217,15 @@ class Frame:
         from lclang.runtime.frame.frame import Frame
 
         if not isinstance(module, Module):
-            raise TypeError("derived frame module must be a Module")
+            raise LclValidationError(
+                "derived frame module must be a Module",
+                code=runtime_codes.E31_DERIVED_FRAME_MODULE_MUST_BE_A_MODULE,
+            )
         if not isinstance(values, dict):
-            raise TypeError("derived frame values must be a dictionary")
+            raise LclValidationError(
+                "derived frame values must be a dictionary",
+                code=runtime_codes.E31_DERIVED_FRAME_VALUES_MUST_BE_A_DICTIONARY,
+            )
         return Frame(
             module,
             FrameId(str(module.name)),
@@ -195,35 +234,41 @@ class Frame:
             masked_names=masked_names,
         )
 
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_231)
     def has(self, name: str) -> bool:
         """Report whether the hierarchy resolves a name.
 
         :param name: Non-empty definition or host-value name.
         :returns: ``True`` when recursive lookup selects any binding.
-        :raises ValueError: If *name* is empty.
+        :raises LclValidationError: If *name* is empty.
 
         .. note::
            Presence inspection never evaluates or caches a definition or value.
         """
         return find_frame(self, name) is not None
 
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_231)
     def is_masked(self, name: str) -> bool:
         """Report whether the hierarchy marks one exact normalized name.
 
         :param name: Non-empty binding name to inspect without evaluation.
         :returns: Whether any effective layer marks *name*.
-        :raises ValueError: If *name* is empty.
+        :raises LclValidationError: If *name* is empty.
         """
         if not name:
-            raise ValueError("variable name cannot be empty")
+            raise LclValidationError(
+                "variable name cannot be empty",
+                code=runtime_codes.E31_FRAME_IDENTIFIER_CANNOT_BE_EMPTY,
+            )
         return is_name_masked(self, name)
 
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_231)
     def get_definition(self, name: str) -> LclAstNode | None:
         """Return the selected definition AST without evaluating it.
 
         :param name: Non-empty definition or host-value name.
         :returns: Nearest selected definition, or ``None`` for a value/miss.
-        :raises ValueError: If *name* is empty.
+        :raises LclValidationError: If *name* is empty.
 
         .. note::
            A nearer host value masks an ancestor definition with the same name.
@@ -237,6 +282,7 @@ class Frame:
             else owner.module.definitions.get(name)
         )
 
+    @guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_231)
     async def __aenter__(self) -> Self:
         """Enter an owned Frame lifecycle scope.
 
@@ -244,6 +290,7 @@ class Frame:
         """
         return self
 
+    @guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_231)
     async def __aexit__(
         self,
         error_type: type[BaseException] | None,
@@ -259,9 +306,14 @@ class Frame:
         :raises LclEvaluationError: If an owned resource cleanup fails.
         :raises BaseException: If cleanup itself raises a direct base exception.
         """
-        await self.close()
+        try:
+            await self.close()
+        except BaseException as cleanup:
+            failure = combine_failures(error, cleanup, code=runtime_codes.SCOPE_CLEANUP_FAILURE)
+            raise failure from failure.__cause__
 
     @property
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_231)
     def closed(self) -> bool:
         """Return whether owned cleanup has completely settled.
 
@@ -272,6 +324,7 @@ class Frame:
         """
         return self._lifecycle.closed
 
+    @guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_231)
     async def close(self) -> None:
         """Cancel owned work and release cached resources exactly once.
 
@@ -284,13 +337,14 @@ class Frame:
         """
         await self._lifecycle.close()
 
+    @guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_231)
     async def get(self, name: str, fallback: object = NO_FALLBACK) -> object:
         """Resolve one local definition or host binding.
 
         :param name: Non-empty variable name to resolve.
         :param fallback: Value returned unchanged when *name* is absent.
         :returns: Cached or newly evaluated value, or the explicit fallback.
-        :raises ValueError: If *name* is empty.
+        :raises LclValidationError: If *name* is empty.
         :raises LclNameError: If no binding exists and fallback is ``NO_FALLBACK``.
         :raises Exception: If definition evaluation fails.
 
@@ -301,12 +355,13 @@ class Frame:
         """
         return await get_value(self, name, fallback)
 
+    @guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_231)
     async def evaluate(self, expr: str) -> object:
         """Evaluate one unnamed expression against this open Frame.
 
         :param expr: Complete LCL source expression.
         :returns: Fully resolved uncached result.
-        :raises TypeError: If *expr* is not a string.
+        :raises LclValidationError: If *expr* is not a string.
         :raises LclClosedFrameError: If Frame closing has begun.
 
         .. note::
@@ -315,6 +370,7 @@ class Frame:
         """
         return await evaluate_expression(self, expr)
 
+    @guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_231)
     async def resolve(self, name: VarName, *, span: SourceSpan) -> object:
         """Resolve a name for the language evaluator.
 
@@ -329,6 +385,7 @@ class Frame:
         """
         return await resolve_name(self, name, span=span)
 
+    @guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_231)
     async def get_resolved(self, name: str, span: SourceSpan | None) -> object:
         """Resolve one validated name while retaining its diagnostic span.
 
@@ -343,6 +400,7 @@ class Frame:
         """
         return await get_resolved(self, name, span)
 
+    @guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_231)
     async def evaluate_definition(self, name: str) -> object:
         """Evaluate and atomically publish one owned definition snapshot.
 
@@ -355,13 +413,14 @@ class Frame:
         """
         return await evaluate_definition(self, name)
 
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_231)
     def mixin(self, values: dict[str, object]) -> None:
         """Copy host bindings into an open Frame.
 
         :param values: String-keyed host bindings applied right-biased.
         :returns: ``None`` after the atomic mapping update.
-        :raises TypeError: If *values* is not a string-keyed dictionary.
-        :raises ValueError: If a host-binding name is empty.
+        :raises LclValidationError: If *values* is not a string-keyed dictionary.
+        :raises LclValidationError: If a host-binding name is empty.
         :raises LclClosedFrameError: If Frame closing has begun.
 
         .. note::
@@ -369,13 +428,14 @@ class Frame:
         """
         update_host_bindings(self, values)
 
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_231)
     def inspect_variable(self, var_name: str) -> VariableInspectionTree:
         """Inspect one selected variable and its unique direct dependency names.
 
         :param var_name: Non-empty name whose lookup starts at this Frame.
         :returns: A detached tree of cache, syntax, path, and dependency evidence.
-        :raises TypeError: If *var_name* is not a string.
-        :raises ValueError: If *var_name* is empty or the parent graph cycles.
+        :raises LclValidationError: If *var_name* is not a string.
+        :raises LclValidationError: If *var_name* is empty or the parent graph cycles.
         :raises LclClosedFrameError: If this Frame is closing or closed.
 
         .. note::
@@ -383,12 +443,13 @@ class Frame:
         """
         return inspect_variable(self, var_name)
 
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_231)
     def dependency_snapshot(self, name: str) -> DependencySnapshot:
         """Return point-in-time dependency evidence for one owned definition.
 
         :param name: Non-empty definition name to inspect.
         :returns: Immutable static, dynamic, and reconciled edge evidence.
-        :raises ValueError: If *name* is empty.
+        :raises LclValidationError: If *name* is empty.
         :raises LclEvaluationError: If *name* selects a host binding.
         :raises LclNameError: If *name* is absent from the Frame hierarchy.
         :raises LclClosedFrameError: If this Frame is closing or closed.

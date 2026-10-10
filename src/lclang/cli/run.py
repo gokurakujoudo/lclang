@@ -14,9 +14,14 @@ from lclang.cli.models import CliConfig, CliResultStatus
 from lclang.cli.parser import help_requested, parse_cli_params
 from lclang.cli.process import ArgvParts, split_argv
 from lclang.cli.routing import RouteAction, RouteFailure, route_command
+from lclang.error import LclCliError
+from lclang.error.base import LclStateError
+from lclang.error.boundary import guard_async_failure, guard_failure
+from lclang.error.codes.cli import Code as cli_codes
 from lclang.masking import normalize_masked_mapping
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_452)
 def script_label_from_args(args: Sequence[str] | None) -> str:
     """Return a best-effort label for pre-parse usage failures.
 
@@ -28,6 +33,7 @@ def script_label_from_args(args: Sequence[str] | None) -> str:
     return "script.py"
 
 
+@guard_async_failure(LclCliError, cli_codes.NATIVE_452)
 async def run_command(command: Command, args: Sequence[str] | None = None) -> int:
     """Run one command directly from full argv.
 
@@ -50,13 +56,14 @@ async def run_command(command: Command, args: Sequence[str] | None = None) -> in
         return int(CliResultStatus.EXCEPTION)
 
 
+@guard_async_failure(LclCliError, cli_codes.NATIVE_452)
 async def run_entrance(entrance: CliEntrance, args: Sequence[str] | None = None) -> int:
     """Route and execute one entrance from full argv.
 
     :param entrance: Root group, version, and framework defaults.
     :param args: Full argv, or ``None`` for process adaptation.
     :returns: Integer program status.
-    :raises RuntimeError: Internally converted if routing yields no command.
+    :raises LclStateError: Internally converted if routing yields no command.
     """
     parts: ArgvParts | None = None
     try:
@@ -76,7 +83,10 @@ async def run_entrance(entrance: CliEntrance, args: Sequence[str] | None = None)
             return 0
         command = route.command
         if command is None:
-            raise RuntimeError("command route did not select a command")
+            raise LclStateError(
+                "command route did not select a command",
+                code=cli_codes.E52_COMMAND_ROUTE_DID_NOT_SELECT_A_COMMAND,
+            )
         values, masked_names = normalize_masked_mapping(entrance.lcl_mixin)
         command = replace(
             command,

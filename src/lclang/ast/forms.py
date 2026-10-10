@@ -6,6 +6,9 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from lclang.ast.base import LclAstNode
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.core import Code as core_codes
 from lclang.types import VarName
 
 
@@ -24,6 +27,7 @@ class ParameterKind(StrEnum):
     VAR_KEYWORD = "variadic-keyword"
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_826)
 @dataclass(frozen=True, slots=True)
 class LclParameter(LclAstNode):
     """Represent one function parameter and optional default.
@@ -31,7 +35,7 @@ class LclParameter(LclAstNode):
     :param name: Non-empty binding name.
     :param kind: Positional or variadic binding category.
     :param default: Optional expression evaluated when the function is created.
-    :raises ValueError: If *name* is empty or a variadic parameter has a default.
+    :raises LclValidationError: If *name* is empty or a variadic parameter has a default.
 
     .. note::
        Ordering and duplicate-name checks belong to the parser.
@@ -41,19 +45,27 @@ class LclParameter(LclAstNode):
     kind: ParameterKind
     default: LclAstNode | None = None
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_826)
     def __post_init__(self) -> None:
         """Validate local parameter invariants.
 
-        :raises ValueError: If the name is empty or a variadic default is present.
+        :raises LclValidationError: If the name is empty or a variadic default is present.
         """
         if not self.name:
-            raise ValueError("function parameter name cannot be empty")
+            raise LclValidationError(
+                "function parameter name cannot be empty",
+                code=core_codes.E26_FUNCTION_PARAMETER_NAME_CANNOT_BE_EMPTY,
+            )
         if self.default is not None and self.kind in {
             ParameterKind.VAR_POSITIONAL,
             ParameterKind.VAR_KEYWORD,
         }:
-            raise ValueError("variadic function parameter cannot have a default")
+            raise LclValidationError(
+                "variadic function parameter cannot have a default",
+                code=core_codes.E26_VARIADIC_FUNCTION_PARAMETER_CANNOT_HAVE_A_DEFAULT,
+            )
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_826)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return the optional default expression.
 
@@ -65,6 +77,7 @@ class LclParameter(LclAstNode):
         return () if self.default is None else (self.default,)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_826)
 @dataclass(frozen=True, slots=True)
 class LclFunction(LclAstNode):
     """Represent an anonymous function expression.
@@ -79,6 +92,7 @@ class LclFunction(LclAstNode):
     parameters: tuple[LclParameter, ...]
     body: LclAstNode
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_826)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return parameters then body.
 
@@ -90,6 +104,7 @@ class LclFunction(LclAstNode):
         return (*self.parameters, self.body)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_826)
 @dataclass(frozen=True, slots=True)
 class LclRaise(LclAstNode):
     """Represent deliberate evaluation failure.
@@ -102,6 +117,7 @@ class LclRaise(LclAstNode):
 
     value: LclAstNode
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_826)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return the error value expression.
 
@@ -113,6 +129,7 @@ class LclRaise(LclAstNode):
         return (self.value,)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_826)
 @dataclass(frozen=True, slots=True)
 class LclAssert(LclAstNode):
     """Represent a condition with an optional failure message.
@@ -127,6 +144,7 @@ class LclAssert(LclAstNode):
     condition: LclAstNode
     message: LclAstNode | None = None
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_826)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return condition followed by an optional message.
 

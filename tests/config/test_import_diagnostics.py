@@ -15,7 +15,7 @@ from lclang.config import (
     load_config,
     parse_config,
 )
-from lclang.errors import LclError, LclSyntaxError
+from lclang.error import LclError, LclSyntaxError, LclValidationError
 from lclang.lang.lexer import scan_tokens
 from lclang.lang.lexer.fstring_values import FStringField
 from lclang.lang.parser.fstrings import internal_convert_part
@@ -83,9 +83,9 @@ async def test_direct_expansion_compatibility_and_native_structure_failure() -> 
         assert [str(item.name) for item in output] == ["x"]
         main.write_text('m: 1\nimport "empty.lclcfg" as m', encoding="utf-8")
         (root / "empty.lclcfg").write_text("", encoding="utf-8")
-        with pytest.raises(ValueError, match="namespace") as failure:
+        with pytest.raises(LclValidationError, match="namespace") as failure:
             await load_config(main)
-        assert type(failure.value) is ValueError
+        assert type(failure.value) is LclValidationError
         assert "main.lclcfg" in str(failure.value)
 
 
@@ -124,4 +124,4 @@ async def test_dynamic_missing_name_hides_generated_target_but_keeps_user_owner(
         path.write_text(source, encoding="utf-8")
         with pytest.raises(Exception) as user_failure:
             await load_config(path)
-        assert "Error in evaluating using_target [LCL3001]" in str(user_failure.value)
+        assert "Error in evaluating using_target [LCL139991]" in str(user_failure.value)

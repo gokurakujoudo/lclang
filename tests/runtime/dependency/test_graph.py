@@ -2,7 +2,7 @@
 
 import pytest
 
-from lclang.errors import LclNameError
+from lclang.error import LclNameError, LclValidationError
 from lclang.lang.parser import parse_expression
 from lclang.runtime import (
     DependencyGraph,
@@ -63,9 +63,9 @@ def test_external_names_are_unique_in_first_occurrence_order() -> None:
 def test_graph_constructor_rejects_duplicate_vertices_or_foreign_sources() -> None:
     """Manually constructed immutable graphs retain module ownership invariants."""
     graph = build_dependency_graph(_module())
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         DependencyGraph((VarName("alpha"), VarName("alpha")), ())
     foreign = graph.edges[0]
     invalid = type(foreign)(VarName("missing"), foreign.target, foreign.kind, foreign.span)
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         DependencyGraph((VarName("alpha"),), (invalid,))

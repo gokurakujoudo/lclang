@@ -5,11 +5,15 @@ from __future__ import annotations
 from collections.abc import Collection
 
 from lclang.ast import LclAstNode, LclAttribute, LclName, LclSafeAttribute
+from lclang.error import LclEvaluationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.runtime import Code as runtime_codes
 from lclang.runtime.dependency.model import DependencyReference
 from lclang.source import SourceSpan
 from lclang.types import VarName
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_241)
 def qualify_dependency_references(
     node: LclAstNode,
     references: tuple[DependencyReference, ...],
@@ -48,6 +52,7 @@ def qualify_dependency_references(
     )
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_241)
 def attribute_path(node: LclAstNode) -> tuple[LclName, tuple[str, ...]] | None:
     """Return one pure name-rooted attribute path.
 

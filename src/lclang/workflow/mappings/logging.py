@@ -5,6 +5,9 @@ from inspect import formatannotation
 from typing import Any, cast, get_origin
 
 from lclang.diagnostics import internal_render_value
+from lclang.error import LclWorkflowError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.workflow import Code as workflow_codes
 from lclang.masking import MASKED_VALUE
 from lclang.runtime import Frame
 from lclang.workflow.mappings.annotations import record_annotations
@@ -12,6 +15,7 @@ from lclang.workflow.projections import reference_name
 from lclang.workflow.variables import TaskVar
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_521)
 def mapping_rows(
     mapping: Any,
     value: Any,

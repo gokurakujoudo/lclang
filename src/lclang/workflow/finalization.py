@@ -4,9 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from lclang.error import LclWorkflowError
+from lclang.error.base import LclStateError, LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.workflow import Code as workflow_codes
 from lclang.workflow.models import ExecutionStatus, ExecutionStatusTree, ExecutionTaskType
 
 
+@guard_constructor(LclValidationError, workflow_codes.NATIVE_531)
 @dataclass(slots=True)
 class SharedExecutionState:
     """Track finalized nodes shared by every manager cursor.
@@ -17,32 +22,41 @@ class SharedExecutionState:
     locked_nodes: set[int] = field(default_factory=set[int])
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def ensure_unlocked(state: SharedExecutionState, node: ExecutionStatusTree) -> None:
     """Reject a manager operation against one finalized node.
 
     :param state: Shared lock registry.
     :param node: Current manager node.
     :returns: ``None``.
-    :raises RuntimeError: If *node* is finalized.
+    :raises LclStateError: If *node* is finalized.
     """
     if id(node) in state.locked_nodes:
-        raise RuntimeError("execution status subtree is already finalized")
+        raise LclStateError(
+            "execution status subtree is already finalized",
+            code=workflow_codes.E31_EXECUTION_STATUS_SUBTREE_IS_ALREADY_FINALIZED,
+        )
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def ensure_can_add(state: SharedExecutionState, node: ExecutionStatusTree) -> None:
     """Require an editable composite task before adding a child.
 
     :param state: Shared lock registry.
     :param node: Current manager node.
     :returns: ``None``.
-    :raises RuntimeError: If *node* is finalized.
-    :raises ValueError: If *node* is a step.
+    :raises LclStateError: If *node* is finalized.
+    :raises LclValidationError: If *node* is a step.
     """
     ensure_unlocked(state, node)
     if node.task_type is ExecutionTaskType.STEP:
-        raise ValueError("a step manager cannot contain sub-tasks")
+        raise LclValidationError(
+            "a step manager cannot contain sub-tasks",
+            code=workflow_codes.E31_A_STEP_MANAGER_CANNOT_CONTAIN_SUB_TASKS,
+        )
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def finalize_node(state: SharedExecutionState, node: ExecutionStatusTree) -> None:
     """Recursively aggregate one unlocked node and add it to the lock registry.
 
@@ -62,6 +76,7 @@ def finalize_node(state: SharedExecutionState, node: ExecutionStatusTree) -> Non
     state.locked_nodes.add(id(node))
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def aggregate_children(node: ExecutionStatusTree) -> None:
     """Apply deterministic child severity and clean-result rules to one task.
 
@@ -99,6 +114,7 @@ def aggregate_children(node: ExecutionStatusTree) -> None:
     )
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def append_child_issue(parent: ExecutionStatusTree, child: ExecutionStatusTree) -> None:
     """Append one direct winning child cause to its parent description.
 

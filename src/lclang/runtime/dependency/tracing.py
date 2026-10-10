@@ -5,6 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, cast
 
+from lclang.error import LclEvaluationError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.codes.runtime import Code as runtime_codes
 from lclang.lang.evaluator.context import Resolver
 from lclang.runtime.dependency.model import DependencyEdge, DependencyKind
 from lclang.scopes import ScopedProxyValue
@@ -12,11 +16,12 @@ from lclang.source import SourceSpan
 from lclang.types import VarName
 
 
+@guard_constructor(LclValidationError, runtime_codes.NATIVE_241)
 class DependencyTrace:
     """Collect bounded runtime dependency occurrences for one definition.
 
     :param source: Non-empty definition name that owns every observation.
-    :raises ValueError: If *source* is empty.
+    :raises LclValidationError: If *source* is empty.
 
     .. note::
        Exact repeated occurrences are idempotent and first-observation order is
@@ -27,14 +32,18 @@ class DependencyTrace:
         """Create an initially empty per-definition trace.
 
         :param source: Non-empty definition owning every observation.
-        :raises ValueError: If *source* is empty.
+        :raises LclValidationError: If *source* is empty.
         """
         if not source:
-            raise ValueError("dependency trace source cannot be empty")
+            raise LclValidationError(
+                "dependency trace source cannot be empty",
+                code=runtime_codes.E41_DEPENDENCY_SNAPSHOT_SOURCE_CANNOT_BE_EMPTY,
+            )
         self.source = source
         self._observations: dict[tuple[VarName, SourceSpan], DependencyEdge] = {}
 
     @property
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_241)
     def edges(self) -> tuple[DependencyEdge, ...]:
         """Return an immutable point-in-time observation snapshot.
 
@@ -45,19 +54,23 @@ class DependencyTrace:
         """
         return tuple(self._observations.values())
 
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_241)
     def record(self, target: VarName, span: SourceSpan) -> None:
         """Record one actual free-name resolution occurrence.
 
         :param target: Non-empty requested free-variable name.
         :param span: Exact source range of the requesting name node.
         :returns: ``None`` after the occurrence is present in the trace.
-        :raises ValueError: If *target* is empty.
+        :raises LclValidationError: If *target* is empty.
 
         .. note::
            Repeating the same target and span does not grow the trace.
         """
         if not target:
-            raise ValueError("dependency trace target cannot be empty")
+            raise LclValidationError(
+                "dependency trace target cannot be empty",
+                code=runtime_codes.E41_DEPENDENCY_SNAPSHOT_SOURCE_CANNOT_BE_EMPTY,
+            )
         key = (target, span)
         if key not in self._observations:
             self._observations[key] = DependencyEdge(
@@ -68,6 +81,7 @@ class DependencyTrace:
             )
 
 
+@guard_constructor(LclValidationError, runtime_codes.NATIVE_241)
 @dataclass(frozen=True, slots=True)
 class TracingResolver:
     """Record free-name requests before delegating to another resolver.
@@ -82,6 +96,7 @@ class TracingResolver:
     trace: DependencyTrace
     parent: Resolver
 
+    @guard_async_failure(LclEvaluationError, runtime_codes.NATIVE_241)
     async def resolve(self, name: VarName, *, span: SourceSpan) -> object:
         """Record and delegate one free-name lookup.
 

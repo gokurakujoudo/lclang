@@ -7,6 +7,7 @@ from typing import assert_type
 import pytest
 
 import lclang.workflow as wf
+from lclang.error import LclValidationError
 
 
 @dataclass
@@ -37,7 +38,7 @@ def test_parameterized_variables_keep_quote_types() -> None:
 
 def test_variable_subscription_is_required_and_none_is_a_type() -> None:
     """Unsubscribed construction has no inferred runtime type."""
-    with pytest.raises(TypeError, match="subscription"):
+    with pytest.raises(LclValidationError, match="subscription"):
         wf.define_variable("missing")
     null = wf.define_variable[None]("null")
     assert_type(null.quote, None)

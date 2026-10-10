@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from lclang.error import LclEvaluationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.runtime import Code as runtime_codes
 from lclang.runtime.frame.binding_lookup import select_binding, walk_hierarchy
 
 if TYPE_CHECKING:
@@ -13,12 +16,13 @@ from lclang.runtime.dependency.frame.model import FrameDependencyBinding
 from lclang.types import FrameId
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_244)
 def collect_frames(frame: object) -> tuple[Frame, ...]:
     """Collect one linear child-to-parent chain with cycle detection.
 
     :param frame: Child-most concrete Frame.
     :returns: Ordered structural Frame views through the root owner.
-    :raises ValueError: If an object identity repeats in the parent chain.
+    :raises LclValidationError: If an object identity repeats in the parent chain.
 
     .. note::
        Object identity detects cycles even when Frame IDs intentionally repeat.
@@ -26,6 +30,7 @@ def collect_frames(frame: object) -> tuple[Frame, ...]:
     return tuple(walk_hierarchy(frame))
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_244)
 def resolve_frame_binding(
     frames: tuple[Frame, ...],
     owner_index: int,

@@ -4,12 +4,16 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from lclang.defaults import NO_DEFAULT, DefaultBinding
+from lclang.error import LclWorkflowError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.workflow import Code as workflow_codes
 from lclang.runtime import Frame
 from lclang.runtime.frame.defaults import create_default_frame, default_scope
 from lclang.workflow.definitions import ContextTask, TaskNode, Workflow
 from lclang.workflow.mappings import mapping_variables
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def workflow_defaults(workflow: Workflow) -> dict[str, DefaultBinding]:
     """Collect declarations without evaluating literals or invoking factories.
 

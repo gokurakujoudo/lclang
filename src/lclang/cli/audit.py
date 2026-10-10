@@ -8,6 +8,9 @@ import logging
 from lclang.cli.models import CliParams
 from lclang.cli.parser import OVERRIDE_OPTIONS
 from lclang.diagnostics import internal_render_value
+from lclang.error import LclCliError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.cli import Code as cli_codes
 from lclang.lang.printer import to_source
 from lclang.logger import Logger
 from lclang.logger.formatter import FILE_ONLY_ATTRIBUTE
@@ -24,6 +27,7 @@ EXECUTION_BANNER_INTERIOR = EXECUTION_BANNER_WIDTH - 4
 AUDIT_RECORD_ATTRIBUTE = "lclang_audit_record"
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_451)
 def redacted_overrides(params: CliParams, frame: Frame) -> dict[str, str | bool]:
     """Return invocation overrides with exact-name secrets hidden.
 
@@ -37,6 +41,7 @@ def redacted_overrides(params: CliParams, frame: Frame) -> dict[str, str | bool]
     }
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_451)
 def canonical_argv(params: CliParams, frame: Frame) -> list[str]:
     """Build deterministic argv when exact original tokens are unavailable.
 
@@ -60,6 +65,7 @@ def canonical_argv(params: CliParams, frame: Frame) -> list[str]:
     return values
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_451)
 def normalized_argv(params: CliParams, frame: Frame) -> list[str]:
     """Return exact-order argv with masked override values redacted.
 
@@ -86,6 +92,7 @@ def normalized_argv(params: CliParams, frame: Frame) -> list[str]:
     return values
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_451)
 def selected_binding(frame: Frame, name: str) -> str | None:
     """Render one selected binding without evaluating it.
 
@@ -105,6 +112,7 @@ def selected_binding(frame: Frame, name: str) -> str | None:
     return internal_render_value(value)
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_451)
 def execution_config(frame: Frame, names: tuple[str, ...]) -> str:
     """Render aligned winner-only command and file configuration.
 
@@ -121,6 +129,7 @@ def execution_config(frame: Frame, names: tuple[str, ...]) -> str:
     return "execution config:\n" + "\n".join(rows)
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_451)
 def execution_banner(params: CliParams) -> str:
     """Render the fixed-width centered invocation banner.
 
@@ -139,6 +148,7 @@ def execution_banner(params: CliParams) -> str:
     return "execution started:\n" + "\n".join((border, *rows, border))
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_451)
 def emit_execution_start(
     logger: logging.Logger | Logger,
     params: CliParams,

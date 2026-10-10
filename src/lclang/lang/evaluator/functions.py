@@ -8,7 +8,10 @@ from dataclasses import dataclass
 
 from lclang.ast import LclAstNode, LclFunction
 from lclang.diagnostics import ACTIVE_MASKED_VALUE, internal_masked_scope
-from lclang.errors import LclEvaluationError
+from lclang.error import LclEvaluationError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.evaluator._types import EvaluateNode
 from lclang.lang.evaluator.context import Resolver, ScopedResolver
 from lclang.lang.evaluator.definition_context import active_definition, definition_scope
@@ -30,6 +33,7 @@ _ACTIVE_FUNCTIONS: ContextVar[frozenset[int]] = ContextVar(
 )
 
 
+@guard_constructor(LclValidationError, language_codes.NATIVE_137)
 @dataclass(frozen=True, slots=True, weakref_slot=True)
 class LclFunctionValue:
     """Represent one callable LCL closure.
@@ -63,13 +67,14 @@ class LclFunctionValue:
         """
         return to_source(self.source)
 
+    @guard_async_failure(LclEvaluationError, language_codes.NATIVE_137)
     async def __call__(self, *args: object, **kwargs: object) -> object:
         """Bind arguments and evaluate the body in the lexical closure.
 
         :param args: Positional application values.
         :param kwargs: Named application values.
         :returns: Fully evaluated function body result.
-        :raises TypeError: If arguments do not satisfy the parameter contract.
+        :raises LclValidationError: If arguments do not satisfy the parameter contract.
         :raises LclEvaluationError: If this value re-enters in the same task.
 
         .. note::
@@ -78,7 +83,11 @@ class LclFunctionValue:
         key = id(self)
         active = _ACTIVE_FUNCTIONS.get()
         if key in active:
-            raise LclEvaluationError("LCL function recursion is prohibited", span=self.span)
+            raise LclEvaluationError(
+                "LCL function recursion is prohibited",
+                span=self.span,
+                code=language_codes.E37_LCL_FUNCTION_RECURSION_IS_PROHIBITED,
+            )
         token = _ACTIVE_FUNCTIONS.set(active | {key})
         try:
             values = bind_arguments(self.parameters, args, kwargs)
@@ -100,6 +109,7 @@ class LclFunctionValue:
             _ACTIVE_FUNCTIONS.reset(token)
 
 
+@guard_async_failure(LclEvaluationError, language_codes.NATIVE_137)
 async def create_function(
     node: LclFunction,
     resolver: Resolver,

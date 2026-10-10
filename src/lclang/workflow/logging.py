@@ -5,13 +5,17 @@ from __future__ import annotations
 import logging
 from dataclasses import replace
 
-from lclang.error_rendering import render_failure
+from lclang.error import LclWorkflowError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.workflow import Code as workflow_codes
+from lclang.error.rendering import render_failure
 from lclang.runtime import Frame
 from lclang.types import TaskID
 from lclang.workflow.context import WorkflowExecutionContext
 from lclang.workflow.models import ExecutionStatus
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def branch_text(branch: tuple[TaskID, ...]) -> str:
     """Join one root-to-current workflow identifier path.
 
@@ -21,6 +25,7 @@ def branch_text(branch: tuple[TaskID, ...]) -> str:
     return ".".join(str(item) for item in branch)
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def status_level(status: ExecutionStatus) -> int:
     """Select the logging level for one finalized workflow status.
 
@@ -34,6 +39,7 @@ def status_level(status: ExecutionStatus) -> int:
     return logging.INFO
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def log_task_start(
     context: WorkflowExecutionContext,
     branch: tuple[TaskID, ...],
@@ -49,6 +55,7 @@ def log_task_start(
     context.logger.info("task start: [%s] %s%s", branch_text(branch), title, dryrun)
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def log_task_error(
     context: WorkflowExecutionContext,
     branch: tuple[TaskID, ...],
@@ -70,6 +77,7 @@ def log_task_error(
     )
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def log_task_complete(
     context: WorkflowExecutionContext,
     branch: tuple[TaskID, ...],
@@ -89,6 +97,7 @@ def log_task_complete(
     )
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def mapping_message(
     context: WorkflowExecutionContext,
     branch: tuple[TaskID, ...],
@@ -119,6 +128,7 @@ def mapping_message(
     return header + "\n" + "\n".join(rows)
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_531)
 def log_mapping(
     context: WorkflowExecutionContext,
     branch: tuple[TaskID, ...],

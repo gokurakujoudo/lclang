@@ -5,6 +5,9 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+from lclang.error import LclUtilityError
+from lclang.error.boundary import guard_async_failure
+from lclang.error.codes.utilities import Code as utilities_codes
 from lclang.utils.calendar.base import BDCalendar
 from lclang.utils.calendar.types import CalendarID
 
@@ -16,6 +19,7 @@ class BDCalendarLoader(ABC):
     """Load calendars handled by one named source."""
 
     @abstractmethod
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_712)
     async def load_calendar(
         self,
         calendar_id: CalendarID,

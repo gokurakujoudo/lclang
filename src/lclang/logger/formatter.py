@@ -7,11 +7,17 @@ import logging
 from datetime import UTC, datetime
 from typing import Literal
 
+from lclang.error import LclLoggerError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.logging import Code as logging_codes
+
 # Unitless LogRecord extras shared with wrappers and the CLI result/audit adapter.
 PREFIX_ATTRIBUTE = "lclang_prefix"
 FILE_ONLY_ATTRIBUTE = "lclang_file_only"
 
 
+@guard_constructor(LclValidationError, logging_codes.NATIVE_641)
 class RecordFormatter(logging.Formatter):
     """Format a detached record with a first-line prefix and zoned timestamp."""
 
@@ -20,11 +26,12 @@ class RecordFormatter(logging.Formatter):
 
         :param fmt: Percent-style logging format.
         :param timezone: Validated local or utc timestamp policy.
-        :raises ValueError: If the logging format is invalid.
+        :raises LclValidationError: If the logging format is invalid.
         """
         super().__init__(fmt)
         self.timezone = timezone
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_641)
     def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
         """Render the producer timestamp with its event-time timezone offset.
 
@@ -37,6 +44,7 @@ class RecordFormatter(logging.Formatter):
             return timestamp.astimezone().isoformat(timespec="microseconds")
         return timestamp.isoformat(timespec="microseconds").replace("+00:00", "Z")
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_641)
     def format(self, record: logging.LogRecord) -> str:
         """Insert prefix while preserving the incoming message and arguments.
 

@@ -300,7 +300,7 @@ def test_handler_exception_wrong_result_and_setup_failures_return_two(
     assert "boom" in errors
     assert "must return CliResult" in errors
     assert "missing required parameter" in errors
-    assert "cannot load config" in errors
+    assert "[LCL321711]" in errors
 
 
 def test_routing_usage_and_direct_command_paths(capsys: pytest.CaptureFixture[str]) -> None:

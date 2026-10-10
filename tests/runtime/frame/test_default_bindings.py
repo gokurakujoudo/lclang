@@ -7,12 +7,13 @@ import pytest
 
 import lclang
 from lclang.defaults import DefaultBinding
+from lclang.error import LclValidationError
 from lclang.runtime.frame.defaults import create_default_frame, default_scope
 
 
 def test_binding_rejects_non_callable_factory() -> None:
     """CLI declaration snapshots cannot retain an invalid factory."""
-    with pytest.raises(TypeError, match="callable"):
+    with pytest.raises(LclValidationError, match="callable"):
         DefaultBinding(factory=3)  # type: ignore[arg-type]
 
 

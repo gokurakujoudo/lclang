@@ -5,6 +5,10 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from lclang.error import LclError, LclSyntaxError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.lexer.characters import ASCII_DIGITS, character_at
 from lclang.lang.lexer.escapes import EscapeDecodeError, decode_content
 from lclang.lang.lexer.fstrings import FStringScanError, scan_fstring
@@ -31,6 +35,7 @@ _NUMBER_CANDIDATE = re.compile(r"(?:\d|\.\d)(?:[A-Za-z0-9_.]|(?<=[eE])[+-])*")
 # ASCII digits accepted by Python-style numeric literals.
 
 
+@guard_constructor(LclValidationError, language_codes.NATIVE_112)
 @dataclass(frozen=True, slots=True)
 class LiteralMatch:
     """Describe one decoded literal and its exclusive source boundary.
@@ -38,7 +43,8 @@ class LiteralMatch:
     :param kind: Token classification for the decoded literal.
     :param lexeme: Exact source slice including prefix and quotes when present.
     :param value: Decoded runtime-neutral literal value.
-    :param end: Exclusive code-point offset in the scanned source.
+    :param code: Classified cause from the detecting scanner.
+        :param end: Exclusive code-point offset in the scanned source.
 
     .. note::
        The match has no origin; the scanner attaches the final source span.
@@ -50,28 +56,31 @@ class LiteralMatch:
     end: int
 
 
-class InternalLiteralScanError(Exception):
+@guard_constructor(LclValidationError, language_codes.NATIVE_112)
+class InternalLiteralScanError(LclSyntaxError):
     """Carry a literal error message and content-relative boundary.
 
     .. note::
        The public scanner adds the final source-aware diagnostic.
     """
 
-    def __init__(self, message: str, end: int) -> None:
+    def __init__(self, message: str, end: int, *, code: str | None = None) -> None:
         """Store the malformed-literal details for the caller.
 
         :param message: Human-readable description of the malformed literal.
+        :param code: Classified cause from the detecting scanner.
         :param end: Absolute exclusive source offset for the error.
         :returns: ``None``.
 
         .. note::
            The offset is already adjusted for escape-decoder failures.
         """
-        super().__init__(message)
+        super().__init__(message, code=code)
         self.message = message
         self.end = end
 
 
+@guard_failure(LclSyntaxError, language_codes.NATIVE_112)
 def scan_literal(text: str, start: int) -> LiteralMatch | None:
     """Match and decode the literal beginning at *start*.
 
@@ -97,7 +106,7 @@ def scan_literal(text: str, start: int) -> LiteralMatch | None:
         try:
             match = scan_fstring(text, quote_at, raw="r" in prefix.lower())
         except FStringScanError as error:
-            raise InternalLiteralScanError(error.message, error.end) from error
+            raise InternalLiteralScanError(error.message, error.end, code=error.code) from error
         return LiteralMatch(
             TokenKind.FSTRING,
             text[start : match.end],
@@ -113,7 +122,7 @@ def internal_scan_number(text: str, start: int) -> LiteralMatch:
     :param text: Complete source text containing the candidate.
     :param start: Zero-based offset at the candidate's first character.
     :returns: Decoded integer or floating-point literal match.
-    :raises AssertionError: If called without a numeric prefix.
+    :raises LclError: If called without a numeric prefix.
     :raises InternalLiteralScanError: If the candidate is not valid numeric syntax.
 
     .. note::
@@ -122,7 +131,10 @@ def internal_scan_number(text: str, start: int) -> LiteralMatch:
     """
     candidate_match = _NUMBER_CANDIDATE.match(text, start)
     if candidate_match is None:  # pragma: no cover - guarded by scan_literal
-        raise AssertionError("numeric scanner called without a numeric prefix")
+        raise LclError(
+            "numeric scanner called without a numeric prefix",
+            code=language_codes.E12_NUMERIC_SCANNER_CALLED_WITHOUT_A_NUMERIC_PREFIX,
+        )
     lexeme = candidate_match.group()
     clean = lexeme.replace("_", "")
     if _FLOAT.fullmatch(lexeme):
@@ -130,7 +142,11 @@ def internal_scan_number(text: str, start: int) -> LiteralMatch:
     if _INTEGER.fullmatch(lexeme):
         base = 0 if clean.lower().startswith(("0x", "0o", "0b")) else 10
         return LiteralMatch(TokenKind.INTEGER, lexeme, int(clean, base), candidate_match.end())
-    raise InternalLiteralScanError("invalid numeric literal", candidate_match.end())
+    raise InternalLiteralScanError(
+        "invalid numeric literal",
+        candidate_match.end(),
+        code=language_codes.E12_INVALID_NUMERIC_LITERAL,
+    )
 
 
 def internal_string_prefix(text: str, start: int) -> tuple[str, int | None]:
@@ -184,11 +200,17 @@ def internal_scan_string(text: str, start: int, prefix: str, quote_at: int) -> L
                     bytes_mode="b" in prefix.lower(),
                 )
             except EscapeDecodeError as error:
-                raise InternalLiteralScanError(error.message, content_start + error.end) from error
+                raise InternalLiteralScanError(
+                    error.message, content_start + error.end, code=error.code
+                ) from error
             kind = TokenKind.BYTES if "b" in prefix.lower() else TokenKind.STRING
             return LiteralMatch(kind, text[start:end], value, end)
         if text[cursor] in "\r\n" and not triple:
-            raise InternalLiteralScanError("newline in single-quoted literal", cursor + 1)
+            raise InternalLiteralScanError(
+                "newline in single-quoted literal",
+                cursor + 1,
+                code=language_codes.E12_NEWLINE_IN_SINGLE_QUOTED_LITERAL,
+            )
         if text[cursor] == "\\":
             cursor += 1
             if (
@@ -198,4 +220,8 @@ def internal_scan_string(text: str, start: int, prefix: str, quote_at: int) -> L
             ):
                 cursor += 1
         cursor += 1
-    raise InternalLiteralScanError("unterminated string literal", len(text))
+    raise InternalLiteralScanError(
+        "unterminated string literal",
+        len(text),
+        code=language_codes.E12_UNTERMINATED_STRING_LITERAL,
+    )

@@ -252,3 +252,8 @@ policy. Cancellation always propagates.
 The language is for trusted application configuration, not hostile-code
 sandboxing. Evaluation retains the ordinary powers of host-provided values and
 callables.
+
+See [errors and diagnostic codes](errors.md) for exception fields, specific
+codes, cause chains, and executable troubleshooting examples. Ordinary library
+validation uses `LclValidationError`; native callback and operation failures
+retain their original exception in `__cause__`.

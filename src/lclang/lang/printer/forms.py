@@ -14,6 +14,9 @@ from lclang.ast import (
     LclWithItem,
     ParameterKind,
 )
+from lclang.error import LclEvaluationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.printer._types import Render, RenderResult
 
 # Unitless precedence 5 places control forms below operators; this parser-compatible rank
@@ -21,6 +24,7 @@ from lclang.lang.printer._types import Render, RenderResult
 FORM_PRECEDENCE = 5
 
 
+@guard_failure(LclEvaluationError, language_codes.NATIVE_141)
 def render_form(node: LclAstNode, render: Render) -> RenderResult | None:
     """Render a function, error, or control expression form.
 

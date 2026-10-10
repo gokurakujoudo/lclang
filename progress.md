@@ -75,6 +75,19 @@ runtime dependencies.
   immutable source excerpts, and protected snapshots of already-read values.
   Failure caches preserve their first scene; rendering never evaluates or reads files.
 
+## Error contracts
+
+- Central `lclang.error` package with domain code tables and six-level builtin
+  classification; applications may supply their own nonempty code strings.
+- Structured validation, lifecycle and subsystem failures with original native
+  causes, source/loading/evaluation context, protected value snapshots, and
+  workflow task context.
+- `LclErrorGroup` preserves ordinary execution and cleanup failures and Python
+  exception-group splitting; native cancellation and protocol signals survive.
+- Attribute failures preserve `AttributeError` fallback and frozen-value semantics.
+- Executable troubleshooting examples, a complete code directory, and a source
+  audit against uncoded ordinary failures.
+
 ## Standard utilities
 
 - Explicit value and callback boxes preserve typed projections and convert only

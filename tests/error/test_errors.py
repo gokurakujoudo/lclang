@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from lclang.errors import LclError, LclEvaluationError, LclNameError, LclSyntaxError
+from lclang.error import (
+    LclError,
+    LclEvaluationError,
+    LclNameError,
+    LclSyntaxError,
+    LclValidationError,
+)
 from lclang.source import SourceOrigin, SourcePosition, SourceSpan
 from lclang.types import SourceName
 
@@ -12,9 +18,9 @@ from lclang.types import SourceName
 def test_error_without_span_has_stable_code_and_rendering() -> None:
     """A plain error must remain machine-readable and concise for humans."""
     error = LclNameError("missing variable")
-    assert error.code == "LCL2001"
+    assert error.code == "LCL230000"
     assert error.message == "missing variable"
-    assert str(error) == "Error in resolving a variable [LCL2001]:\nCause: missing variable"
+    assert str(error) == "Error in resolving a variable [LCL230000]:\nCause: missing variable"
     assert isinstance(error, LclError)
 
 
@@ -41,7 +47,7 @@ def test_evaluation_error_renders_an_immutable_variable_stack() -> None:
     )
     assert error.variable_stack == ("RESULT", "middle", "failing")
     assert str(error) == (
-        "Error in evaluating RESULT [LCL3001]:\n  RESULT\n  middle\n  failing\n"
+        "Error in evaluating RESULT [LCL130000]:\n  RESULT\n  middle\n  failing\n"
         "Cause: division by zero"
     )
     error.attach_variable_stack(("replacement",))
@@ -50,21 +56,21 @@ def test_evaluation_error_renders_an_immutable_variable_stack() -> None:
     empty = LclEvaluationError("failure")
     empty.attach_variable_stack(("RESULT",))
     assert empty.variable_stack == ("RESULT",)
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         empty.attach_variable_stack(["invalid"])  # type: ignore[arg-type]
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         empty.attach_variable_stack(("",))
 
 
 @pytest.mark.parametrize("stack", [("",), ("value", 1), ["value"]])
 def test_error_rejects_invalid_variable_stacks(stack: object) -> None:
     """Variable diagnostics accept only immutable non-empty string names."""
-    with pytest.raises((TypeError, ValueError)):
+    with pytest.raises((LclValidationError, LclValidationError)):
         LclEvaluationError("failure", variable_stack=stack)  # type: ignore[arg-type]
 
 
-@pytest.mark.parametrize(("message", "code"), [("", "LCL0000"), ("failure", "")])
+@pytest.mark.parametrize(("message", "code"), [("", "APP"), ("failure", "")])
 def test_error_rejects_empty_message_or_code(message: str, code: str) -> None:
     """Structured errors must never lose their human or machine identifier."""
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         LclError(message, code=code)

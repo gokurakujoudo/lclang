@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 
 import pytest
 
+from lclang.error import LclValidationError
 from lclang.stdlib import join, lines
 
 
@@ -22,9 +23,9 @@ async def test_join_consumes_sync_and_async_string_values() -> None:
 @pytest.mark.asyncio
 async def test_join_rejects_non_string_separator_or_items() -> None:
     """Text helpers do not stringify application values implicitly."""
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         await join(1, ["value"])  # type: ignore[arg-type]
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         await join(",", ["value", 2])
 
 
@@ -32,7 +33,7 @@ def test_lines_uses_deterministic_splitlines_and_strict_types() -> None:
     """Line boundary retention follows the explicit boolean flag."""
     assert lines("a\r\nb\n") == ["a", "b"]
     assert lines("a\r\nb\n", keep_ends=True) == ["a\r\n", "b\n"]
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         lines(1)  # type: ignore[arg-type]
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         lines("value", keep_ends=1)  # type: ignore[arg-type]

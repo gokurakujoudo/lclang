@@ -7,7 +7,7 @@ from typing import cast
 import pytest
 
 from lclang.ast import LclConstant, LclDictComprehension
-from lclang.errors import LclEvaluationError
+from lclang.error import LclEvaluationError
 from lclang.lang.evaluator.dispatch import interpret_expression
 from lclang.lang.parser import parse_expression
 
@@ -132,7 +132,7 @@ async def test_dictionary_comprehension_rejects_non_mapping_unpack() -> None:
             parse_expression("{**value for value in values}"),
             {"values": [{"ok": 1}, ["not", "mapping"]]},
         )
-    assert isinstance(caught.value.__cause__, TypeError)
+    assert caught.value.__cause__ is None
 
 
 @pytest.mark.asyncio

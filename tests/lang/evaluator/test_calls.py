@@ -5,7 +5,7 @@ from collections.abc import AsyncIterator
 import pytest
 
 from lclang.ast import LclCall, LclConstant
-from lclang.errors import LclEvaluationError
+from lclang.error import LclEvaluationError
 from lclang.lang.evaluator.dispatch import interpret_expression
 from lclang.lang.parser import parse_expression
 from lclang.source import SourceSpan
@@ -103,19 +103,19 @@ async def test_duplicate_and_non_string_keywords_are_rejected() -> None:
             parse_expression("function(key=1, **options)"),
             {"function": function, "options": {"key": 2}},
         )
-    assert isinstance(duplicate.value.__cause__, TypeError)
+    assert duplicate.value.__cause__ is None
     with pytest.raises(LclEvaluationError, match="string keys") as invalid_key:
         await interpret_expression(
             parse_expression("function(**options)"),
             {"function": function, "options": {1: 2}},
         )
-    assert isinstance(invalid_key.value.__cause__, TypeError)
+    assert invalid_key.value.__cause__ is None
     with pytest.raises(LclEvaluationError, match="requires a mapping") as invalid_mapping:
         await interpret_expression(
             parse_expression("function(**options)"),
             {"function": function, "options": [1, 2]},
         )
-    assert isinstance(invalid_mapping.value.__cause__, TypeError)
+    assert invalid_mapping.value.__cause__ is None
     assert called is False
 
 
@@ -136,4 +136,4 @@ async def test_call_rejects_invalid_ast_argument_wrapper() -> None:
     )
     with pytest.raises(LclEvaluationError, match="unsupported call argument") as caught:
         await interpret_expression(malformed)
-    assert isinstance(caught.value.__cause__, TypeError)
+    assert caught.value.__cause__ is None

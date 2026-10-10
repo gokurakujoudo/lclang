@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 import pytest
 
 from lclang.cli import CliContext, CliEntrance, CliResult, CliResultStatus, CommandGroup, cli
+from lclang.error import LclStateError
 from lclang.logger.logger import Logger
 from lclang.runtime import Frame
 
@@ -71,5 +72,5 @@ async def test_source_cli_configuration_logging_and_cleanup() -> None:
         assert loggers
         for logger in loggers:
             assert isinstance(logger, Logger)
-            with pytest.raises(RuntimeError):
+            with pytest.raises(LclStateError):
                 logger.info("after close")

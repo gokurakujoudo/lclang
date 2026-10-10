@@ -7,7 +7,7 @@ import pytest
 
 from lclang.api import LCL_BUILTIN_VALUES, LCL_BUILTINS, LCL_ROOT, LCL_RUNTIME
 from lclang.ast import LclAstNode
-from lclang.errors import LclClosedFrameError, LclEvaluationError, LclNameError
+from lclang.error import LclClosedFrameError, LclEvaluationError, LclNameError, LclValidationError
 from lclang.lang.parser import parse_expression
 from lclang.runtime import (
     Frame,
@@ -184,7 +184,8 @@ def test_inspection_is_read_only_and_reports_missing_and_cycles_as_leaves() -> N
     assert isinstance(missing.current_exception, LclNameError)
     assert repr(missing) == (
         "missing@frame-app: <missing> (NotEvaluated) "
-        "LclNameError: Error in resolving a variable [LCL2001]:\\nCause: unknown variable: missing"
+        "LclNameError: Error in resolving a variable [LCL251311]:\\n"
+        "Cause: unknown variable: missing"
     )
     produced = tree.dependencies[2]
     assert produced.status is VariableInspectionStatus.NOT_EVALUATED
@@ -395,7 +396,11 @@ def test_inspection_repr_escapes_multiline_error_messages() -> None:
 
 @pytest.mark.parametrize(
     ("depth", "prefix", "error"),
-    [(-1, "- ", ValueError), (1.5, "- ", TypeError), (0, None, TypeError)],
+    [
+        (-1, "- ", LclValidationError),
+        (1.5, "- ", LclValidationError),
+        (0, None, LclValidationError),
+    ],
 )
 def test_inspection_rendering_rejects_invalid_arguments(
     depth: object,
@@ -420,12 +425,12 @@ def test_inspection_rendering_rejects_invalid_arguments(
 def test_inspection_validates_name_parent_cycles_and_lifecycle() -> None:
     """Invalid requests fail deterministically without traversing forever."""
     frame = Frame(module("app", {}))
-    with pytest.raises(TypeError, match="variable name must be a string"):
+    with pytest.raises(LclValidationError, match="variable name must be a string"):
         frame.inspect_variable(42)  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="variable name cannot be empty"):
+    with pytest.raises(LclValidationError, match="variable name cannot be empty"):
         frame.inspect_variable("")
     frame.parent = frame
-    with pytest.raises(ValueError, match="Frame parent cycle"):
+    with pytest.raises(LclValidationError, match="Frame parent cycle"):
         frame.inspect_variable("missing")
 
 

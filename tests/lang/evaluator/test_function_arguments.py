@@ -3,6 +3,7 @@
 import pytest
 
 from lclang.ast import ParameterKind
+from lclang.error import LclEvaluationError
 from lclang.lang.evaluator.function_arguments import (
     MISSING_PARAMETER,
     BoundParameter,
@@ -51,7 +52,7 @@ def test_argument_binding_rejects_invalid_call_shapes(
     message: str,
 ) -> None:
     """Rainy call shapes retain deterministic native TypeError diagnostics."""
-    with pytest.raises(TypeError, match=message):
+    with pytest.raises(LclEvaluationError, match=message):
         bind_arguments(parameters, args, kwargs)
 
 

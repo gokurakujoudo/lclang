@@ -6,7 +6,9 @@ from collections import deque
 from collections.abc import Set
 from typing import cast
 
-from lclang.errors import LclCircularDependencyError
+from lclang.error import LclCircularDependencyError, LclEvaluationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.runtime import Code as runtime_codes
 from lclang.runtime.dependency.graph import DependencyGraph
 from lclang.runtime.dependency.model import DependencyEdge, DependencyKind
 from lclang.types import VarName
@@ -16,6 +18,7 @@ from lclang.types import VarName
 _EAGER_ONLY = frozenset({DependencyKind.EAGER})
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_242)
 def topological_order(
     graph: DependencyGraph,
     *,
@@ -55,7 +58,9 @@ def topological_order(
         cycle = cast(tuple[str, ...], internal_find_cycle(graph, selected))
         closing = internal_closing_edge(selected, cycle)
         message = f"circular dependency: {' -> '.join(cycle)}"
-        raise LclCircularDependencyError(message, span=closing.span)
+        raise LclCircularDependencyError(
+            message, span=closing.span, code=runtime_codes.E42_TOPOLOGICAL_ORDER_FAILURE
+        )
     return tuple(VarName(name) for name in ordered)
 
 

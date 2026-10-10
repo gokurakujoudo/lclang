@@ -4,6 +4,10 @@ from collections.abc import Mapping
 from types import MappingProxyType
 
 from lclang.api import LCL_BUILTIN_VALUES
+from lclang.error import LclCliError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.cli import Code as cli_codes
 from lclang.stdlib import STANDARD_MANIFESTS
 from lclang.utils.calendar.lcl import CALENDARS_NAMESPACE
 
@@ -83,11 +87,12 @@ CALENDAR_DESCRIPTIONS: Mapping[str, str] = MappingProxyType(
 )
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_417)
 def render_builtin_docs() -> str:
     """Render the complete canonical builtin inventory.
 
     :returns: Deterministic newline-joined top-level and nested documentation.
-    :raises ValueError: If description metadata drifts or public names collide.
+    :raises LclValidationError: If description metadata drifts or public names collide.
 
     .. note::
        Namespace methods retain manifest declaration order beneath globally
@@ -95,12 +100,21 @@ def render_builtin_docs() -> str:
     """
     manifests = {item.namespace: item for item in STANDARD_MANIFESTS}
     if set(NAMESPACE_DESCRIPTIONS) != {*manifests, "calendars"}:
-        raise ValueError("namespace descriptions do not match canonical values")
+        raise LclValidationError(
+            "namespace descriptions do not match canonical values",
+            code=cli_codes.E17_NAMESPACE_DESCRIPTIONS_DO_NOT_MATCH_CANONICAL_VALUES,
+        )
     expected_values = {*BUILTIN_DESCRIPTIONS, *NAMESPACE_DESCRIPTIONS}
     if expected_values != set(LCL_BUILTIN_VALUES):
-        raise ValueError("builtin descriptions do not match canonical values")
+        raise LclValidationError(
+            "builtin descriptions do not match canonical values",
+            code=cli_codes.E17_BUILTIN_DESCRIPTIONS_DO_NOT_MATCH_CANONICAL_VALUES,
+        )
     if set(CALENDAR_DESCRIPTIONS) != set(CALENDARS_NAMESPACE):
-        raise ValueError("calendar descriptions do not match canonical values")
+        raise LclValidationError(
+            "calendar descriptions do not match canonical values",
+            code=cli_codes.E17_CALENDAR_DESCRIPTIONS_DO_NOT_MATCH_CANONICAL_VALUES,
+        )
     groups = (
         tuple(BUILTIN_DESCRIPTIONS),
         tuple(ROOT_BUILTIN_DESCRIPTIONS),
@@ -108,7 +122,10 @@ def render_builtin_docs() -> str:
     )
     names = tuple(name for group in groups for name in group)
     if len(names) != len(set(names)):
-        raise ValueError("canonical builtin names must be unique")
+        raise LclValidationError(
+            "canonical builtin names must be unique",
+            code=cli_codes.E17_CANONICAL_BUILTIN_NAMES_MUST_BE_UNIQUE,
+        )
     descriptions = (
         *BUILTIN_DESCRIPTIONS.values(),
         *ROOT_BUILTIN_DESCRIPTIONS.values(),
@@ -116,9 +133,15 @@ def render_builtin_docs() -> str:
         *CALENDAR_DESCRIPTIONS.values(),
     )
     if any(not value.strip() or value != value.strip() for value in descriptions):
-        raise ValueError("builtin descriptions must be non-blank and trimmed")
+        raise LclValidationError(
+            "builtin descriptions must be non-blank and trimmed",
+            code=cli_codes.E17_BUILTIN_DESCRIPTIONS_MUST_BE_NON_BLANK_AND_TRIMMED,
+        )
     if any("\n" in value or "\r" in value for value in descriptions):
-        raise ValueError("builtin descriptions must occupy one line")
+        raise LclValidationError(
+            "builtin descriptions must occupy one line",
+            code=cli_codes.E17_BUILTIN_DESCRIPTIONS_MUST_OCCUPY_ONE_LINE,
+        )
 
     lines: list[str] = []
     for name in sorted(names):

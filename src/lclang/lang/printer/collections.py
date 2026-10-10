@@ -18,6 +18,10 @@ from lclang.ast import (
     LclTuple,
 )
 from lclang.ast.comprehensions import LclComprehensionClause
+from lclang.error import LclEvaluationError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.printer._types import Render, RenderResult
 
 # Unitless precedence 100 matches delimited displays in the parser; delimiters make additional
@@ -25,6 +29,7 @@ from lclang.lang.printer._types import Render, RenderResult
 COLLECTION_PRECEDENCE = 100
 
 
+@guard_failure(LclEvaluationError, language_codes.NATIVE_141)
 def render_collection(node: LclAstNode, render: Render) -> RenderResult | None:
     """Render a collection display or comprehension.
 
@@ -112,13 +117,16 @@ def internal_entry(node: LclAstNode, render: Render) -> str:
     :param node: Dictionary entry node to render.
     :param render: Recursive dispatcher for keys, values, and unpacked maps.
     :returns: Canonical dictionary entry source text.
-    :raises TypeError: If the node is not a supported dictionary entry.
+    :raises LclValidationError: If the node is not a supported dictionary entry.
     """
     if isinstance(node, LclKeyValue):
         return f"{render(node.key, 0)}: {render(node.value, 0)}"
     if isinstance(node, LclDictUnpack):
         return f"**{render(node.value, 0)}"
-    raise TypeError("dictionary contains an unsupported entry node")
+    raise LclValidationError(
+        "dictionary contains an unsupported entry node",
+        code=language_codes.E41_DICTIONARY_CONTAINS_AN_UNSUPPORTED_ENTRY_NODE,
+    )
 
 
 def internal_clauses(clauses: tuple[LclComprehensionClause, ...], render: Render) -> str:

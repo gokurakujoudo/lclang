@@ -7,6 +7,7 @@ from typing import cast
 import pytest
 
 import lclang
+from lclang.error import LclUtilityError, LclValidationError
 from lclang.utils import CallableBox, ValueBox
 from lclang.workflow import define_variable
 from lclang.workflow.mappings import mapped_outputs, materialize_args
@@ -83,9 +84,9 @@ async def test_wrong_boxes_and_unboxed_outputs_are_rejected() -> None:
     """Nominal wrapper identity prevents accidental double boxing or malformed publication."""
     source = define_variable[OptionalRule]("source")
     async with lclang.define_frame(preset={"source": ValueBox(None)}) as frame:
-        with pytest.raises(TypeError, match="incompatible box"):
+        with pytest.raises(LclValidationError, match="incompatible box"):
             await materialize_args(source.quote, frame)
-        with pytest.raises(TypeError, match="declared box"):
+        with pytest.raises(LclValidationError, match="declared box"):
             await mapped_outputs(source.quote, None, frame)
 
 
@@ -104,7 +105,7 @@ async def test_callback_box_preserves_awaitables_and_errors() -> None:
     def fail() -> None:
         raise ValueError("callback failed")
 
-    with pytest.raises(ValueError, match="callback failed"):
+    with pytest.raises(LclUtilityError, match="callback failed"):
         CallableBox(fail)()
 
 

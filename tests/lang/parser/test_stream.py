@@ -2,7 +2,7 @@
 
 import pytest
 
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError, LclValidationError
 from lclang.lang.lexer import Token, TokenKind, scan_tokens
 from lclang.lang.parser.stream import TokenStream
 
@@ -41,12 +41,12 @@ def test_peek_supports_bounded_non_consuming_lookahead() -> None:
     assert stream.peek(1).kind is TokenKind.PLUS
     assert stream.peek(99).kind is TokenKind.EOF
     assert stream.current.kind is TokenKind.IDENTIFIER
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         stream.peek(-1)
 
 
 @pytest.mark.parametrize("tokens", [[], scan_tokens("name")[:-1]])
 def test_stream_requires_a_final_eof_sentinel(tokens: list[Token]) -> None:
     """Empty and abruptly truncated token sequences are rejected at construction."""
-    with pytest.raises(ValueError, match="final EOF"):
+    with pytest.raises(LclValidationError, match="final EOF"):
         TokenStream(tokens)

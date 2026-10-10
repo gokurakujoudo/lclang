@@ -5,9 +5,14 @@ from dataclasses import dataclass
 
 from lclang.cli.models import ParameterDoc
 from lclang.defaults import DefaultBinding
+from lclang.error import LclCliError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.cli import Code as cli_codes
 from lclang.runtime import Frame
 
 
+@guard_constructor(LclValidationError, cli_codes.NATIVE_418)
 @dataclass(frozen=True, slots=True)
 class DerivedParameterDoc(ParameterDoc):
     """Describe a record field without injecting a binding or checking it alone.
@@ -26,6 +31,7 @@ class DerivedParameterDoc(ParameterDoc):
     help_default: DefaultBinding | None = None
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_418)
 def get_parameter_masks(parameters: Sequence[ParameterDoc], frame: Frame) -> frozenset[str]:
     """Propagate known record masks before CLI audits inspect derived fields.
 

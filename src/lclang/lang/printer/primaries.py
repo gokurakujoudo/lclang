@@ -15,6 +15,10 @@ from lclang.ast import (
     LclSubscript,
     LclTuple,
 )
+from lclang.error import LclEvaluationError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.printer._types import Render, RenderResult
 
 # Unitless precedence 90 matches primary expressions in the parser; the rank keeps calls,
@@ -22,6 +26,7 @@ from lclang.lang.printer._types import Render, RenderResult
 PRIMARY_PRECEDENCE = 90
 
 
+@guard_failure(LclEvaluationError, language_codes.NATIVE_141)
 def render_primary(node: LclAstNode, render: Render) -> RenderResult | None:
     """Render an attribute, subscription, slice, or call.
 
@@ -52,7 +57,7 @@ def internal_argument(node: LclAstNode, render: Render) -> str:
     :param node: Call-argument wrapper to render.
     :param render: Recursive dispatcher for the argument value.
     :returns: Canonical call-argument source text.
-    :raises TypeError: If the node is not a supported call-argument wrapper.
+    :raises LclValidationError: If the node is not a supported call-argument wrapper.
 
     .. note::
        Argument markers are emitted by this helper so calls preserve the
@@ -67,7 +72,10 @@ def internal_argument(node: LclAstNode, render: Render) -> str:
         return f"{node.name}={render(node.value, 0)}"
     if isinstance(node, LclKeywordUnpackArgument):
         return f"**{render(node.value, 0)}"
-    raise TypeError("call contains an unsupported argument node")
+    raise LclValidationError(
+        "call contains an unsupported argument node",
+        code=language_codes.E41_CALL_CONTAINS_AN_UNSUPPORTED_ARGUMENT_NODE,
+    )
 
 
 def internal_index(node: LclAstNode, render: Render) -> str:

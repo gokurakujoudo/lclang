@@ -6,10 +6,15 @@ import logging
 import sys
 from typing import TextIO, cast
 
+from lclang.error import LclLoggerError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.logging import Code as logging_codes
 from lclang.logger.formatter import FILE_ONLY_ATTRIBUTE, RecordFormatter
 from lclang.logger.sink_config import ConsoleConfig
 
 
+@guard_constructor(LclValidationError, logging_codes.NATIVE_634)
 class ConsoleSink:
     """Write selected records to a borrowed text stream."""
 
@@ -26,6 +31,7 @@ class ConsoleSink:
         )
         self.key = "console"
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_634)
     def accepts(self, record: logging.LogRecord) -> bool:
         """Apply the console threshold and CLI result suppression.
 
@@ -36,6 +42,7 @@ class ConsoleSink:
             record, FILE_ONLY_ATTRIBUTE, False
         )
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_634)
     def write(self, record: logging.LogRecord) -> None:
         """Format and flush one console record in the writer thread.
 
@@ -44,6 +51,7 @@ class ConsoleSink:
         self.stream.write(self.formatter.format(record) + "\n")
         self.stream.flush()
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_634)
     def close(self) -> None:
         """Flush without closing a caller-owned stream."""
         self.stream.flush()

@@ -5,10 +5,15 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from lclang.error import LclLoggerError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.logging import Code as logging_codes
 from lclang.logger.context import current_runtime
 from lclang.logger.formatter import PREFIX_ATTRIBUTE
 
 
+@guard_constructor(LclValidationError, logging_codes.NATIVE_611)
 class Logger:
     """Bind only a stdlib source name, prefix, and caller offset."""
 
@@ -23,6 +28,7 @@ class Logger:
         self.prefix, self.emit_level = prefix, emit_level
 
     @property
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
     def name(self) -> str:
         """Return the stdlib source name.
 
@@ -30,6 +36,7 @@ class Logger:
         """
         return self.backend.name
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
     def isEnabledFor(self, level: int) -> bool:
         """Check scope admission and the stdlib logger threshold.
 
@@ -38,6 +45,7 @@ class Logger:
         """
         return not current_runtime().handler.closing and self.backend.isEnabledFor(level)
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
     def log(self, level: int, msg: object, *args: object, **kwargs: Any) -> None:
         """Forward a record with prefix metadata and adjusted stacklevel.
 
@@ -52,9 +60,10 @@ class Logger:
                 return
             extra = dict(kwargs.pop("extra", None) or {})
             extra[PREFIX_ATTRIBUTE] = self.prefix
-            stacklevel = kwargs.pop("stacklevel", 1) + self.emit_level + 1
+            stacklevel = kwargs.pop("stacklevel", 1) + self.emit_level + 2
             self.backend.log(level, msg, *args, extra=extra, stacklevel=stacklevel, **kwargs)
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
     def debug(self, msg: object, *args: object, **kwargs: Any) -> None:
         """Emit DEBUG through the shared forwarding path.
 
@@ -62,8 +71,9 @@ class Logger:
         :param args: Deferred formatting arguments.
         :param kwargs: Stdlib logging options.
         """
-        self.log(logging.DEBUG, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 1, **kwargs)
+        self.log(logging.DEBUG, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 2, **kwargs)
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
     def info(self, msg: object, *args: object, **kwargs: Any) -> None:
         """Emit INFO through the shared forwarding path.
 
@@ -71,8 +81,9 @@ class Logger:
         :param args: Deferred formatting arguments.
         :param kwargs: Stdlib logging options.
         """
-        self.log(logging.INFO, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 1, **kwargs)
+        self.log(logging.INFO, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 2, **kwargs)
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
     def warning(self, msg: object, *args: object, **kwargs: Any) -> None:
         """Emit WARNING through the shared forwarding path.
 
@@ -80,8 +91,9 @@ class Logger:
         :param args: Deferred formatting arguments.
         :param kwargs: Stdlib logging options.
         """
-        self.log(logging.WARNING, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 1, **kwargs)
+        self.log(logging.WARNING, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 2, **kwargs)
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
     def error(self, msg: object, *args: object, **kwargs: Any) -> None:
         """Emit ERROR through the shared forwarding path.
 
@@ -89,8 +101,9 @@ class Logger:
         :param args: Deferred formatting arguments.
         :param kwargs: Stdlib logging options.
         """
-        self.log(logging.ERROR, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 1, **kwargs)
+        self.log(logging.ERROR, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 2, **kwargs)
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
     def critical(self, msg: object, *args: object, **kwargs: Any) -> None:
         """Emit CRITICAL through the shared forwarding path.
 
@@ -98,8 +111,9 @@ class Logger:
         :param args: Deferred formatting arguments.
         :param kwargs: Stdlib logging options.
         """
-        self.log(logging.CRITICAL, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 1, **kwargs)
+        self.log(logging.CRITICAL, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 2, **kwargs)
 
+    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
     def exception(self, msg: object, *args: object, **kwargs: Any) -> None:
         """Emit ERROR with the current exception unless explicitly overridden.
 
@@ -108,4 +122,4 @@ class Logger:
         :param kwargs: Stdlib logging options including optional exc_info.
         """
         kwargs.setdefault("exc_info", True)
-        self.log(logging.ERROR, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 1, **kwargs)
+        self.log(logging.ERROR, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 2, **kwargs)

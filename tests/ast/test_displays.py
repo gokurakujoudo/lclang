@@ -13,6 +13,7 @@ from lclang.ast.displays import (
     LclSet,
     LclStarred,
 )
+from lclang.error import LclValidationError
 from lclang.types import VarName
 
 
@@ -50,7 +51,7 @@ def test_record_fields_expose_only_value_children_in_source_order() -> None:
 
 def test_record_ast_requires_names_and_at_least_one_field() -> None:
     """Manually constructed record trees retain their local invariants."""
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         LclRecordField(VarName(""), LclConstant(value=1))
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         LclRecordDisplay(())

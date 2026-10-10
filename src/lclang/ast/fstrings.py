@@ -5,15 +5,19 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from lclang.ast.base import LclAstNode
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.core import Code as core_codes
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_828)
 @dataclass(frozen=True, slots=True)
 class LclStringText(LclAstNode):
     """Represent one non-empty text segment in a joined string.
 
     :param text: Decoded non-empty literal text.
     :param span: Optional source span inherited from :class:`LclAstNode`.
-    :raises ValueError: If *text* is empty.
+    :raises LclValidationError: If *text* is empty.
 
     .. note::
        Adjacent text is normalized by the parser before this node is created.
@@ -21,15 +25,20 @@ class LclStringText(LclAstNode):
 
     text: str
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_828)
     def __post_init__(self) -> None:
         """Reject segments that add no semantic value.
 
-        :raises ValueError: If the text is empty.
+        :raises LclValidationError: If the text is empty.
         """
         if not self.text:
-            raise ValueError("f-string text segment cannot be empty")
+            raise LclValidationError(
+                "f-string text segment cannot be empty",
+                code=core_codes.E28_F_STRING_TEXT_SEGMENT_CANNOT_BE_EMPTY,
+            )
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_828)
 @dataclass(frozen=True, slots=True)
 class LclFormattedValue(LclAstNode):
     """Represent one evaluated replacement field.
@@ -39,7 +48,7 @@ class LclFormattedValue(LclAstNode):
     :param format_spec: Optional recursively joined format specification.
     :param debug: Whether the source used debug ``=`` syntax.
     :param span: Optional source span inherited from :class:`LclAstNode`.
-    :raises ValueError: If *conversion* is outside the V1 conversion set.
+    :raises LclValidationError: If *conversion* is outside the V1 conversion set.
 
     .. note::
        Conversion and formatting occur after expression evaluation.
@@ -50,14 +59,19 @@ class LclFormattedValue(LclAstNode):
     format_spec: LclJoinedString | None = None
     debug: bool = False
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_828)
     def __post_init__(self) -> None:
         """Validate the explicit V1 conversion vocabulary.
 
-        :raises ValueError: If conversion is outside the supported set.
+        :raises LclValidationError: If conversion is outside the supported set.
         """
         if self.conversion not in {None, "s", "r", "a"}:
-            raise ValueError("unsupported f-string conversion")
+            raise LclValidationError(
+                "unsupported f-string conversion",
+                code=core_codes.E28_UNSUPPORTED_F_STRING_CONVERSION,
+            )
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_828)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return expression followed by an optional format specification.
 
@@ -71,6 +85,7 @@ class LclFormattedValue(LclAstNode):
         return (self.expression, self.format_spec)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_828)
 @dataclass(frozen=True, slots=True)
 class LclJoinedString(LclAstNode):
     """Represent ordered semantic parts of an interpolated string.
@@ -84,6 +99,7 @@ class LclJoinedString(LclAstNode):
 
     values: tuple[LclAstNode, ...] = ()
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_828)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return joined-string values in source order.
 

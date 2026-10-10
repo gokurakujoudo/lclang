@@ -6,16 +6,20 @@ from dataclasses import dataclass
 
 from lclang.ast.base import LclAstNode
 from lclang.ast.call_arguments import LclCallArgument
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.core import Code as core_codes
 from lclang.types import VarName
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_829)
 @dataclass(frozen=True, slots=True)
 class LclAttribute(LclAstNode):
     """Represent ordinary attribute access.
 
     :param value: Receiver expression.
     :param name: Non-empty attribute name.
-    :raises ValueError: If *name* is empty.
+    :raises LclValidationError: If *name* is empty.
 
     .. note::
        Runtime policy rejects underscore-prefixed dot access.
@@ -24,14 +28,18 @@ class LclAttribute(LclAstNode):
     value: LclAstNode
     name: VarName
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_829)
     def __post_init__(self) -> None:
         """Reject an empty attribute name.
 
-        :raises ValueError: If the attribute name is empty.
+        :raises LclValidationError: If the attribute name is empty.
         """
         if not self.name:
-            raise ValueError("attribute name cannot be empty")
+            raise LclValidationError(
+                "attribute name cannot be empty", code=core_codes.E29_ATTRIBUTE_NAME_CANNOT_BE_EMPTY
+            )
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_829)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return the receiver expression.
 
@@ -43,13 +51,14 @@ class LclAttribute(LclAstNode):
         return (self.value,)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_829)
 @dataclass(frozen=True, slots=True)
 class LclSafeAttribute(LclAstNode):
     """Represent null-safe attribute access.
 
     :param value: Receiver expression.
     :param name: Non-empty attribute name.
-    :raises ValueError: If *name* is empty.
+    :raises LclValidationError: If *name* is empty.
 
     .. note::
        A null receiver returns null without reading the attribute.
@@ -58,14 +67,19 @@ class LclSafeAttribute(LclAstNode):
     value: LclAstNode
     name: VarName
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_829)
     def __post_init__(self) -> None:
         """Reject an empty attribute name.
 
-        :raises ValueError: If the attribute name is empty.
+        :raises LclValidationError: If the attribute name is empty.
         """
         if not self.name:
-            raise ValueError("safe attribute name cannot be empty")
+            raise LclValidationError(
+                "safe attribute name cannot be empty",
+                code=core_codes.E29_ATTRIBUTE_NAME_CANNOT_BE_EMPTY,
+            )
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_829)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return the receiver expression.
 
@@ -77,6 +91,7 @@ class LclSafeAttribute(LclAstNode):
         return (self.value,)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_829)
 @dataclass(frozen=True, slots=True)
 class LclSlice(LclAstNode):
     """Represent a slice with independently optional bounds.
@@ -93,6 +108,7 @@ class LclSlice(LclAstNode):
     upper: LclAstNode | None = None
     step: LclAstNode | None = None
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_829)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return only present slice expressions.
 
@@ -104,6 +120,7 @@ class LclSlice(LclAstNode):
         return tuple(value for value in (self.lower, self.upper, self.step) if value is not None)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_829)
 @dataclass(frozen=True, slots=True)
 class LclSubscript(LclAstNode):
     """Represent subscription by an expression or slice.
@@ -118,6 +135,7 @@ class LclSubscript(LclAstNode):
     value: LclAstNode
     index: LclAstNode
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_829)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return receiver then index.
 
@@ -129,6 +147,7 @@ class LclSubscript(LclAstNode):
         return (self.value, self.index)
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_829)
 @dataclass(frozen=True, slots=True)
 class LclCall(LclAstNode):
     """Represent a function call with explicit argument forms.
@@ -143,6 +162,7 @@ class LclCall(LclAstNode):
     function: LclAstNode
     arguments: tuple[LclCallArgument, ...] = ()
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_829)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return function then argument wrappers.
 

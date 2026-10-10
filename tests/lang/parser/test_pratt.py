@@ -8,7 +8,7 @@ import pytest
 from lclang.ast import LclBinary, LclConstant, LclName, LclUnary
 from lclang.ast.operators import BinaryOperator, UnaryOperator
 from lclang.diagnostics import internal_verbose_scope
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError, LclValidationError
 from lclang.lang.parser import parse_expression
 from lclang.source import SourceOrigin
 from lclang.types import SourceName
@@ -87,7 +87,7 @@ def test_invalid_or_trailing_input_reports_syntax_error(source: str) -> None:
 
 def test_unsupported_runtime_version_is_rejected() -> None:
     """The public entry point validates versions even across untyped callers."""
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         parse_expression("1", version="2")  # type: ignore[arg-type]
     assert isinstance(parse_expression("1", version=LanguageVersion.V1), LclConstant)
 

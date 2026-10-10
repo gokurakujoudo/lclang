@@ -7,6 +7,7 @@ import pytest
 
 import lclang
 from lclang.api import LCL_BUILTIN_VALUES
+from lclang.error import LclStateError, LclValidationError
 from lclang.utils import SnowflakeGenerator
 
 
@@ -55,10 +56,15 @@ async def test_host_generator_is_shared_across_frames() -> None:
 @pytest.mark.asyncio
 async def test_lcl_reports_invalid_configuration_and_clock_rollback() -> None:
     """Constructor and generation failures remain visible at the language boundary."""
-    errors: dict[str, object] = {"ValueError": ValueError, "RuntimeError": RuntimeError}
+    errors: dict[str, object] = {
+        "LclValidationError": LclValidationError,
+        "LclStateError": LclStateError,
+    }
     async with lclang.define_frame(preset=errors) as frame:
         assert (
-            await frame.evaluate("try: SnowflakeGenerator(1024) except ValueError: 'invalid'")
+            await frame.evaluate(
+                "try: SnowflakeGenerator(1024) except LclValidationError: 'invalid'"
+            )
             == "invalid"
         )
         generator = SnowflakeGenerator(0, epoch_ms=0)
@@ -66,6 +72,6 @@ async def test_lcl_reports_invalid_configuration_and_clock_rollback() -> None:
         with patch("lclang.utils.snowflake.time_ns", side_effect=[2_000_000, 1_000_000]):
             assert await frame.evaluate("ids.next_id()") == 2 << 22
             assert (
-                await frame.evaluate("try: ids.next_id() except RuntimeError: 'rollback'")
+                await frame.evaluate("try: ids.next_id() except LclStateError: 'rollback'")
                 == "rollback"
             )

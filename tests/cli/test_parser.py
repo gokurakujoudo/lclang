@@ -14,7 +14,7 @@ from lclang.cli.parser import (
     split_argv,
 )
 from lclang.cli.runtime_keys import RUNTIME_DRYRUN_KEY, RUNTIME_VERBOSE_KEY
-from lclang.errors import LclCliUsageError
+from lclang.error import LclCliUsageError
 
 
 def test_parser_accepts_aliases_last_override_and_dates() -> None:

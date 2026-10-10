@@ -6,7 +6,10 @@ from collections.abc import Callable
 
 from lclang.ast import LclAssert, LclAstNode, LclFunction, LclParameter, LclRaise
 from lclang.ast.forms import ParameterKind
-from lclang.errors import LclSyntaxError
+from lclang.error import LclSyntaxError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.language import Code as language_codes
 from lclang.lang.lexer import TokenKind
 from lclang.lang.parser.bindings import validate_binding_name
 from lclang.lang.parser.stream import TokenStream
@@ -14,6 +17,7 @@ from lclang.source import merge_source_spans
 from lclang.types import VarName
 
 
+@guard_constructor(LclValidationError, language_codes.NATIVE_129)
 class InternalFormParser:
     """Parse function, raise, and assert forms from a shared token stream.
 
@@ -44,6 +48,7 @@ class InternalFormParser:
         self.parse_complete = parse_complete
         self.parse_nonconditional = parse_nonconditional
 
+    @guard_failure(LclSyntaxError, language_codes.NATIVE_129)
     def parse(self) -> LclAstNode | None:
         """Dispatch to the form parser selected by current lookahead.
 
@@ -135,6 +140,7 @@ class InternalFormParser:
                 raise LclSyntaxError(
                     "parameter follows variadic keyword",
                     span=self.stream.current.span,
+                    code=language_codes.E29_PARAMETER_FOLLOWS_VARIADIC_KEYWORD,
                 )
             parameter = self.internal_parameter(
                 keyword_only=keyword_only,
@@ -189,7 +195,11 @@ class InternalFormParser:
         name_token = self.stream.expect(TokenKind.IDENTIFIER, "expected parameter name")
         validate_binding_name(name_token)
         if name_token.lexeme in names:
-            raise LclSyntaxError("duplicate function parameter", span=name_token.span)
+            raise LclSyntaxError(
+                "duplicate function parameter",
+                span=name_token.span,
+                code=language_codes.E29_DUPLICATE_FUNCTION_PARAMETER,
+            )
         names.add(name_token.lexeme)
         if kind is None:
             kind = ParameterKind.KEYWORD_ONLY if keyword_only else ParameterKind.POSITIONAL
@@ -199,10 +209,15 @@ class InternalFormParser:
                 raise LclSyntaxError(
                     "variadic parameter cannot have a default",
                     span=name_token.span,
+                    code=language_codes.E29_VARIADIC_PARAMETER_CANNOT_HAVE_A_DEFAULT,
                 )
             default = self.parse_nonconditional()
         elif kind is ParameterKind.POSITIONAL and seen_default:
-            raise LclSyntaxError("required parameter follows default", span=name_token.span)
+            raise LclSyntaxError(
+                "required parameter follows default",
+                span=name_token.span,
+                code=language_codes.E29_REQUIRED_PARAMETER_FOLLOWS_DEFAULT,
+            )
         end = name_token.span if default is None else default.span
         start = name_token.span if marker is None else marker.span
         return LclParameter(
@@ -246,6 +261,7 @@ class InternalFormParser:
         return LclAssert(condition, message, span=merge_source_spans(opening.span, closing.span))
 
 
+@guard_failure(LclSyntaxError, language_codes.NATIVE_129)
 def parse_form(
     stream: TokenStream,
     parse_complete: Callable[[], LclAstNode],

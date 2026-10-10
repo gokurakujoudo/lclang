@@ -7,6 +7,7 @@ from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from contextvars import ContextVar
 
+from lclang.error.masking import ACTIVE_MASKED_VALUE
 from lclang.masking import MASKED_VALUE
 from lclang.utils.representation import safe_repr
 
@@ -20,8 +21,6 @@ ACTIVE_VERBOSE_LOGGER: ContextVar[logging.Logger | None] = ContextVar(
     "lclang_active_verbose_logger",
     default=None,
 )
-# Task-local switch preventing diagnostic payload rendering.
-ACTIVE_MASKED_VALUE: ContextVar[bool] = ContextVar("lclang_active_masked_value", default=False)
 
 
 def internal_verbose_enabled() -> bool:
@@ -98,3 +97,15 @@ def internal_masked_scope(masked: bool = True) -> Generator[None]:
         yield
     finally:
         ACTIVE_MASKED_VALUE.reset(token)
+
+
+# Public module compatibility exports the primitive masking context.
+__all__ = [
+    "ACTIVE_MASKED_VALUE",
+    "ACTIVE_VERBOSE_LOGGER",
+    "internal_verbose_enabled",
+    "internal_render_value",
+    "internal_trace",
+    "internal_verbose_scope",
+    "internal_masked_scope",
+]

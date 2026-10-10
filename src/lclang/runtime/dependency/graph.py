@@ -6,7 +6,10 @@ from collections.abc import Collection, Set
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, overload
 
-from lclang.errors import LclNameError
+from lclang.error import LclEvaluationError, LclNameError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.runtime import Code as runtime_codes
 from lclang.runtime.dependency.analysis import analyze_dependencies
 from lclang.runtime.dependency.model import DependencyEdge, DependencyKind
 from lclang.runtime.modules import Module
@@ -17,13 +20,14 @@ if TYPE_CHECKING:
     from lclang.runtime.frame import Frame
 
 
+@guard_constructor(LclValidationError, runtime_codes.NATIVE_241)
 @dataclass(frozen=True, slots=True)
 class DependencyGraph:
     """Represent ordered definitions and occurrence-preserving dependency edges.
 
     :param definitions: Unique non-empty local vertices in declaration order.
     :param edges: Ordered dependency occurrences owned by local definitions.
-    :raises ValueError: If vertices repeat/are empty or an edge source is foreign.
+    :raises LclValidationError: If vertices repeat/are empty or an edge source is foreign.
 
     .. note::
        Targets may be external names and repeated edges are retained.
@@ -32,17 +36,25 @@ class DependencyGraph:
     definitions: tuple[VarName, ...]
     edges: tuple[DependencyEdge, ...]
 
+    @guard_failure(LclValidationError, runtime_codes.NATIVE_241)
     def __post_init__(self) -> None:
         """Validate immutable graph ownership invariants.
 
-        :raises ValueError: If definitions repeat/are empty or an edge is foreign.
+        :raises LclValidationError: If definitions repeat/are empty or an edge is foreign.
         """
         local = {str(name) for name in self.definitions}
         if len(local) != len(self.definitions) or any(not name for name in local):
-            raise ValueError("dependency graph definitions must be unique and non-empty")
+            raise LclValidationError(
+                "dependency graph definitions must be unique and non-empty",
+                code=runtime_codes.E41_DEPENDENCY_GRAPH_DEFINITIONS_MUST_BE_UNIQUE_AND_NON_EMPTY,
+            )
         if any(str(edge.source) not in local for edge in self.edges):
-            raise ValueError("dependency edge source must be a local definition")
+            raise LclValidationError(
+                "dependency edge source must be a local definition",
+                code=runtime_codes.E41_DEPENDENCY_EDGE_SOURCE_MUST_BE_A_LOCAL_DEFINITION,
+            )
 
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_241)
     def dependencies(
         self,
         source: str,
@@ -59,13 +71,17 @@ class DependencyGraph:
            An empty kind set intentionally selects no edges.
         """
         if source not in {str(name) for name in self.definitions}:
-            raise LclNameError(f"unknown graph definition: {source}")
+            raise LclNameError(
+                f"unknown graph definition: {source}",
+                code=runtime_codes.E41_UNKNOWN_GRAPH_DEFINITION_VALUE,
+            )
         return tuple(
             edge
             for edge in self.edges
             if str(edge.source) == source and internal_matches(edge, kinds)
         )
 
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_241)
     def dependants(
         self,
         target: str,
@@ -87,6 +103,7 @@ class DependencyGraph:
         )
 
     @property
+    @guard_failure(LclEvaluationError, runtime_codes.NATIVE_241)
     def external_names(self) -> tuple[VarName, ...]:
         """Return unique non-local targets in first-occurrence order.
 
@@ -136,6 +153,7 @@ def build_dependency_graph(  # noqa: D418
     ...
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_241)
 def build_dependency_graph(
     source: Module | Frame,
     *,
@@ -146,7 +164,7 @@ def build_dependency_graph(
     :param source: Immutable Module or runtime Frame to inspect without evaluation.
     :param scoped_names: Optional known qualified names for Module analysis.
     :returns: Name-only Module graph or qualified Frame dependency graph.
-    :raises TypeError: If *source* is neither a Module nor a Frame.
+    :raises LclValidationError: If *source* is neither a Module nor a Frame.
 
     .. note::
        Frame construction snapshots syntax, value names, and lookup paths only.
@@ -159,9 +177,13 @@ def build_dependency_graph(
         from lclang.runtime.dependency.frame.builder import build_frame_dependency_graph
 
         return build_frame_dependency_graph(source)
-    raise TypeError("dependency graph source must be a Module or Frame")
+    raise LclValidationError(
+        "dependency graph source must be a Module or Frame",
+        code=runtime_codes.E41_DEPENDENCY_GRAPH_SOURCE_MUST_BE_A_MODULE_OR_FRAME,
+    )
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_241)
 def build_module_dependency_graph(
     module: Module,
     *,

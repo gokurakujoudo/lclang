@@ -10,18 +10,26 @@ from lclang.api import (
     define_module,
 )
 from lclang.ast import LclAstNode, LclConstant, LclName, LclTuple, LclVisitor
-from lclang.error_context import ConfigLoadFrame, DiagnosticValue, EvaluationContextFrame
-from lclang.errors import (
+from lclang.error import (
+    LclAttributeError,
     LclCircularDependencyError,
     LclCliError,
     LclCliUsageError,
     LclClosedFrameError,
     LclConfigError,
     LclError,
+    LclErrorGroup,
     LclEvaluationError,
+    LclLoggerError,
     LclNameError,
+    LclStandardError,
+    LclStateError,
     LclSyntaxError,
+    LclUtilityError,
+    LclValidationError,
+    LclWorkflowError,
 )
+from lclang.error.context import ConfigLoadFrame, DiagnosticValue, EvaluationContextFrame
 from lclang.lang import parse_expression, to_source
 from lclang.override_markers import NEED_OVERRIDE, RUNTIME_OVERRIDE, OverrideMarker
 from lclang.records import LclRecord
@@ -65,6 +73,14 @@ __all__ = [
     "LclConfigError",
     "LclConstant",
     "LclError",
+    "LclAttributeError",
+    "LclErrorGroup",
+    "LclValidationError",
+    "LclStateError",
+    "LclWorkflowError",
+    "LclLoggerError",
+    "LclUtilityError",
+    "LclStandardError",
     "LclEvaluationError",
     "LclNameError",
     "LclRecord",

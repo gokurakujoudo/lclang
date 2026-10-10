@@ -3,6 +3,7 @@
 import asyncio
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import cast
 
 import pytest
 
@@ -21,8 +22,89 @@ from lclang.config import (
 from lclang.config.errors import LclConfigSyntaxError
 from lclang.config.sources import LoadedConfigSource
 from lclang.config.using import evaluate_using_target, snapshot_using_overrides
+from lclang.error import LclErrorGroup, LclEvaluationError, LclValidationError
 from lclang.lang import parse_expression
 from tests.config.support import MappingResolver
+
+
+@pytest.mark.asyncio
+async def test_grouped_resolver_and_target_failures_retain_members(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Resolver and target boundaries keep native groups instead of hiding their members."""
+    original = ExceptionGroup("loading", [OSError("first"), ValueError("second")])
+
+    class Resolver:
+        async def resolve(
+            self, path: Path, *, importer: ResolvedConfigSource | None
+        ) -> ResolvedConfigSource:
+            raise original
+
+    with pytest.raises(LclErrorGroup) as loaded:
+        await ConfigLoader(Resolver()).load(Path("settings.lclcfg"))
+    assert loaded.value.code == "LCL323931" and loaded.value.config_stack
+    assert [item.__cause__ for item in loaded.value.exceptions] == list(original.exceptions)
+
+    async def target(*args: object, **kwargs: object) -> object:
+        raise original
+
+    monkeypatch.setattr("lclang.config.using.evaluate_target_expression", target)
+    declaration = cast(ConfigUsing, parse_config('using f"{name}.lclcfg"').declarations[0])
+    with pytest.raises(LclErrorGroup) as failed:
+        await evaluate_using_target(declaration, [], {})
+    assert failed.value.code == "LCL324983" and failed.value.__cause__ is original
+    assert "configuration file target" in failed.value.__notes__
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("existing", [False, True])
+async def test_dynamic_target_retains_known_codes_and_original_failure(
+    existing: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Dynamic target placement preserves known failures and classifies native operations."""
+    error = LclEvaluationError("business", code="APP") if existing else OSError("backend")
+
+    async def broken(*args: object, **kwargs: object) -> object:
+        raise error
+
+    declaration = cast(ConfigUsing, parse_config('using f"{name}.lclcfg"').declarations[0])
+    monkeypatch.setattr("lclang.config.using.evaluate_target_expression", broken)
+    with pytest.raises(LclConfigUsingError) as caught:
+        await evaluate_using_target(declaration, [], {})
+    assert caught.value.code == ("APP" if existing else "LCL324983")
+    assert caught.value.__cause__ is error and caught.value.span == declaration.span
+
+
+@pytest.mark.asyncio
+async def test_resolver_wrong_result_has_a_specific_validation_code() -> None:
+    """A resolver's return contract is checked before parsed-source state is published."""
+
+    class WrongResolver:
+        async def resolve(
+            self, path: Path, *, importer: ResolvedConfigSource | None
+        ) -> ResolvedConfigSource:
+            return cast(ResolvedConfigSource, {})
+
+    loader = ConfigLoader(WrongResolver())
+    with pytest.raises(LclValidationError) as caught:
+        await loader.load(Path("wrong.lclcfg"))
+    assert caught.value.code == "LCL323151" and not loader.identities
+
+
+@pytest.mark.asyncio
+async def test_loader_rejects_an_unsupported_declaration_before_expansion() -> None:
+    """Malformed parser-extension values cannot pass into target evaluation."""
+    from lclang.config.model import ConfigDeclaration
+
+    with TemporaryDirectory() as directory:
+        path = Path(directory) / "settings.lclcfg"
+        source = ResolvedConfigSource(str(path), str(path), path, "value: 1")
+        document = parse_config(source.text)
+        object.__setattr__(document, "declarations", (cast(ConfigDeclaration, object()),))
+        loader = ConfigLoader(MappingResolver({path: source.text}))
+        with pytest.raises(LclValidationError) as caught:
+            await loader.expand(LoadedConfigSource(source, document), (), 1, [], {})
+        assert caught.value.code == "LCL323191"
 
 
 @pytest.mark.asyncio
@@ -165,9 +247,9 @@ async def test_dynamic_using_validates_overrides_masks_and_evaluated_type(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Loader override validation and defensive target checks remain structured."""
-    with pytest.raises(TypeError, match="mapping"):
+    with pytest.raises(LclValidationError, match="mapping"):
         snapshot_using_overrides(1)  # type: ignore[arg-type]
-    with pytest.raises(TypeError, match="names"):
+    with pytest.raises(LclValidationError, match="names"):
         snapshot_using_overrides({1: "value"})  # type: ignore[dict-item]
 
     root = (tmp_path / "root.lclcfg").resolve()

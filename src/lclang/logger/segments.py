@@ -12,6 +12,9 @@ from pathlib import Path
 from threading import Lock
 from typing import BinaryIO
 
+from lclang.error import LclLoggerError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.logging import Code as logging_codes
 from lclang.logger.sink_config import FileConfig, leaf_filename
 
 # Unitless process-local sequence state survives sequential scopes; PID resets detect fork copies.
@@ -20,6 +23,7 @@ SEQUENCE_PID = os.getpid()
 SEQUENCE = 0
 
 
+@guard_failure(LclLoggerError, logging_codes.NATIVE_611)
 def next_sequence() -> int:
     """Reserve a monotonically increasing segment number in this process.
 
@@ -34,6 +38,7 @@ def next_sequence() -> int:
         return SEQUENCE
 
 
+@guard_failure(LclLoggerError, logging_codes.NATIVE_611)
 def path_line(label: str, path: Path, encoding: str) -> bytes:
     """Encode one physical metadata line with an escaped absolute path.
 
@@ -47,6 +52,7 @@ def path_line(label: str, path: Path, encoding: str) -> bytes:
     )
 
 
+@guard_failure(LclLoggerError, logging_codes.NATIVE_611)
 def create_segment(config: FileConfig) -> tuple[Path, BinaryIO, int]:
     """Create a fresh segment, retrying only exclusive-name collisions.
 

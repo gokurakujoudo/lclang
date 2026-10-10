@@ -8,13 +8,16 @@ from lclang.ast import LclAstNode
 from lclang.cli.models import CliParams
 from lclang.cli.parser import lazy_override_expression
 from lclang.diagnostics import internal_masked_scope
-from lclang.errors import LclCliUsageError, LclSyntaxError
+from lclang.error import LclCliError, LclCliUsageError, LclSyntaxError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.cli import Code as cli_codes
 from lclang.lang import parse_expression
 from lclang.runtime import Frame
 from lclang.source import SourceOrigin, SourceSpan
 from lclang.types import SourceName
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_433)
 def forced_override_expression(value: str, *, masked: bool = False) -> LclAstNode | None:
     """Strictly parse an exact marked RESULT override.
 
@@ -40,11 +43,15 @@ def forced_override_expression(value: str, *, masked: bool = False) -> LclAstNod
             token = f"RESULT={value}"
             underline = " " * (len("RESULT=") + start) + "^" * (end - start)
             excerpt = f"{token}\n{underline}"
-        converted = LclCliUsageError(f"forced RESULT parse failed\n{excerpt}")
+        converted = LclCliUsageError(
+            f"forced RESULT parse failed\n{excerpt}",
+            code=cli_codes.E33_FORCED_RESULT_PARSE_FAILED_VALUE,
+        )
         converted.masked = False  # The excerpt above is already redacted before formatting.
         raise converted from error
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_433)
 def partition_overrides(
     params: CliParams,
 ) -> tuple[dict[str, LclAstNode], dict[str, object]]:
@@ -69,6 +76,7 @@ def partition_overrides(
     return definitions, values
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_433)
 def require_forced_result(
     params: CliParams,
     definitions: dict[str, LclAstNode],

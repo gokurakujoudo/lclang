@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from lclang.error import LclValidationError
 from lclang.source import SourceOrigin, SourcePosition, SourceSpan
 from lclang.types import FrameId, ModuleName, SourceName, VarName
 from lclang.version import LCL_V1, LanguageVersion
@@ -48,7 +49,7 @@ def test_source_position_rejects_invalid_coordinates(
     offset: int,
 ) -> None:
     """Coordinates must use positive lines/columns and non-negative offsets."""
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         SourcePosition(line=line, column=column, offset=offset)
 
 
@@ -57,5 +58,5 @@ def test_source_span_rejects_reversed_range() -> None:
     origin = SourceOrigin(SourceName("memory"))
     start = SourcePosition(line=2, column=1, offset=5)
     end = SourcePosition(line=1, column=1, offset=4)
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         SourceSpan(origin=origin, start=start, end=end)

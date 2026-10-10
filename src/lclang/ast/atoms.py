@@ -5,9 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from lclang.ast.base import LclAstNode
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.core import Code as core_codes
 from lclang.types import VarName
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_821)
 @dataclass(frozen=True, slots=True)
 class LclConstant(LclAstNode):
     """Represent an already-decoded literal value.
@@ -22,13 +26,14 @@ class LclConstant(LclAstNode):
     value: object
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_821)
 @dataclass(frozen=True, slots=True)
 class LclName(LclAstNode):
     """Represent a variable reference.
 
     :param identifier: Non-empty variable identifier.
     :param span: Optional source span inherited from :class:`LclAstNode`.
-    :raises ValueError: If *identifier* is empty.
+    :raises LclValidationError: If *identifier* is empty.
 
     .. note::
        Name resolution is deferred to runtime evaluation.
@@ -36,15 +41,20 @@ class LclName(LclAstNode):
 
     identifier: VarName
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_821)
     def __post_init__(self) -> None:
         """Reject identifiers that cannot name a value.
 
-        :raises ValueError: If the identifier is empty.
+        :raises LclValidationError: If the identifier is empty.
         """
         if not self.identifier:
-            raise ValueError("AST name identifier cannot be empty")
+            raise LclValidationError(
+                "AST name identifier cannot be empty",
+                code=core_codes.E21_AST_NAME_IDENTIFIER_CANNOT_BE_EMPTY,
+            )
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_821)
 @dataclass(frozen=True, slots=True)
 class LclTuple(LclAstNode):
     """Represent a tuple expression in source order.
@@ -58,6 +68,7 @@ class LclTuple(LclAstNode):
 
     elements: tuple[LclAstNode, ...] = ()
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_821)
     def children(self) -> tuple[LclAstNode, ...]:
         """Return tuple elements in source order.
 

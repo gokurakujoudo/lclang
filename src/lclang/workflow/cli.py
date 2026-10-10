@@ -7,7 +7,10 @@ from typing import cast
 
 from lclang.cli import CliContext, CliResult, CliResultStatus, Command, ParameterDoc
 from lclang.cli.logger_config import logger_parameter
-from lclang.errors import LclCliUsageError
+from lclang.error import LclCliUsageError, LclWorkflowError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.workflow import Code as workflow_codes
 from lclang.masking import normalize_masked_mapping
 from lclang.workflow.cli_logging import log_lunch_option, log_status_tree, status_lines
 from lclang.workflow.cli_parameters import expand_record_parameters
@@ -28,6 +31,7 @@ NO_HELP_MESSAGE = "NO HELP MESSAGE PROVIDED"
 __all__ = ["cli_status", "log_status_tree", "status_lines", "workflow_command"]
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_513)
 def external_variables(workflow: Workflow) -> tuple[TaskVar[object], ...]:
     """Infer variables read before a visible workflow assignment.
 
@@ -46,6 +50,7 @@ def external_variables(workflow: Workflow) -> tuple[TaskVar[object], ...]:
     return tuple(external.values())
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_513)
 def cli_status(status: ExecutionStatus) -> CliResultStatus:
     """Map one finalized workflow status to a process result.
 
@@ -61,6 +66,7 @@ def cli_status(status: ExecutionStatus) -> CliResultStatus:
     return CliResultStatus.SUCCESS
 
 
+@guard_failure(LclWorkflowError, workflow_codes.NATIVE_513)
 def workflow_command(
     workflow: Workflow,
     name: str,
@@ -75,7 +81,7 @@ def workflow_command(
     :param preset: Optional external-variable defaults.
     :returns: Immutable executable command.
     :raises LclCliUsageError: Through the handler for an unknown override.
-    :raises ValueError: If a preset targets a non-external variable.
+    :raises LclValidationError: If a preset targets a non-external variable.
     """
     variables = external_variables(workflow)
     values, preset_masks = normalize_masked_mapping({} if preset is None else preset)
@@ -105,7 +111,10 @@ def workflow_command(
     )
     allowed = {item.name for item in docs}
     if supplied_names - allowed:
-        raise ValueError("workflow preset contains non-external variable")
+        raise LclValidationError(
+            "workflow preset contains non-external variable",
+            code=workflow_codes.E13_WORKFLOW_PRESET_CONTAINS_NON_EXTERNAL_VARIABLE,
+        )
     masked = preset_masks | {
         item.name for item in variables if item.is_masked and item.name in values
     }
@@ -123,7 +132,10 @@ def workflow_command(
             if name not in allowed and not logger_parameter(name)
         }
         if unknown:
-            raise LclCliUsageError("workflow override targets non-external variable")
+            raise LclCliUsageError(
+                "workflow override targets non-external variable",
+                code=workflow_codes.E13_WORKFLOW_OVERRIDE_TARGETS_NON_EXTERNAL_VARIABLE,
+            )
         result = await execution_workflow.execute(
             WorkflowExecutionContext(
                 context.dryrun,

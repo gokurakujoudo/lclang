@@ -11,7 +11,7 @@ from lclang import define_frame, define_module
 from lclang.ast import LclBinary, LclConstant, LclName
 from lclang.ast.operators import BinaryOperator
 from lclang.config import load_config
-from lclang.errors import LclEvaluationError
+from lclang.error import LclAttributeError, LclError, LclEvaluationError, LclValidationError
 from lclang.runtime import Module
 from lclang.types import ModuleName, VarName
 
@@ -112,9 +112,9 @@ async def test_qualified_reads_keep_actual_names(expression: str) -> None:
 @pytest.mark.parametrize(
     ("index", "exception", "reason"),
     [
-        ("1", TypeError, "FrameProxy index must be text"),
-        ('"missing"', AttributeError, "m.missing"),
-        ('"_private"', AttributeError, "_private"),
+        ("1", LclValidationError, "FrameProxy index must be text"),
+        ('"missing"', LclAttributeError, "m.missing"),
+        ('"_private"', LclAttributeError, "_private"),
     ],
 )
 async def test_invalid_qualified_indices_preserve_native_errors(
@@ -123,10 +123,11 @@ async def test_invalid_qualified_indices_preserve_native_errors(
     """Source-aware index reads retain Python's existing invalid-child contract."""
     module = define_module("qualified", {"m.count": "5", "bad": f"m[{index}]"})
     async with define_frame(module) as frame:
-        with pytest.raises(LclEvaluationError) as failure:
+        with pytest.raises(exception) as failure:
             await frame.get("bad")
-        assert isinstance(failure.value.__cause__, exception)
-        assert str(failure.value.__cause__) == reason
+        assert isinstance(failure.value, LclError)
+        assert failure.value.__cause__ is None
+        assert failure.value.message == reason
         assert failure.value.evaluation_context[0].used_values == ()
 
 

@@ -11,7 +11,10 @@ from lclang.cli.models import CliParams
 from lclang.cli.process import ArgvParts, split_argv
 from lclang.cli.runtime_keys import CLI_RUNTIME_KEYS
 from lclang.cli.validation import require_lcl_qualified_name
-from lclang.errors import LclCliUsageError, LclSyntaxError
+from lclang.error import LclCliError, LclCliUsageError, LclSyntaxError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.cli import Code as cli_codes
 from lclang.lang import parse_expression
 from lclang.masking import split_masked_name
 from lclang.stdlib.dates import parse_ymd
@@ -33,6 +36,7 @@ VERSION_OPTIONS = frozenset({"-v", "--version"})
 VERBOSE_OPTIONS = frozenset({"--verbose"})
 
 
+@guard_constructor(LclValidationError, cli_codes.NATIVE_431)
 @dataclass(frozen=True, slots=True)
 class ParsedCommonOptions:
     """Retain pure intermediate common-option state.
@@ -55,17 +59,22 @@ class ParsedCommonOptions:
     masked_names: frozenset[str]
 
 
-def usage_error(message: str, index: int, token: str) -> LclCliUsageError:
+@guard_failure(LclCliError, cli_codes.NATIVE_431)
+def usage_error(
+    message: str, index: int, token: str, *, code: str | None = None
+) -> LclCliUsageError:
     """Create one stable token-oriented usage failure.
 
     :param message: Human-readable problem.
     :param index: Zero-based index in the command option tail.
+    :param code: Classified argument failure from the detecting branch.
     :param token: Responsible spelling.
     :returns: Structured CLI usage error.
     """
-    return LclCliUsageError(f"{message} at argument {index}: {token}")
+    return LclCliUsageError(f"{message} at argument {index}: {token}", code=code)
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_431)
 def parse_common_options(tokens: Sequence[str]) -> ParsedCommonOptions:
     """Parse common option tokens without constructing runtime values.
 
@@ -89,41 +98,70 @@ def parse_common_options(tokens: Sequence[str]) -> ParsedCommonOptions:
             continue
         if token in DRYRUN_OPTIONS:
             if dryrun:
-                raise usage_error("duplicate dryrun option", index, token)
+                raise usage_error(
+                    "duplicate dryrun option",
+                    index,
+                    token,
+                    code=cli_codes.E31_DUPLICATE_DRYRUN_OPTION,
+                )
             dryrun = True
             index += 1
             continue
         if token in VERBOSE_OPTIONS:
             if verbose:
-                raise usage_error("duplicate verbose option", index, token)
+                raise usage_error(
+                    "duplicate verbose option",
+                    index,
+                    token,
+                    code=cli_codes.E31_DUPLICATE_VERBOSE_OPTION,
+                )
             verbose = True
             index += 1
             continue
         if token in ONE_VALUE_OPTIONS:
             if index + 1 >= len(tokens):
-                raise usage_error("missing option value", index, token)
+                raise usage_error(
+                    "missing option value", index, token, code=cli_codes.E31_MISSING_OPTION_VALUE
+                )
             value = tokens[index + 1]
             if token in {"-c", "--config"}:
                 if config_path is not None:
-                    raise usage_error("duplicate config option", index, token)
+                    raise usage_error(
+                        "duplicate config option",
+                        index,
+                        token,
+                        code=cli_codes.E31_DUPLICATE_CONFIG_OPTION,
+                    )
                 config_path = value
             else:
                 if as_of_text is not None:
-                    raise usage_error("duplicate as-of option", index, token)
+                    raise usage_error(
+                        "duplicate as-of option",
+                        index,
+                        token,
+                        code=cli_codes.E31_DUPLICATE_AS_OF_OPTION,
+                    )
                 as_of_text = value
             index += 2
             continue
         if token in OVERRIDE_OPTIONS:
             if index + 1 >= len(tokens):
-                raise usage_error("missing override key", index, token)
+                raise usage_error(
+                    "missing override key", index, token, code=cli_codes.E31_MISSING_OVERRIDE_KEY
+                )
             raw_key = tokens[index + 1]
             try:
                 key, masked = split_masked_name(raw_key)
                 require_lcl_qualified_name(key, "override key")
-            except ValueError as error:
-                raise usage_error(str(error), index + 1, raw_key) from error
+            except LclValidationError as error:
+                raise usage_error(error.message, index + 1, raw_key, code=error.code) from error
             if key.split(".", 1)[0] in CLI_RUNTIME_KEYS:
-                raise usage_error("reserved override key", index + 1, key)
+                raise usage_error(
+                    "reserved override key",
+                    index + 1,
+                    key,
+                    code=cli_codes.E31_RESERVED_OVERRIDE_KEY,
+                )
             if masked:
                 masked_names.add(key)
             value_index = index + 2
@@ -135,7 +173,12 @@ def parse_common_options(tokens: Sequence[str]) -> ParsedCommonOptions:
             overrides[key] = value
             index += 3
             continue
-        raise usage_error("unknown option or argument", index, token)
+        raise usage_error(
+            "unknown option or argument",
+            index,
+            token,
+            code=cli_codes.E31_UNKNOWN_OPTION_OR_ARGUMENT,
+        )
     return ParsedCommonOptions(
         config_path,
         overrides,
@@ -147,6 +190,7 @@ def parse_common_options(tokens: Sequence[str]) -> ParsedCommonOptions:
     )
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_431)
 def parse_cli_params(
     parts: ArgvParts,
     command_path: Sequence[str],
@@ -163,8 +207,11 @@ def parse_cli_params(
     parsed = parse_common_options(tokens)
     try:
         as_of = date.today() if parsed.as_of_text is None else parse_ymd(parsed.as_of_text)
-    except ValueError as error:
-        raise LclCliUsageError("invalid as-of date; expected YYYYMMDD") from error
+    except LclValidationError as error:
+        raise LclCliUsageError(
+            "invalid as-of date; expected YYYYMMDD",
+            code=error.code,
+        ) from error
     return CliParams(
         parts.executable_path,
         tuple(command_path),
@@ -179,6 +226,7 @@ def parse_cli_params(
     )
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_431)
 def help_requested(tokens: Sequence[str]) -> bool:
     """Report help at a valid fixed-arity option boundary.
 
@@ -203,6 +251,7 @@ def help_requested(tokens: Sequence[str]) -> bool:
     return False
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_431)
 def lazy_override_expression(value: str) -> LclAstNode | None:
     """Parse one complete valid lazy marker without creating a literal AST.
 
@@ -214,11 +263,12 @@ def lazy_override_expression(value: str) -> LclAstNode | None:
         if body:
             try:
                 return parse_expression(body)
-            except LclSyntaxError, ValueError:
+            except LclSyntaxError, ValueError, LclValidationError:
                 pass
     return None
 
 
+@guard_failure(LclCliError, cli_codes.NATIVE_431)
 def override_expression(value: str) -> LclAstNode:
     """Convert one raw override into a lazy expression or literal constant.
 

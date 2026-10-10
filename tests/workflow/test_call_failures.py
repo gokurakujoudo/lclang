@@ -7,6 +7,7 @@ import pytest
 
 import lclang
 import lclang.workflow as wf
+from lclang.error import LclValidationError, LclWorkflowError
 from lclang.runtime import Frame
 from tests.workflow.call_support import Value, install_call_resource, make_child, run_parent
 
@@ -23,10 +24,10 @@ async def test_setup_failure_propagates_without_borrowing_parent_frame(
 
     async def parent(context: wf.TaskContext, manager: wf.ExecutionStatusManager) -> Value:
         monkeypatch.setattr("lclang.workflow.calls.define_frame", fail)
-        with pytest.raises(OSError) as caught:
+        with pytest.raises(LclWorkflowError) as caught:
             async with make_child().execute_in_task(context, manager, name="creation"):
                 pytest.fail("entered")
-        assert caught.value is failure
+        assert caught.value.__cause__ is failure
         assert manager.current.sub_tasks[0].status is wf.ExecutionStatus.ERROR
         assert await context.frame.get("alive") == 1
         return Value(1)
@@ -44,7 +45,7 @@ async def test_preflight_binding_errors_create_no_call_nodes() -> None:
 
     async def parent(context: wf.TaskContext, manager: wf.ExecutionStatusManager) -> Value:
         for preset in (1, {1: 2}):
-            with pytest.raises(TypeError):
+            with pytest.raises(LclValidationError):
                 async with make_child().execute_in_task(
                     context,
                     manager,
@@ -126,12 +127,12 @@ async def test_body_and_cleanup_errors_preserve_native_values(
             error = caught.value
             assert isinstance(error, ExceptionGroup)
             errors = cast(ExceptionGroup[Exception], error).exceptions
-            assert errors[0] is body_failure
+            assert errors[0].__cause__ is body_failure
             assert errors[1].__cause__ is cleanup_failure
         elif cleanup_error:
             assert caught.value.__cause__ is cleanup_failure
         else:
-            assert caught.value is body_failure
+            assert caught.value.__cause__ is body_failure
         assert result is not None
         assert result.task_args[wf.TaskID("child")] == Value(4)
         assert result.task_outputs[wf.TaskID("child")] == Value(5)

@@ -8,6 +8,7 @@ from typing import cast
 
 import pytest
 
+from lclang.error import LclValidationError
 from lclang.utils.calendar import (
     CalendarCannotLoadException,
     CalendarID,
@@ -38,7 +39,7 @@ def test_strict_calendar_json_rejects_every_schema_failure(
     """Strict file parsing rejects malformed structure, dates, and overlap."""
     path = tmp_path / "BAD.calendar.json"
     path.write_text(json.dumps(content), encoding="utf-8")
-    with pytest.raises((ValueError, TypeError)):
+    with pytest.raises((LclValidationError, LclValidationError)):
         read_calendar_json(path, CalendarID("BAD"))
 
 
@@ -48,7 +49,7 @@ async def test_filesystem_loader_path_kinds_and_cancellation(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Filesystem loader declines unsafe paths and propagates cancellation."""
-    with pytest.raises(TypeError):
+    with pytest.raises(LclValidationError):
         FileSystemHardcodedBDCalendarLoader(cast(Path, "bad"))
     loader = FileSystemHardcodedBDCalendarLoader(tmp_path)
     manager = use_calendar_manager((loader,))
@@ -97,6 +98,6 @@ async def test_filesystem_loader_accepts_strict_json_and_rejects_bad_content(
     bad.write_text('{"business_days": [], "holidays": [], "extra": []}', encoding="utf-8")
     with pytest.raises(CalendarCannotLoadException) as failure:
         await manager.use_calendar(CalendarID("BAD"))
-    assert isinstance(failure.value.__cause__, ValueError)
+    assert isinstance(failure.value.__cause__, LclValidationError)
     with pytest.raises(CalendarCannotLoadException):
         await manager.use_calendar(CalendarID("MISSING"))

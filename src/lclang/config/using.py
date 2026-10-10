@@ -4,19 +4,26 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-
-from lclang.ast import LclAstNode
-from lclang.config.errors import LclConfigUsingError
-from lclang.config.model import ConfigDefinition, ConfigImport, ConfigUsing
-from lclang.lang.evaluator.evaluation_context import ACTIVE_TARGET_EXPRESSION
-from lclang.masking import normalize_masked_mapping
-from lclang.runtime import Module
-from lclang.types import ModuleName
+from typing import cast
 
 # Transient module name for definitions visible before one using declaration.
 # Unitless private evaluation labels below distinguish dynamic-using context, overrides and
 # targets in diagnostic Frames. Fixed labels come from the loader implementation and avoid
 # collisions with ordinary configuration names.
+from lclang.ast import LclAstNode
+from lclang.config.model import ConfigDefinition, ConfigImport, ConfigUsing
+from lclang.error import LclConfigError, LclError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_failure
+from lclang.error.codes.configuration import Code as configuration_codes
+from lclang.error.configuration import LclConfigUsingError
+from lclang.error.wrapping import wrap_failure
+from lclang.lang.evaluator.evaluation_context import ACTIVE_TARGET_EXPRESSION
+from lclang.masking import normalize_masked_mapping
+from lclang.runtime import Module
+from lclang.types import ModuleName
+
+# Unitless module label identifies chronological definitions used to evaluate a file target.
 USING_CONTEXT_MODULE = ModuleName("using_context")
 # Transient module name for call-level using overrides.
 USING_OVERRIDES_MODULE = ModuleName("using_overrides")
@@ -27,6 +34,7 @@ USING_TARGET_NAME = "__lclang_file_target"
 USING_TARGET_MODULE = ModuleName("using_target")
 
 
+@guard_failure(LclConfigError, configuration_codes.NATIVE_324)
 def snapshot_using_overrides(
     overrides: Mapping[str, object] | None,
 ) -> dict[str, object]:
@@ -34,18 +42,25 @@ def snapshot_using_overrides(
 
     :param overrides: Literal values and semantic LCL expressions.
     :returns: Fresh string-keyed override dictionary.
-    :raises TypeError: If the mapping or one key has an unsupported type.
+    :raises LclValidationError: If the mapping or one key has an unsupported type.
     """
     if overrides is None:
         return {}
     if not isinstance(overrides, Mapping):
-        raise TypeError("config using overrides must be a mapping")
+        raise LclValidationError(
+            "config using overrides must be a mapping",
+            code=configuration_codes.E24_CONFIG_USING_OVERRIDES_MUST_BE_A_MAPPING,
+        )
     snapshot = dict(overrides)
     if any(not isinstance(name, str) for name in snapshot):
-        raise TypeError("config using override names must be strings")
+        raise LclValidationError(
+            "config using override names must be strings",
+            code=configuration_codes.E24_CONFIG_USING_OVERRIDE_NAMES_MUST_BE_STRINGS,
+        )
     return snapshot
 
 
+@guard_async_failure(LclConfigError, configuration_codes.NATIVE_324)
 async def evaluate_using_target(
     declaration: ConfigUsing | ConfigImport,
     preceding: Sequence[ConfigDefinition],
@@ -72,23 +87,44 @@ async def evaluate_using_target(
             namespace_names=namespace_names,
         )
     except Exception as error:
+        if isinstance(error, ExceptionGroup):
+            failure = wrap_failure(
+                cast(ExceptionGroup[Exception], error),
+                LclConfigUsingError,
+                (
+                    error.code
+                    if isinstance(error, LclError)
+                    else configuration_codes.E24_CANNOT_EVALUATE_FILE_TARGET
+                ),
+                span=declaration.span,
+            )
+            failure.add_note("configuration file target")
+            raise failure from failure.__cause__
         raise LclConfigUsingError(
             "cannot evaluate file target",
             span=declaration.span,
+            code=(
+                error.code
+                if isinstance(error, LclError)
+                else configuration_codes.E24_CANNOT_EVALUATE_FILE_TARGET
+            ),
         ) from error
     if not isinstance(result, str) or not result:
         raise LclConfigUsingError(
             "using target must evaluate to non-empty text",
             span=declaration.span,
+            code=configuration_codes.E24_USING_TARGET_MUST_EVALUATE_TO_NON_EMPTY_TEXT,
         )
     if Path(result).suffix != ".lclcfg":
         raise LclConfigUsingError(
             "using target must end in .lclcfg",
             span=declaration.span,
+            code=configuration_codes.E24_USING_TARGET_MUST_END_IN_LCLCFG,
         )
     return result
 
 
+@guard_async_failure(LclConfigError, configuration_codes.NATIVE_324)
 async def evaluate_target_expression(
     expression: LclAstNode,
     preceding: Sequence[ConfigDefinition],

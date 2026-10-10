@@ -7,7 +7,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from lclang.errors import LclNameError
+from lclang.error import LclEvaluationError, LclNameError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_failure
+from lclang.error.codes.runtime import Code as runtime_codes
 from lclang.runtime.dependency.analysis import analyze_dependencies
 from lclang.runtime.frame.binding_lookup import (
     hierarchy_binding_names,
@@ -25,6 +28,7 @@ if TYPE_CHECKING:
     from lclang.runtime.frame.frame import Frame
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_251)
 def build_inspection_tree(
     origin: Frame,
     name: str,
@@ -36,7 +40,7 @@ def build_inspection_tree(
     :param name: Requested non-empty variable name.
     :param ancestors: Owner/name pairs already expanded on the current branch.
     :returns: One detached inspection node with first-seen unique direct children.
-    :raises ValueError: If the Frame parent object graph cycles.
+    :raises LclValidationError: If the Frame parent object graph cycles.
     :raises LclClosedFrameError: If a selected owner is closing or closed.
 
     .. note::
@@ -53,7 +57,9 @@ def build_inspection_tree(
             path,
             origin,
             None,
-            LclNameError(f"unknown variable: {name}"),
+            LclNameError(
+                f"unknown variable: {name}", code=runtime_codes.E51_UNKNOWN_VARIABLE_VALUE
+            ),
             [],
             masked,
         )
@@ -117,6 +123,7 @@ def build_inspection_tree(
     )
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_251)
 def inspect_cache(
     owner: Frame,
     name: str,
@@ -137,22 +144,27 @@ def inspect_cache(
     return VariableInspectionStatus.NOT_EVALUATED, None, None
 
 
+@guard_failure(LclEvaluationError, runtime_codes.NATIVE_251)
 def inspect_variable(frame: Frame, var_name: str) -> VariableInspectionTree:
     """Inspect one selected variable and its unique direct dependency names.
 
     :param frame: Concrete Frame providing the operation state.
     :param var_name: Non-empty name whose lookup starts at this Frame.
     :returns: A detached tree of cache, syntax, path, and dependency evidence.
-    :raises TypeError: If *var_name* is not a string.
-    :raises ValueError: If *var_name* is empty or the parent graph cycles.
+    :raises LclValidationError: If *var_name* is not a string.
+    :raises LclValidationError: If *var_name* is empty or the parent graph cycles.
     :raises LclClosedFrameError: If this Frame is closing or closed.
 
     .. note::
        Inspection never evaluates, awaits, creates tasks, or publishes traces.
     """
     if not isinstance(var_name, str):
-        raise TypeError("variable name must be a string")
+        raise LclValidationError(
+            "variable name must be a string", code=runtime_codes.E51_VARIABLE_NAME_MUST_BE_A_STRING
+        )
     if not var_name:
-        raise ValueError("variable name cannot be empty")
+        raise LclValidationError(
+            "variable name cannot be empty", code=runtime_codes.E51_VARIABLE_NAME_CANNOT_BE_EMPTY
+        )
     frame._lifecycle.ensure_open(None)
     return build_inspection_tree(frame, var_name, frozenset())

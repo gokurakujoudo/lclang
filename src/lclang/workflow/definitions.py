@@ -8,6 +8,10 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
+from lclang.error import LclWorkflowError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.codes.workflow import Code as workflow_codes
 from lclang.types import TaskID
 
 if TYPE_CHECKING:
@@ -23,6 +27,7 @@ type TaskAction = Callable[..., Awaitable[object]]
 type ContextAction = Callable[..., AbstractAsyncContextManager[object]]
 
 
+@guard_constructor(LclValidationError, workflow_codes.NATIVE_512)
 @dataclass(frozen=True, slots=True)
 class ContextTask:
     """Declare one resource or exception-handling task context.
@@ -41,6 +46,7 @@ class ContextTask:
     outputs_mapping: object | None
 
 
+@guard_constructor(LclValidationError, workflow_codes.NATIVE_512)
 @dataclass(frozen=True, slots=True)
 class TaskNode:
     """Declare one action and its ordered context and child tasks.
@@ -63,6 +69,7 @@ class TaskNode:
     children: tuple[TaskNode, ...]
 
 
+@guard_constructor(LclValidationError, workflow_codes.NATIVE_512)
 @dataclass(frozen=True, slots=True)
 class Workflow:
     """Retain one reusable validated tree-shaped workflow definition.
@@ -76,11 +83,12 @@ class Workflow:
     root_task: TaskNode
     lcl_mixin: Mapping[str, object] = field(default_factory=dict[str, object])
 
+    @guard_failure(LclValidationError, workflow_codes.NATIVE_512)
     def __post_init__(self) -> None:
         """Detach host bindings while preserving their values by reference.
 
-        :raises TypeError: If binding names are not strings.
-        :raises ValueError: If binding names or scopes conflict.
+        :raises LclValidationError: If binding names are not strings.
+        :raises LclValidationError: If binding names or scopes conflict.
         """
         from lclang.runtime import Preset
 
@@ -88,6 +96,7 @@ class Workflow:
         Preset("workflow", snapshot)
         object.__setattr__(self, "lcl_mixin", MappingProxyType(snapshot))
 
+    @guard_async_failure(LclWorkflowError, workflow_codes.NATIVE_512)
     async def execute(self, context: WorkflowExecutionContext) -> WorkflowExecutionResult:
         """Execute this definition once against a borrowed Frame.
 
@@ -98,6 +107,7 @@ class Workflow:
 
         return await execute_workflow(self, context)
 
+    @guard_failure(LclWorkflowError, workflow_codes.NATIVE_512)
     def to_lines(self) -> list[str]:
         """Render the static task and context tree without executing it.
 
@@ -107,6 +117,7 @@ class Workflow:
 
         return render_workflow(self)
 
+    @guard_failure(LclWorkflowError, workflow_codes.NATIVE_512)
     def execute_in_task(
         self,
         context: TaskContext,
@@ -122,15 +133,16 @@ class Workflow:
         :param name: Unique call name under that task.
         :param preset: Explicit bindings copied shallowly into an isolated Frame.
         :returns: Async context yielding the native result while its Frame remains open.
-        :raises TypeError: On incompatible input types or invalid preset bindings.
-        :raises ValueError: On invalid or conflicting names or a leaf-step parent.
-        :raises RuntimeError: Outside an active action or with a finalized parent.
+        :raises LclValidationError: On incompatible input types or invalid preset bindings.
+        :raises LclValidationError: On invalid or conflicting names or a leaf-step parent.
+        :raises LclStateError: Outside an active action or with a finalized parent.
         :raises BaseException: On scope setup, cleanup, body errors or cancellation.
         """
         from lclang.workflow.calls import execute_workflow_in_task
 
         return execute_workflow_in_task(self, context, status_mgr, name=name, preset=preset)
 
+    @guard_failure(LclWorkflowError, workflow_codes.NATIVE_512)
     def to_cli(
         self,
         name: str,

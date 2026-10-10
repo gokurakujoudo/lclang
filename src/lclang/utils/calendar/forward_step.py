@@ -5,12 +5,21 @@ from bisect import bisect_left
 from collections.abc import Sequence
 from datetime import date
 
+from lclang.error import LclError, LclUtilityError
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.calendar import (
+    CalendarLogicException,
+    DateOperationOutOfScopeException,
+    wrap_calendar_failure,
+)
+from lclang.error.codes.utilities import Code as utilities_codes
 from lclang.utils.calendar.base import BDCalendar
-from lclang.utils.calendar.errors import CalendarLogicException, DateOperationOutOfScopeException
 from lclang.utils.calendar.helpers import CALENDAR_ERRORS, safe_add_days, year_dates
 from lclang.utils.calendar.types import CalendarID, DayType
 
 
+@guard_constructor(LclValidationError, utilities_codes.NATIVE_717)
 class ForwardStepBDCalendar(BDCalendar):
     """Discover ordered business dates from a first date and forward step.
 
@@ -26,16 +35,20 @@ class ForwardStepBDCalendar(BDCalendar):
         :param calendar_id: Unique calendar identifier.
         :param first_bd: First business day in the generated sequence.
         :returns: ``None``.
-        :raises TypeError: If *first_bd* is not a date.
+        :raises LclValidationError: If *first_bd* is not a date.
         """
         super().__init__(calendar_id)
         if not isinstance(first_bd, date):
-            raise TypeError("first business day must be a date")
+            raise LclValidationError(
+                "first business day must be a date",
+                code=utilities_codes.E17_FIRST_BUSINESS_DAY_MUST_BE_A_DATE,
+            )
         self.first_bd = first_bd
         self._defined_business_days = [first_bd]
         self._fully_cached = False
 
     @property
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_717)
     def defined_business_days(self) -> Sequence[date]:
         """Return an immutable snapshot of discovered business dates.
 
@@ -44,6 +57,7 @@ class ForwardStepBDCalendar(BDCalendar):
         return tuple(self._defined_business_days)
 
     @property
+    @guard_failure(LclUtilityError, utilities_codes.NATIVE_717)
     def fully_cached(self) -> bool:
         """Return whether the generator has reported exhaustion.
 
@@ -52,6 +66,7 @@ class ForwardStepBDCalendar(BDCalendar):
         return self._fully_cached
 
     @abstractmethod
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_717)
     async def next_bd(self, d: date) -> date:
         """Calculate the next generated business day.
 
@@ -60,6 +75,7 @@ class ForwardStepBDCalendar(BDCalendar):
         :raises DateOperationOutOfScopeException: If the sequence is exhausted.
         """
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_717)
     async def cache_through(self, d: date) -> None:
         """Extend the ordered cache until it reaches or passes a date.
 
@@ -77,12 +93,33 @@ class ForwardStepBDCalendar(BDCalendar):
             except CALENDAR_ERRORS:
                 raise
             except Exception as error:
-                raise CalendarLogicException(self.calendar_id) from error
+                failure = wrap_calendar_failure(
+                    error,
+                    CalendarLogicException(
+                        self.calendar_id,
+                        code=(
+                            error.code
+                            if isinstance(error, LclError)
+                            else utilities_codes.E17_SELF_CALENDAR_ID
+                        ),
+                    ),
+                )
+                raise failure from failure.__cause__
             if not isinstance(following, date) or following <= previous:
-                generated_error = ValueError("forward business dates must increase")
-                raise CalendarLogicException(self.calendar_id) from generated_error
+                generated_error = LclValidationError(
+                    "forward business dates must increase",
+                    code=utilities_codes.E17_FORWARD_BUSINESS_DATES_MUST_INCREASE,
+                )
+                failure = wrap_calendar_failure(
+                    generated_error,
+                    CalendarLogicException(
+                        self.calendar_id, code=utilities_codes.E17_SELF_CALENDAR_ID
+                    ),
+                )
+                raise failure from failure.__cause__
             self._defined_business_days.append(following)
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_717)
     async def get_day_type(self, d: date) -> DayType:
         """Return business for discovered dates and undefined otherwise.
 
@@ -98,6 +135,7 @@ class ForwardStepBDCalendar(BDCalendar):
             else DayType.Undefined
         )
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_717)
     async def prev_bd(self, d: date) -> date:
         """Return the previous generated business date.
 
@@ -108,15 +146,16 @@ class ForwardStepBDCalendar(BDCalendar):
         await self.cache_through(d)
         index = bisect_left(self._defined_business_days, d) - 1
         if index < 0:
-            raise DateOperationOutOfScopeException(d, self)
+            raise DateOperationOutOfScopeException(d, self, code=utilities_codes.E17_D)
         return self._defined_business_days[index]
 
+    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_717)
     async def gen_year(self, year: int) -> dict[date, DayType]:
         """Return generated business dates in one year.
 
         :param year: Gregorian year from 1 through 9999.
         :returns: Sparse business-day mapping.
-        :raises ValueError: If *year* is outside the supported range.
+        :raises LclValidationError: If *year* is outside the supported range.
         """
         dates = year_dates(year)
         next(dates, None)

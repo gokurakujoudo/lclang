@@ -5,9 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from lclang.error.base import LclValidationError
+from lclang.error.boundary import guard_constructor, guard_failure
+from lclang.error.codes.core import Code as core_codes
 from lclang.types import SourceName
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_811)
 @dataclass(frozen=True, slots=True)
 class SourceOrigin:
     """Describe the logical and optional filesystem origin of source text.
@@ -23,6 +27,7 @@ class SourceOrigin:
     path: Path | None = None
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_811)
 @dataclass(frozen=True, slots=True, order=True)
 class SourcePosition:
     """Represent one position using one-based display coordinates.
@@ -30,7 +35,7 @@ class SourcePosition:
     :param line: One-based line number.
     :param column: One-based Unicode code-point column.
     :param offset: Zero-based Unicode code-point offset.
-    :raises ValueError: If any coordinate is outside its valid range.
+    :raises LclValidationError: If any coordinate is outside its valid range.
 
     .. note::
        Lines and columns are one-based; offsets are zero-based code points.
@@ -40,40 +45,59 @@ class SourcePosition:
     column: int
     offset: int
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_811)
     def __post_init__(self) -> None:
         """Validate public coordinate invariants after construction.
 
-        :raises ValueError: If any coordinate is outside its valid range.
+        :raises LclValidationError: If any coordinate is outside its valid range.
         """
+        if any(type(value) is not int for value in (self.line, self.column, self.offset)):
+            raise LclValidationError(
+                "source coordinates must be integers excluding bool",
+                code=core_codes.COORDINATE_TYPE,
+            )
         if self.line < 1:
-            raise ValueError("source line must be positive")
+            raise LclValidationError(
+                "source line must be positive", code=core_codes.E11_SOURCE_LINE_MUST_BE_POSITIVE
+            )
         if self.column < 1:
-            raise ValueError("source column must be positive")
+            raise LclValidationError(
+                "source column must be positive", code=core_codes.E11_SOURCE_LINE_MUST_BE_POSITIVE
+            )
         if self.offset < 0:
-            raise ValueError("source offset cannot be negative")
+            raise LclValidationError(
+                "source offset cannot be negative",
+                code=core_codes.E11_SOURCE_OFFSET_CANNOT_BE_NEGATIVE,
+            )
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_811)
 @dataclass(frozen=True, slots=True)
 class SourceSnapshot:
     """Retain parsed Unicode source without reopening its original file.
 
     :param text: Original complete source or independently parsed fragment.
     :param start: Physical position corresponding to the first character.
-    :raises TypeError: If text or start has an unsupported type.
+    :raises LclValidationError: If text or start has an unsupported type.
     """
 
     text: str
     start: SourcePosition
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_811)
     def __post_init__(self) -> None:
         """Validate detached source metadata.
 
-        :raises TypeError: If text or start has an unsupported type.
+        :raises LclValidationError: If text or start has an unsupported type.
         """
         if not isinstance(self.text, str) or not isinstance(self.start, SourcePosition):
-            raise TypeError("source snapshot requires text and a SourcePosition")
+            raise LclValidationError(
+                "source snapshot requires text and a SourcePosition",
+                code=core_codes.E11_SOURCE_SNAPSHOT_REQUIRES_TEXT_AND_A_SOURCEPOSITION,
+            )
 
 
+@guard_constructor(LclValidationError, core_codes.NATIVE_811)
 @dataclass(frozen=True, slots=True)
 class SourceSpan:
     """Represent a half-open source range within one origin.
@@ -82,8 +106,8 @@ class SourceSpan:
     :param start: Inclusive first position.
     :param end: Exclusive final position.
     :param snapshot: Optional immutable parsed source, excluded from position equality.
-    :raises ValueError: If the end precedes the start.
-    :raises TypeError: If snapshot is neither a SourceSnapshot nor None.
+    :raises LclValidationError: If the end precedes the start.
+    :raises LclValidationError: If snapshot is neither a SourceSnapshot nor None.
 
     .. note::
        Empty spans are valid when *start* and *end* are equal.
@@ -94,16 +118,23 @@ class SourceSpan:
     end: SourcePosition
     snapshot: SourceSnapshot | None = field(default=None, kw_only=True, compare=False, repr=False)
 
+    @guard_failure(LclValidationError, core_codes.NATIVE_811)
     def __post_init__(self) -> None:
         """Reject ranges whose offsets run backwards.
 
-        :raises ValueError: If the end offset precedes the start offset.
-        :raises TypeError: If snapshot has an unsupported type.
+        :raises LclValidationError: If the end offset precedes the start offset.
+        :raises LclValidationError: If snapshot has an unsupported type.
         """
         if self.end.offset < self.start.offset:
-            raise ValueError("source span end cannot precede its start")
+            raise LclValidationError(
+                "source span end cannot precede its start",
+                code=core_codes.E11_SOURCE_SPAN_END_CANNOT_PRECEDE_ITS_START,
+            )
         if self.snapshot is not None and not isinstance(self.snapshot, SourceSnapshot):
-            raise TypeError("source span snapshot must be a SourceSnapshot or None")
+            raise LclValidationError(
+                "source span snapshot must be a SourceSnapshot or None",
+                code=core_codes.E11_SOURCE_SPAN_SNAPSHOT_MUST_BE_A_SOURCESNAPSHOT_OR_NONE,
+            )
 
 
 # Defaults below are internal source-less sentinels, not measured positions in an input.
@@ -124,17 +155,19 @@ UNKNOWN_SPAN = SourceSpan(
 """Empty span used as the immutable default for source-less values."""
 
 
+@guard_failure(LclValidationError, core_codes.NATIVE_811)
 def merge_source_spans(first: SourceSpan, last: SourceSpan) -> SourceSpan:
     """Cover an ordered pair of spans from the same parsed source.
 
     :param first: First consumed span, supplying the shared origin and start.
     :param last: Final consumed span, supplying the exclusive end.
     :returns: Span covering both endpoints and intervening source text.
-    :raises ValueError: If the final end precedes the initial start.
+    :raises LclValidationError: If the final end precedes the initial start.
     """
     return SourceSpan(first.origin, first.start, last.end, snapshot=first.snapshot)
 
 
+@guard_failure(LclValidationError, core_codes.NATIVE_811)
 def advance_source_position(start: SourcePosition, prefix: str) -> SourcePosition:
     """Advance Unicode coordinates through original physical source text.
 

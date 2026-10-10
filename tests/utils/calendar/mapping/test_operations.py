@@ -5,6 +5,7 @@ from typing import cast
 
 import pytest
 
+from lclang.error import LclAttributeError, LclError, LclValidationError
 from lclang.utils.calendar import (
     ALL_DAYS,
     ALL_WEEKDAYS,
@@ -85,7 +86,7 @@ async def test_primitive_mappings_shift_cache_and_reverse_ranges() -> None:
     assert await ALL_DAYS.shift_n_days(1, ALL_WEEKDAYS).map_date(saturday) == date(2024, 1, 8)
     assert await ALL_DAYS.shift_n_days(-1, ALL_WEEKDAYS).map_date(saturday) == date(2024, 1, 5)
     assert await ALL_DAYS.shift_n_days(0, ALL_WEEKDAYS).map_date(saturday) == date(2024, 1, 8)
-    with pytest.raises(ValueError):
+    with pytest.raises(LclValidationError):
         ShiftNDaysMapOperation(101, ALL_DAYS)
     point = date(2024, 1, 8)
     assert await ALL_DAYS.map_this_or_next(PointDomainCalendar(point)).map_date_reverse(point) == (
@@ -107,11 +108,11 @@ async def test_unapplied_and_composed_mappings_remain_immutable() -> None:
     assert applied.has_applied is True
     assert len(applied.operations) == 1 and len(extended.operations) == 2
     assert await extended.map_date(date(2024, 1, 1)) == date(2024, 1, 3)
-    with pytest.raises(AttributeError):
+    with pytest.raises(LclAttributeError):
         operation.base_calendar = ALL_DAYS
-    with pytest.raises(AttributeError):
+    with pytest.raises(LclAttributeError):
         operation.n = 2
-    with pytest.raises(AttributeError):
+    with pytest.raises(LclAttributeError):
         mapping.operations = ()
 
 
@@ -158,8 +159,13 @@ async def test_mapping_wraps_unexpected_navigation_failures_with_the_dependency(
         with pytest.raises(CalendarLogicException) as failure:
             await mapping.map_date(date(2024, 1, 1))
         assert failure.value.calendar_id == broken.calendar_id
-        assert isinstance(failure.value.__cause__, RuntimeError)
+        cause = failure.value.__cause__
+        while isinstance(cause, LclError):
+            assert cause.code == failure.value.code
+            cause = cause.__cause__
+        assert isinstance(cause, RuntimeError)
     invalid = InvalidNavigationCalendar()
     with pytest.raises(CalendarLogicException) as invalid_failure:
         await ALL_DAYS.shift_n_days(1, invalid).map_date(date(2024, 1, 1))
-    assert isinstance(invalid_failure.value.__cause__, TypeError)
+    assert isinstance(invalid_failure.value.__cause__, LclValidationError)
+    assert invalid_failure.value.code == invalid_failure.value.__cause__.code
