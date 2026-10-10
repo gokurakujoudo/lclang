@@ -1,6 +1,7 @@
 """Generated documentation preserves source and has complete, portable navigation."""
 
 import json
+import re
 import shutil
 from html.parser import HTMLParser
 from pathlib import Path
@@ -125,6 +126,8 @@ def test_complete_site_links_anchors_assets_and_examples() -> None:
             ROOT / "site/assets/logo.png"
         ).read_bytes()
         assert "assets/favicon.png" in home
+        assert (output / "syntax.css").read_bytes() == (ROOT / "site/syntax.css").read_bytes()
+        assert (output / "copy-code.js").read_bytes() == (ROOT / "site/copy-code.js").read_bytes()
         assert not (output / "overrides/main.html").exists()
         guide = (output / "development/index.html").read_text(encoding="utf-8")
         assert "github.com/gokurakujoudo/lclang/blob/revision/" in guide
@@ -143,3 +146,39 @@ def test_navigation_requires_all_pages_and_follows_tutorial_index() -> None:
         (root / "docs/tutorials/17-unlisted.md").write_text("# Unlisted", encoding="utf-8")
         with pytest.raises(ValueError, match="Every documentation page"):
             documentation_groups(root)
+
+
+def test_copy_button_layout_and_visibility_contract() -> None:
+    """Copy controls share the first line and support hover, focus, touch and print."""
+    css = (ROOT / "site/syntax.css").read_text(encoding="utf-8")
+
+    def get_declarations(selector: str, source: str = css) -> dict[str, str]:
+        match = re.search(rf"{re.escape(selector)}(?:\s*,[^{{}}]+)?\s*\{{([^{{}}]*)\}}", source)
+        assert match is not None, selector
+        return dict(
+            (name.strip(), value.strip())
+            for declaration in match[1].split(";")
+            if declaration.strip()
+            for name, value in [declaration.split(":", 1)]
+        )
+
+    code = get_declarations(".rst-content div.highlight pre")
+    button = get_declarations(".copy-code")
+    assert code["padding"] == button["top"] == "16px"
+    assert "padding-top" not in css
+    assert button["position"] == "absolute"
+    assert button["opacity"] == "0"
+    assert button["pointer-events"] == "none"
+    for selector in (
+        ".rst-content div.highlight:hover > .copy-code",
+        ".rst-content div.highlight:focus-within > .copy-code",
+    ):
+        visible = get_declarations(selector)
+        assert visible["opacity"] == "1"
+        assert visible["pointer-events"] == "auto"
+    touch = css.split("@media (hover: none)", 1)[1]
+    visible = get_declarations(".copy-code", touch)
+    assert visible["opacity"] == "1"
+    assert visible["pointer-events"] == "auto"
+    assert get_declarations(".copy-code", css.split("@media print", 1)[1])["display"] == "none"
+    assert "outline" in get_declarations(".copy-code:focus-visible")

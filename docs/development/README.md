@@ -184,6 +184,9 @@ The Read the Docs theme uses its standard light reading surface.
 Content fills the available width beside the sidebar with balanced horizontal
 padding. Code blocks use one bordered surface, a compact Copy button, and
 horizontal scrolling for long lines without widening the page.
+The Copy button aligns with the first code line without reserving an extra row.
+It appears on code-block hover or keyboard focus, remains visible on devices
+without hover, and is hidden when printing.
 
 Build and preview from the repository root:
 

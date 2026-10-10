@@ -14,6 +14,9 @@
 
 ### Diagnostics and documentation
 
+- Align site Copy buttons with the first code line and remove the empty button
+  row. Show buttons on hover or keyboard focus, keep them visible on devices
+  without hover, and hide them when printing.
 - Replace builtin codes with six-digit classifications and centralize error
   types, context, rendering, and domain code tables in `lclang.error`.
 - Add structured validation and subsystem failures, original native causes,
