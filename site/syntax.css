@@ -11,8 +11,10 @@ pre code .gp { color: #1756a0; font-weight: 600; }
 .rst-content div.highlight { position: relative; border: 1px solid #e1e4e5; border-radius: 6px; background: #f6f8fa; overflow: hidden; }
 .rst-content div.highlight pre { margin: 0; padding: 16px; border: 0; background: transparent; overflow-x: auto; font-size: 14px; line-height: 1.6; }
 .rst-content div.highlight pre code { display: block; margin: 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; white-space: pre; }
-.rst-content div.highlight:has(> .copy-code) pre { padding-top: 44px; }
-.copy-code { position: absolute; top: 8px; right: 8px; padding: 3px 8px; border: 1px solid #cbd2d8; border-radius: 4px; background: #fff; color: #404040; font: 12px/1.5 system-ui, sans-serif; cursor: pointer; }
+.copy-code { position: absolute; top: 16px; right: 8px; padding: 3px 8px; border: 1px solid #cbd2d8; border-radius: 4px; background: #fff; color: #404040; font: 12px/1.5 system-ui, sans-serif; cursor: pointer; opacity: 0; pointer-events: none; }
+.rst-content div.highlight:hover > .copy-code,
+.rst-content div.highlight:focus-within > .copy-code { opacity: 1; pointer-events: auto; }
 .copy-code:hover { background: #eaf0f5; }
 .copy-code:focus-visible { outline: 2px solid #2980b9; outline-offset: 2px; }
+@media (hover: none) { .copy-code { opacity: 1; pointer-events: auto; } }
 @media print { .copy-code { display: none; } }
