@@ -1,25 +1,25 @@
-"""Behavioral tests mirroring :mod:`lclang.stdlib.recursion`."""
+"""Behavioral tests mirroring :mod:`lclang.lang.stdlib.recursive_function`."""
 
 from collections.abc import Awaitable, Callable
 
 import pytest
 
-import lclang
 from lclang.error import LclValidationError
-from lclang.stdlib import recursive
+from lclang.lang import LCL_BUILTINS, define_frame, define_module
+from lclang.lang.stdlib import recursive
 
 
 @pytest.mark.asyncio
 async def test_recursive_builtin_evaluates_factorial_in_default_frame() -> None:
     """A normal LCL definition uses the builtin without supplying a combinator."""
-    module = lclang.define_module(
+    module = define_module(
         "factorial",
         {
             "factorial": ("recursive((again) -> (n) -> " "1 if n <= 1 else n * again(n - 1))"),
             "result": "factorial(6)",
         },
     )
-    frame = lclang.define_frame(module)
+    frame = define_frame(module)
     try:
         assert await frame.get("result") == 720
         function = await frame.get("factorial")
@@ -29,8 +29,8 @@ async def test_recursive_builtin_evaluates_factorial_in_default_frame() -> None:
         rendered = repr(frame.inspect_variable("factorial"))
         assert "(Cached) Recursive Function: (again) -> (n) ->" in rendered
         assert "0x" not in rendered
-        assert lclang.LCL_BUILTINS.values["recursive"] is recursive
-        assert repr(lclang.LCL_BUILTINS.inspect_variable("recursive")).endswith(
+        assert LCL_BUILTINS.values["recursive"] is recursive
+        assert repr(LCL_BUILTINS.inspect_variable("recursive")).endswith(
             "(NativeProvided) Builtin Function: recursive"
         )
     finally:
@@ -80,7 +80,7 @@ async def test_recursive_rejects_noncallable_builder_and_step() -> None:
 @pytest.mark.asyncio
 async def test_recursive_builtin_sorts_composite_values() -> None:
     """The variadic fixed point supports recursive quicksort in ordinary LCL."""
-    module = lclang.define_module(
+    module = define_module(
         "quicksort",
         {
             "quicksort": (
@@ -92,7 +92,7 @@ async def test_recursive_builtin_sorts_composite_values() -> None:
             "result": "quicksort([7, 2, 9, 2, -1, 5])",
         },
     )
-    frame = lclang.define_frame(module)
+    frame = define_frame(module)
     try:
         assert await frame.get("result") == [-1, 2, 2, 5, 7, 9]
     finally:

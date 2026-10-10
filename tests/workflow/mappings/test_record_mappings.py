@@ -9,9 +9,9 @@ from typing import Any, cast
 
 import pytest
 
-import lclang
 import lclang.workflow as wf
 from lclang.error import LclValidationError
+from lclang.lang import FRAME_PROXY, Frame, FrameProxy, define_frame, define_module
 
 
 @dataclass
@@ -41,7 +41,7 @@ async def resource(
     yield args
 
 
-def execution_context(frame: lclang.Frame, verbose: bool = False) -> wf.WorkflowExecutionContext:
+def execution_context(frame: Frame, verbose: bool = False) -> wf.WorkflowExecutionContext:
     """Build isolated execution metadata without file logging."""
     return wf.WorkflowExecutionContext(
         False,
@@ -82,7 +82,7 @@ async def test_whole_records_read_and_publish(
     values: dict[str, object] = {"source.value": 17} if scoped_input else {"source": original}
     if scoped_output:
         values.update({"target.value": -1, "target.extra": "keep"})
-    async with lclang.define_frame(preset=values) as frame:
+    async with define_frame(preset=values) as frame:
         with caplog.at_level(logging.DEBUG, logger="record-mappings"):
             result = await workflow.execute(execution_context(frame, True))
         assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
@@ -92,7 +92,7 @@ async def test_whole_records_read_and_publish(
             assert args is original
         if scoped_output:
             proxy = await frame.get("target")
-            assert isinstance(proxy, lclang.FrameProxy)
+            assert isinstance(proxy, FrameProxy)
             assert await proxy.as_record(Record) == original
             assert await frame.get("target.extra") == "keep"
             assert frame.is_masked("target.value")
@@ -123,7 +123,7 @@ async def test_whole_context_records_remain_local() -> None:
         "source.value",
         "source.count",
     ]
-    async with lclang.define_frame(preset={"source": Record(7), "local.value": -1}) as frame:
+    async with define_frame(preset={"source": Record(7), "local.value": -1}) as frame:
         result = await workflow.execute(execution_context(frame))
         assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
         assert result.task_args[wf.TaskID("root")] == Record(7)
@@ -160,7 +160,7 @@ async def test_whole_argument_failures_use_normal_workflow_errors(
     """Wrong records, missing fields and absent variables stop the action."""
     source = wf.define_variable[Record[int]]("source")
     task = wf.define_task("root", "Root", task_action=echo, args_mapping=source.quote)
-    async with lclang.define_frame(preset=values) as frame:
+    async with define_frame(preset=values) as frame:
         result = await wf.define_workflow("Records", task).execute(execution_context(frame))
         assert result.execution_status.status is wf.ExecutionStatus.ERROR
         assert not result.task_args
@@ -188,7 +188,7 @@ async def test_wrong_whole_context_output_is_rejected() -> None:
         target.quote,
     )
     task = wf.define_task("root", "Root", context_tasks=[context])
-    async with lclang.define_frame(preset={"source": Record(1)}) as frame:
+    async with define_frame(preset={"source": Record(1)}) as frame:
         result = await wf.define_workflow("Records", task).execute(execution_context(frame))
         assert result.execution_status.status is wf.ExecutionStatus.ERROR
         assert not frame.has("target")
@@ -207,7 +207,7 @@ async def test_non_record_action_return_retains_boundary_error() -> None:
 
     source = wf.define_variable[Record[int]]("source")
     task = wf.define_task("root", "Root", task_action=scalar, args_mapping=source.quote)
-    async with lclang.define_frame(preset={"source": Record(1)}) as frame:
+    async with define_frame(preset={"source": Record(1)}) as frame:
         result = await wf.define_workflow("Records", task).execute(execution_context(frame))
         assert result.execution_status.status is wf.ExecutionStatus.ERROR
         assert not result.task_outputs
@@ -242,13 +242,13 @@ async def test_empty_records_support_verbose_scope_publication() -> None:
         args_mapping=source.quote,
         outputs_mapping=target.quote,
     )
-    async with lclang.define_frame(
-        preset={"source": Empty(), "target": lclang.FRAME_PROXY},
+    async with define_frame(
+        preset={"source": Empty(), "target": FRAME_PROXY},
     ) as frame:
         result = await wf.define_workflow("Empty", task).execute(execution_context(frame, True))
         assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
         proxy = await frame.get("target")
-        assert isinstance(proxy, lclang.FrameProxy)
+        assert isinstance(proxy, FrameProxy)
         assert await proxy.field_names() == []
 
 
@@ -266,9 +266,9 @@ async def test_scope_field_masks_and_target_failures(
         args_mapping=source.quote,
         outputs_mapping=target.quote,
     )
-    module = lclang.define_module("records", {"source.value!": "314159", "target": "1 / 0"})
+    module = define_module("records", {"source.value!": "314159", "target": "1 / 0"})
     workflow = wf.define_workflow("Records", task)
-    async with lclang.define_frame(module) as frame:
+    async with define_frame(module) as frame:
         with caplog.at_level(logging.DEBUG, logger="record-mappings"):
             result = await workflow.execute(execution_context(frame, True))
         assert result.execution_status.status is wf.ExecutionStatus.ERROR

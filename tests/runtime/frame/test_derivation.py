@@ -1,20 +1,20 @@
-"""Behavioural tests for :mod:`lclang.runtime.frame.derivation`."""
+"""Behavioural tests for :mod:`lclang.lang.runtime.frame.derivation`."""
 
 from typing import Any, cast
 
 import pytest
 
-import lclang
 from lclang.error import LclValidationError
+from lclang.lang import define_frame, define_module
 
 
 @pytest.mark.asyncio
 async def test_derive_creates_a_detached_independent_child() -> None:
     """Sunny: the child borrows its parent and owns values, cache, and close."""
-    module = lclang.define_module("child", {"answer": "base + offset"})
+    module = define_module("child", {"answer": "base + offset"})
     values: dict[str, object] = {"offset": 2}
 
-    async with lclang.define_frame(lclang.define_module("parent", {"base": "40"})) as parent:
+    async with define_frame(define_module("parent", {"base": "40"})) as parent:
         async with parent.derive(module, values) as child:
             values["offset"] = 100
 
@@ -32,15 +32,13 @@ async def test_derive_creates_a_detached_independent_child() -> None:
 @pytest.mark.asyncio
 async def test_nested_derive_uses_normal_recursive_shadowing() -> None:
     """Composite: each derived layer participates in nearest-binding lookup."""
-    async with lclang.define_frame(
-        lclang.define_module("root", {"base": "10", "shared": "1"})
-    ) as root:
+    async with define_frame(define_module("root", {"base": "10", "shared": "1"})) as root:
         async with root.derive(
-            lclang.define_module("middle", {"subtotal": "base + shared"}),
+            define_module("middle", {"subtotal": "base + shared"}),
             {"shared": 2},
         ) as middle:
             async with middle.derive(
-                lclang.define_module(
+                define_module(
                     "leaf",
                     {"shared": "3", "total": "subtotal + shared"},
                 )
@@ -57,9 +55,9 @@ async def test_nested_derive_uses_normal_recursive_shadowing() -> None:
 async def test_derive_default_values_are_empty_and_independent() -> None:
     """The shared default object is never retained as mutable Frame state."""
     async with (
-        lclang.define_frame() as parent,
-        parent.derive(lclang.define_module("first", {})) as first,
-        parent.derive(lclang.define_module("second", {})) as second,
+        define_frame() as parent,
+        parent.derive(define_module("first", {})) as first,
+        parent.derive(define_module("second", {})) as second,
     ):
         assert first.values == second.values == {}
         assert first.values is not second.values
@@ -69,8 +67,8 @@ async def test_derive_default_values_are_empty_and_independent() -> None:
     ("module", "values", "error"),
     [
         (object(), {}, LclValidationError),
-        (lclang.define_module("child", {}), [], LclValidationError),
-        (lclang.define_module("child", {}), {"": 1}, LclValidationError),
+        (define_module("child", {}), [], LclValidationError),
+        (define_module("child", {}), {"": 1}, LclValidationError),
     ],
 )
 @pytest.mark.asyncio
@@ -80,6 +78,6 @@ async def test_derive_rejects_invalid_inputs(
     error: type[Exception],
 ) -> None:
     """Rainy: invalid child inputs fail before a usable Frame is returned."""
-    async with lclang.define_frame() as parent:
+    async with define_frame() as parent:
         with pytest.raises(error):
             parent.derive(cast(Any, module), cast(Any, values))

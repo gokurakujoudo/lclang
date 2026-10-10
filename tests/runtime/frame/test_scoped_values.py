@@ -5,9 +5,9 @@ from typing import ClassVar
 
 import pytest
 
-import lclang
-from lclang.error import LclAttributeError, LclEvaluationError, LclValidationError
-from lclang.runtime import VariableInspectionStatus
+from lclang.error import LclAttributeError, LclEvaluationError, LclNameError, LclValidationError
+from lclang.lang import FRAME_PROXY, FrameProxy, define_frame, define_module
+from lclang.lang.runtime import VariableInspectionStatus
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,13 +37,13 @@ async def test_scoped_definitions_infer_lazy_python_proxies() -> None:
         calls += 1
         return 21
 
-    module = lclang.define_module(
+    module = define_module(
         "scoped",
-        {"A": lclang.FRAME_PROXY, "A.B.x": "produce()", "A.B.y": "A.B.x * 2"},
+        {"A": FRAME_PROXY, "A.B.x": "produce()", "A.B.y": "A.B.x * 2"},
     )
-    async with lclang.define_frame(module, preset={"produce": produce}) as frame:
+    async with define_frame(module, preset={"produce": produce}) as frame:
         proxy = await frame.get("A")
-        assert isinstance(proxy, lclang.FrameProxy)
+        assert isinstance(proxy, FrameProxy)
         assert repr(proxy) == "FrameProxy(A)"
         private_name = "_private"
         with pytest.raises(LclAttributeError, match="_private"):
@@ -60,8 +60,8 @@ async def test_scoped_definitions_infer_lazy_python_proxies() -> None:
 @pytest.mark.asyncio
 async def test_proxy_index_names_and_records_share_scoped_lookup() -> None:
     """Indexed children materialize sorted override-aware dataclass records."""
-    parent = lclang.define_frame(
-        lclang.define_module(
+    parent = define_frame(
+        define_module(
             "endpoints",
             {
                 "endpoints.green.host": '"green.example"',
@@ -71,7 +71,7 @@ async def test_proxy_index_names_and_records_share_scoped_lookup() -> None:
         )
     )
     child = parent.derive(
-        lclang.define_module(
+        define_module(
             "endpoint-overrides",
             {
                 "endpoints.blue.port": "9443",
@@ -81,9 +81,9 @@ async def test_proxy_index_names_and_records_share_scoped_lookup() -> None:
     )
     try:
         endpoints = await child.get("endpoints")
-        assert isinstance(endpoints, lclang.FrameProxy)
+        assert isinstance(endpoints, FrameProxy)
         assert await endpoints.field_names() == ["blue", "canary", "green"]
-        assert isinstance(endpoints["blue"], lclang.FrameProxy)
+        assert isinstance(endpoints["blue"], FrameProxy)
         assert await endpoints["blue"].port == 9443
         assert await child.evaluate('endpoints["blue"].port') == 9443
         records = [
@@ -106,8 +106,8 @@ async def test_proxy_index_names_and_records_share_scoped_lookup() -> None:
 @pytest.mark.asyncio
 async def test_proxy_record_validation_defaults_and_failures() -> None:
     """Record conversion preserves None/defaults and reports invalid inputs."""
-    frame = lclang.define_frame(
-        lclang.define_module(
+    frame = define_frame(
+        define_module(
             "records",
             {
                 "complete.host": "None",
@@ -119,7 +119,7 @@ async def test_proxy_record_validation_defaults_and_failures() -> None:
     )
     try:
         complete = await frame.get("complete")
-        assert isinstance(complete, lclang.FrameProxy)
+        assert isinstance(complete, FrameProxy)
         assert await complete.get("absent", "fallback") == "fallback"
         with pytest.raises(LclValidationError):
             await complete.get(1)  # type: ignore[arg-type]
@@ -127,17 +127,17 @@ async def test_proxy_record_validation_defaults_and_failures() -> None:
         assert (await complete.as_record(Endpoint)).tags == []
         group = await complete.as_record(EndpointGroup)
         nested = group.endpoint
-        assert isinstance(nested, lclang.FrameProxy)
+        assert isinstance(nested, FrameProxy)
         assert await nested.host == "nested.example"
         with pytest.raises(LclValidationError, match="dataclass"):
             await complete.as_record(dict)
         with pytest.raises(LclEvaluationError, match="host"):
             missing = await frame.get("missing")
-            assert isinstance(missing, lclang.FrameProxy)
+            assert isinstance(missing, FrameProxy)
             await missing.as_record(Endpoint)
-        with pytest.raises(lclang.LclEvaluationError, match="division by zero"):
+        with pytest.raises(LclEvaluationError, match="division by zero"):
             broken = await frame.get("broken")
-            assert isinstance(broken, lclang.FrameProxy)
+            assert isinstance(broken, FrameProxy)
             await broken.as_record(Endpoint)
     finally:
         await frame.close()
@@ -146,16 +146,14 @@ async def test_proxy_record_validation_defaults_and_failures() -> None:
 @pytest.mark.asyncio
 async def test_scoped_lookup_uses_caller_hierarchy_and_safe_missing() -> None:
     """A child proxy selects child leaves and falls back to parent leaves."""
-    parent = lclang.define_frame(
-        lclang.define_module("parent", {"A.parent": "40", "A.optional": "None"})
-    )
-    child = parent.derive(lclang.define_module("child", {"A.child": "2"}))
+    parent = define_frame(define_module("parent", {"A.parent": "40", "A.optional": "None"}))
+    child = parent.derive(define_module("child", {"A.child": "2"}))
     try:
         assert await child.evaluate("A.parent + A.child") == 42
         assert await child.evaluate("A?.missing ?? A.parent") == 40
-        with pytest.raises(lclang.LclNameError, match="unknown variable: A.missing"):
+        with pytest.raises(LclNameError, match="unknown variable: A.missing"):
             await child.evaluate("A.missing")
-        with pytest.raises(lclang.LclNameError, match="unknown variable: missing"):
+        with pytest.raises(LclNameError, match="unknown variable: missing"):
             await child.evaluate("missing?.value ?? 0")
     finally:
         await child.close()
@@ -165,10 +163,10 @@ async def test_scoped_lookup_uses_caller_hierarchy_and_safe_missing() -> None:
 def test_scoped_real_prefix_conflicts_are_eager_and_atomic() -> None:
     """Real ancestors conflict while placeholders and exact overrides work."""
     with pytest.raises(LclValidationError, match="conflict"):
-        lclang.define_module("bad", {"A": "1", "A.x": "2"})
-    module = lclang.define_module("good", {"A": lclang.FRAME_PROXY, "A.x": "1", "A.y": "2"})
-    parent = lclang.define_frame(module)
-    parent.derive(lclang.define_module("child", {"A.x": "3"}))
+        define_module("bad", {"A": "1", "A.x": "2"})
+    module = define_module("good", {"A": FRAME_PROXY, "A.x": "1", "A.y": "2"})
+    parent = define_frame(module)
+    parent.derive(define_module("child", {"A.x": "3"}))
     with pytest.raises(LclValidationError, match="conflict"):
         parent.mixin({"A.x.deep": 4})
     assert "A.x.deep" not in parent.values
@@ -177,8 +175,8 @@ def test_scoped_real_prefix_conflicts_are_eager_and_atomic() -> None:
 @pytest.mark.asyncio
 async def test_closed_descendants_do_not_block_atomic_parent_mixins() -> None:
     """Only open descendants participate in prospective hierarchy validation."""
-    parent = lclang.define_frame()
-    child = parent.derive(lclang.define_module("child", {"A": "1"}))
+    parent = define_frame()
+    child = parent.derive(define_module("child", {"A": "1"}))
     await child.close()
     parent.mixin({"A.x": 2})
     assert await parent.get("A.x") == 2
@@ -192,15 +190,15 @@ async def test_scoped_external_awaitable_is_resolved_lazily() -> None:
     async def value() -> int:
         return 42
 
-    async with lclang.define_frame(preset={"A.B.x": value()}) as frame:
+    async with define_frame(preset={"A.B.x": value()}) as frame:
         assert await frame.evaluate("A.B.x") == 42
 
 
 @pytest.mark.asyncio
 async def test_scoped_dependencies_and_inspection_use_qualified_leaf() -> None:
     """Static, dynamic, and inspection evidence names the terminal binding."""
-    module = lclang.define_module("evidence", {"A.x": "40", "result": "A.x + 2"})
-    async with lclang.define_frame(module) as frame:
+    module = define_module("evidence", {"A.x": "40", "result": "A.x + 2"})
+    async with define_frame(module) as frame:
         before = frame.dependency_snapshot("result")
         assert [str(edge.target) for edge in before.static_edges] == ["A.x"]
         tree = frame.inspect_variable("result")
@@ -215,10 +213,8 @@ async def test_scoped_dependencies_and_inspection_use_qualified_leaf() -> None:
 @pytest.mark.asyncio
 async def test_proxy_operations_reject_recalculation_and_snapshots() -> None:
     """Proxy prefixes are not cached definitions with refreshable evidence."""
-    async with lclang.define_frame(
-        lclang.define_module("proxy", {"A": lclang.FRAME_PROXY, "A.x": "1"})
-    ) as frame:
-        with pytest.raises(lclang.LclEvaluationError, match="proxy"):
+    async with define_frame(define_module("proxy", {"A": FRAME_PROXY, "A.x": "1"})) as frame:
+        with pytest.raises(LclEvaluationError, match="proxy"):
             await frame.recalculate("A")
-        with pytest.raises(lclang.LclEvaluationError, match="proxy"):
+        with pytest.raises(LclEvaluationError, match="proxy"):
             frame.dependency_snapshot("A")

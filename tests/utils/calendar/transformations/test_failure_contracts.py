@@ -5,22 +5,30 @@ from typing import cast
 
 import pytest
 
-from lclang.error import LclValidationError
+from lclang.error import (
+    CalendarLogicException,
+    DateOperationOutOfScopeException,
+    LclValidationError,
+)
 from lclang.utils.calendar import (
     ALL_DAYS,
     ALL_WEEKDAYS,
     BDCalendar,
     CalendarID,
-    CalendarLogicException,
-    DateOperationOutOfScopeException,
     DayType,
     SubtractionBDCalendar,
     at,
     def_functional_calendar,
     nth_day_of_month,
 )
-from lclang.utils.calendar.transformations.logic import dependency_day_type, direct_dependency_ids
-from lclang.utils.calendar.transformations.operands import canonical_calendars, ordered_calendars
+from lclang.utils.calendar.transformations.calendar_dependency import (
+    dependency_day_type,
+    direct_dependency_ids,
+)
+from lclang.utils.calendar.transformations.calendar_operand import (
+    canonical_calendars,
+    ordered_calendars,
+)
 from tests.utils.calendar.calendar_support import DomainFailureCalendar, RawFailureCalendar
 
 

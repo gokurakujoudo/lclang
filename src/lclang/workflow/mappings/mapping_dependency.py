@@ -1,0 +1,66 @@
+"""Scope-aware mapping dependencies and dataclass field fallback metadata.
+
+Defines ``has_field_default``, ``external_uses``.
+"""
+
+from dataclasses import MISSING
+from typing import cast
+
+from lclang.error import LclWorkflowError, WorkflowErrorCode
+from lclang.error.operation_guard import guard_failure
+from lclang.workflow.mappings.mapping_binding import mapping_variables
+from lclang.workflow.mappings.mapping_structure import MappingNode, mapping_nodes, mapping_structure
+from lclang.workflow.task_variable import TaskVar
+from lclang.workflow.workflow_definition import TaskNode, Workflow
+
+
+@guard_failure(LclWorkflowError, WorkflowErrorCode.E21_MAPPING_STRUCTURE_NATIVE_FAILURE)
+def has_field_default(node: MappingNode) -> bool:
+    """Inspect constructor fallback metadata without calling its factory.
+
+    :param node: One structural mapping location.
+    :returns: Whether this location has a dataclass constructor default.
+    """
+    return node.field is not None and (
+        node.field.default is not MISSING or node.field.default_factory is not MISSING
+    )
+
+
+@guard_failure(LclWorkflowError, WorkflowErrorCode.E21_MAPPING_STRUCTURE_NATIVE_FAILURE)
+def external_uses(workflow: Workflow) -> tuple[MappingNode, ...]:
+    """Find unresolved argument locations using execution's context scope rules.
+
+    :param workflow: Workflow definition to analyze.
+    :returns: External mapping locations in first-use order, retaining repetitions.
+    """
+    assigned: set[str] = set()
+    external: list[MappingNode] = []
+
+    def use(mapping: object | None, visible: set[str]) -> None:
+        """Record unresolved quotes from one argument mapping.
+
+        :param mapping: Optional dataclass mapping.
+        :param visible: Names assigned in the current scope.
+        """
+        for node in mapping_nodes(mapping_structure(mapping)):
+            value: object = node.value
+            if isinstance(value, TaskVar) and cast(TaskVar[object], value).name not in visible:
+                external.append(node)
+
+    def visit(task: TaskNode, inherited: frozenset[str] = frozenset()) -> None:
+        """Analyze one task in parent-first depth-first order.
+
+        :param task: Current task definition.
+        :param inherited: Context bindings visible from ancestor task scopes.
+        """
+        local = assigned | set(inherited)
+        for context in task.context_tasks:
+            use(context.args_mapping, local)
+            local.update(item.name for item in mapping_variables(context.outputs_mapping))
+        use(task.args_mapping, local)
+        assigned.update(item.name for item in mapping_variables(task.outputs_mapping))
+        for child in task.children:
+            visit(child, frozenset(local))
+
+    visit(workflow.root_task)
+    return tuple(external)

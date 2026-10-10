@@ -1,0 +1,63 @@
+# Shared implementation modules intentionally access owner state.
+# pyright: reportPrivateUsage=false
+
+"""Controlled updates for Frame host-value bindings.
+
+Defines ``update_host_bindings``.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from lclang.error import LclEvaluationError, RuntimeErrorCode
+from lclang.error.exception_base import LclValidationError
+from lclang.error.operation_guard import guard_failure
+
+if TYPE_CHECKING:
+    from lclang.lang.runtime.frame.frame import Frame
+
+from typing import cast
+
+from lclang.common.binding_mask import normalize_masked_mapping
+from lclang.lang.common.binding_names import validate_binding_names
+from lclang.lang.runtime.frame.binding_lookup import validate_mixin_tree
+
+
+@guard_failure(LclEvaluationError, RuntimeErrorCode.E38_HOST_BINDING_PUBLICATION_NATIVE_FAILURE)
+def update_host_bindings(frame: Frame, values: dict[str, object]) -> None:
+    """Copy host bindings into an open Frame.
+
+    :param frame: Concrete Frame providing the operation state.
+    :param values: String-keyed host bindings applied right-biased.
+    :returns: ``None`` after the atomic mapping update.
+    :raises LclValidationError: If *values* is not a string-keyed dictionary.
+    :raises LclValidationError: If a host-binding name is empty.
+    :raises LclClosedFrameError: If Frame closing has begun.
+
+    .. note::
+       Validation and detachment finish before any owned state is changed.
+    """
+    if not isinstance(values, dict):
+        raise LclValidationError(
+            "Frame mixin values must be a dictionary",
+            code=RuntimeErrorCode.E38_FRAME_MIXIN_VALUES_MUST_BE_A_DICTIONARY,
+        )
+    if any(not isinstance(name, str) for name in values):
+        raise LclValidationError(
+            "Frame mixin names must be strings",
+            code=RuntimeErrorCode.E38_FRAME_MIXIN_NAMES_MUST_BE_STRINGS,
+        )
+    updates, masked_names = normalize_masked_mapping(values)
+    if any(not name for name in updates):
+        raise LclValidationError(
+            "host binding name cannot be empty",
+            code=RuntimeErrorCode.E38_HOST_BINDING_NAME_CANNOT_BE_EMPTY,
+        )
+    validate_binding_names(updates)
+    frame._lifecycle.ensure_open(None)
+    prospective = dict(cast(dict[str, object], frame.values))
+    prospective.update(updates)
+    validate_mixin_tree(frame, prospective)
+    frame._values.update(updates)
+    frame.masked_names = frozenset(frame.masked_names | masked_names)

@@ -1,17 +1,17 @@
-"""Unit tests mirroring :mod:`lclang.ast.call_arguments`."""
+"""Unit tests mirroring :mod:`lclang.lang.ast.call_argument_nodes`."""
 
 import pytest
 
-from lclang.ast import LclConstant, LclName
-from lclang.ast.call_arguments import (
+from lclang.common.identifiers import VarName
+from lclang.error import LclValidationError
+from lclang.lang.ast import LclConstant, LclName
+from lclang.lang.ast.call_argument_nodes import (
     LclKeywordArgument,
     LclKeywordUnpackArgument,
     LclPositionalArgument,
     LclStarArgument,
 )
-from lclang.ast.primaries import LclCall
-from lclang.error import LclValidationError
-from lclang.types import VarName
+from lclang.lang.ast.primary_nodes import LclCall
 
 
 def test_call_children_preserve_receiver_then_arguments() -> None:

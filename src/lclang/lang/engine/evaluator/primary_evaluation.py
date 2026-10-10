@@ -1,0 +1,83 @@
+"""Evaluation for attributes, subscriptions, and slice values.
+
+Defines ``internal_evaluate_primary``, ``internal_slice``.
+"""
+
+from __future__ import annotations
+
+import operator
+from typing import Any, cast
+
+from lclang.common.scoped_proxy import ScopedProxyValue
+from lclang.lang.ast import (
+    LclAttribute,
+    LclSafeAttribute,
+    LclSlice,
+    LclSubscript,
+)
+from lclang.lang.engine.evaluator.evaluation_callback import EvaluateNode
+from lclang.lang.engine.evaluator.name_resolver import Resolver
+from lclang.lang.runtime.frame.scoped_proxy import FrameProxy
+
+type PrimaryNode = LclAttribute | LclSafeAttribute | LclSubscript | LclSlice
+
+
+async def internal_evaluate_primary(
+    node: PrimaryNode,
+    resolver: Resolver,
+    evaluate: EvaluateNode,
+) -> object:
+    """Evaluate an attribute, safe attribute, subscript, or slice node.
+
+    :param node: Primary-expression AST node to evaluate.
+    :param resolver: Resolver supplying names referenced by child expressions.
+    :param evaluate: Recursive evaluator for receivers and index expressions.
+    :returns: Attribute value, indexed value, ``None`` for a safe null access,
+       or a constructed :class:`slice`.
+
+    .. note::
+       Safe attributes return ``None`` without attribute lookup when their
+       receiver is ``None``; ordinary attributes and subscripts propagate their
+       native Python lookup behavior.
+    """
+    if isinstance(node, (LclAttribute, LclSafeAttribute)):
+        value = await evaluate(node.value, resolver)
+        if isinstance(node, LclSafeAttribute) and value is None:
+            return None
+        if isinstance(value, ScopedProxyValue):
+            return await cast(Any, value).resolve_attribute(
+                str(node.name),
+                safe=isinstance(node, LclSafeAttribute),
+                span=node.span,
+            )
+        return getattr(value, str(node.name))
+    if isinstance(node, LclSubscript):
+        value = await evaluate(node.value, resolver)
+        index = await evaluate(node.index, resolver)
+        if isinstance(value, FrameProxy):
+            return await value.resolve_index(index, span=node.span)
+        return cast(object, operator.getitem(cast(Any, value), index))
+    return await internal_slice(node, resolver, evaluate)
+
+
+async def internal_slice(
+    node: LclSlice,
+    resolver: Resolver,
+    evaluate: EvaluateNode,
+) -> slice:
+    """Evaluate the optional bounds of a slice expression.
+
+    :param node: Slice AST node containing optional lower, upper, and step
+       expressions.
+    :param resolver: Resolver supplying names referenced by bound expressions.
+    :param evaluate: Recursive evaluator for each present bound.
+    :returns: Python :class:`slice` value with evaluated bounds.
+
+    .. note::
+       Missing bounds remain ``None`` and are not evaluated, preserving open
+       slice semantics and avoiding unnecessary resolver calls.
+    """
+    lower = None if node.lower is None else await evaluate(node.lower, resolver)
+    upper = None if node.upper is None else await evaluate(node.upper, resolver)
+    step = None if node.step is None else await evaluate(node.step, resolver)
+    return slice(lower, upper, step)

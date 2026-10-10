@@ -19,10 +19,10 @@ SOURCE_ROOT = Path(__file__).resolve().parents[1] / "src"
 if str(SOURCE_ROOT) not in sys.path:
     sys.path.insert(0, str(SOURCE_ROOT))
 
-import lclang  # noqa: E402
 from lclang.__version__ import __version__  # noqa: E402
 from lclang.config import ConfigLoader, ResolvedConfigSource  # noqa: E402
-from lclang.runtime import build_dependency_graph, topological_order  # noqa: E402
+from lclang.lang import Frame, define_module, parse_expression, to_source  # noqa: E402
+from lclang.lang.runtime import build_dependency_graph, topological_order  # noqa: E402
 
 
 class Measurement(TypedDict):
@@ -88,8 +88,8 @@ def measure(
 def benchmark_operations(workload: int) -> dict[str, Callable[[], object]]:
     """Build deterministic operation batches for every published metric."""
     source = "([1, 2, 3][1] + 4) * 2"
-    parsed = lclang.parse_expression(source)
-    module = lclang.define_module("benchmark", {"value": "base + 1"})
+    parsed = parse_expression(source)
+    module = define_module("benchmark", {"value": "base + 1"})
     graph_definitions = {
         f"n{index}": "0" if index == 0 else f"n{index - 1} + 1" for index in range(workload)
     }
@@ -97,14 +97,14 @@ def benchmark_operations(workload: int) -> dict[str, Callable[[], object]]:
 
     async def cold_lookup() -> None:
         for _ in range(workload):
-            frame = lclang.Frame(module, values={"base": 1})
+            frame = Frame(module, values={"base": 1})
             try:
                 await frame.get("value")
             finally:
                 await frame.close()
 
     async def hot_lookup() -> None:
-        frame = lclang.Frame(module, values={"base": 1})
+        frame = Frame(module, values={"base": 1})
         try:
             await frame.get("value")
             for _ in range(workload):
@@ -113,7 +113,7 @@ def benchmark_operations(workload: int) -> dict[str, Callable[[], object]]:
             await frame.close()
 
     async def recalculate() -> None:
-        frame = lclang.Frame(module, values={"base": 1})
+        frame = Frame(module, values={"base": 1})
         try:
             await frame.get("value")
             for _ in range(workload):
@@ -126,15 +126,15 @@ def benchmark_operations(workload: int) -> dict[str, Callable[[], object]]:
             await ConfigLoader(MemoryConfigResolver()).load(config_path)
 
     return {
-        "parse": lambda: [lclang.parse_expression(source) for _ in range(workload)],
+        "parse": lambda: [parse_expression(source) for _ in range(workload)],
         "canonical_round_trip": lambda: [
-            lclang.parse_expression(lclang.to_source(parsed)) for _ in range(workload)
+            parse_expression(to_source(parsed)) for _ in range(workload)
         ],
         "frame_cold_lookup": lambda: asyncio.run(cold_lookup()),
         "frame_hot_lookup": lambda: asyncio.run(hot_lookup()),
         "frame_recalculate": lambda: asyncio.run(recalculate()),
         "dependency_graph": lambda: topological_order(
-            build_dependency_graph(lclang.define_module("graph", graph_definitions))
+            build_dependency_graph(define_module("graph", graph_definitions))
         ),
         "config_load": lambda: asyncio.run(config_load()),
     }

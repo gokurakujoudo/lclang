@@ -1,11 +1,11 @@
-"""Unit tests mirroring :mod:`lclang.lang.lexer.tokens`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.lexer.token`."""
 
 from dataclasses import FrozenInstanceError
 
 import pytest
 
-from lclang.lang.lexer import Token, TokenKind
-from lclang.source import UNKNOWN_SPAN
+from lclang.common.source_location import UNKNOWN_SPAN
+from lclang.lang.engine.lexer import Token, TokenKind
 
 
 def test_token_is_an_immutable_source_value() -> None:

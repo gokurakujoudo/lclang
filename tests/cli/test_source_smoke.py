@@ -9,8 +9,8 @@ import pytest
 
 from lclang.cli import CliContext, CliEntrance, CliResult, CliResultStatus, CommandGroup, cli
 from lclang.error import LclStateError
+from lclang.lang.runtime import Frame
 from lclang.logger.logger import Logger
-from lclang.runtime import Frame
 
 # Fixed configuration fixtures exercise inclusion and derived overrides together.
 SHARED_SOURCE = "base: 40\n"

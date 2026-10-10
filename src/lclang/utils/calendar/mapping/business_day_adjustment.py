@@ -1,19 +1,21 @@
-"""Business day adjustment."""
+"""Business day adjustment.
+
+Defines ``adjust_business_day``, ``ThisOrNextMapOperation``, ``ThisOrPrevMapOperation``.
+"""
 
 from __future__ import annotations
 
 from datetime import date
 from typing import final
 
-from lclang.error import LclUtilityError
-from lclang.error.boundary import guard_async_failure, guard_failure
-from lclang.error.codes.utilities import Code as utilities_codes
-from lclang.utils.calendar.base import BDCalendar
-from lclang.utils.calendar.helpers import dependency_date
-from lclang.utils.calendar.mapping.base import BDCalendarMapOperation
+from lclang.error import LclUtilityError, UtilityErrorCode
+from lclang.error.operation_guard import guard_async_failure, guard_failure
+from lclang.utils.calendar.business_calendar import BDCalendar
+from lclang.utils.calendar.calendar_date_operation import dependency_date
+from lclang.utils.calendar.mapping.date_map_operation import BDCalendarMapOperation
 
 
-@guard_async_failure(LclUtilityError, utilities_codes.NATIVE_713)
+@guard_async_failure(LclUtilityError, UtilityErrorCode.E13_CALENDAR_MAPPING_NATIVE_FAILURE)
 async def adjust_business_day(
     operation: BDCalendarMapOperation,
     base_date: date,
@@ -45,7 +47,7 @@ class ThisOrNextMapOperation(BDCalendarMapOperation):
     :param base_calendar: Calendar used for adjustment.
     """
 
-    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_713)
+    @guard_async_failure(LclUtilityError, UtilityErrorCode.E13_CALENDAR_MAPPING_NATIVE_FAILURE)
     async def map_date(self, base_date: date) -> date:
         """Map through this-or-next business-day lookup.
 
@@ -54,7 +56,7 @@ class ThisOrNextMapOperation(BDCalendarMapOperation):
         """
         return await adjust_business_day(self, base_date, forward=True)
 
-    @guard_failure(LclUtilityError, utilities_codes.NATIVE_713)
+    @guard_failure(LclUtilityError, UtilityErrorCode.E13_CALENDAR_MAPPING_NATIVE_FAILURE)
     def with_base_calendar(self, calendar: BDCalendar) -> ThisOrNextMapOperation:
         """Return a new operation bound to a calendar.
 
@@ -78,7 +80,7 @@ class ThisOrPrevMapOperation(BDCalendarMapOperation):
     :param base_calendar: Calendar used for adjustment.
     """
 
-    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_713)
+    @guard_async_failure(LclUtilityError, UtilityErrorCode.E13_CALENDAR_MAPPING_NATIVE_FAILURE)
     async def map_date(self, base_date: date) -> date:
         """Map through this-or-previous business-day lookup.
 
@@ -87,7 +89,7 @@ class ThisOrPrevMapOperation(BDCalendarMapOperation):
         """
         return await adjust_business_day(self, base_date, forward=False)
 
-    @guard_failure(LclUtilityError, utilities_codes.NATIVE_713)
+    @guard_failure(LclUtilityError, UtilityErrorCode.E13_CALENDAR_MAPPING_NATIVE_FAILURE)
     def with_base_calendar(self, calendar: BDCalendar) -> ThisOrPrevMapOperation:
         """Return a new operation bound to a calendar.
 

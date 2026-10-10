@@ -1,10 +1,10 @@
-"""Unit tests mirroring :mod:`lclang.ast.fstrings`."""
+"""Unit tests mirroring :mod:`lclang.lang.ast.fstring_nodes`."""
 
 import pytest
 
-from lclang.ast import LclConstant
-from lclang.ast.fstrings import LclFormattedValue, LclJoinedString, LclStringText
 from lclang.error import LclValidationError
+from lclang.lang.ast import LclConstant
+from lclang.lang.ast.fstring_nodes import LclFormattedValue, LclJoinedString, LclStringText
 
 
 def test_joined_string_children_preserve_part_order() -> None:

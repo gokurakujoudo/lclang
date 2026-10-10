@@ -102,12 +102,7 @@ from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from lclang.utils.calendar import (
-    CalendarID,
-    DayType,
-    use_calendar_manager,
-    use_file_system_hardcoded_calendar_loader,
-)
+from lclang.utils.calendar import CalendarID, DayType, use_calendar_manager, use_file_system_hardcoded_calendar_loader
 
 
 async def main() -> None:

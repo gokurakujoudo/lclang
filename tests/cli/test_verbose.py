@@ -17,7 +17,7 @@ from lclang.cli import (
     CommandGroup,
     cli,
 )
-from lclang.cli.application import LCLANG_CLI_ENTRANCE
+from lclang.cli.builtin_command import LCLANG_CLI_ENTRANCE
 from lclang.error import LclError
 from lclang.logger import LoggerHandlerConfig
 

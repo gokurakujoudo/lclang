@@ -9,8 +9,8 @@ from typing import cast
 from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy
 
-from lclang.ast import LclAstNode, LclBinary, LclConstant, LclTuple, LclUnary
-from lclang.ast.operators import BinaryOperator, UnaryOperator
+from lclang.lang.ast import LclAstNode, LclBinary, LclConstant, LclTuple, LclUnary
+from lclang.lang.ast.operator_nodes import BinaryOperator, UnaryOperator
 
 NUMERIC_LEAVES: SearchStrategy[LclAstNode] = st.builds(
     LclConstant,

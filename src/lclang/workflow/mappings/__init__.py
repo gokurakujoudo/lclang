@@ -1,6 +1,10 @@
-"""Recursive dataclass mapping boundaries for workflow consumers."""
+"""Recursive dataclass mapping boundaries for workflow consumers.
 
-from lclang.workflow.mappings.bindings import (
+Exports ``mapped_outputs``, ``mapping_text``, ``mapping_variables``, ``materialize_args``,
+``require_mapping``.
+"""
+
+from lclang.workflow.mappings.mapping_binding import (
     mapped_outputs,
     mapping_text,
     mapping_variables,

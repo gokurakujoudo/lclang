@@ -4,9 +4,9 @@ import weakref
 
 import pytest
 
-import lclang
 import lclang.workflow as wf
-from lclang.runtime import Frame
+from lclang.lang import define_frame
+from lclang.lang.runtime import Frame
 from tests.workflow.call_support import Value, make_child, run_parent
 
 
@@ -30,7 +30,7 @@ async def test_repeated_workflow_calls_release_frames_and_keep_detached_results(
             assert result.execution_frame.closed
         return Value(len(outputs))
 
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         result = await run_parent(parent, frame)
     assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
     assert result.task_outputs[wf.TaskID("parent")] == Value(150)

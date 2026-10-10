@@ -2,10 +2,10 @@
 
 import pytest
 
-import lclang
 from lclang.error import LclAttributeError, LclValidationError
+from lclang.lang import FrameProxy, define_frame, define_module
 from lclang.utils import env
-from lclang.utils.environment import BoundEnvironment
+from lclang.utils.process_environment import BoundEnvironment
 
 
 def test_python_environment_reads_are_live_and_optional(
@@ -40,8 +40,8 @@ async def test_lcl_environment_falls_back_after_scoped_overrides(
     monkeypatch.setenv("LCLANG_ENV_ALPHA", "system-alpha")
     monkeypatch.setenv("LCLANG_ENV_BETA", "system-beta")
     monkeypatch.delenv("LCLANG_ENV_MISSING", raising=False)
-    frame = lclang.define_frame(
-        lclang.define_module(
+    frame = define_frame(
+        define_module(
             "environment",
             {
                 "env.LCLANG_ENV_ALPHA": '"module-alpha"',
@@ -86,7 +86,7 @@ async def test_environment_overrides_compose_through_presets_and_mixins(
     """Preset and mixin leaves override the utility without replacing it."""
     name = "LCLANG_ENV_LAYER_TEST"
     monkeypatch.setenv(name, "system")
-    frame = lclang.define_frame(preset={f"env.{name}": "preset"})
+    frame = define_frame(preset={f"env.{name}": "preset"})
     try:
         environment = await frame.get("env")
         assert isinstance(environment, BoundEnvironment)
@@ -94,7 +94,7 @@ async def test_environment_overrides_compose_through_presets_and_mixins(
         frame.mixin({f"env.{name}": None, "env.PREFIX.value": 42})
         assert await environment.get(name, "fallback") is None
         prefix = await environment.PREFIX
-        assert isinstance(prefix, lclang.FrameProxy)
+        assert isinstance(prefix, FrameProxy)
         assert await prefix.value == 42
         assert await frame.evaluate("env.PREFIX.value") == 42
         names = await frame.evaluate("env.field_names()")

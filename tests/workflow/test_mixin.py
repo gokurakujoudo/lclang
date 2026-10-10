@@ -10,11 +10,11 @@ from typing import cast
 
 import pytest
 
-import lclang
 import lclang.workflow as wf
 from lclang.cli import CliConfig, CliContext, CliParams, CliResultStatus
-from lclang.cli.binding import build_binding
+from lclang.cli.frame_binding import build_binding
 from lclang.error import LclValidationError
+from lclang.lang import define_frame, define_module
 
 
 @dataclass
@@ -56,8 +56,8 @@ async def test_mixin_snapshot_config_tasks_and_concurrent_runs() -> None:
         cast(dict[str, object], workflow.lcl_mixin)["seed!"] = -50
 
     async def run(index: int) -> None:
-        module = lclang.define_module("config", {"value": "helper(seed) + index"})
-        async with lclang.define_frame(module, preset={"seed": -20, "index": index}) as frame:
+        module = define_module("config", {"value": "helper(seed) + index"})
+        async with define_frame(module, preset={"seed": -20, "index": index}) as frame:
             context = wf.WorkflowExecutionContext(
                 False,
                 date(2026, 9, 19),

@@ -6,9 +6,9 @@ from typing import cast
 
 import pytest
 
-import lclang
 import lclang.workflow as wf
-from lclang.error import LclValidationError
+from lclang.error import LclNameError, LclValidationError
+from lclang.lang import define_frame, define_module
 from tests.workflow.default_support import Value, echo, execution_context, workflow_for
 
 
@@ -35,8 +35,8 @@ async def test_default_is_visible_to_lcl_and_is_below_explicit_bindings() -> Non
         ),
     )
     for explicit, expected in [({}, 3), ({"value": 8}, 8)]:
-        async with lclang.define_frame(
-            lclang.define_module("config", {"calculated": "value * 2"}),
+        async with define_frame(
+            define_module("config", {"calculated": "value * 2"}),
             preset=dict(explicit),
         ) as frame:
             parent = frame.parent
@@ -76,7 +76,7 @@ async def test_factory_is_lazy_and_independent_between_runs() -> None:
     assert not command.parameter_docs[0].required
     assert not calls
     for _ in range(2):
-        async with lclang.define_frame() as frame:
+        async with define_frame() as frame:
             result = await workflow.execute(execution_context(frame))
             root = cast(Value, result.task_args[wf.TaskID("root")])
             child = cast(Value, result.task_args[wf.TaskID("child")])
@@ -90,18 +90,18 @@ async def test_none_identity_field_fallback_and_failed_definition() -> None:
     values: tuple[object, ...] = (None, [])
     for value in values:
         workflow = workflow_for(wf.define_variable[object]("value", default=value))
-        async with lclang.define_frame() as frame:
+        async with define_frame() as frame:
             result = await workflow.execute(execution_context(frame))
             assert cast(Value, result.task_args[wf.TaskID("root")]).value is value
             assert not frame.has("value")
     variable = wf.define_variable[object]("value")
     workflow = workflow_for(variable)
     assert not workflow.to_cli("run", "Run").parameter_docs[0].required
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         result = await workflow.execute(execution_context(frame))
         assert result.task_args[wf.TaskID("root")] == Value()
     workflow = workflow_for(wf.define_variable[object]("value", default=99))
-    async with lclang.define_frame(lclang.define_module("bad", {"value": "missing + 1"})) as frame:
+    async with define_frame(define_module("bad", {"value": "missing + 1"})) as frame:
         result = await workflow.execute(execution_context(frame))
         assert result.execution_status.status is wf.ExecutionStatus.ERROR
         assert not result.task_args
@@ -122,11 +122,11 @@ async def test_field_factory_and_required_occurrences() -> None:
     from lclang.workflow.mappings import materialize_args
 
     variable = wf.define_variable[object]("value")
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         first = cast(Collection, await materialize_args(Collection(variable.quote), frame))
         second = cast(Collection, await materialize_args(Collection(variable.quote), frame))
         assert first.value == second.value == [] and first.value is not second.value
-        with pytest.raises(lclang.LclNameError):
+        with pytest.raises(LclNameError):
             await materialize_args(Required(variable.quote), frame)
 
 
@@ -142,7 +142,7 @@ async def test_concurrent_and_repeated_borrowed_frame_runs_are_isolated() -> Non
         return object()
 
     workflow = workflow_for(wf.define_variable[object]("value", default_factory=factory))
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         results = await asyncio.gather(
             *(workflow.execute(execution_context(frame)) for _ in range(20))
         )
@@ -177,7 +177,7 @@ async def test_factory_cancellation_propagates_and_finishes_the_factory() -> Non
         return None
 
     workflow = workflow_for(wf.define_variable[object]("value", default_factory=factory))
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         task = asyncio.create_task(workflow.execute(execution_context(frame)))
         await started.wait()
         task.cancel()

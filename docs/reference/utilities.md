@@ -53,7 +53,7 @@ calendar-manager construction helpers. Filesystem access remains opt-in through
 Python integrations may import `STANDARD_MANIFESTS`, `STANDARD_PRESET`,
 `StdlibEntry`, `StdlibManifest`, `StdlibNamespace`, `RecursiveFunction`,
 `assemble_stdlib`, `collect`, `first`, `join`, `lines`, `lookup`, `merge`,
-`json_encode`, `json_decode`, and `recursive` from `lclang.stdlib`.
+`json_encode`, `json_decode`, and `recursive` from `lclang.lang.stdlib`.
 
 ## Snowflake IDs
 
@@ -165,7 +165,7 @@ masks are recursively expanded or copied.
 `make_multi_log_lines(title, lines, line_indent="    ")` indents every body
 line, including empty lines and embedded newlines, while leaving the title
 unchanged. An empty body produces only the title. Both helpers are synchronous
-and available from `lclang.utils` and `lclang.utils.representation`.
+and available from `lclang.utils` and `lclang.utils.value_representation`.
 
 <!-- lclang-doc-exec -->
 ```python

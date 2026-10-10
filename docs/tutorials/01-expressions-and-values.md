@@ -22,7 +22,7 @@ inside an async application, await its coroutine in the existing event loop.
 ```python
 import asyncio
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 CALCULATION = define_module("calculation", {"total": "unit_price * quantity"})
@@ -60,7 +60,7 @@ dependencies.
 ```python
 import asyncio
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 ORDER = define_module(
@@ -119,7 +119,7 @@ and a per-run multiplier.
 ```python
 import asyncio
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 TRANSFORM = define_module(

@@ -1,10 +1,10 @@
-"""Unit tests mirroring :mod:`lclang.lang.lexer.fstrings`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.lexer.fstring_scanner`."""
 
 import pytest
 
 from lclang.error import LclSyntaxError
-from lclang.lang.lexer import TokenKind, scan_tokens
-from lclang.lang.lexer.fstring_values import FStringField, FStringText, FStringValue
+from lclang.lang.engine.lexer import TokenKind, scan_tokens
+from lclang.lang.engine.lexer.fstring_parts import FStringField, FStringText, FStringValue
 
 
 def fvalue(source: str) -> FStringValue:

@@ -9,7 +9,7 @@ from typing import cast
 
 import pytest
 
-from lclang import LclRecord, define_module
+from lclang.common.source_location import UNKNOWN_SPAN, SourcePosition, SourceSpan
 from lclang.error import (
     CalendarCannotLoadException,
     DateOperationOutOfScopeException,
@@ -19,13 +19,13 @@ from lclang.error import (
     LclFrozenAttributeError,
     LclValidationError,
 )
-from lclang.error.aggregation import combine_failures
-from lclang.error.boundary import guard_async_failure, guard_failure
-from lclang.error.context import ConfigLoadFrame
-from lclang.error.wrapping import wrap_failure
-from lclang.source import UNKNOWN_SPAN, SourcePosition, SourceSpan
-from lclang.utils.calendar.base import BDCalendar
-from lclang.utils.calendar.types import CalendarID
+from lclang.error.diagnostic_records import ConfigLoadFrame
+from lclang.error.failure_aggregation import combine_failures
+from lclang.error.native_wrap import wrap_failure
+from lclang.error.operation_guard import guard_async_failure, guard_failure
+from lclang.lang import LclRecord, define_module
+from lclang.utils.calendar.business_calendar import BDCalendar
+from lclang.utils.calendar.calendar_type import CalendarID
 
 
 @pytest.mark.parametrize(

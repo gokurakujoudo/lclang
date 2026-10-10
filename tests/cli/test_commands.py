@@ -87,11 +87,13 @@ def test_command_snapshots_inputs_and_validates_handler_once() -> None:
     """Construction owns validation and detaches normalized declaration containers."""
     from unittest.mock import patch
 
-    from lclang.cli.commands import validate_handler
+    from lclang.cli.command_definition import validate_handler
 
     values: dict[str, object] = {"token!": "secret"}
     docs = [ParameterDoc("token", str, False, "Token")]
-    with patch("lclang.cli.commands.validate_handler", wraps=validate_handler) as validate:
+    with patch(
+        "lclang.cli.command_definition.validate_handler", wraps=validate_handler
+    ) as validate:
         command = cli.command(preset=values, parameter_docs=docs)(valid_handler)
         assert validate.call_count == 1
     values.clear()

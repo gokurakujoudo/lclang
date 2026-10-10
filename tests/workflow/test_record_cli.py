@@ -9,21 +9,21 @@ from typing import cast
 
 import pytest
 
-import lclang
 from lclang.cli import CliConfig, CliParams, ParameterDoc
-from lclang.cli.audit import redacted_overrides
-from lclang.cli.binding import build_binding
-from lclang.cli.help import render_command_help
-from lclang.cli.parameter_details import DerivedParameterDoc
+from lclang.cli.frame_binding import build_binding
+from lclang.cli.help_rendering import render_command_help
+from lclang.cli.invocation_audit import redacted_overrides
+from lclang.cli.parameter_metadata import DerivedParameterDoc
 from lclang.error import LclValidationError
+from lclang.lang import Frame, define_frame
 from lclang.utils import ValueBox, flatten_to_dict
 from lclang.workflow import ExecutionStatus, TaskID, WorkflowExecutionContext, define_variable
-from lclang.workflow.cli_parameters import expand_record_parameters
-from lclang.workflow.mappings.records import can_construct_record
+from lclang.workflow.cli_parameter import expand_record_parameters
+from lclang.workflow.mappings.record_mapping import can_construct_record
 from tests.workflow.record_cli_support import CsvOptions, Dialect, make_workflow
 
 
-def make_context(frame: lclang.Frame) -> WorkflowExecutionContext:
+def make_context(frame: Frame) -> WorkflowExecutionContext:
     """Use deterministic metadata and the caller-owned Frame."""
     return WorkflowExecutionContext(
         False,
@@ -84,7 +84,7 @@ async def test_cli_and_direct_execution_share_constructor_defaults(
         value = cast(CsvOptions, result.task_args[TaskID("convert")])
     finally:
         await binding.stack.close()
-    async with lclang.define_frame(preset=dict(overrides)) as frame:
+    async with define_frame(preset=dict(overrides)) as frame:
         direct = await workflow.execute(make_context(frame))
     other = cast(CsvOptions, direct.task_args[TaskID("convert")])
     expected = CsvOptions(dialect=Dialect(overrides.get("csv.dialect.delimiter", ",")))

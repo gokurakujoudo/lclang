@@ -5,9 +5,21 @@ from typing import Any, cast
 
 import pytest
 
-from lclang import ConfigLoadFrame, DiagnosticValue, EvaluationContextFrame, SourceSnapshot
-from lclang.error import LclError, LclSyntaxError, LclValidationError
-from lclang.source import UNKNOWN_SPAN, SourcePosition, SourceSpan, merge_source_spans
+from lclang.common.source_location import (
+    UNKNOWN_SPAN,
+    SourcePosition,
+    SourceSpan,
+    merge_source_spans,
+)
+from lclang.error import (
+    ConfigLoadFrame,
+    DiagnosticValue,
+    EvaluationContextFrame,
+    LclError,
+    LclSyntaxError,
+    LclValidationError,
+)
+from lclang.lang import SourceSnapshot
 
 
 @pytest.mark.parametrize(
@@ -111,7 +123,7 @@ def test_adding_load_frames_copies_class_cause_traceback_and_custom_message() ->
 
 def test_native_loading_copy_keeps_cause_notes_and_missing_source_metadata() -> None:
     """Native validation failures remain native and retain independent annotations."""
-    from lclang.error_loading import derive_loading_error
+    from lclang.error.loading_context import derive_loading_error
 
     original = ValueError("invalid namespace")
     original.add_note("original note")
@@ -126,7 +138,7 @@ def test_native_loading_copy_keeps_cause_notes_and_missing_source_metadata() -> 
 
 def test_native_and_unspecified_actions_have_consistent_headers() -> None:
     """Host boundaries and the generic public error retain original reason wording."""
-    from lclang.error_rendering import render_failure
+    from lclang.error import render_failure
 
     assert str(LclError("user text")) == "Error [LCL000000]:\nCause: user text"
     assert render_failure(ValueError("user text"), action="loading calendar") == (

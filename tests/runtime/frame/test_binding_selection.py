@@ -4,9 +4,9 @@ from unittest.mock import patch
 
 import pytest
 
-from lclang import define_frame, define_module
-from lclang.runtime.frame.binding_lookup import local_binding_kind, select_binding
-from lclang.scope_proxy import FrameProxy
+from lclang.lang import define_frame, define_module
+from lclang.lang.runtime.frame.binding_lookup import local_binding_kind, select_binding
+from lclang.lang.runtime.frame.scoped_proxy import FrameProxy
 
 
 @pytest.mark.asyncio
@@ -15,7 +15,7 @@ async def test_cached_read_classifies_the_binding_once() -> None:
     async with define_frame(define_module("lookup", {"answer": "42"})) as frame:
         assert await frame.get("answer") == 42
         with patch(
-            "lclang.runtime.frame.binding_lookup.local_binding_kind", wraps=local_binding_kind
+            "lclang.lang.runtime.frame.binding_lookup.local_binding_kind", wraps=local_binding_kind
         ) as kind:
             assert await frame.get("answer") == 42
             assert kind.call_count == 1
@@ -44,7 +44,7 @@ async def test_async_proxy_read_reuses_selection_and_deferred_attributes_stay_li
         proxy = await frame.get("A")
         assert isinstance(proxy, FrameProxy)
         with patch(
-            "lclang.runtime.frame.binding_lookup.local_binding_kind",
+            "lclang.lang.runtime.frame.binding_lookup.local_binding_kind",
             wraps=local_binding_kind,
         ) as kind:
             assert await proxy.get("x") == 1

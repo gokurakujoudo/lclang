@@ -4,8 +4,8 @@ from typing import cast
 
 import pytest
 
-from lclang.lang.evaluator.dispatch import interpret_expression
-from lclang.lang.parser import parse_expression
+from lclang.lang.engine.evaluator.ast_interpreter import interpret_expression
+from lclang.lang.engine.parser import parse_expression
 
 
 @pytest.mark.asyncio

@@ -4,9 +4,9 @@ import asyncio
 
 import pytest
 
-from lclang.lang.parser import parse_expression
-from lclang.runtime import Frame, Module
-from lclang.types import FrameId, ModuleName
+from lclang.common.identifiers import FrameId, ModuleName
+from lclang.lang.engine.parser import parse_expression
+from lclang.lang.runtime import Frame, Module
 
 
 @pytest.mark.asyncio

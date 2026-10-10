@@ -2,9 +2,9 @@
 
 from pathlib import Path
 
+from lclang.common.identifiers import SourceName
+from lclang.common.source_location import SourceOrigin, SourcePosition, SourceSpan
 from lclang.config import ResolvedConfigSource
-from lclang.source import SourceOrigin, SourcePosition, SourceSpan
-from lclang.types import SourceName
 
 
 def source_span(name: str = "test") -> SourceSpan:

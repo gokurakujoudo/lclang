@@ -33,6 +33,12 @@ UTF-8 `.lclcfg` files, dependency analysis, runtime inspection, reviewed
 standard namespaces, a typed command-line framework, tree workflows and status,
 and a composable business-day calendar system.
 
+Import language construction and parsing from `lclang.lang`, configuration from
+`lclang.config`, command-line tools from `lclang.cli`, and tasks from
+`lclang.workflow`. Utilities, logging and diagnostics have their own
+`lclang.utils`, `lclang.logger` and `lclang.error` APIs. The package root has no
+public API exports.
+
 ## Why lclang
 
 Static formats are excellent for static values. They become awkward when a
@@ -75,7 +81,7 @@ the values owned by the application, and ask only for the outputs you need.
 ```python
 import asyncio
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 ORDER = define_module(
@@ -118,7 +124,7 @@ For a single expression, give its result a name and use the same workflow:
 ```python
 import asyncio
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 TOTAL = define_module("total", {"result": "unit_price * quantity"})

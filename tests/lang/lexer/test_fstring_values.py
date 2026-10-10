@@ -1,10 +1,10 @@
-"""Unit tests mirroring :mod:`lclang.lang.lexer.fstring_values`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.lexer.fstring_parts`."""
 
 from dataclasses import FrozenInstanceError
 
 import pytest
 
-from lclang.lang.lexer.fstring_values import FStringField, FStringText, FStringValue
+from lclang.lang.engine.lexer.fstring_parts import FStringField, FStringText, FStringValue
 
 
 def test_lexical_fstring_values_are_frozen_and_structural() -> None:

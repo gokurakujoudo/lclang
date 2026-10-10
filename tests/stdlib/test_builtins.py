@@ -1,4 +1,4 @@
-"""Unit tests mirroring :mod:`lclang.stdlib.builtins`."""
+"""Unit tests mirroring :mod:`lclang.lang.stdlib.builtin_preset`."""
 
 import ast
 from collections.abc import AsyncIterator
@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from lclang.lang.parser import parse_expression
-from lclang.runtime import FrameFactory, Module
-from lclang.stdlib import STANDARD_MANIFESTS, STANDARD_PRESET
-from lclang.types import FrameId, ModuleName
+from lclang.common.identifiers import FrameId, ModuleName
+from lclang.lang.engine.parser import parse_expression
+from lclang.lang.runtime import FrameFactory, Module
+from lclang.lang.stdlib import STANDARD_MANIFESTS, STANDARD_PRESET
 
 
 def test_standard_manifests_and_preset_have_stable_reviewed_order() -> None:
@@ -45,10 +45,16 @@ async def test_standard_preset_composes_async_helpers_in_a_frame() -> None:
 
 def test_helper_modules_import_only_reviewed_capability_roots() -> None:
     """The concrete helper surface cannot acquire ambient I/O capabilities."""
-    root = Path(__file__).parents[2] / "src" / "lclang" / "stdlib"
+    root = Path(__file__).parents[2] / "src" / "lclang" / "lang" / "stdlib"
     # Runtime casts and finite-number checks add no ambient connectivity or file access.
     allowed = {"__future__", "collections", "json", "lclang", "types", "typing", "math"}
-    for name in ("iterables.py", "text.py", "data.py", "json_values.py", "builtins.py"):
+    for name in (
+        "iterable_function.py",
+        "text_function.py",
+        "mapping_function.py",
+        "json_codec.py",
+        "builtin_preset.py",
+    ):
         tree = ast.parse((root / name).read_text(encoding="utf-8"))
         from_imports = {
             node.module.split(".")[0]

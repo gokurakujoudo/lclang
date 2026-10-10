@@ -5,9 +5,9 @@ from unittest.mock import patch
 
 import pytest
 
-import lclang
-from lclang.api import LCL_BUILTIN_VALUES
 from lclang.error import LclStateError, LclValidationError
+from lclang.lang import define_frame, define_module
+from lclang.lang.runtime.module_frame_factory import LCL_BUILTIN_VALUES
 from lclang.utils import SnowflakeGenerator
 
 
@@ -15,7 +15,7 @@ from lclang.utils import SnowflakeGenerator
 async def test_builtin_construction_cache_recalculation_and_composition() -> None:
     """LCL constructs the Python utility and caches IDs independently from its state."""
     assert LCL_BUILTIN_VALUES["SnowflakeGenerator"] is SnowflakeGenerator
-    module = lclang.define_module(
+    module = define_module(
         "snowflake",
         {
             "ids": "SnowflakeGenerator(worker_id, epoch_ms=0)",
@@ -24,8 +24,8 @@ async def test_builtin_construction_cache_recalculation_and_composition() -> Non
             "batch": "[ids.next_id() for item in range(3)]",
         },
     )
-    with patch("lclang.utils.snowflake.time_ns", return_value=1_000_000):
-        async with lclang.define_frame(module, preset={"worker_id": 7}) as frame:
+    with patch("lclang.utils.snowflake_id.time_ns", return_value=1_000_000):
+        async with define_frame(module, preset={"worker_id": 7}) as frame:
             first = (1 << 22) | (7 << 12)
             assert (
                 await asyncio.gather(*(frame.get("request_id") for _ in range(10))) == [first] * 10
@@ -42,11 +42,11 @@ async def test_builtin_construction_cache_recalculation_and_composition() -> Non
 async def test_host_generator_is_shared_across_frames() -> None:
     """Separate request Frames borrow one worker's generator without resetting it."""
     generator = SnowflakeGenerator(2, epoch_ms=0)
-    module = lclang.define_module("request", {"id": "ids.next_id()"})
-    with patch("lclang.utils.snowflake.time_ns", return_value=0):
+    module = define_module("request", {"id": "ids.next_id()"})
+    with patch("lclang.utils.snowflake_id.time_ns", return_value=0):
         async with (
-            lclang.define_frame(module, preset={"ids": generator}) as first,
-            lclang.define_frame(module, preset={"ids": generator}) as second,
+            define_frame(module, preset={"ids": generator}) as first,
+            define_frame(module, preset={"ids": generator}) as second,
         ):
             values = await asyncio.gather(first.get("id"), second.get("id"))
             assert list(values) == [8192, 8193]
@@ -60,7 +60,7 @@ async def test_lcl_reports_invalid_configuration_and_clock_rollback() -> None:
         "LclValidationError": LclValidationError,
         "LclStateError": LclStateError,
     }
-    async with lclang.define_frame(preset=errors) as frame:
+    async with define_frame(preset=errors) as frame:
         assert (
             await frame.evaluate(
                 "try: SnowflakeGenerator(1024) except LclValidationError: 'invalid'"
@@ -69,7 +69,7 @@ async def test_lcl_reports_invalid_configuration_and_clock_rollback() -> None:
         )
         generator = SnowflakeGenerator(0, epoch_ms=0)
         frame.mixin({"ids": generator})
-        with patch("lclang.utils.snowflake.time_ns", side_effect=[2_000_000, 1_000_000]):
+        with patch("lclang.utils.snowflake_id.time_ns", side_effect=[2_000_000, 1_000_000]):
             assert await frame.evaluate("ids.next_id()") == 2 << 22
             assert (
                 await frame.evaluate("try: ids.next_id() except LclStateError: 'rollback'")

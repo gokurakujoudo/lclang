@@ -1,11 +1,11 @@
-"""Unit tests mirroring :mod:`lclang.lang.lexer.scanner`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.lexer.token_scanner`."""
 
 import pytest
 
+from lclang.common.identifiers import SourceName
+from lclang.common.source_location import SourceOrigin
 from lclang.error import LclSyntaxError
-from lclang.lang.lexer import TokenKind, scan_tokens
-from lclang.source import SourceOrigin
-from lclang.types import SourceName
+from lclang.lang.engine.lexer import TokenKind, scan_tokens
 
 
 def kinds(source: str) -> list[TokenKind]:

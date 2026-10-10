@@ -1,41 +1,43 @@
 # Shared implementation modules intentionally access owner state.
 # pyright: reportPrivateUsage=false
 
-"""Context acquisition and unwinding for workflow execution."""
+"""Context acquisition and unwinding for workflow execution.
+
+Defines ``execute_context_scope``.
+"""
 
 from __future__ import annotations
 
 from contextlib import AbstractAsyncContextManager
 from typing import cast
 
-from lclang.error import LclWorkflowError
-from lclang.error.boundary import guard_async_failure
-from lclang.error.codes.workflow import Code as workflow_codes
-from lclang.error.wrapping import wrap_failure
-from lclang.types import TaskID
-from lclang.workflow.context import (
+from lclang.error import LclWorkflowError, WorkflowErrorCode
+from lclang.error.failure_aggregation import combine_failures
+from lclang.error.native_wrap import wrap_failure
+from lclang.error.operation_guard import guard_async_failure
+from lclang.workflow.execution_context import (
     TaskContext,
 )
-from lclang.workflow.definitions import TaskNode
-from lclang.workflow.execution import (
+from lclang.workflow.execution_status import ExecutionStatus
+from lclang.workflow.mappings import mapped_outputs, materialize_args
+from lclang.workflow.status_manager import ExecutionStatusManager
+from lclang.workflow.task_execution import (
     WorkflowRunState,
     execute_action_and_children,
     finalize_manager,
     raise_for_status,
     record_exception,
 )
-from lclang.workflow.failures import combine_failures
-from lclang.workflow.logging import (
+from lclang.workflow.task_id import TaskID
+from lclang.workflow.task_logging import (
     log_mapping,
     log_task_complete,
     log_task_start,
 )
-from lclang.workflow.manager import ExecutionStatusManager
-from lclang.workflow.mappings import mapped_outputs, materialize_args
-from lclang.workflow.models import ExecutionStatus
+from lclang.workflow.workflow_definition import TaskNode
 
 
-@guard_async_failure(LclWorkflowError, workflow_codes.NATIVE_532)
+@guard_async_failure(LclWorkflowError, WorkflowErrorCode.E32_WORKFLOW_RUNNER_NATIVE_FAILURE)
 async def execute_context_scope(
     state: WorkflowRunState,
     task: TaskNode,
@@ -80,7 +82,11 @@ async def execute_context_scope(
     except BaseException as error:
         if isinstance(error, Exception):
             error = record_exception(
-                state, context_manager, branch, error, code=workflow_codes.CONTEXT_ENTER_FAILURE
+                state,
+                context_manager,
+                branch,
+                error,
+                code=WorkflowErrorCode.E32_CONTEXT_ENTER_FAILURE,
             )
         finalize_manager(context_manager)
         log_task_complete(state.context, branch, context_manager.current.status)
@@ -92,7 +98,7 @@ async def execute_context_scope(
             updates = await mapped_outputs(definition.outputs_mapping, resource, task_context.frame)
         except Exception as error:
             mapping_failure = record_exception(
-                state, context_manager, branch, error, code=workflow_codes.MAPPING_FAILURE
+                state, context_manager, branch, error, code=WorkflowErrorCode.E22_MAPPING_FAILURE
             )
             raise mapping_failure from mapping_failure.__cause__
         if updates:
@@ -111,16 +117,18 @@ async def execute_context_scope(
         )
     except BaseException as error:
         cleanup = (
-            wrap_failure(error, LclWorkflowError, workflow_codes.CONTEXT_EXIT_FAILURE)
+            wrap_failure(error, LclWorkflowError, WorkflowErrorCode.E32_CONTEXT_EXIT_FAILURE)
             if isinstance(error, Exception)
             else error
         )
-        failure = combine_failures(incoming, cleanup)
+        failure = combine_failures(incoming, cleanup, code=WorkflowErrorCode.E35_COMPOSITE_FAILURE)
         if isinstance(error, Exception):
             recorded = (
                 failure
                 if isinstance(failure, Exception)
-                else wrap_failure(error, LclWorkflowError, workflow_codes.CONTEXT_EXIT_FAILURE)
+                else wrap_failure(
+                    error, LclWorkflowError, WorkflowErrorCode.E32_CONTEXT_EXIT_FAILURE
+                )
             )
             record_exception(state, context_manager, branch, recorded)
         finalize_manager(context_manager)

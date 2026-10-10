@@ -1,1 +1,1 @@
-"""Tests mirroring :mod:`lclang.lang.parser`."""
+"""Tests mirroring :mod:`lclang.lang.engine.parser`."""

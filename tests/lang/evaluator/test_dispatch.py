@@ -1,15 +1,15 @@
-"""Unit tests mirroring :mod:`lclang.lang.evaluator.dispatch`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.evaluator.ast_interpreter`."""
 
 from collections.abc import Coroutine
 
 import pytest
 
-from lclang.ast import LclStringText
+from lclang.common.identifiers import SourceName, VarName
+from lclang.common.source_location import SourceOrigin, SourceSpan
 from lclang.error import LclEvaluationError, LclNameError
-from lclang.lang.evaluator.dispatch import interpret_expression
-from lclang.lang.parser import parse_expression
-from lclang.source import SourceOrigin, SourceSpan
-from lclang.types import SourceName, VarName
+from lclang.lang.ast import LclStringText
+from lclang.lang.engine.evaluator.ast_interpreter import interpret_expression
+from lclang.lang.engine.parser import parse_expression
 
 
 @pytest.mark.asyncio

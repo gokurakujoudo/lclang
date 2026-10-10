@@ -1,15 +1,15 @@
-"""Behavioural tests for :mod:`lclang.runtime.frame.binding_lookup`."""
+"""Behavioural tests for :mod:`lclang.lang.runtime.frame.binding_lookup`."""
 
 import pytest
 
-import lclang
 from lclang.error import LclValidationError
+from lclang.lang import define_frame, define_module
 
 
 def test_has_and_get_definition_follow_recursive_lookup_precedence() -> None:
     """Definitions, host values, masking, and missing names share one search."""
-    ancestor = lclang.define_frame(
-        lclang.define_module(
+    ancestor = define_frame(
+        define_module(
             "ancestor",
             {
                 "inherited": "40",
@@ -17,8 +17,8 @@ def test_has_and_get_definition_follow_recursive_lookup_precedence() -> None:
             },
         )
     )
-    child = lclang.define_frame(
-        lclang.define_module(
+    child = define_frame(
+        define_module(
             "child",
             {
                 "local": "inherited + 2",
@@ -50,8 +50,8 @@ def test_lookup_inspection_does_not_evaluate_or_cache_a_definition() -> None:
         calls += 1
         return 42
 
-    frame = lclang.define_frame(
-        lclang.define_module("app", {"answer": "produce()"}),
+    frame = define_frame(
+        define_module("app", {"answer": "produce()"}),
         preset={"produce": produce},
     )
 
@@ -63,6 +63,6 @@ def test_lookup_inspection_does_not_evaluate_or_cache_a_definition() -> None:
 @pytest.mark.parametrize("method", ["has", "get_definition"])
 def test_lookup_inspection_rejects_empty_names(method: str) -> None:
     """Inspection uses the same non-empty-name contract as get."""
-    frame = lclang.define_frame()
+    frame = define_frame()
     with pytest.raises(LclValidationError, match="variable name cannot be empty"):
         getattr(frame, method)("")

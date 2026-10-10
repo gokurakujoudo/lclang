@@ -6,14 +6,16 @@ from typing import cast
 
 import pytest
 
-from lclang.error import LclValidationError
+from lclang.error import (
+    CalendarCannotLoadException,
+    CalendarLogicException,
+    DateOperationOutOfScopeException,
+    LclValidationError,
+)
 from lclang.utils.calendar import (
     ALL_DAYS,
     ALL_WEEKDAYS,
-    CalendarCannotLoadException,
     CalendarID,
-    CalendarLogicException,
-    DateOperationOutOfScopeException,
     DayType,
     at,
     def_functional_calendar,

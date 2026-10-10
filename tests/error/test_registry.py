@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from lclang.error import LclError, LclValidationError, get_error_code_path, get_error_codes
-from lclang.error.codes.catalog import CODE_ENUMS
+from lclang.error.codes.code_registry import CODE_ENUMS
 from scripts.check_errors import check_error_contract, check_error_source
 
 
@@ -64,8 +64,8 @@ def test_application_codes_and_invalid_registry_inputs_are_distinct() -> None:
         ('raise LclValidationError("bad")', "must specify its code"),
         ('raise errors.LclValidationError("bad")', "must specify its code"),
         (
-            "from lclang.error.codes.general import Code as codes\n"
-            'raise LclError("bad", code=codes.MISSING)',
+            "from lclang.error import GeneralErrorCode\n"
+            'raise LclError("bad", code=GeneralErrorCode.MISSING)',
             "unregistered builtin code",
         ),
     ],

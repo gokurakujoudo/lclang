@@ -20,7 +20,7 @@ whether to call it and how to use its result.
 ```python
 import asyncio
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 PRICING = define_module(
@@ -81,7 +81,7 @@ available, binds the entered value, evaluates the body, and awaits cleanup.
 ```python
 import asyncio
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 class Session:

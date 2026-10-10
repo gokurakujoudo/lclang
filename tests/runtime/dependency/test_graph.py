@@ -1,16 +1,16 @@
-"""Unit tests mirroring :mod:`lclang.runtime.dependency.graph`."""
+"""Unit tests mirroring :mod:`lclang.lang.runtime.dependency.module_dependency_graph`."""
 
 import pytest
 
+from lclang.common.identifiers import ModuleName, VarName
 from lclang.error import LclNameError, LclValidationError
-from lclang.lang.parser import parse_expression
-from lclang.runtime import (
+from lclang.lang.engine.parser import parse_expression
+from lclang.lang.runtime import (
     DependencyGraph,
     DependencyKind,
     Module,
     build_dependency_graph,
 )
-from lclang.types import ModuleName, VarName
 
 
 def _module() -> Module:

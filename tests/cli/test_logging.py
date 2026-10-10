@@ -8,11 +8,11 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from lclang import parse_expression
 from lclang.cli import CliConfig, CliContext, CliEntrance, CliParams, CliResult, CommandGroup, cli
-from lclang.cli.binding import build_binding
-from lclang.cli.logger_config import logger_parameter
-from lclang.diagnostics import internal_verbose_scope
+from lclang.cli.frame_binding import build_binding
+from lclang.cli.logger_parameter import logger_parameter
+from lclang.error.verbose_diagnostic import internal_verbose_scope
+from lclang.lang import parse_expression
 from lclang.logger import LoggerHandlerConfig, resolve_logger_config
 
 # Static configuration keeps test file inputs independent of runtime path creation.

@@ -1,9 +1,9 @@
-"""Unit tests mirroring :mod:`lclang.lang.printer.expressions`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.printer.operator_rendering`."""
 
 import pytest
 
-from lclang.lang.parser import parse_expression
-from lclang.lang.printer import to_source
+from lclang.lang.engine.parser import parse_expression
+from lclang.lang.engine.printer import to_source
 
 
 @pytest.mark.parametrize(

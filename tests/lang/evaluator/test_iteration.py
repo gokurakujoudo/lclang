@@ -1,4 +1,4 @@
-"""Unit tests mirroring :mod:`lclang.lang.evaluator.iteration`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.evaluator.value_iteration`."""
 
 from collections.abc import AsyncIterator, Awaitable
 from inspect import isawaitable
@@ -7,7 +7,7 @@ from typing import cast
 import pytest
 
 from lclang.error import LclEvaluationError
-from lclang.lang.evaluator.iteration import iterate_values
+from lclang.lang.engine.evaluator.value_iteration import iterate_values
 
 
 class AsyncValues:

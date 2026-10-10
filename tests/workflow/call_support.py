@@ -7,8 +7,8 @@ from datetime import date
 
 import pytest
 
-import lclang
-from lclang.runtime import Frame
+from lclang.lang import define_frame, define_module
+from lclang.lang.runtime import Frame
 from lclang.workflow import (
     ExecutionStatus,
     ExecutionStatusManager,
@@ -100,8 +100,8 @@ def install_call_resource(monkeypatch: pytest.MonkeyPatch, factory: Callable[[],
     """Give calls a real owned definition to exercise root Frame cleanup."""
 
     def create() -> Frame:
-        frame = lclang.define_frame(lclang.define_module("owned", {"resource": "make()"}))
+        frame = define_frame(define_module("owned", {"resource": "make()"}))
         frame.mixin({"make": factory})
         return frame
 
-    monkeypatch.setattr("lclang.workflow.calls.define_frame", create)
+    monkeypatch.setattr("lclang.workflow.workflow_call.define_frame", create)

@@ -1,13 +1,14 @@
-"""Unit tests mirroring :mod:`lclang.lang.parser.atoms`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.parser.atom_parser`."""
 
 import pytest
 
-from lclang.ast import LclConstant, LclName
+from lclang.common.identifiers import VarName
 from lclang.error import LclSyntaxError
-from lclang.lang.lexer import scan_tokens
-from lclang.lang.parser.atoms import parse_atom
-from lclang.lang.parser.stream import TokenStream
-from lclang.types import VarName
+from lclang.lang import FRAME_PROXY
+from lclang.lang.ast import LclConstant, LclName
+from lclang.lang.engine.lexer import scan_tokens
+from lclang.lang.engine.parser.atom_parser import parse_atom
+from lclang.lang.engine.parser.token_stream import TokenStream
 
 
 def atom(source: str) -> LclConstant | LclName:
@@ -58,14 +59,13 @@ def test_reserved_or_invalid_atom_reports_syntax_error(source: str) -> None:
 
 def test_frame_proxy_is_a_standalone_special_constant() -> None:
     """The proxy marker parses as a constant and cannot be nested."""
-    import lclang
-    from lclang.lang.parser import parse_expression
-    from lclang.lang.printer import to_source
+    from lclang.lang.engine.parser import parse_expression
+    from lclang.lang.engine.printer import to_source
 
     node = parse_expression("FRAME_PROXY")
     assert isinstance(node, LclConstant)
-    assert node.value is lclang.FRAME_PROXY
-    assert repr(lclang.FRAME_PROXY) == "FRAME_PROXY"
+    assert node.value is FRAME_PROXY
+    assert repr(FRAME_PROXY) == "FRAME_PROXY"
     assert to_source(node) == "FRAME_PROXY"
     with pytest.raises(LclSyntaxError, match="complete expression"):
         parse_expression("[FRAME_PROXY]")

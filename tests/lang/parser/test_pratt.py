@@ -1,18 +1,18 @@
-"""Unit tests mirroring :mod:`lclang.lang.parser.pratt`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.parser.pratt_parser`."""
 
 import io
 import logging
 
 import pytest
 
-from lclang.ast import LclBinary, LclConstant, LclName, LclUnary
-from lclang.ast.operators import BinaryOperator, UnaryOperator
-from lclang.diagnostics import internal_verbose_scope
+from lclang.common.identifiers import SourceName
+from lclang.common.source_location import SourceOrigin
 from lclang.error import LclSyntaxError, LclValidationError
-from lclang.lang.parser import parse_expression
-from lclang.source import SourceOrigin
-from lclang.types import SourceName
-from lclang.version import LanguageVersion
+from lclang.error.verbose_diagnostic import internal_verbose_scope
+from lclang.lang.ast import LclBinary, LclConstant, LclName, LclUnary
+from lclang.lang.ast.operator_nodes import BinaryOperator, UnaryOperator
+from lclang.lang.common.language_version import LanguageVersion
+from lclang.lang.engine.parser import parse_expression
 
 
 def test_multiplication_binds_tighter_than_addition() -> None:

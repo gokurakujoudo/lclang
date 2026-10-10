@@ -20,13 +20,8 @@ definition route and the original host exception as their cause.
 ```python
 import asyncio
 
-from lclang import (
-    LclEvaluationError,
-    LclSyntaxError,
-    define_frame,
-    define_module,
-    parse_expression,
-)
+from lclang.error import LclEvaluationError, LclSyntaxError
+from lclang.lang import define_frame, define_module, parse_expression
 
 
 async def main() -> None:
@@ -67,7 +62,7 @@ calls the host division function with zero. lclang wraps that host exception
 once, preserving both the owner route `result -> ratio` and the original
 `ZeroDivisionError` cause checked by the assertions.
 
-Catch `lclang.LclError` at an application boundary when one expected family is
+Catch `lclang.error.LclError` at an application boundary when one expected family is
 useful. Catch narrower subclasses when recovery differs. Cancellation,
 `KeyboardInterrupt`, and other base exceptions are not converted into ordinary
 language failures.
@@ -95,7 +90,7 @@ result: ratio * 100
 import asyncio
 
 from lclang.config import load_config
-from lclang.errors import LclEvaluationError
+from lclang.error import LclEvaluationError
 
 
 async def main() -> None:
@@ -153,7 +148,7 @@ awaits, caches, or publishes dynamic traces.
 ```python
 import asyncio
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 async def main() -> None:

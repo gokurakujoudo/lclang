@@ -11,10 +11,17 @@ from typing import Any, get_args, get_type_hints
 
 import lclang
 import lclang.cli
+import lclang.common
 import lclang.config
+import lclang.error
 import lclang.lang
-import lclang.runtime
-import lclang.runtime.frame
+import lclang.lang.ast
+import lclang.lang.common
+import lclang.lang.engine
+import lclang.lang.runtime
+import lclang.lang.runtime.frame
+import lclang.lang.stdlib
+import lclang.logger
 import lclang.utils
 import lclang.workflow
 
@@ -22,12 +29,19 @@ ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_MODULES = (
     lclang,
     lclang.lang,
-    lclang.runtime,
-    lclang.runtime.frame,
+    lclang.common,
+    lclang.error,
+    lclang.lang.ast,
+    lclang.lang.common,
+    lclang.lang.engine,
+    lclang.lang.runtime,
+    lclang.lang.runtime.frame,
     lclang.config,
     lclang.cli,
     lclang.workflow,
     lclang.utils,
+    lclang.lang.stdlib,
+    lclang.logger,
 )
 API_NAMESPACE = {
     name: getattr(module, name) for module in PUBLIC_MODULES for name in module.__all__

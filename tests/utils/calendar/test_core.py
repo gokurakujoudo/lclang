@@ -5,13 +5,17 @@ from typing import cast
 
 import pytest
 
-from lclang.error import LclAttributeError, LclErrorGroup, LclValidationError
-from lclang.error.calendar import wrap_calendar_failure
+from lclang.error import (
+    CalendarLogicException,
+    DateOperationOutOfScopeException,
+    LclAttributeError,
+    LclErrorGroup,
+    LclValidationError,
+)
+from lclang.error.calendar_exception import wrap_calendar_failure
 from lclang.utils.calendar import (
     MAX_BUSINESS_DAY_GAP_DAYS,
     CalendarID,
-    CalendarLogicException,
-    DateOperationOutOfScopeException,
     DayType,
     ForwardStepBDCalendar,
     FunctionalBDCalendar,

@@ -6,13 +6,13 @@ from typing import cast
 
 import pytest
 
-from lclang import define_frame, define_module
+from lclang.common.source_location import UNKNOWN_SPAN
 from lclang.error import LclError, LclErrorGroup, LclEvaluationError, LclValidationError
-from lclang.error.aggregation import combine_failures
-from lclang.error.context import ConfigLoadFrame
-from lclang.error.loading import derive_loading_error
-from lclang.error.waiting import settle_cleanup
-from lclang.source import UNKNOWN_SPAN
+from lclang.error.cleanup_wait import settle_cleanup
+from lclang.error.diagnostic_records import ConfigLoadFrame
+from lclang.error.failure_aggregation import combine_failures
+from lclang.error.loading_context import derive_loading_error
+from lclang.lang import define_frame, define_module
 from tests.lang.evaluator.context_support import SyncManager
 
 
@@ -50,9 +50,9 @@ async def test_native_groups_keep_protocol_through_evaluation(source: str, code:
 def test_compatibility_paths_reexport_the_central_error_types() -> None:
     """Supported historical import paths expose the same centralized class objects."""
     from lclang.error import CalendarLogicException
-    from lclang.error_context import ConfigLoadFrame as HistoricalContext
-    from lclang.errors import LclError as HistoricalError
-    from lclang.utils.calendar.errors import CalendarLogicException as HistoricalCalendar
+    from lclang.error import CalendarLogicException as HistoricalCalendar
+    from lclang.error import ConfigLoadFrame as HistoricalContext
+    from lclang.error import LclError as HistoricalError
 
     assert HistoricalError is LclError
     assert HistoricalContext is ConfigLoadFrame

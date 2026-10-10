@@ -20,9 +20,9 @@ from lclang.cli import (
     ParameterDoc,
     cli,
 )
-from lclang.cli.execution import execute_command, write_result
-from lclang.cli.routing import RouteAction, RouteResult
-from lclang.cli.run import script_label_from_args
+from lclang.cli.command_execution import execute_command, write_result
+from lclang.cli.command_routing import RouteAction, RouteResult
+from lclang.cli.command_runner import script_label_from_args
 from lclang.logger import LoggerHandlerConfig
 from lclang.logger.logger import Logger
 
@@ -380,7 +380,7 @@ def test_logger_cleanup_output_and_internal_route_failures_are_converted(
         """
         raise RuntimeError("cleanup failed")
 
-    monkeypatch.setattr("lclang.cli.binding.FrameStack.close", fail_close)
+    monkeypatch.setattr("lclang.cli.frame_binding.FrameStack.close", fail_close)
     assert asyncio.run(entrance.run(["python", "tool.py", "result"])) == 2
     monkeypatch.undo()
 
@@ -394,7 +394,7 @@ def test_logger_cleanup_output_and_internal_route_failures_are_converted(
         """
         raise OSError("output failed")
 
-    monkeypatch.setattr("lclang.cli.execution.write_result", fail_output)
+    monkeypatch.setattr("lclang.cli.command_execution.write_result", fail_output)
     assert asyncio.run(entrance.run(["python", "tool.py", "result"])) == 2
     monkeypatch.undo()
 
@@ -408,7 +408,7 @@ def test_logger_cleanup_output_and_internal_route_failures_are_converted(
         del tokens
         return RouteResult(RouteAction.COMMAND, root, None, (), ())  # type: ignore[arg-type]
 
-    monkeypatch.setattr("lclang.cli.run.route_command", empty_route)
+    monkeypatch.setattr("lclang.cli.command_runner.route_command", empty_route)
     assert asyncio.run(entrance.run(["python", "tool.py", "result"])) == 2
     monkeypatch.undo()
     assert asyncio.run(entrance.run(["python", "tool", "result"])) == 2

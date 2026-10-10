@@ -6,8 +6,8 @@ from typing import cast
 
 import pytest
 
-import lclang
 from lclang.error import LclUtilityError, LclValidationError
+from lclang.lang import define_frame
 from lclang.utils import CallableBox, ValueBox
 from lclang.workflow import define_variable
 from lclang.workflow.mappings import mapped_outputs, materialize_args
@@ -32,7 +32,7 @@ async def test_boxed_bindings_retain_payload_identity_and_publish_raw_values(wra
     shared: list[object] = [ValueBox(3)]
     template = Inputs(rule.quote, convert.quote, shared)
     original = Inputs(OptionalRule(None), CallableBox(int), shared)
-    async with lclang.define_frame(
+    async with define_frame(
         preset={
             "rule": original.rule if wrapped else None,
             "convert": original.convert if wrapped else int,
@@ -69,12 +69,12 @@ async def test_projection_wraps_only_the_selected_binding() -> None:
     """Scope fields remain raw until the explicitly boxed projection is resolved."""
     source = define_variable[Projected]("source")
     projection = source.field("optional", ValueBox[str | None])
-    async with lclang.define_frame(preset={"source.optional": None}) as frame:
+    async with define_frame(preset={"source.optional": None}) as frame:
         result = await materialize_args(Destination(projection.quote), frame)
         assert result == Destination(ValueBox(None))
         assert await frame.get("source.optional") is None
     record = Projected(ValueBox("kept"))
-    async with lclang.define_frame(preset={"source": record}) as frame:
+    async with define_frame(preset={"source": record}) as frame:
         assert await materialize_args(source.quote, frame) is record
         assert (await mapped_outputs(source.quote, record, frame))["source"] is record
 
@@ -83,7 +83,7 @@ async def test_projection_wraps_only_the_selected_binding() -> None:
 async def test_wrong_boxes_and_unboxed_outputs_are_rejected() -> None:
     """Nominal wrapper identity prevents accidental double boxing or malformed publication."""
     source = define_variable[OptionalRule]("source")
-    async with lclang.define_frame(preset={"source": ValueBox(None)}) as frame:
+    async with define_frame(preset={"source": ValueBox(None)}) as frame:
         with pytest.raises(LclValidationError, match="incompatible box"):
             await materialize_args(source.quote, frame)
         with pytest.raises(LclValidationError, match="declared box"):
@@ -115,7 +115,7 @@ async def test_repeated_boxing_is_shallow_and_leaves_ordinary_callbacks_untouche
     value = define_variable[ValueBox[list[int]]]("value")
     callback = define_variable[Callable[[str], int]]("callback")
     payload = [1, 2]
-    async with lclang.define_frame(preset={"value": payload, "callback": int}) as frame:
+    async with define_frame(preset={"value": payload, "callback": int}) as frame:
         for _ in range(1000):
             boxed = await materialize_args(value.quote, frame)
             assert isinstance(boxed, ValueBox) and cast(ValueBox[object], boxed).value is payload

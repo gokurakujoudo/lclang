@@ -7,10 +7,10 @@ import asyncio
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-import lclang
-from lclang.ast import LclAstNode
 from lclang.error import LclSyntaxError
-from lclang.lang.evaluator.dispatch import interpret_expression
+from lclang.lang import parse_expression, to_source
+from lclang.lang.ast import LclAstNode
+from lclang.lang.engine.evaluator.ast_interpreter import interpret_expression
 from tests.support.property_strategies import AST_VALUES, ast_shape
 
 
@@ -19,10 +19,10 @@ def test_generated_ast_round_trip_preserves_shape_value_and_canonical_source(
     node: LclAstNode,
 ) -> None:
     """Generated safe ASTs remain structurally and semantically canonical."""
-    source = lclang.to_source(node)
-    parsed = lclang.parse_expression(source)
+    source = to_source(node)
+    parsed = parse_expression(source)
     assert ast_shape(parsed) == ast_shape(node)
-    assert lclang.to_source(parsed) == source
+    assert to_source(parsed) == source
     assert asyncio.run(interpret_expression(parsed)) == asyncio.run(interpret_expression(node))
     for descendant in parsed.walk():
         assert 0 <= descendant.span.start.offset <= descendant.span.end.offset <= len(source)
@@ -33,11 +33,11 @@ def test_generated_ast_round_trip_preserves_shape_value_and_canonical_source(
 def test_bounded_unicode_input_returns_ast_or_structured_syntax_error(source: str) -> None:
     """Arbitrary bounded text never leaks parser implementation failures."""
     try:
-        expression = lclang.parse_expression(source)
+        expression = parse_expression(source)
     except LclSyntaxError:
         return
-    canonical = lclang.to_source(expression)
-    assert lclang.to_source(lclang.parse_expression(canonical)) == canonical
+    canonical = to_source(expression)
+    assert to_source(parse_expression(canonical)) == canonical
 
 
 def test_recorded_delimiter_operator_and_unicode_regressions() -> None:
@@ -55,7 +55,7 @@ def test_recorded_delimiter_operator_and_unicode_regressions() -> None:
     )
     for source in fragments:
         try:
-            lclang.parse_expression(source)
+            parse_expression(source)
         except LclSyntaxError:
             continue
         raise AssertionError(f"malformed source parsed unexpectedly: {source!r}")

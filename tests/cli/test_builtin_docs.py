@@ -1,12 +1,11 @@
-"""Behavioral tests mirroring :mod:`lclang.cli.builtin_docs`."""
+"""Behavioral tests mirroring :mod:`lclang.cli.builtin_documentation`."""
 
 from collections.abc import Mapping
 
 import pytest
 
-import lclang.cli.builtin_docs as builtin_docs
-from lclang.api import LCL_BUILTIN_VALUES
-from lclang.cli.builtin_docs import (
+import lclang.cli.builtin_documentation as builtin_docs
+from lclang.cli.builtin_documentation import (
     BUILTIN_DESCRIPTIONS,
     CALENDAR_DESCRIPTIONS,
     NAMESPACE_DESCRIPTIONS,
@@ -14,8 +13,9 @@ from lclang.cli.builtin_docs import (
     render_builtin_docs,
 )
 from lclang.error import LclValidationError
-from lclang.stdlib import STANDARD_MANIFESTS
-from lclang.utils.calendar.lcl import CALENDARS_NAMESPACE
+from lclang.lang.runtime.module_frame_factory import LCL_BUILTIN_VALUES
+from lclang.lang.stdlib import STANDARD_MANIFESTS
+from lclang.lang.stdlib.calendar_namespace import CALENDARS_NAMESPACE
 
 
 def test_builtin_docs_render_complete_deterministic_nested_inventory() -> None:

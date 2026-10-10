@@ -1,9 +1,11 @@
-"""Unit tests mirroring :mod:`lclang.ast.displays`."""
+"""Unit tests mirroring :mod:`lclang.lang.ast.display_nodes`."""
 
 import pytest
 
-from lclang.ast import LclConstant
-from lclang.ast.displays import (
+from lclang.common.identifiers import VarName
+from lclang.error import LclValidationError
+from lclang.lang.ast import LclConstant
+from lclang.lang.ast.display_nodes import (
     LclDict,
     LclDictUnpack,
     LclKeyValue,
@@ -13,8 +15,6 @@ from lclang.ast.displays import (
     LclSet,
     LclStarred,
 )
-from lclang.error import LclValidationError
-from lclang.types import VarName
 
 
 def test_sequence_displays_and_unpacking_preserve_source_order() -> None:

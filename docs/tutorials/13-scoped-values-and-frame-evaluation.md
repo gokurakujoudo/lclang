@@ -23,7 +23,7 @@ inferred automatically.
 ```python
 import asyncio
 
-from lclang import FrameProxy, define_frame, define_module
+from lclang.lang import FrameProxy, define_frame, define_module
 
 
 async def main() -> None:
@@ -61,7 +61,7 @@ layout.
 ```python
 import asyncio
 
-from lclang import FRAME_PROXY, define_frame, define_module
+from lclang.lang import FRAME_PROXY, define_frame, define_module
 
 
 async def main() -> None:
@@ -96,7 +96,7 @@ therefore override one scoped leaf while another leaf falls back to its parent.
 ```python
 import asyncio
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 async def main() -> None:
@@ -146,7 +146,7 @@ Named dependencies still use ordinary Frame snapshots.
 ```python
 import asyncio
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 async def main() -> None:
@@ -293,14 +293,8 @@ lifecycle errors. An uncached returned resource belongs to the caller.
 ```python
 import asyncio
 
-from lclang import (
-    LclClosedFrameError,
-    LclEvaluationError,
-    LclNameError,
-    LclSyntaxError,
-    define_frame,
-    define_module,
-)
+from lclang.error import LclClosedFrameError, LclEvaluationError, LclNameError, LclSyntaxError
+from lclang.lang import define_frame, define_module
 
 
 from lclang.error import LclValidationError
@@ -366,7 +360,7 @@ detached view when it needs one.
 import asyncio
 from dataclasses import dataclass
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 @dataclass

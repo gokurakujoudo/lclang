@@ -1,11 +1,11 @@
-"""Unit tests mirroring :mod:`lclang.stdlib.text`."""
+"""Unit tests mirroring :mod:`lclang.lang.stdlib.text_function`."""
 
 from collections.abc import AsyncIterator
 
 import pytest
 
 from lclang.error import LclValidationError
-from lclang.stdlib import join, lines
+from lclang.lang.stdlib import join, lines
 
 
 @pytest.mark.asyncio

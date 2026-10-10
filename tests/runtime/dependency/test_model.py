@@ -1,11 +1,11 @@
-"""Unit tests mirroring :mod:`lclang.runtime.dependency.model`."""
+"""Unit tests mirroring :mod:`lclang.lang.runtime.dependency.dependency_types`."""
 
 import pytest
 
+from lclang.common.identifiers import VarName
 from lclang.error import LclAttributeError, LclValidationError
-from lclang.lang.parser import parse_expression
-from lclang.runtime import DependencyEdge, DependencyKind, DependencyReference
-from lclang.types import VarName
+from lclang.lang.engine.parser import parse_expression
+from lclang.lang.runtime import DependencyEdge, DependencyKind, DependencyReference
 
 
 def test_dependency_kinds_have_stable_public_values() -> None:

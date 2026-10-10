@@ -2,7 +2,8 @@
 
 import pytest
 
-from lclang import LclError, define_frame, define_module, parse_expression
+from lclang.error import LclError
+from lclang.lang import define_frame, define_module, parse_expression
 
 
 def test_syntax_failure_has_a_six_digit_builtin_code() -> None:

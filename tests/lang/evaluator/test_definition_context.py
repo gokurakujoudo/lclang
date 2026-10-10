@@ -4,15 +4,15 @@ import asyncio
 
 import pytest
 
-import lclang
 from lclang.error import LclEvaluationError
-from lclang.lang.evaluator.definition_context import definition_scope
+from lclang.lang import LCL_ROOT, define_frame, define_module
+from lclang.lang.engine.evaluator.definition_scope import definition_scope
 
 
 @pytest.mark.asyncio
 async def test_lhs_tracks_nested_and_calling_definition_names() -> None:
     """Nested evaluation and a deferred closure each see their active owner."""
-    module = lclang.define_module(
+    module = define_module(
         "owners",
         {
             "k": '{"name": lhs()}',
@@ -21,7 +21,7 @@ async def test_lhs_tracks_nested_and_calling_definition_names() -> None:
             "called": "owner_function()",
         },
     )
-    frame = lclang.define_frame(module)
+    frame = define_frame(module)
     try:
         assert await frame.get("outer") == {
             "name": "outer",
@@ -40,8 +40,8 @@ async def test_lhs_context_is_isolated_between_concurrent_definitions() -> None:
         await asyncio.sleep(0)
         return value
 
-    frame = lclang.define_frame(
-        lclang.define_module("concurrent", {"left": "delayed(lhs())", "right": "delayed(lhs())"}),
+    frame = define_frame(
+        define_module("concurrent", {"left": "delayed(lhs())", "right": "delayed(lhs())"}),
         preset={"delayed": delayed},
     )
     try:
@@ -56,8 +56,8 @@ async def test_lhs_context_is_isolated_between_concurrent_definitions() -> None:
 @pytest.mark.asyncio
 async def test_lhs_uses_caller_for_arguments_and_lexical_owner_for_function_body() -> None:
     """A nested call separates its argument owner from its closure owner."""
-    frame = lclang.define_frame(
-        lclang.define_module(
+    frame = define_frame(
+        define_module(
             "nested-lhs",
             {
                 "x": "(a) -> f'{a}-{lhs()}'",
@@ -73,8 +73,8 @@ async def test_lhs_uses_caller_for_arguments_and_lexical_owner_for_function_body
 
 def test_lhs_rejects_calls_outside_frame_definition_evaluation() -> None:
     """The fundamental function cannot invent a name in direct Python use."""
-    function = lclang.LCL_ROOT.values["lhs"]
-    with pytest.raises(lclang.LclEvaluationError, match="Frame definition"):
+    function = LCL_ROOT.values["lhs"]
+    with pytest.raises(LclEvaluationError, match="Frame definition"):
         function()  # type: ignore[operator]
 
 

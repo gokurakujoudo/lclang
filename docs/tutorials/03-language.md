@@ -39,7 +39,7 @@ missing object, `??` supplies a fallback, and an f-string formats the result.
 import asyncio
 from types import SimpleNamespace
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 GREETING = define_module(
@@ -83,7 +83,7 @@ as named fields.
 ```python
 import asyncio
 
-from lclang import LclRecord, define_frame, define_module
+from lclang.lang import LclRecord, define_frame, define_module
 
 
 SUMMARY = define_module(
@@ -135,7 +135,7 @@ Canonical printing is useful for formatters, diagnostics, and code review.
 ```python
 import asyncio
 
-from lclang import define_frame, define_module, parse_expression, to_source
+from lclang.lang import define_frame, define_module, parse_expression, to_source
 
 node = parse_expression("(base+tax)*quantity")
 source = to_source(node)

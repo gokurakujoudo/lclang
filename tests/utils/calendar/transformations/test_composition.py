@@ -4,12 +4,7 @@ from datetime import date
 
 import pytest
 
-from lclang.utils.calendar import (
-    ALL_DAYS,
-    DayType,
-    at,
-    nth_day_of_month,
-)
+from lclang.utils.calendar import ALL_DAYS, DayType, at, nth_day_of_month
 
 
 @pytest.mark.asyncio

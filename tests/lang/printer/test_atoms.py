@@ -1,18 +1,18 @@
-"""Unit tests mirroring :mod:`lclang.lang.printer.atoms`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.printer.atom_rendering`."""
 
 import pytest
 
-from lclang.ast import (
+from lclang.common.identifiers import VarName
+from lclang.error import LclValidationError
+from lclang.lang.ast import (
     LclConstant,
     LclFormattedValue,
     LclJoinedString,
     LclName,
     LclStringText,
 )
-from lclang.error import LclValidationError
-from lclang.lang.parser import parse_expression
-from lclang.lang.printer import to_source
-from lclang.types import VarName
+from lclang.lang.engine.parser import parse_expression
+from lclang.lang.engine.printer import to_source
 
 
 @pytest.mark.parametrize(

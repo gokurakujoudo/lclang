@@ -1,0 +1,161 @@
+"""Pure Frame hierarchy dependency graph construction.
+
+Defines ``build_frame_dependency_graph``, ``build_frame_edges``, ``edges_for_node``.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from lclang.error import LclEvaluationError, RuntimeErrorCode
+from lclang.error.operation_guard import guard_failure
+
+if TYPE_CHECKING:
+    from lclang.lang.runtime.frame.frame import Frame
+
+from typing import TYPE_CHECKING
+
+from lclang.common.identifiers import VarName
+from lclang.lang.ast import LclAstNode
+from lclang.lang.runtime.dependency.ast_dependency_analysis import analyze_dependencies
+from lclang.lang.runtime.dependency.frame.frame_binding_resolution import (
+    collect_frames,
+    resolve_frame_binding,
+)
+from lclang.lang.runtime.dependency.frame.frame_dependency_graph import (
+    FrameBindingKind,
+    FrameDependencyBinding,
+    FrameDependencyEdge,
+    FrameDependencyGraph,
+)
+
+if TYPE_CHECKING:
+    from lclang.lang.runtime.frame import Frame
+
+
+@guard_failure(LclEvaluationError, RuntimeErrorCode.E44_DEPENDENCY_RESOLUTION_NATIVE_FAILURE)
+def build_frame_dependency_graph(frame: Frame) -> FrameDependencyGraph:
+    """Build qualified static dependencies for a complete Frame chain.
+
+    :param frame: Child-most Frame whose hierarchy should be analyzed.
+    :returns: Immutable definitions, values, lookup paths, and resolved edges.
+    :raises LclValidationError: If the mutable parent object graph contains a cycle.
+
+    .. note::
+       Construction reads names and ASTs only; opaque values are never touched.
+    """
+    frames = collect_frames(frame)
+    paths = tuple(
+        tuple(item.frame_id for item in frames[: index + 1]) for index in range(len(frames))
+    )
+    definitions: list[FrameDependencyBinding] = []
+    values: list[FrameDependencyBinding] = []
+    definition_map: dict[tuple[int, str], FrameDependencyBinding] = {}
+    value_map: dict[tuple[int, str], FrameDependencyBinding] = {}
+    for index, item in enumerate(frames):
+        for name in item.module.definitions:
+            selected = FrameDependencyBinding(
+                paths[index], VarName(name), FrameBindingKind.DEFINITION
+            )
+            definitions.append(selected)
+            definition_map[(index, name)] = selected
+        for name in item.values:
+            if name not in item.module.definitions:
+                selected = FrameDependencyBinding(
+                    paths[index], VarName(name), FrameBindingKind.VALUE
+                )
+                values.append(selected)
+                value_map[(index, name)] = selected
+    edges = build_frame_edges(frames, definitions, definition_map, value_map)
+    return FrameDependencyGraph(
+        frames[0].frame_id,
+        tuple(definitions),
+        tuple(values),
+        edges,
+    )
+
+
+@guard_failure(LclEvaluationError, RuntimeErrorCode.E44_DEPENDENCY_RESOLUTION_NATIVE_FAILURE)
+def build_frame_edges(
+    frames: tuple[Frame, ...],
+    definitions: list[FrameDependencyBinding],
+    definition_map: dict[tuple[int, str], FrameDependencyBinding],
+    value_map: dict[tuple[int, str], FrameDependencyBinding],
+) -> tuple[FrameDependencyEdge, ...]:
+    """Resolve every static occurrence from its defining owner.
+
+    :param frames: Complete child-to-parent hierarchy.
+    :param definitions: Qualified definitions in matching hierarchy order.
+    :param definition_map: Owner-index/name definition lookup.
+    :param value_map: Owner-index/name host-value lookup.
+    :returns: Occurrence-preserving resolved Frame dependency edges.
+
+    .. note::
+       Each parent definition starts lookup at its own hierarchy index.
+    """
+    edges: list[FrameDependencyEdge] = []
+    definition_index = 0
+    for owner_index, frame in enumerate(frames):
+        for node in frame.module.definitions.values():
+            source = definitions[definition_index]
+            definition_index += 1
+            edges.extend(
+                edges_for_node(
+                    frames,
+                    owner_index,
+                    source,
+                    node,
+                    definition_map,
+                    value_map,
+                )
+            )
+    return tuple(edges)
+
+
+@guard_failure(LclEvaluationError, RuntimeErrorCode.E44_DEPENDENCY_RESOLUTION_NATIVE_FAILURE)
+def edges_for_node(
+    frames: tuple[Frame, ...],
+    owner_index: int,
+    source: FrameDependencyBinding,
+    node: LclAstNode,
+    definition_map: dict[tuple[int, str], FrameDependencyBinding],
+    value_map: dict[tuple[int, str], FrameDependencyBinding],
+) -> tuple[FrameDependencyEdge, ...]:
+    """Resolve one definition's free-name occurrences.
+
+    :param frames: Complete child-to-parent hierarchy.
+    :param owner_index: Index where definition evaluation starts lookup.
+    :param source: Qualified definition owning every returned edge.
+    :param node: Immutable definition syntax to analyze.
+    :param definition_map: Owner-index/name definition lookup.
+    :param value_map: Owner-index/name host-value lookup.
+    :returns: Ordered resolved edges for *node*.
+
+    .. note::
+       Static analysis preserves lazy and conditional dependency kinds.
+    """
+    result: list[FrameDependencyEdge] = []
+    scoped_names = tuple(
+        name
+        for frame in frames[owner_index:]
+        for name in (*frame.module.definitions, *frame.values)
+    )
+    for reference in analyze_dependencies(node, scoped_names=scoped_names):
+        target, lookup_path = resolve_frame_binding(
+            frames,
+            owner_index,
+            str(reference.name),
+            definition_map,
+            value_map,
+        )
+        result.append(
+            FrameDependencyEdge(
+                source,
+                reference.name,
+                target,
+                reference.kind,
+                reference.span,
+                lookup_path,
+            )
+        )
+    return tuple(result)

@@ -5,8 +5,8 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from lclang import FrameProxy
 from lclang.config import load_config
+from lclang.lang import FrameProxy
 
 
 @pytest.mark.asyncio

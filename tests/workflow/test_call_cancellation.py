@@ -6,8 +6,8 @@ from contextlib import asynccontextmanager
 
 import pytest
 
-import lclang
 import lclang.workflow as wf
+from lclang.lang import define_frame
 from tests.workflow.call_support import Value, install_call_resource, make_child, run_parent
 
 
@@ -67,7 +67,7 @@ async def test_cancellation_during_child_execution_unwinds_context_resources(
         async with child.execute_in_task(context, manager, name="waiting"):
             pytest.fail("cancelled child yielded")
 
-    async with lclang.define_frame(preset={"alive": 1}) as frame, asyncio.timeout(5):
+    async with define_frame(preset={"alive": 1}) as frame, asyncio.timeout(5):
         running = asyncio.create_task(run_parent(parent, frame))
         await entered.wait()
         running.cancel()
@@ -112,7 +112,7 @@ async def test_repeated_cancellation_waits_for_final_owned_frame_cleanup(
             await result.execution_frame.get("resource")
         return Value(1)
 
-    async with lclang.define_frame() as frame, asyncio.timeout(5):
+    async with define_frame() as frame, asyncio.timeout(5):
         running = asyncio.create_task(run_parent(parent, frame))
         await entered.wait()
         for _ in range(2):
@@ -150,6 +150,6 @@ async def test_nonordinary_cleanup_failure_propagates(monkeypatch: pytest.Monkey
             await result.execution_frame.get("resource")
         return Value(1)
 
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         with pytest.raises(StopCall):
             await run_parent(parent, frame)

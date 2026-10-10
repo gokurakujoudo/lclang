@@ -10,9 +10,9 @@ from typing import cast
 
 import pytest
 
-import lclang
 import lclang.workflow as wf
 from lclang.error import LclError
+from lclang.lang import Frame, define_frame
 
 
 @dataclass
@@ -22,7 +22,7 @@ class Value:
     value: int
 
 
-def execution_context(frame: lclang.Frame) -> wf.WorkflowExecutionContext:
+def execution_context(frame: Frame) -> wf.WorkflowExecutionContext:
     """Supply deterministic metadata with verbose in-memory logs."""
     return wf.WorkflowExecutionContext(
         False,
@@ -105,7 +105,7 @@ async def test_resources_follow_subtree_scope_and_cli_visibility(
     assert [item.name for item in workflow.to_cli("run", "Run").parameter_docs] == (
         ["resource"] if outside else []
     )
-    async with lclang.define_frame(preset={"resource": 9}) as frame:
+    async with define_frame(preset={"resource": 9}) as frame:
         with caplog.at_level(logging.DEBUG, logger="resource-scope"):
             result = await workflow.execute(execution_context(frame))
         assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
@@ -173,7 +173,7 @@ async def test_business_and_multiple_cleanup_failures_are_retained(cancel: bool)
             wf.define_context_task("inner", "Inner", scope, Value(1)),
         ],
     )
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         workflow = wf.define_workflow("Failures", root)
         if cancel:
             with pytest.raises(asyncio.CancelledError) as caught:
@@ -202,9 +202,9 @@ async def test_task_frame_close_keeps_prior_failure(
         else asyncio.CancelledError() if pending_kind == "cancel" else None
     )
     cleanup = RuntimeError("frame close")
-    original = lclang.Frame.close
+    original = Frame.close
 
-    async def close(frame: lclang.Frame) -> None:
+    async def close(frame: Frame) -> None:
         await original(frame)
         if str(frame.frame_id) == "root":
             raise cleanup
@@ -218,7 +218,7 @@ async def test_task_frame_close_keeps_prior_failure(
             raise prior
         return args
 
-    monkeypatch.setattr(lclang.Frame, "close", close)
+    monkeypatch.setattr(Frame, "close", close)
     workflow = wf.define_workflow(
         "Close",
         wf.define_task(
@@ -228,7 +228,7 @@ async def test_task_frame_close_keeps_prior_failure(
             args_mapping=Value(1),
         ),
     )
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         if pending_kind == "cancel":
             with pytest.raises(asyncio.CancelledError) as caught:
                 await workflow.execute(execution_context(frame))
@@ -256,7 +256,7 @@ async def test_cancellation_at_lifecycle_boundaries_unwinds_outer_resources(
     exited: list[str] = []
     cancellation = asyncio.CancelledError("lifecycle")
     ordinary = ValueError("business")
-    original = lclang.Frame.close
+    original = Frame.close
 
     @asynccontextmanager
     async def scope(
@@ -273,7 +273,7 @@ async def test_cancellation_at_lifecycle_boundaries_unwinds_outer_resources(
             if args.value == 1 and during == "exit":
                 raise cancellation
 
-    async def close(frame: lclang.Frame) -> None:
+    async def close(frame: Frame) -> None:
         await original(frame)
         if str(frame.frame_id) == "root" and during == "close":
             raise cancellation
@@ -285,7 +285,7 @@ async def test_cancellation_at_lifecycle_boundaries_unwinds_outer_resources(
     ) -> Value:
         raise ordinary
 
-    monkeypatch.setattr(lclang.Frame, "close", close)
+    monkeypatch.setattr(Frame, "close", close)
     task = wf.define_task(
         "root",
         "Root",
@@ -296,7 +296,7 @@ async def test_cancellation_at_lifecycle_boundaries_unwinds_outer_resources(
             wf.define_context_task("inner", "Inner", scope, Value(1)),
         ],
     )
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         with pytest.raises(asyncio.CancelledError) as caught:
             await wf.define_workflow("Cancel", task).execute(execution_context(frame))
     assert caught.value is cancellation
@@ -308,9 +308,9 @@ async def test_cancellation_at_lifecycle_boundaries_unwinds_outer_resources(
 @pytest.mark.asyncio
 async def test_reraised_original_failure_is_not_duplicated() -> None:
     """A reraised native failure is wrapped once without duplicate group members."""
-    from lclang.workflow.failures import combine_failures
+    from lclang.error.failure_aggregation import combine_failures
 
     error = ValueError("original")
     wrapped = combine_failures(error, error)
-    assert isinstance(wrapped, lclang.LclError) and wrapped.__cause__ is error
+    assert isinstance(wrapped, LclError) and wrapped.__cause__ is error
     assert combine_failures(wrapped, wrapped) is wrapped

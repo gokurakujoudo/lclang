@@ -1,12 +1,12 @@
-"""Unit tests mirroring :mod:`lclang.lang.parser.forms`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.parser.function_error_parser`."""
 
 import pytest
 
-from lclang.ast import LclBinary, LclCall, LclList, LclName, LclTuple
-from lclang.ast.forms import LclAssert, LclFunction, LclRaise, ParameterKind
+from lclang.common.identifiers import VarName
 from lclang.error import LclSyntaxError
-from lclang.lang.parser import parse_expression
-from lclang.types import VarName
+from lclang.lang.ast import LclBinary, LclCall, LclList, LclName, LclTuple
+from lclang.lang.ast.function_error_nodes import LclAssert, LclFunction, LclRaise, ParameterKind
+from lclang.lang.engine.parser import parse_expression
 
 
 def test_function_parameters_preserve_kind_default_and_body() -> None:

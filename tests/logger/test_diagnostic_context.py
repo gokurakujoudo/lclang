@@ -2,11 +2,10 @@
 
 import pytest
 
-from lclang import define_frame, define_module
-from lclang.error import LclErrorGroup, LclEvaluationError, LclValidationError
-from lclang.error_rendering import render_failure
+from lclang.error import LclErrorGroup, LclEvaluationError, LclValidationError, render_failure
+from lclang.lang import define_frame, define_module
+from lclang.lang.runtime.frame.scoped_proxy import FrameProxy
 from lclang.logger import resolve_logger_config
-from lclang.scope_proxy import FrameProxy
 
 
 @pytest.mark.asyncio

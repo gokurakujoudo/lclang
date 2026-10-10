@@ -3,9 +3,15 @@
 import pytest
 
 from lclang.cli import CliContext, CliResult, CliResultStatus, CommandGroup, ParameterDoc, cli
-from lclang.cli.help import format_rows, render_command_help, render_group_help, render_usage_error
-from lclang.cli.parser import split_argv
-from lclang.cli.routing import RouteAction, RouteFailure, child_named, route_command
+from lclang.cli.command_routing import RouteAction, child_named, route_command
+from lclang.cli.help_rendering import (
+    format_rows,
+    render_command_help,
+    render_group_help,
+    render_usage_error,
+)
+from lclang.cli.option_parser import split_argv
+from lclang.error import RouteFailure
 
 
 def make_group() -> CommandGroup:

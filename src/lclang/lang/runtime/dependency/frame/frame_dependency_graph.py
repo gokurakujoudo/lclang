@@ -1,0 +1,277 @@
+"""Immutable qualified dependency evidence for Frame hierarchies.
+
+Defines ``FrameBindingKind``, ``FrameDependencyBinding``, ``FrameDependencyEdge``,
+``FrameDependencyGraph``.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Set
+from dataclasses import dataclass
+from enum import StrEnum
+
+from lclang.common.identifiers import FrameId, VarName
+from lclang.common.source_location import SourceSpan
+from lclang.error import LclEvaluationError, LclNameError, RuntimeErrorCode
+from lclang.error.exception_base import LclValidationError
+from lclang.error.operation_guard import guard_constructor, guard_failure
+from lclang.lang.runtime.dependency.dependency_types import DependencyKind
+
+
+class FrameBindingKind(StrEnum):
+    """Classify a selected Frame binding as syntax or an opaque host value.
+
+    .. note::
+       String values are stable for graph serialization and diagnostics.
+    """
+
+    # Binding backed by one immutable expression AST.
+    # Unitless binding-kind labels come from Frame graph semantics. Separate definition and
+    # host-value categories preserve lookup precedence and allow graph consumers to distinguish
+    # executable syntax from supplied values.
+    DEFINITION = "definition"
+    # Binding backed by one opaque host-supplied value.
+    VALUE = "value"
+
+
+@guard_constructor(
+    LclValidationError, RuntimeErrorCode.E43_DEPENDENCY_TYPE_CONSTRUCTION_NATIVE_FAILURE
+)
+@dataclass(frozen=True, slots=True)
+class FrameDependencyBinding:
+    """Identify one binding at an exact position in a Frame parent chain.
+
+    :param frame_path: IDs from analyzed Frame through the binding owner.
+    :param name: Non-empty selected binding name.
+    :param kind: Definition or host-value classification.
+    :raises LclValidationError: If the path/name is empty or the kind is invalid.
+    .. note::
+       Positional paths distinguish shadowed names without evaluating values.
+    """
+
+    frame_path: tuple[FrameId, ...]
+    name: VarName
+    kind: FrameBindingKind
+
+    @guard_failure(
+        LclValidationError, RuntimeErrorCode.E43_DEPENDENCY_TYPE_CONSTRUCTION_NATIVE_FAILURE
+    )
+    def __post_init__(self) -> None:
+        """Validate the immutable qualified binding.
+
+        :returns: ``None`` after successful validation.
+        :raises LclValidationError: If the path, name, or kind is invalid.
+        .. note::
+           Validation uses identifiers only and never inspects a host value.
+        """
+        if not self.frame_path or any(not frame_id for frame_id in self.frame_path):
+            raise LclValidationError(
+                "Frame binding path cannot be empty",
+                code=RuntimeErrorCode.E43_FRAME_BINDING_PATH_CANNOT_BE_EMPTY,
+            )
+        if not self.name:
+            raise LclValidationError(
+                "Frame binding name cannot be empty",
+                code=RuntimeErrorCode.E43_FRAME_BINDING_PATH_CANNOT_BE_EMPTY,
+            )
+        if not isinstance(self.kind, FrameBindingKind):
+            raise LclValidationError(
+                "Frame binding kind must be a FrameBindingKind",
+                code=RuntimeErrorCode.E43_FRAME_BINDING_KIND_MUST_BE_A_FRAMEBINDINGKIND,
+            )
+
+
+@guard_constructor(
+    LclValidationError, RuntimeErrorCode.E43_DEPENDENCY_TYPE_CONSTRUCTION_NATIVE_FAILURE
+)
+@dataclass(frozen=True, slots=True)
+class FrameDependencyEdge:
+    """Resolve one static occurrence through a Frame hierarchy.
+
+    :param source: Qualified definition containing the occurrence.
+    :param target_name: Name requested by the expression.
+    :param target: Selected definition/value, or ``None`` when unresolved.
+    :param kind: Static evaluation classification.
+    :param span: Exact requesting source occurrence.
+    :param lookup_path: Frame IDs searched from the source owner outward.
+    :raises LclValidationError: If endpoints, kinds, or paths are inconsistent.
+    .. note::
+       Repeated references retain separate edges and exact source spans.
+    """
+
+    source: FrameDependencyBinding
+    target_name: VarName
+    target: FrameDependencyBinding | None
+    kind: DependencyKind
+    span: SourceSpan
+    lookup_path: tuple[FrameId, ...]
+
+    @guard_failure(
+        LclValidationError, RuntimeErrorCode.E43_DEPENDENCY_TYPE_CONSTRUCTION_NATIVE_FAILURE
+    )
+    def __post_init__(self) -> None:
+        """Validate resolved occurrence invariants.
+
+        :returns: ``None`` after successful validation.
+        :raises LclValidationError: If endpoints, kinds, or paths are inconsistent.
+        .. note::
+           An unresolved target is valid evidence rather than an invalid edge.
+        """
+        if self.source.kind is not FrameBindingKind.DEFINITION:
+            raise LclValidationError(
+                "Frame dependency source must be a definition",
+                code=RuntimeErrorCode.E43_FRAME_DEPENDENCY_SOURCE_MUST_BE_A_DEFINITION,
+            )
+        if not self.target_name:
+            raise LclValidationError(
+                "Frame dependency target name cannot be empty",
+                code=RuntimeErrorCode.E43_FRAME_BINDING_PATH_CANNOT_BE_EMPTY,
+            )
+        if self.target is not None and self.target.name != self.target_name:
+            raise LclValidationError(
+                "resolved Frame target name must match the request",
+                code=RuntimeErrorCode.E43_RESOLVED_FRAME_TARGET_NAME_MUST_MATCH_THE_REQUEST,
+            )
+        if not isinstance(self.kind, DependencyKind):
+            raise LclValidationError(
+                "Frame dependency kind must be a DependencyKind",
+                code=RuntimeErrorCode.E43_FRAME_DEPENDENCY_KIND_MUST_BE_A_DEPENDENCYKIND,
+            )
+        if not self.lookup_path or any(not frame_id for frame_id in self.lookup_path):
+            raise LclValidationError(
+                "Frame dependency lookup path cannot be empty",
+                code=RuntimeErrorCode.E43_FRAME_BINDING_PATH_CANNOT_BE_EMPTY,
+            )
+
+
+@guard_constructor(
+    LclValidationError, RuntimeErrorCode.E43_DEPENDENCY_TYPE_CONSTRUCTION_NATIVE_FAILURE
+)
+@dataclass(frozen=True, slots=True)
+class FrameDependencyGraph:
+    """Snapshot static lookup across one complete Frame hierarchy.
+
+    :param root: ID of the analyzed child-most Frame.
+    :param definitions: Qualified syntax vertices in child-to-parent order.
+    :param values: Selectable opaque host-value terminals in the same order.
+    :param edges: Occurrence-preserving resolved static dependency edges.
+    :raises LclValidationError: If bindings repeat or edges refer outside this graph.
+    .. note::
+       Opaque host values are represented by bindings but are not retained.
+    """
+
+    root: FrameId
+    definitions: tuple[FrameDependencyBinding, ...]
+    values: tuple[FrameDependencyBinding, ...]
+    edges: tuple[FrameDependencyEdge, ...]
+
+    @guard_failure(
+        LclValidationError, RuntimeErrorCode.E43_DEPENDENCY_TYPE_CONSTRUCTION_NATIVE_FAILURE
+    )
+    def __post_init__(self) -> None:
+        """Validate binding uniqueness and edge ownership.
+
+        :returns: ``None`` after successful validation.
+        :raises LclValidationError: If roots, bindings, or edge ownership are invalid.
+        .. note::
+           Validation is structural and cannot invoke a definition or value.
+        """
+        if not self.root:
+            raise LclValidationError(
+                "Frame dependency graph root cannot be empty",
+                code=RuntimeErrorCode.E43_FRAME_BINDING_PATH_CANNOT_BE_EMPTY,
+            )
+        if len(set(self.definitions)) != len(self.definitions):
+            raise LclValidationError(
+                "Frame dependency definitions must be unique",
+                code=RuntimeErrorCode.E43_FRAME_DEPENDENCY_DEFINITIONS_MUST_BE_UNIQUE,
+            )
+        if len(set(self.values)) != len(self.values):
+            raise LclValidationError(
+                "Frame dependency values must be unique",
+                code=RuntimeErrorCode.E43_FRAME_DEPENDENCY_VALUES_MUST_BE_UNIQUE,
+            )
+        definitions = set(self.definitions)
+        bindings = definitions | set(self.values)
+        if any(edge.source not in definitions for edge in self.edges):
+            raise LclValidationError(
+                "Frame dependency edge source must be a definition",
+                code=RuntimeErrorCode.E43_FRAME_DEPENDENCY_EDGE_SOURCE_MUST_BE_A_DEFINITION,
+            )
+        if any(edge.target not in bindings for edge in self.edges if edge.target):
+            raise LclValidationError(
+                "Frame dependency edge target must belong to the graph",
+                code=RuntimeErrorCode.E43_FRAME_DEPENDENCY_EDGE_TARGET_MUST_BELONG_TO_THE_GRAPH,
+            )
+
+    @guard_failure(
+        LclEvaluationError, RuntimeErrorCode.E43_DEPENDENCY_TYPE_CONSTRUCTION_NATIVE_FAILURE
+    )
+    def dependencies(
+        self,
+        source: FrameDependencyBinding,
+        kinds: Set[DependencyKind] | None = None,
+    ) -> tuple[FrameDependencyEdge, ...]:
+        """Return ordered outgoing occurrences for one qualified definition.
+
+        :param source: Definition binding to query.
+        :param kinds: Optional accepted dependency classifications.
+        :returns: Matching occurrence edges in graph order.
+        :raises LclNameError: If *source* is not a graph definition.
+
+        .. note::
+           An empty kind set intentionally selects no occurrences.
+        """
+        if source not in self.definitions:
+            raise LclNameError(
+                f"unknown Frame graph definition: {source.name}",
+                code=RuntimeErrorCode.E43_UNKNOWN_FRAME_GRAPH_DEFINITION,
+            )
+        return tuple(
+            edge
+            for edge in self.edges
+            if edge.source == source and (kinds is None or edge.kind in kinds)
+        )
+
+    @guard_failure(
+        LclEvaluationError, RuntimeErrorCode.E43_DEPENDENCY_TYPE_CONSTRUCTION_NATIVE_FAILURE
+    )
+    def dependants(
+        self,
+        target: FrameDependencyBinding,
+        kinds: Set[DependencyKind] | None = None,
+    ) -> tuple[FrameDependencyEdge, ...]:
+        """Return ordered incoming occurrences for one qualified binding.
+
+        :param target: Definition or host-value binding to query.
+        :param kinds: Optional accepted dependency classifications.
+        :returns: Matching occurrence edges in graph order.
+
+        .. note::
+           Definition and value terminals use the same reverse query.
+        """
+        return tuple(
+            edge
+            for edge in self.edges
+            if edge.target == target and (kinds is None or edge.kind in kinds)
+        )
+
+    @property
+    @guard_failure(
+        LclEvaluationError, RuntimeErrorCode.E43_DEPENDENCY_TYPE_CONSTRUCTION_NATIVE_FAILURE
+    )
+    def external_names(self) -> tuple[VarName, ...]:
+        """Return unresolved names once in first-occurrence order.
+
+        :returns: Names whose complete owner lookup path found no binding.
+        .. note::
+           Resolved host values are terminals and therefore never external.
+        """
+        seen: set[str] = set()
+        result: list[VarName] = []
+        for edge in self.edges:
+            name = str(edge.target_name)
+            if edge.target is None and name not in seen:
+                seen.add(name)
+                result.append(edge.target_name)
+        return tuple(result)

@@ -7,7 +7,7 @@ import pytest
 
 from lclang.error import LclValidationError
 from lclang.logger import LoggerHandlerConfig
-from lclang.logger.config import handler_config
+from lclang.logger.handler_config import handler_config
 
 
 @pytest.mark.parametrize(

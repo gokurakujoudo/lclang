@@ -1,17 +1,17 @@
-"""Tests mirroring :mod:`lclang.runtime.dependency.reconciliation`."""
+"""Tests mirroring :mod:`lclang.lang.runtime.dependency.dependency_reconciliation`."""
 
 from dataclasses import FrozenInstanceError
 
 import pytest
 
+from lclang.common.identifiers import VarName
 from lclang.error import LclValidationError
-from lclang.lang.parser import parse_expression
-from lclang.runtime import (
+from lclang.lang.engine.parser import parse_expression
+from lclang.lang.runtime import (
     DependencyEdge,
     DependencyKind,
     reconcile_dependency_edges,
 )
-from lclang.types import VarName
 
 
 def _edge(

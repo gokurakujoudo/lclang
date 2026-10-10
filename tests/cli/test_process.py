@@ -4,7 +4,7 @@ import sys
 
 import pytest
 
-from lclang.cli.process import split_argv
+from lclang.cli.argv_adapter import split_argv
 from lclang.error import LclCliUsageError
 
 

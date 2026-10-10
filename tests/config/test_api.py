@@ -7,11 +7,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from lclang import LCL_IMPORTS, LCL_RUNTIME, LclNameError
+from lclang.common.identifiers import FrameId
 from lclang.config import evaluate_config, load_config
-from lclang.error import LclValidationError
-from lclang.runtime import DependencyKind, Frame, FrameDependencyGraph, build_dependency_graph
-from lclang.types import FrameId
+from lclang.error import LclNameError, LclValidationError
+from lclang.lang import LCL_IMPORTS, LCL_RUNTIME
+from lclang.lang.runtime import DependencyKind, Frame, FrameDependencyGraph, build_dependency_graph
 
 
 @pytest.mark.asyncio

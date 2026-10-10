@@ -6,7 +6,7 @@ import asyncio
 
 import pytest
 
-import lclang
+from lclang.lang import Frame, define_module
 from tests.support.concurrency import AsyncCloseProbe, CountingGate
 
 
@@ -14,8 +14,8 @@ from tests.support.concurrency import AsyncCloseProbe, CountingGate
 async def test_two_hundred_fifty_six_waiters_share_owner_despite_cancellation() -> None:
     """Cancelling half the peers leaves one owner and equal survivors."""
     gate = CountingGate(42)
-    frame = lclang.Frame(
-        lclang.define_module("lookup-stress", {"result": "work()"}),
+    frame = Frame(
+        define_module("lookup-stress", {"result": "work()"}),
         values={"work": gate.run},
     )
     requests = [asyncio.create_task(frame.get("result")) for _ in range(256)]
@@ -34,8 +34,8 @@ async def test_two_hundred_fifty_six_waiters_share_owner_despite_cancellation() 
 async def test_sixty_four_refreshes_coalesce_without_invalidating_dependant() -> None:
     """One refresh atomically replaces only its selected cached snapshot."""
     gate = CountingGate(1, block_after=1)
-    frame = lclang.Frame(
-        lclang.define_module(
+    frame = Frame(
+        define_module(
             "refresh-stress",
             {"base": "work()", "dependant": "base + 1"},
         ),
@@ -58,8 +58,8 @@ async def test_close_race_cancels_work_and_closes_resource_once() -> None:
     """Cancelled close waiters cannot interrupt shared deterministic cleanup."""
     slow = CountingGate(99)
     resource = AsyncCloseProbe()
-    frame = lclang.Frame(
-        lclang.define_module(
+    frame = Frame(
+        define_module(
             "close-stress",
             {"owned": "make()", "slow": "work()"},
         ),

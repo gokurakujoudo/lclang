@@ -2,8 +2,8 @@
 
 import pytest
 
-from lclang import define_frame, define_module
 from lclang.error import LclEvaluationError
+from lclang.lang import define_frame, define_module
 
 
 @pytest.mark.asyncio

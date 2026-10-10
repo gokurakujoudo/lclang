@@ -1,6 +1,6 @@
-"""Unit tests mirroring :mod:`lclang.ast.operators`."""
+"""Unit tests mirroring :mod:`lclang.lang.ast.operator_nodes`."""
 
-from lclang.ast.operators import (
+from lclang.lang.ast.operator_nodes import (
     BinaryOperator,
     BooleanOperator,
     ComparisonOperator,

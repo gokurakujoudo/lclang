@@ -1,13 +1,13 @@
-"""Unit tests mirroring :mod:`lclang.runtime.frame.cache_lifecycle`."""
+"""Unit tests mirroring :mod:`lclang.lang.runtime.frame.cache_lifecycle`."""
 
 import asyncio
 
 import pytest
 
+from lclang.common.identifiers import FrameId, ModuleName, VarName
 from lclang.error import LclClosedFrameError, LclEvaluationError
-from lclang.lang.parser import parse_expression
-from lclang.runtime import Frame, Module
-from lclang.types import FrameId, ModuleName, VarName
+from lclang.lang.engine.parser import parse_expression
+from lclang.lang.runtime import Frame, Module
 from tests.runtime.frame.lifecycle_support import (
     AsyncResource,
     BlockingResource,

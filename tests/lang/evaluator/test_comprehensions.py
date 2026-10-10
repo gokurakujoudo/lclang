@@ -1,4 +1,4 @@
-"""Unit tests mirroring :mod:`lclang.lang.evaluator.comprehensions`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.evaluator.comprehension_evaluation`."""
 
 from collections.abc import AsyncIterable, AsyncIterator, Awaitable, Iterator
 from inspect import isawaitable
@@ -6,10 +6,10 @@ from typing import cast
 
 import pytest
 
-from lclang.ast import LclConstant, LclDictComprehension
 from lclang.error import LclEvaluationError
-from lclang.lang.evaluator.dispatch import interpret_expression
-from lclang.lang.parser import parse_expression
+from lclang.lang.ast import LclConstant, LclDictComprehension
+from lclang.lang.engine.evaluator.ast_interpreter import interpret_expression
+from lclang.lang.engine.parser import parse_expression
 
 
 class AsyncValues:

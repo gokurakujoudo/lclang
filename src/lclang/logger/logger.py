@@ -1,19 +1,21 @@
-"""Lightweight scope-independent wrappers using stdlib caller attribution."""
+"""Lightweight scope-independent wrappers using stdlib caller attribution.
+
+Defines ``Logger``.
+"""
 
 from __future__ import annotations
 
 import logging
 from typing import Any
 
-from lclang.error import LclLoggerError
-from lclang.error.base import LclValidationError
-from lclang.error.boundary import guard_constructor, guard_failure
-from lclang.error.codes.logging import Code as logging_codes
-from lclang.logger.context import current_runtime
-from lclang.logger.formatter import PREFIX_ATTRIBUTE
+from lclang.error import LclLoggerError, LoggerErrorCode
+from lclang.error.exception_base import LclValidationError
+from lclang.error.operation_guard import guard_constructor, guard_failure
+from lclang.logger.record_formatter import PREFIX_ATTRIBUTE
+from lclang.logger.runtime_registry import current_runtime
 
 
-@guard_constructor(LclValidationError, logging_codes.NATIVE_611)
+@guard_constructor(LclValidationError, LoggerErrorCode.E11_LOGGER_CONFIGURATION_NATIVE_FAILURE)
 class Logger:
     """Bind only a stdlib source name, prefix, and caller offset."""
 
@@ -28,7 +30,7 @@ class Logger:
         self.prefix, self.emit_level = prefix, emit_level
 
     @property
-    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
+    @guard_failure(LclLoggerError, LoggerErrorCode.E11_LOGGER_CONFIGURATION_NATIVE_FAILURE)
     def name(self) -> str:
         """Return the stdlib source name.
 
@@ -36,7 +38,7 @@ class Logger:
         """
         return self.backend.name
 
-    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
+    @guard_failure(LclLoggerError, LoggerErrorCode.E11_LOGGER_CONFIGURATION_NATIVE_FAILURE)
     def isEnabledFor(self, level: int) -> bool:
         """Check scope admission and the stdlib logger threshold.
 
@@ -45,7 +47,7 @@ class Logger:
         """
         return not current_runtime().handler.closing and self.backend.isEnabledFor(level)
 
-    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
+    @guard_failure(LclLoggerError, LoggerErrorCode.E11_LOGGER_CONFIGURATION_NATIVE_FAILURE)
     def log(self, level: int, msg: object, *args: object, **kwargs: Any) -> None:
         """Forward a record with prefix metadata and adjusted stacklevel.
 
@@ -63,7 +65,7 @@ class Logger:
             stacklevel = kwargs.pop("stacklevel", 1) + self.emit_level + 2
             self.backend.log(level, msg, *args, extra=extra, stacklevel=stacklevel, **kwargs)
 
-    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
+    @guard_failure(LclLoggerError, LoggerErrorCode.E11_LOGGER_CONFIGURATION_NATIVE_FAILURE)
     def debug(self, msg: object, *args: object, **kwargs: Any) -> None:
         """Emit DEBUG through the shared forwarding path.
 
@@ -73,7 +75,7 @@ class Logger:
         """
         self.log(logging.DEBUG, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 2, **kwargs)
 
-    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
+    @guard_failure(LclLoggerError, LoggerErrorCode.E11_LOGGER_CONFIGURATION_NATIVE_FAILURE)
     def info(self, msg: object, *args: object, **kwargs: Any) -> None:
         """Emit INFO through the shared forwarding path.
 
@@ -83,7 +85,7 @@ class Logger:
         """
         self.log(logging.INFO, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 2, **kwargs)
 
-    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
+    @guard_failure(LclLoggerError, LoggerErrorCode.E11_LOGGER_CONFIGURATION_NATIVE_FAILURE)
     def warning(self, msg: object, *args: object, **kwargs: Any) -> None:
         """Emit WARNING through the shared forwarding path.
 
@@ -93,7 +95,7 @@ class Logger:
         """
         self.log(logging.WARNING, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 2, **kwargs)
 
-    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
+    @guard_failure(LclLoggerError, LoggerErrorCode.E11_LOGGER_CONFIGURATION_NATIVE_FAILURE)
     def error(self, msg: object, *args: object, **kwargs: Any) -> None:
         """Emit ERROR through the shared forwarding path.
 
@@ -103,7 +105,7 @@ class Logger:
         """
         self.log(logging.ERROR, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 2, **kwargs)
 
-    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
+    @guard_failure(LclLoggerError, LoggerErrorCode.E11_LOGGER_CONFIGURATION_NATIVE_FAILURE)
     def critical(self, msg: object, *args: object, **kwargs: Any) -> None:
         """Emit CRITICAL through the shared forwarding path.
 
@@ -113,7 +115,7 @@ class Logger:
         """
         self.log(logging.CRITICAL, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 2, **kwargs)
 
-    @guard_failure(LclLoggerError, logging_codes.NATIVE_611)
+    @guard_failure(LclLoggerError, LoggerErrorCode.E11_LOGGER_CONFIGURATION_NATIVE_FAILURE)
     def exception(self, msg: object, *args: object, **kwargs: Any) -> None:
         """Emit ERROR with the current exception unless explicitly overridden.
 

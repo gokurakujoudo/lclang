@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
+from lclang.common.identifiers import FrameId
 from lclang.config import load_config
-from lclang.types import FrameId
 from lclang.utils.calendar import BDCalendar, BDCalendarMapping, DayType
 
 # Static LCL policies used by calendar integration tests.
