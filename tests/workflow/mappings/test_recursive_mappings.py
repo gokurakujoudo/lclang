@@ -9,7 +9,7 @@ from typing import Any, assert_type, cast
 import pytest
 
 import lclang.workflow as wf
-from lclang.error import LclValidationError
+from lclang.error import LclValidationError, WorkflowException
 from lclang.lang import FrameProxy, define_frame
 from lclang.workflow.mappings import mapped_outputs, materialize_args
 
@@ -346,7 +346,7 @@ async def test_invalid_verbose_resource_keeps_original_error() -> None:
             )
         )
         assert result.execution_status.status is wf.ExecutionStatus.ERROR
-        failure = cast(wf.WorkflowException, await frame.get("__exception__"))
+        failure = cast(WorkflowException, await frame.get("__exception__"))
         assert "mapping dataclass" in str(failure.exception)
 
 

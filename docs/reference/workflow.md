@@ -284,6 +284,10 @@ shared task Frame continues to expose the owning task-node branch.
 
 `FailureCoveringContextTask` is the standard template for recovery contexts.
 Subclasses implement `acquire`, `handle_exception`, and optionally `release`.
+If handling fails, the original business failure and handling failure are
+retained together. Release still runs, and a release failure joins the pending
+failures under `LCL535911`. Cancellation and other control signals keep their
+native identity with ordinary failures retained in their cause chain.
 Successful handling and cleanup suppress the ordinary exception and mark the
 context `FAILURE_COVERED`. Covered failures remain visible and still stop later
 siblings; covering means the failure was wrapped up, not that execution can be
@@ -541,3 +545,7 @@ See [errors and diagnostic codes](errors.md) for exception fields, specific
 codes, cause chains, and executable troubleshooting examples. Ordinary library
 validation uses `LclValidationError`; native callback and operation failures
 retain their original exception in `__cause__`.
+
+The [exception guide](exceptions.md) describes each failure family, grouped
+execution and cleanup failures, actual diagnostic output, and application
+handling with `except*` and native control signals.

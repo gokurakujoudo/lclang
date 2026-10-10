@@ -21,7 +21,7 @@ def derive_loading_error(error: Exception, frame: ConfigLoadFrame) -> LclError:
     """
     failure = wrap_failure(error, LclConfigError, ConfigurationErrorCode.E23_LOADING_FAILURE)
     if not isinstance(error, LclError):
-        span = error.__dict__.get("source_span")
+        span = getattr(error, "source_span", None)
         if isinstance(span, SourceSpan):
             failure.span = span
     return failure.derive_config_context(frame)

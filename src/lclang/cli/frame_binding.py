@@ -21,7 +21,7 @@ from lclang.cli.invocation_key import (
     RUNTIME_VERBOSE_KEY,
     RUNTIME_YMD_KEY,
 )
-from lclang.cli.logger_parameter import logger_definitions
+from lclang.cli.logger_parameter import collect_borrowed_console_values, logger_definitions
 from lclang.cli.parameter_metadata import DerivedParameterDoc, get_parameter_masks
 from lclang.common.identifiers import ModuleName
 from lclang.config import load_config
@@ -154,8 +154,13 @@ async def build_binding(command: Command, params: CliParams, cli_config: CliConf
             ),
             name=str(config_module.name),
         )
+        borrowed_values = collect_borrowed_console_values(
+            defaults_module.definitions, combined.definitions
+        )
         definitions = {
-            key: node for key, node in combined.definitions.items() if key not in preliminary_values
+            key: node
+            for key, node in combined.definitions.items()
+            if key not in preliminary_values and key not in borrowed_values
         }
         config = imports.derive(
             Module(
@@ -164,7 +169,7 @@ async def build_binding(command: Command, params: CliParams, cli_config: CliConf
                 masked_names=combined.masked_names & definitions.keys(),
                 namespace_names=combined.namespace_names,
             ),
-            {**preliminary_values, **execution_values},
+            {**borrowed_values, **preliminary_values, **execution_values},
             masked_names=combined.masked_names | params.masked_names,
         )
         frames.append(config)

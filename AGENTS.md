@@ -298,6 +298,11 @@ changes. Update this file only when durable architecture or workflow changes.
   failures use `LclErrorGroup` and retain every execution and cleanup member.
 - Rendering uses detached source/value snapshots and never evaluates or reloads
   configuration. Preserve masks, loading routes, evaluation stacks and task names.
+- Copy LCL diagnostics through their declared fields and `copy_diagnostic_fields`
+  hooks. Preserve selected group members and native group arguments, original
+  causes/tracebacks and independent notes. Do not read or mutate LCL instances
+  through `__dict__` or `vars`; module reflection and native protocol metadata
+  retain their documented uses.
 - Add every builtin code to `docs/reference/errors.md` with its path, cause,
   minimal trigger, handling and exception type. Execute marked examples. The
   production source audit rejects uncoded proactive failures and registry errors.

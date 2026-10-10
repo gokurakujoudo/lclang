@@ -13,16 +13,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import get_type_hints
 
-from lclang.error import LclError, LclWorkflowError, WorkflowErrorCode, WorkflowStatusStop
+from lclang.error import (
+    LclError,
+    LclWorkflowError,
+    WorkflowErrorCode,
+    WorkflowException,
+    WorkflowStatusStop,
+)
 from lclang.error.exception_base import LclStateError, LclValidationError
 from lclang.error.native_wrap import wrap_failure
 from lclang.error.operation_guard import guard_async_failure, guard_constructor, guard_failure
 from lclang.lang.runtime import Frame
-from lclang.workflow.execution_context import (
-    TaskContext,
-    WorkflowException,
-    WorkflowExecutionContext,
-)
+from lclang.workflow.execution_context import TaskContext, WorkflowExecutionContext
 from lclang.workflow.execution_status import ExecutionStatus
 from lclang.workflow.mappings import mapped_outputs, materialize_args
 from lclang.workflow.mappings.record_mapping import record_type

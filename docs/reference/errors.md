@@ -5,6 +5,9 @@ records, code tables, and rendering helpers live in `lclang.error`. Each builtin
 code has a specific meaning; argument names, source paths, and task names belong
 in the diagnostic message and context.
 
+See [Exceptions and grouped failures](exceptions.md) for the exception hierarchy,
+multiple-failure scenarios, diagnostic output and application handling examples.
+
 ## Read a code
 
 A builtin code is `LCLabcdef`, with six decimal digits:
@@ -78,6 +81,7 @@ retain their native propagation behavior.
 | `config_stack` | Loading route, including source introductions and their ranges |
 | `masked` | Whether the failure was captured under masking |
 | `native_cause` | Protected description captured from a native exception |
+| `binding_names` | Conflicting binding names on validation errors; empty when no conflict is attached |
 | `__cause__` | Original exception object retained at a wrapping boundary |
 | `__notes__` | Operation and workflow task context added during propagation |
 
@@ -91,6 +95,13 @@ A failure already belonging to `LclError` retains its code as it crosses another
 boundary. Loading adds context to a copy so concurrent callers do not share
 mutable loading routes. Workflow failures retain their task branch in notes and
 in `WorkflowException.error_task`.
+
+Copies retain declared diagnostic fields, native causes and tracebacks, with an
+independent notes list. Application exception subclasses can override
+`copy_diagnostic_fields(target)`, call the base method, and copy their own declared
+fields. This hook copies state into an already allocated compatible error;
+it does not call the subclass constructor. Exception-group splitting keeps the
+selected member objects and arguments.
 
 `LclValidationError` reports invalid types, invalid values, and declaration
 conflicts. `LclStateError` reports unavailable lifecycle operations. Neither is
@@ -352,15 +363,8 @@ from logging import CRITICAL, Logger
 
 from lclang.lang import define_frame
 from lclang.error import LclWorkflowError
-from lclang.workflow import (
-    ExecutionStatus,
-    ExecutionStatusManager,
-    TaskContext,
-    WorkflowException,
-    WorkflowExecutionContext,
-    define_task,
-    define_workflow,
-)
+from lclang.error import WorkflowException
+from lclang.workflow import ExecutionStatus, ExecutionStatusManager, TaskContext, WorkflowExecutionContext, define_task, define_workflow
 
 @dataclass
 class Inputs:
@@ -416,16 +420,8 @@ from logging import CRITICAL, Logger
 
 from lclang.lang import define_frame
 from lclang.error import LclErrorGroup
-from lclang.workflow import (
-    ExecutionStatus,
-    ExecutionStatusManager,
-    TaskContext,
-    WorkflowException,
-    WorkflowExecutionContext,
-    define_context_task,
-    define_task,
-    define_workflow,
-)
+from lclang.error import WorkflowException
+from lclang.workflow import ExecutionStatus, ExecutionStatusManager, TaskContext, WorkflowExecutionContext, define_context_task, define_task, define_workflow
 
 @dataclass
 class Inputs:
@@ -499,6 +495,7 @@ inspect common failures.
 | `LCL011131` | General → Error construction → Construct and annotate errors → Input type → Sequence type → stack type | Variable stack must be a tuple of strings. | Call `LclError` with `variable_stack=None` for the required variable stack must be a tuple of strings. | Supply the declared input type. | LclValidationError |
 | `LCL011181` | General → Error construction → Construct and annotate errors → Input type → Annotation or source type → span type | Error span must be a SourceSpan or None. | Call `LclError` with `span=None` for the required error span must be a sourcespan or none. | Supply the declared input type. | LclValidationError |
 | `LCL011182` | General → Error construction → Construct and annotate errors → Input type → Annotation or source type → load frame type | Loading context must be a ConfigLoadFrame. | Call `LclError.derive_config_context` with `frame=None` for the required loading context must be a configloadframe. | Supply the declared input type. | LclValidationError |
+| `LCL011183` | General → Error construction → Construct and annotate errors → Input type → Annotation or source type → copy target type | A diagnostic copy target has an incompatible exception type. | `LclError("failed", code="APP").copy_diagnostic_fields(object())` | Supply an allocated instance of the same concrete error type or a subtype. | LclValidationError |
 | `LCL011191` | General → Error construction → Construct and annotate errors → Input type → Other input type → constructor call | Arguments do not match an error constructor signature. | `LclError()` omits its message. | Supply valid error constructor fields. | LclValidationError |
 | `LCL011211` | General → Error construction → Construct and annotate errors → Input value → Empty value → message empty | Required diagnostic text is empty. | `LclError("")` or `LclError("bad", code="")`. | Provide nonempty message, code and stack names. | LclValidationError |
 | `LCL011891` | General → Error construction → Construct and annotate errors → External operation → Native boundary failure → constructor operation | A native operation failed inside an error constructor. | Construct an application error whose initializer raises `OSError`. | Correct the constructor; inspect the retained native cause. | LclErrorGroup (grouped failures) / LclValidationError |
@@ -977,6 +974,7 @@ inspect common failures.
 | `LCL533691` | Workflow → Execution → Context → State → Operation-specific failure → skip children is only available during the task action | Skip_children is only available during the task action. | Call `TaskContext.skip_children` when `not self._child_execution.action_active` is true. | Use the operation in its supported lifecycle state. | LclStateError |
 | `LCL533692` | Workflow → Execution → Context → State → Operation-specific failure → context handler unimplemented | Context exception handling is not implemented. | In `FailureCoveringContextTask.handle_exception`, trigger: context exception handling is not implemented. | Use the operation in its supported lifecycle state. | LclStateError |
 | `LCL533693` | Workflow → Execution → Context → State → Operation-specific failure → context acquire unimplemented | Context acquire unimplemented. | In `FailureCoveringContextTask.acquire`, trigger: context acquire unimplemented. | Use the operation in its supported lifecycle state. | LclStateError |
+| `LCL533811` | Workflow → Execution → Context → External operation → Context or resource lifecycle callback → context handling failure | The failure-covering handler raised an ordinary exception. | Implement `FailureCoveringContextTask.handle_exception` to raise `OSError("handling")` after a body failure. | Inspect both failures and correct handling before another run; release still runs. | LclWorkflowError / LclErrorGroup (grouped failures) |
 | `LCL533890` | Workflow → Execution → Context → External operation → Native boundary failure → No further refinement | A native operation failed after entering this boundary. | A supplied value or implementation raises during `WorkflowException`. | Inspect the native cause and the operation note. | LclErrorGroup (grouped failures) / LclValidationError / LclWorkflowError |
 | `LCL534151` | Workflow → Execution → Events → Input type → Record type → event record must be a dataclass instance | Event record must be a dataclass instance. | Call `emit_event` with `record=None` for the required event record must be a dataclass instance. | Supply the declared input type. | LclValidationError |
 | `LCL534271` | Workflow → Execution → Events → Input value → Required structure → event fields must be declared unique and separate from keyword va | Event fields must be declared, unique, and separate from keyword values. | Call `emit_event` when `set(selected) - declared or len(set(selected)) != len(selected) or set(selected) & values.keys()` is true. | Correct the invalid value or declaration. | LclValidationError |

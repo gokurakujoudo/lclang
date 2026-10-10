@@ -71,6 +71,7 @@ walks through this model with runnable Python.
 - [Tree workflow API](reference/workflow.md)
 - [Business-day calendars](reference/calendar.md)
 - [Unified process logging](reference/logger.md)
+- [Exceptions and grouped failures](reference/exceptions.md)
 
 ## Trust and ownership
 

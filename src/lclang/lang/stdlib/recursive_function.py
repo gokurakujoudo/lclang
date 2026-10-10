@@ -8,10 +8,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from lclang.common.awaitable_resolution import resolve_awaitable
 from lclang.error import LclStandardError, StandardLibraryErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_async_failure, guard_constructor, guard_failure
-from lclang.lang.engine.evaluator.awaitable_resolution import resolve_awaitable
 from lclang.lang.engine.evaluator.lcl_function import LclFunctionValue
 
 

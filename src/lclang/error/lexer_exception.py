@@ -3,8 +3,10 @@
 Defines ``EscapeDecodeError``, ``InternalLiteralScanError``, ``FStringScanError``.
 """
 
+from typing import Self, cast
+
 from lclang.error.codes.e1_language_error_code import LanguageErrorCode
-from lclang.error.exception_base import LclValidationError
+from lclang.error.exception_base import LclError, LclValidationError
 from lclang.error.exception_family import LclSyntaxError
 from lclang.error.operation_guard import guard_constructor
 
@@ -33,6 +35,16 @@ class EscapeDecodeError(LclSyntaxError):
         self.message = message
         self.end = end
 
+    def copy_diagnostic_fields(self, target: LclError) -> None:
+        """Copy specialized fields after the shared diagnostic fields.
+
+        :param target: Compatible allocated error receiving retained fields.
+        :raises LclValidationError: If the target is incompatible.
+        """
+        super().copy_diagnostic_fields(target)
+        copied = cast(Self, target)
+        copied.end = self.end
+
 
 @guard_constructor(LclValidationError, LanguageErrorCode.E12_LITERAL_SCANNING_NATIVE_FAILURE)
 class InternalLiteralScanError(LclSyntaxError):
@@ -56,6 +68,16 @@ class InternalLiteralScanError(LclSyntaxError):
         super().__init__(message, code=code)
         self.message = message
         self.end = end
+
+    def copy_diagnostic_fields(self, target: LclError) -> None:
+        """Copy specialized fields after the shared diagnostic fields.
+
+        :param target: Compatible allocated error receiving retained fields.
+        :raises LclValidationError: If the target is incompatible.
+        """
+        super().copy_diagnostic_fields(target)
+        copied = cast(Self, target)
+        copied.end = self.end
 
 
 @guard_constructor(LclValidationError, LanguageErrorCode.E14_FSTRING_SCANNING_NATIVE_FAILURE)
@@ -81,3 +103,13 @@ class FStringScanError(LclSyntaxError):
         super().__init__(message, code=code)
         self.message = message
         self.end = end
+
+    def copy_diagnostic_fields(self, target: LclError) -> None:
+        """Copy specialized fields after the shared diagnostic fields.
+
+        :param target: Compatible allocated error receiving retained fields.
+        :raises LclValidationError: If the target is incompatible.
+        """
+        super().copy_diagnostic_fields(target)
+        copied = cast(Self, target)
+        copied.end = self.end

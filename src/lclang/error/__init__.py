@@ -1,9 +1,9 @@
 """Public structured errors, diagnostic records, and failure groups.
 
-Exports ``EscapeDecodeError``, ``InternalLiteralScanError``, ``FStringScanError``,
-``RouteFailure``, ``WorkflowStatusStop``, ``GeneralErrorCode``, ``LanguageErrorCode``,
-``RuntimeErrorCode``, ``ConfigurationErrorCode``, ``CliErrorCode``, ``WorkflowErrorCode``,
-``LoggerErrorCode``, ``UtilityErrorCode``, ``DataModelErrorCode``,
+Exports ``WorkflowException``, ``EscapeDecodeError``, ``InternalLiteralScanError``,
+``FStringScanError``, ``RouteFailure``, ``WorkflowStatusStop``, ``GeneralErrorCode``,
+``LanguageErrorCode``, ``RuntimeErrorCode``, ``ConfigurationErrorCode``, ``CliErrorCode``,
+``WorkflowErrorCode``, ``LoggerErrorCode``, ``UtilityErrorCode``, ``DataModelErrorCode``,
 ``StandardLibraryErrorCode``, ``render_error``, ``render_failure``, ``get_error_codes``,
 ``get_error_code_path``, ``LclFrozenAttributeError``, ``CalendarCannotLoadException``,
 ``CalendarLogicException``, ``DateOperationOutOfScopeException``,
@@ -73,9 +73,11 @@ from lclang.error.lexer_exception import (
     FStringScanError,
     InternalLiteralScanError,
 )
+from lclang.error.workflow_failure_record import WorkflowException
 
 # Unitless names curate the diagnostic API without behavioral initialization.
 __all__ = [
+    "WorkflowException",
     "EscapeDecodeError",
     "InternalLiteralScanError",
     "FStringScanError",

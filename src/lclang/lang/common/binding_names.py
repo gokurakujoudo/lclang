@@ -74,5 +74,5 @@ def validate_real_conflicts(names: Iterable[str]) -> None:
                     f"scoped binding conflict between {ancestor!r} and {name!r}",
                     code=DataModelErrorCode.E41_SCOPED_BINDING_PREFIX_CONFLICT,
                 )
-                error.__dict__["binding_names"] = (ancestor, name)
+                error.binding_names = (ancestor, name)
                 raise error

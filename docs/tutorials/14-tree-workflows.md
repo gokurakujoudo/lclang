@@ -266,3 +266,7 @@ inputs and outputs remain meaningful; a structural task with children is often
 clearer than one action that hides an entire procedure.
 
 [Previous: Scoped values and Frame evaluation](13-scoped-values-and-frame-evaluation.md) | [Next: Case Study: Energy Settlement Workflow](15-energy-settlement-workflow.md) | [Return to the series introduction](README.md)
+
+See the [exception guide](../reference/exceptions.md) for failure families,
+combined execution and cleanup diagnostics, and examples of handling selected
+group members while retaining unhandled failures.

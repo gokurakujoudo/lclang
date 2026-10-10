@@ -1,7 +1,7 @@
 """Public workflow execution context and failure values.
 
-Defines ``WorkflowException``, ``WorkflowExecutionContext``, ``TaskChildExecution``,
-``TaskContext``, ``WorkflowExecutionResult``, ``FailureCoveringContextTask``.
+Defines ``WorkflowExecutionContext``, ``TaskChildExecution``, ``TaskContext``,
+``WorkflowExecutionResult``, ``FailureCoveringContextTask``.
 """
 
 from __future__ import annotations
@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING
 
 from lclang.error import LclWorkflowError, WorkflowErrorCode
 from lclang.error.exception_base import LclStateError, LclValidationError
+from lclang.error.failure_aggregation import combine_failures
+from lclang.error.native_wrap import wrap_failure
 from lclang.error.operation_guard import guard_async_failure, guard_constructor, guard_failure
 from lclang.lang.runtime import Frame
 from lclang.logger import Logger
@@ -24,19 +26,6 @@ from lclang.workflow.task_id import TaskID
 
 if TYPE_CHECKING:
     from lclang.workflow.workflow_definition import TaskNode
-
-
-@guard_constructor(LclValidationError, WorkflowErrorCode.E33_WORKFLOW_CONTEXT_NATIVE_FAILURE)
-@dataclass(frozen=True, slots=True)
-class WorkflowException:
-    """Retain one execution failure and its originating task.
-
-    :param exception: Original or synthetic ordinary exception.
-    :param error_task: Task or context-task identifier owning the failure.
-    """
-
-    exception: Exception
-    error_task: TaskID
 
 
 @guard_constructor(LclValidationError, WorkflowErrorCode.E33_WORKFLOW_CONTEXT_NATIVE_FAILURE)
@@ -237,16 +226,50 @@ class FailureCoveringContextTask[ArgsT, ResourceT]:
         :param args: Materialized context arguments.
         :param status_mgr: Context-task status manager.
         :returns: Async iterator yielding the acquired resource.
+        :raises LclErrorGroup: If business, handling or release failures occur together.
+        :raises BaseException: If acquisition or release fails, or a control signal propagates.
         """
-        resource = await self.acquire(context, args, status_mgr)
+        try:
+            resource = await self.acquire(context, args, status_mgr)
+        except Exception as error:
+            failure = wrap_failure(
+                error, LclWorkflowError, WorkflowErrorCode.E32_CONTEXT_ENTER_FAILURE
+            )
+            raise failure from failure.__cause__
         covered = False
+        pending: BaseException | None = None
         try:
             yield resource
         except Exception as exception:
-            await self.handle_exception(context, args, status_mgr, resource, exception)
-            covered = True
-        finally:
+            try:
+                await self.handle_exception(context, args, status_mgr, resource, exception)
+                covered = True
+            except BaseException as error:
+                handling = (
+                    wrap_failure(
+                        error, LclWorkflowError, WorkflowErrorCode.E33_CONTEXT_HANDLING_FAILURE
+                    )
+                    if isinstance(error, Exception)
+                    else error
+                )
+                pending = combine_failures(
+                    exception, handling, code=WorkflowErrorCode.E35_COMPOSITE_FAILURE
+                )
+        except BaseException as error:
+            pending = error
+        try:
             await self.release(context, args, status_mgr, resource)
+        except BaseException as error:
+            cleanup = (
+                wrap_failure(error, LclWorkflowError, WorkflowErrorCode.E32_CONTEXT_EXIT_FAILURE)
+                if isinstance(error, Exception)
+                else error
+            )
+            pending = combine_failures(
+                pending, cleanup, code=WorkflowErrorCode.E35_COMPOSITE_FAILURE
+            )
+        if pending is not None:
+            raise pending
         if covered:
             status_mgr.update(ExecutionStatus.FAILURE_COVERED)
 

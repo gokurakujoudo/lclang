@@ -3,15 +3,14 @@
 Exports ``ContextTask``, ``ExecutionStatus``, ``ExecutionStatusManager``,
 ``ExecutionStatusStep``, ``ExecutionStatusTree``, ``ExecutionTaskType``,
 ``FailureCoveringContextTask``, ``TaskContext``, ``TaskID``, ``TaskNode``,
-``TaskProjection``, ``TaskVar``, ``Workflow``, ``WorkflowException``,
-``WorkflowExecutionContext``, ``WorkflowExecutionResult``, ``define_context_task``,
-``define_task``, ``define_variable``, ``define_workflow``.
+``TaskProjection``, ``TaskVar``, ``Workflow``, ``WorkflowExecutionContext``,
+``WorkflowExecutionResult``, ``define_context_task``, ``define_task``, ``define_variable``,
+``define_workflow``.
 """
 
 from lclang.workflow.execution_context import (
     FailureCoveringContextTask,
     TaskContext,
-    WorkflowException,
     WorkflowExecutionContext,
     WorkflowExecutionResult,
 )
@@ -40,7 +39,6 @@ __all__ = [
     "TaskProjection",
     "TaskVar",
     "Workflow",
-    "WorkflowException",
     "WorkflowExecutionContext",
     "WorkflowExecutionResult",
     "define_context_task",

@@ -12,7 +12,7 @@ from typing import cast
 import pytest
 
 import lclang.workflow as wf
-from lclang.error import LclStateError, LclValidationError, LclWorkflowError
+from lclang.error import LclStateError, LclValidationError, LclWorkflowError, WorkflowException
 from lclang.lang import Frame, define_frame
 
 
@@ -241,7 +241,7 @@ async def test_unhandled_action_error_records_failure_and_skips_full_branch() ->
         result = await wf.define_workflow("Rainy", root).execute(execution_context(frame))
         failure = await frame.get("__exception__")
 
-    assert isinstance(failure, wf.WorkflowException)
+    assert isinstance(failure, WorkflowException)
     assert isinstance(failure.exception, LclWorkflowError)
     assert isinstance(failure.exception.__cause__, ValueError)
     assert failure.error_task == wf.TaskID("root")
@@ -424,7 +424,7 @@ async def test_explicit_failure_creates_synthetic_exception_and_stops() -> None:
     assert result.execution_status.status is wf.ExecutionStatus.FAILURE
     assert result.task_outputs[wf.TaskID("root")] == NumberOutputs(4)
     assert result.execution_status.sub_tasks[0].sub_tasks[0].status is wf.ExecutionStatus.SKIPPED
-    assert isinstance(cast(wf.WorkflowException, failure).exception, LclWorkflowError)
+    assert isinstance(cast(WorkflowException, failure).exception, LclWorkflowError)
 
 
 @pytest.mark.asyncio
@@ -502,7 +502,7 @@ async def test_context_enter_exit_and_unsuppressed_failures_are_recorded() -> No
         )
         async with define_frame(preset={"source": 1}) as frame:
             result = await wf.define_workflow("Workflow", task).execute(execution_context(frame))
-            failure = cast(wf.WorkflowException, await frame.get("__exception__"))
+            failure = cast(WorkflowException, await frame.get("__exception__"))
         assert (
             failure.exception.__cause__ is not None and str(failure.exception.__cause__) == message
         )
@@ -549,7 +549,7 @@ async def test_wrong_action_outputs_and_duplicate_publication_fail_cleanly() -> 
     for task in tasks:
         async with define_frame(preset={"source": 1}) as frame:
             result = await wf.define_workflow("Workflow", task).execute(execution_context(frame))
-            failure = cast(wf.WorkflowException, await frame.get("__exception__"))
+            failure = cast(WorkflowException, await frame.get("__exception__"))
         assert isinstance(failure.exception, LclValidationError)
         assert result.execution_status.status is wf.ExecutionStatus.ERROR
 
@@ -575,7 +575,7 @@ async def test_defensive_execution_validation_and_task_frame_close_failure(
     )
     async with define_frame() as frame:
         result = await wf.Workflow("Workflow", invalid).execute(execution_context(frame))
-        failure = cast(wf.WorkflowException, await frame.get("__exception__"))
+        failure = cast(WorkflowException, await frame.get("__exception__"))
     assert isinstance(failure.exception, LclStateError)
 
     original_close = Frame.close
@@ -589,7 +589,7 @@ async def test_defensive_execution_validation_and_task_frame_close_failure(
     structural = wf.TaskNode(wf.TaskID("invalid"), "Invalid", None, None, None, (), ())
     async with define_frame() as frame:
         result = await wf.Workflow("Workflow", structural).execute(execution_context(frame))
-        failure = cast(wf.WorkflowException, await frame.get("__exception__"))
+        failure = cast(WorkflowException, await frame.get("__exception__"))
     assert (
         failure.exception.__cause__ is not None
         and str(failure.exception.__cause__) == "close failed"

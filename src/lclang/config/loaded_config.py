@@ -8,7 +8,6 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import cast
 
 from lclang.common.identifiers import ModuleName
 from lclang.common.source_location import SourceOrigin
@@ -150,7 +149,7 @@ def validate_config_structure(
         validate_real_conflicts(real_names)
         validate_namespace_conflicts(namespaces, real_names)
     except LclValidationError as error:
-        names = cast(tuple[str, ...], error.__dict__["binding_names"])
+        names = error.binding_names
         conflicts = [definition for key, definition in winners.items() if key in names]
-        vars(error)["source_span"] = conflicts[-1].span
+        error.span = conflicts[-1].span
         raise

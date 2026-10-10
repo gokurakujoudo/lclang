@@ -12,7 +12,7 @@ from lclang.error.native_wrap import is_ordinary_failure, wrap_failure
 
 
 # ExceptionGroup owns a read-only C message descriptor; the shared LCL payload
-# retains the same text in its diagnostic dictionary.
+# receives the remaining declared diagnostic fields through the copy hook.
 class LclErrorGroup(ExceptionGroup, LclError):  # type: ignore[override]
     """Retain several ordinary failures as one structured diagnostic.
 
@@ -59,7 +59,7 @@ class LclErrorGroup(ExceptionGroup, LclError):  # type: ignore[override]
             else:
                 members.append(wrap_failure(error, LclError, GeneralErrorCode.E21_GROUP_MEMBER))
         result = super().__new__(cls, message, members)
-        vars(result).update(vars(record))
+        record.copy_diagnostic_fields(result)
         return result
 
     def __init__(
@@ -85,7 +85,7 @@ class LclErrorGroup(ExceptionGroup, LclError):  # type: ignore[override]
         :returns: Same concrete group type with the selected members and original code.
         """
         result = type(self)(self.message, exceptions, code=self.code)
-        vars(result).update(vars(self))
+        self.copy_diagnostic_fields(result)
         copy_failure_state(self, result)
         return result
 

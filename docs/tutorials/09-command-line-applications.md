@@ -288,3 +288,7 @@ command. An override still treats its optional next token literally, including
 `--verbose`; place the verbose flag before a valueless override.
 
 [Previous: Dependency analysis](08-dependency-analysis.md) | [Next: Workflow status](10-workflow-status.md) | [Return to the series introduction](README.md)
+
+See the [exception guide](../reference/exceptions.md) for failure families,
+combined execution and cleanup diagnostics, and examples of handling selected
+group members while retaining unhandled failures.

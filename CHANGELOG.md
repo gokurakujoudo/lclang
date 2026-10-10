@@ -27,6 +27,15 @@
 
 ### Diagnostics and documentation
 
+- Add a dedicated exception guide with executable group, workflow, CLI, logger
+  and control-signal examples and their actual diagnostic output.
+- Copy declared diagnostic fields through a public hook, preserving subclass
+  metadata, causes and independent notes without instance dictionary access.
+- Classify awaited native failures at their owning operation. Retain business,
+  failure-handling and release errors together without duplicating a failure
+  already present in a nested group. Render native group members and group causes.
+- Keep console streams supplied in typed CLI configuration borrowed through
+  invocation cleanup, preserving configuration and override precedence.
 - Align site Copy buttons with the first code line and remove the empty button
   row. Show buttons on hover or keyboard focus, keep them visible on devices
   without hover, and hide them when printing.

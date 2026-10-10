@@ -325,3 +325,7 @@ See [errors and diagnostic codes](errors.md) for exception fields, specific
 codes, cause chains, and executable troubleshooting examples. Ordinary library
 validation uses `LclValidationError`; native callback and operation failures
 retain their original exception in `__cause__`.
+
+The [exception guide](exceptions.md) describes each failure family, grouped
+execution and cleanup failures, actual diagnostic output, and application
+handling with `except*` and native control signals.

@@ -19,9 +19,9 @@ if TYPE_CHECKING:
 import asyncio
 from collections.abc import Callable
 
+from lclang.common.awaitable_resolution import resolve_awaitable
 from lclang.common.source_location import SourceSpan
 from lclang.error import LclClosedFrameError
-from lclang.lang.engine.evaluator.awaitable_resolution import resolve_awaitable
 
 # Unitless unique sentinel distinguishes an absent cache entry from every valid cached value,
 # including None.

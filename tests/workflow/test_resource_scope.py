@@ -11,7 +11,7 @@ from typing import cast
 import pytest
 
 import lclang.workflow as wf
-from lclang.error import LclError
+from lclang.error import LclError, WorkflowException
 from lclang.lang import Frame, define_frame
 
 
@@ -184,7 +184,7 @@ async def test_business_and_multiple_cleanup_failures_are_retained(cancel: bool)
         else:
             result = await workflow.execute(execution_context(frame))
             assert result.execution_status.status is wf.ExecutionStatus.ERROR
-            failure = cast(wf.WorkflowException, await frame.get("__exception__"))
+            failure = cast(WorkflowException, await frame.get("__exception__"))
             assert set(exception_leaves(failure.exception)) == {business, *failures}
     assert events == [1, 0]
 
@@ -240,7 +240,7 @@ async def test_task_frame_close_keeps_prior_failure(
         else:
             result = await workflow.execute(execution_context(frame))
             assert result.execution_status.status is wf.ExecutionStatus.ERROR
-            failure = cast(wf.WorkflowException, await frame.get("__exception__"))
+            failure = cast(WorkflowException, await frame.get("__exception__"))
             assert set(exception_leaves(failure.exception)) == (
                 {prior, cleanup} if prior is not None else {cleanup}
             )

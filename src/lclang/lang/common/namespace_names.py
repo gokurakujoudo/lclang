@@ -51,5 +51,5 @@ def validate_namespace_conflicts(names: Iterable[str], real_names: Iterable[str]
                     f"namespace {namespace!r} conflicts with binding {name!r}",
                     code=DataModelErrorCode.E42_NAMESPACE_BINDING_CONFLICT,
                 )
-                error.__dict__["binding_names"] = (namespace, name)
+                error.binding_names = (namespace, name)
                 raise error
