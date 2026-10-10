@@ -22,8 +22,10 @@ def test_release_notes(version: str, section: str, error: str | None) -> None:
     """Only one nonempty stable release section can be published."""
     with TemporaryDirectory() as directory:
         root = Path(directory)
-        (root / "pyproject.toml").write_text(
-            f'[project]\nversion = "{version}"\n',
+        source = root / "src/lclang"
+        source.mkdir(parents=True)
+        (source / "__version__.py").write_text(
+            f'__version__ = "{version}"\n',
             encoding="utf-8",
         )
         (root / "CHANGELOG.md").write_text(

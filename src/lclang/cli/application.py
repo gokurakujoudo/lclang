@@ -2,7 +2,7 @@
 
 from contextlib import suppress
 
-from lclang._version import __version__
+from lclang.__version__ import __version__
 from lclang.cli.builtin_docs import render_builtin_docs
 from lclang.cli.commands import CommandGroup, cli
 from lclang.cli.context import CliContext

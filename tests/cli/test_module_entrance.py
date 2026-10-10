@@ -10,7 +10,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from lclang import __version__
+from lclang.__version__ import __version__
 from lclang.cli.application import LCLANG_CLI_ENTRANCE
 from lclang.cli.builtin_docs import render_builtin_docs
 

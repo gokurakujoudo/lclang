@@ -1,6 +1,6 @@
 """Public package for the lclang configuration language."""
 
-from lclang._version import __version__
+from lclang.__version__ import __version__
 from lclang.api import (
     LCL_BUILTINS,
     LCL_IMPORTS,
