@@ -1,13 +1,13 @@
-"""Unit tests mirroring :mod:`lclang.runtime.frame.evaluation_limits`."""
+"""Unit tests mirroring :mod:`lclang.lang.runtime.frame.evaluation_limit`."""
 
 import asyncio
 
 import pytest
 
+from lclang.common.identifiers import FrameId, ModuleName
 from lclang.error import LclAttributeError, LclEvaluationError, LclValidationError
-from lclang.lang.parser import parse_expression
-from lclang.runtime import EvaluationLimits, Frame, Module
-from lclang.types import FrameId, ModuleName
+from lclang.lang.engine.parser import parse_expression
+from lclang.lang.runtime import EvaluationLimits, Frame, Module
 
 
 def _frame(

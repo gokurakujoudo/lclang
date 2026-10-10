@@ -1,18 +1,18 @@
-"""Unit tests mirroring :mod:`lclang.runtime.frame.frame`."""
+"""Unit tests mirroring :mod:`lclang.lang.runtime.frame.frame`."""
 
 import asyncio
 from typing import cast
 
 import pytest
 
+from lclang.common.identifiers import FrameId, ModuleName
 from lclang.error import LclEvaluationError, LclNameError, LclValidationError
-from lclang.lang.parser import parse_expression
-from lclang.types import FrameId, ModuleName
+from lclang.lang.engine.parser import parse_expression
 
 
 def test_frame_rejects_empty_frame_and_host_binding_names() -> None:
     """Construction validates both identifier namespaces."""
-    from lclang.runtime import Frame, Module
+    from lclang.lang.runtime import Frame, Module
 
     module = Module(ModuleName("app"), {})
     with pytest.raises(LclValidationError):
@@ -29,7 +29,7 @@ def test_frame_rejects_empty_frame_and_host_binding_names() -> None:
 
 def test_frame_normalizes_optional_and_string_identifiers() -> None:
     """Direct construction shares the ergonomic factory identifier policy."""
-    from lclang.runtime import Frame, Module
+    from lclang.lang.runtime import Frame, Module
 
     module = Module(ModuleName("app"), {})
     assert Frame(module).frame_id == FrameId("frame-app")
@@ -44,7 +44,7 @@ def test_frame_normalizes_optional_and_string_identifiers() -> None:
 @pytest.mark.asyncio
 async def test_frame_get_rejects_empty_variable_name() -> None:
     """The convenience lookup rejects an ambiguous empty key."""
-    from lclang.runtime import Frame, Module
+    from lclang.lang.runtime import Frame, Module
 
     frame = Frame(Module(ModuleName("app"), {}), FrameId("frame:1"))
     with pytest.raises(LclValidationError):
@@ -56,7 +56,7 @@ async def test_frame_get_rejects_empty_variable_name() -> None:
 @pytest.mark.asyncio
 async def test_frame_get_returns_explicit_fallback_for_an_absent_name() -> None:
     """Sunny: any explicit fallback, including None, represents a result."""
-    from lclang.runtime import Frame, Module
+    from lclang.lang.runtime import Frame, Module
 
     marker = object()
     frame = Frame(Module(ModuleName("app"), {}), FrameId("frame:1"))
@@ -71,7 +71,7 @@ async def test_frame_get_returns_explicit_fallback_for_an_absent_name() -> None:
 @pytest.mark.asyncio
 async def test_frame_get_no_fallback_preserves_missing_name_error() -> None:
     """Rainy: omission and the public sentinel retain existing diagnostics."""
-    from lclang.runtime import NO_FALLBACK, Frame, Module
+    from lclang.lang.runtime import NO_FALLBACK, Frame, Module
 
     frame = Frame(Module(ModuleName("app"), {}), FrameId("frame:1"))
     with pytest.raises(LclNameError, match="unknown variable: missing"):
@@ -83,7 +83,7 @@ async def test_frame_get_no_fallback_preserves_missing_name_error() -> None:
 @pytest.mark.asyncio
 async def test_frame_get_fallback_does_not_replace_selected_name_outcomes() -> None:
     """Composite: hierarchy hits and definition failures ignore the fallback."""
-    from lclang.runtime import Frame, Module
+    from lclang.lang.runtime import Frame, Module
 
     fallback = object()
     parent = Frame(
@@ -108,7 +108,7 @@ async def test_frame_get_fallback_does_not_replace_selected_name_outcomes() -> N
 @pytest.mark.asyncio
 async def test_frame_lazily_evaluates_and_caches_local_result() -> None:
     """A definition executes once and retains its result by identity."""
-    from lclang.runtime import Frame, Module
+    from lclang.lang.runtime import Frame, Module
 
     calls = 0
     marker = object()
@@ -131,7 +131,7 @@ async def test_frame_lazily_evaluates_and_caches_local_result() -> None:
 @pytest.mark.asyncio
 async def test_frame_resolves_local_definitions_through_itself() -> None:
     """One local expression can resolve another cached definition."""
-    from lclang.runtime import Frame, Module
+    from lclang.lang.runtime import Frame, Module
 
     module = Module(
         ModuleName("app"),
@@ -145,7 +145,7 @@ async def test_frame_resolves_local_definitions_through_itself() -> None:
 @pytest.mark.asyncio
 async def test_frame_caches_and_reraises_same_failure() -> None:
     """Failed definitions are deterministic snapshots just like values."""
-    from lclang.runtime import Frame, Module
+    from lclang.lang.runtime import Frame, Module
 
     calls = 0
 
@@ -167,7 +167,7 @@ async def test_frame_caches_and_reraises_same_failure() -> None:
 @pytest.mark.asyncio
 async def test_frame_unknown_name_retains_resolver_span() -> None:
     """Missing definitions report the requesting expression location."""
-    from lclang.runtime import Frame, Module
+    from lclang.lang.runtime import Frame, Module
 
     node = parse_expression("missing")
     frame = Frame(Module(ModuleName("app"), {}), FrameId("frame:1"))
@@ -179,7 +179,7 @@ async def test_frame_unknown_name_retains_resolver_span() -> None:
 @pytest.mark.asyncio
 async def test_direct_cancellation_is_not_cached() -> None:
     """A cancelled first attempt does not poison the next local lookup."""
-    from lclang.runtime import Frame, Module
+    from lclang.lang.runtime import Frame, Module
 
     calls = 0
 
@@ -200,7 +200,7 @@ async def test_direct_cancellation_is_not_cached() -> None:
 @pytest.mark.asyncio
 async def test_child_delegates_parent_result_and_cache_identity() -> None:
     """Ancestor results remain cached and owned by their defining Frame."""
-    from lclang.runtime import Frame, Module
+    from lclang.lang.runtime import Frame, Module
 
     marker = object()
     parent = Frame(
@@ -216,7 +216,7 @@ async def test_child_delegates_parent_result_and_cache_identity() -> None:
 @pytest.mark.asyncio
 async def test_parent_definition_resolves_inside_parent_scope() -> None:
     """Child shadowing cannot alter an ancestor-owned expression."""
-    from lclang.runtime import Frame, Module
+    from lclang.lang.runtime import Frame, Module
 
     parent_module = Module(
         ModuleName("parent"),
@@ -232,7 +232,7 @@ async def test_parent_definition_resolves_inside_parent_scope() -> None:
 @pytest.mark.asyncio
 async def test_child_definition_can_combine_local_and_parent_values() -> None:
     """Unshadowed names fall through while local names retain precedence."""
-    from lclang.runtime import Frame, Module
+    from lclang.lang.runtime import Frame, Module
 
     parent = Frame(
         Module(ModuleName("parent"), {"base": parse_expression("40")}),
@@ -248,7 +248,7 @@ async def test_child_definition_can_combine_local_and_parent_values() -> None:
 @pytest.mark.asyncio
 async def test_missing_parent_chain_keeps_original_request_span() -> None:
     """Hierarchical fallback does not replace the requesting name-node span."""
-    from lclang.runtime import Frame, Module
+    from lclang.lang.runtime import Frame, Module
 
     empty = Module(ModuleName("empty"), {})
     parent = Frame(empty, FrameId("parent:1"))

@@ -1,12 +1,12 @@
-"""Unit tests mirroring :mod:`lclang.lang.evaluator.logical`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.evaluator.logical_evaluation`."""
 
 import pytest
 
+from lclang.common.identifiers import VarName
+from lclang.common.source_location import SourceSpan
 from lclang.error import LclEvaluationError
-from lclang.lang.evaluator.dispatch import interpret_expression
-from lclang.lang.parser import parse_expression
-from lclang.source import SourceSpan
-from lclang.types import VarName
+from lclang.lang.engine.evaluator.ast_interpreter import interpret_expression
+from lclang.lang.engine.parser import parse_expression
 
 
 @pytest.mark.asyncio

@@ -1,12 +1,12 @@
-"""Unit tests mirroring :mod:`lclang.config.sources`."""
+"""Unit tests mirroring :mod:`lclang.config.config_source`."""
 
 from pathlib import Path
 
 import pytest
 
-from lclang.config import LclConfigUsingError, ResolvedConfigSource
-from lclang.config.sources import canonical_config_path, resolve_using_path
-from lclang.error import LclValidationError
+from lclang.config import ResolvedConfigSource
+from lclang.config.config_source import canonical_config_path, resolve_using_path
+from lclang.error import LclConfigUsingError, LclValidationError
 
 
 def test_resolved_source_and_root_path_validation(tmp_path: Path) -> None:

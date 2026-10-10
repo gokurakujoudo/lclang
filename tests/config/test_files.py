@@ -1,4 +1,4 @@
-"""Unit tests mirroring :mod:`lclang.config.files`."""
+"""Unit tests mirroring :mod:`lclang.config.file_resolver`."""
 
 import asyncio
 import os
@@ -9,7 +9,7 @@ from tempfile import TemporaryDirectory
 import pytest
 
 from lclang.config import FileConfigResolver, load_config
-from lclang.config.files import read_file_source
+from lclang.config.file_resolver import read_file_source
 from lclang.error import LclConfigUsingError
 
 

@@ -21,7 +21,7 @@ python -m pip install lclang
 ```python
 import asyncio
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 TOTAL = define_module("total", {"result": "unit_price * quantity"})

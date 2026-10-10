@@ -1,0 +1,39 @@
+"""Async host boundary for retrieving path-backed configuration sources.
+
+Defines ``ConfigSourceResolver``.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Protocol
+
+from lclang.config.config_source import ResolvedConfigSource
+
+
+class ConfigSourceResolver(Protocol):
+    """Resolve one canonical path into immutable Unicode source text.
+
+    .. note::
+       Implementations control authorization and retrieval, not path semantics.
+    """
+
+    async def resolve(
+        self,
+        path: Path,
+        *,
+        importer: ResolvedConfigSource | None,
+    ) -> ResolvedConfigSource:
+        """Retrieve one normalized configuration path.
+
+        :param path: Canonical absolute `.lclcfg` path requested by the loader.
+        :param importer: Source containing the using declaration, or ``None``.
+        :returns: Immutable resolved source snapshot.
+        :raises FileNotFoundError: If the directly requested source does not exist.
+        :raises Exception: If host retrieval or authorization fails.
+
+        .. note::
+           Only ``FileNotFoundError`` signals optional absence. Cancellation must
+           propagate without translation.
+        """
+        ...

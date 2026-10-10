@@ -7,17 +7,14 @@ from typing import Any, cast
 
 import pytest
 
-from lclang.config import (
-    ConfigImport,
-    ConfigLoader,
-    FileConfigResolver,
+from lclang.config import ConfigImport, ConfigLoader, FileConfigResolver, load_config, parse_config
+from lclang.error import (
     LclConfigCycleError,
     LclConfigSyntaxError,
     LclConfigUsingError,
-    load_config,
-    parse_config,
+    LclEvaluationError,
+    LclValidationError,
 )
-from lclang.error import LclEvaluationError, LclValidationError
 from tests.config.support import source_span
 
 

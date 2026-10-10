@@ -1,13 +1,13 @@
-"""Unit tests mirroring :mod:`lclang.runtime.frame.frame_factory`."""
+"""Unit tests mirroring :mod:`lclang.lang.runtime.frame.frame_factory`."""
 
 from dataclasses import FrozenInstanceError
 
 import pytest
 
+from lclang.common.identifiers import FrameId, ModuleName
 from lclang.error import LclValidationError
-from lclang.lang.parser import parse_expression
-from lclang.runtime import EvaluationLimits, FrameFactory, Module, Preset
-from lclang.types import FrameId, ModuleName
+from lclang.lang.engine.parser import parse_expression
+from lclang.lang.runtime import EvaluationLimits, FrameFactory, Module, Preset
 
 
 def _module(source: str = "base + extra") -> Module:

@@ -1,16 +1,16 @@
-"""Unit tests mirroring :mod:`lclang.runtime.dependency.tracing`."""
+"""Unit tests mirroring :mod:`lclang.lang.runtime.dependency.dependency_trace`."""
 
 from collections.abc import Awaitable, Callable
 from typing import cast
 
 import pytest
 
+from lclang.common.identifiers import VarName
 from lclang.error import LclNameError, LclValidationError
-from lclang.lang.evaluator.context import MappingResolver
-from lclang.lang.evaluator.dispatch import interpret_expression
-from lclang.lang.parser import parse_expression
-from lclang.runtime import DependencyKind, DependencyTrace, TracingResolver
-from lclang.types import VarName
+from lclang.lang.engine.evaluator.ast_interpreter import interpret_expression
+from lclang.lang.engine.evaluator.name_resolver import MappingResolver
+from lclang.lang.engine.parser import parse_expression
+from lclang.lang.runtime import DependencyKind, DependencyTrace, TracingResolver
 
 
 def test_trace_validates_source_and_retains_bounded_ordered_snapshots() -> None:

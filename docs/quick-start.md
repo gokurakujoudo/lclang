@@ -8,7 +8,7 @@ other definitions as needed.
 ```python
 import asyncio
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 async def main() -> None:
@@ -39,7 +39,7 @@ reviewed builtins such as `int` and `len`, alongside your supplied inputs:
 ```python
 import asyncio
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 TOTAL = define_module("total", {"result": "int(subtotal) + len(taxes)"})

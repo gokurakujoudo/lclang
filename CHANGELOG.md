@@ -9,6 +9,14 @@
 
 ### Configuration and runtime
 
+- Group public APIs by function; import language construction and parsing from
+  `lclang.lang` and diagnostic types and code enums from `lclang.error`.
+  Move the AST, runtime and standard library under `lclang.lang`, with the
+  lexer, parser, printer and evaluator under `lclang.lang.engine`.
+- Use concrete source filenames and module overviews. Shared primitives live in
+  `lclang.common`; language records and markers live in `lclang.lang.common`.
+- Sort domain error enums by code and use descriptive `Exx_REASON` members,
+  including native operation failures. Existing six-digit code strings are unchanged.
 - Add `import` and `import?` with required static aliases, independent loading
   contexts, scope-aware name qualification, repeated-alias field merging, and
   empty namespace reservations. Optional imports skip only directly missing files.

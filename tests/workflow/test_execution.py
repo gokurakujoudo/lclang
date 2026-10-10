@@ -11,9 +11,9 @@ from typing import cast
 
 import pytest
 
-import lclang
 import lclang.workflow as wf
 from lclang.error import LclStateError, LclValidationError, LclWorkflowError
+from lclang.lang import Frame, define_frame
 
 
 @dataclass
@@ -46,7 +46,7 @@ class DoubleOutputs:
     second: int
 
 
-def execution_context(frame: lclang.Frame) -> wf.WorkflowExecutionContext:
+def execution_context(frame: Frame) -> wf.WorkflowExecutionContext:
     """Return one deterministic workflow execution context.
 
     :param frame: Shared execution Frame.
@@ -171,7 +171,7 @@ async def test_nested_siblings_publish_outputs_and_scope_context_resources() -> 
         children=[child, sibling],
     )
 
-    async with lclang.define_frame(preset={"source": 2}) as frame:
+    async with define_frame(preset={"source": 2}) as frame:
         result = await wf.define_workflow("Composite", root).execute(execution_context(frame))
         assert events == [
             "context-enter",
@@ -237,7 +237,7 @@ async def test_unhandled_action_error_records_failure_and_skips_full_branch() ->
         args_mapping=NumberArgs(source.quote),
         children=[child],
     )
-    async with lclang.define_frame(preset={"source": 1}) as frame:
+    async with define_frame(preset={"source": 1}) as frame:
         result = await wf.define_workflow("Rainy", root).execute(execution_context(frame))
         failure = await frame.get("__exception__")
 
@@ -379,7 +379,7 @@ async def test_covering_context_wraps_failure_but_still_skips_sibling() -> None:
     )
     root = wf.define_task("root", "Root", children=[failed, sibling])
 
-    async with lclang.define_frame(preset={"source": 3}) as frame:
+    async with define_frame(preset={"source": 3}) as frame:
         result = await wf.define_workflow("Covered", root).execute(execution_context(frame))
 
     assert events == ["acquire", "handle", "release"]
@@ -417,7 +417,7 @@ async def test_explicit_failure_creates_synthetic_exception_and_stops() -> None:
         args_mapping=NumberArgs(source.quote),
         children=[wf.define_task("child", "Skipped")],
     )
-    async with lclang.define_frame(preset={"source": 4}) as frame:
+    async with define_frame(preset={"source": 4}) as frame:
         result = await wf.define_workflow("Rejected", root).execute(execution_context(frame))
         failure = await frame.get("__exception__")
 
@@ -500,7 +500,7 @@ async def test_context_enter_exit_and_unsuppressed_failures_are_recorded() -> No
             args_mapping=None if action is None else NumberArgs(source.quote),
             context_tasks=context_tasks,
         )
-        async with lclang.define_frame(preset={"source": 1}) as frame:
+        async with define_frame(preset={"source": 1}) as frame:
             result = await wf.define_workflow("Workflow", task).execute(execution_context(frame))
             failure = cast(wf.WorkflowException, await frame.get("__exception__"))
         assert (
@@ -547,7 +547,7 @@ async def test_wrong_action_outputs_and_duplicate_publication_fail_cleanly() -> 
         ),
     )
     for task in tasks:
-        async with lclang.define_frame(preset={"source": 1}) as frame:
+        async with define_frame(preset={"source": 1}) as frame:
             result = await wf.define_workflow("Workflow", task).execute(execution_context(frame))
             failure = cast(wf.WorkflowException, await frame.get("__exception__"))
         assert isinstance(failure.exception, LclValidationError)
@@ -573,21 +573,21 @@ async def test_defensive_execution_validation_and_task_frame_close_failure(
         (),
         (),
     )
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         result = await wf.Workflow("Workflow", invalid).execute(execution_context(frame))
         failure = cast(wf.WorkflowException, await frame.get("__exception__"))
     assert isinstance(failure.exception, LclStateError)
 
-    original_close = lclang.Frame.close
+    original_close = Frame.close
 
-    async def selective_close(frame: lclang.Frame) -> None:
+    async def selective_close(frame: Frame) -> None:
         if str(frame.frame_id) == "invalid":
             raise ValueError("close failed")
         await original_close(frame)
 
-    monkeypatch.setattr(lclang.Frame, "close", selective_close)
+    monkeypatch.setattr(Frame, "close", selective_close)
     structural = wf.TaskNode(wf.TaskID("invalid"), "Invalid", None, None, None, (), ())
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         result = await wf.Workflow("Workflow", structural).execute(execution_context(frame))
         failure = cast(wf.WorkflowException, await frame.get("__exception__"))
     assert (

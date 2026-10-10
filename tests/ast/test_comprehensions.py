@@ -1,17 +1,17 @@
-"""Unit tests mirroring :mod:`lclang.ast.comprehensions`."""
+"""Unit tests mirroring :mod:`lclang.lang.ast.comprehension_nodes`."""
 
 import pytest
 
-from lclang.ast import LclConstant, LclDictUnpack, LclKeyValue, LclName
-from lclang.ast.comprehensions import (
+from lclang.common.identifiers import VarName
+from lclang.error import LclValidationError
+from lclang.lang.ast import LclConstant, LclDictUnpack, LclKeyValue, LclName
+from lclang.lang.ast.comprehension_nodes import (
     LclComprehensionClause,
     LclDictComprehension,
     LclGenerator,
     LclListComprehension,
     LclSetComprehension,
 )
-from lclang.error import LclValidationError
-from lclang.types import VarName
 
 
 def clause() -> LclComprehensionClause:

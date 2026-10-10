@@ -5,10 +5,10 @@ from typing import cast
 
 import pytest
 
-import lclang
-from lclang.defaults import DefaultBinding
-from lclang.error import LclValidationError
-from lclang.runtime.frame.defaults import create_default_frame, default_scope
+from lclang.common.default_binding import DefaultBinding
+from lclang.error import LclNameError, LclValidationError
+from lclang.lang import FrameProxy, define_frame, define_module
+from lclang.lang.runtime.frame.default_frame_scope import create_default_frame, default_scope
 
 
 def test_binding_rejects_non_callable_factory() -> None:
@@ -21,10 +21,10 @@ def test_binding_rejects_non_callable_factory() -> None:
 async def test_default_scope_names_masks_and_real_prefix_shadowing() -> None:
     """Partial config scopes see default leaves while concrete parents suppress them."""
     bindings = {"settings.limit!": DefaultBinding(3), "settings.mode": DefaultBinding("safe")}
-    async with create_default_frame(bindings) as defaults, lclang.define_frame() as frame:
+    async with create_default_frame(bindings) as defaults, define_frame() as frame:
         with default_scope(frame, defaults):
             assert frame.is_masked("settings.limit")
-            scope = cast(lclang.FrameProxy, await frame.get("settings"))
+            scope = cast(FrameProxy, await frame.get("settings"))
             assert set(await scope.field_names()) == {"limit", "mode"}
             assert await scope.get("limit") == 3
             frame.mixin({"settings.mode": "fast"})
@@ -33,13 +33,13 @@ async def test_default_scope_names_masks_and_real_prefix_shadowing() -> None:
         assert not frame.has("settings.limit")
     async with (
         create_default_frame(bindings) as defaults,
-        lclang.define_frame(
+        define_frame(
             preset={"settings": object()},
         ) as frame,
     ):
         with default_scope(frame, defaults):
             assert not frame.has("settings.limit")
-            with pytest.raises(lclang.LclNameError):
+            with pytest.raises(LclNameError):
                 await frame.get("settings.limit")
 
 
@@ -54,7 +54,7 @@ async def test_factory_failure_shared_and_new_execution_retries() -> None:
         await asyncio.sleep(0)
         raise ValueError("factory failure")
 
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         for expected in (1, 2):
             async with create_default_frame({"value": DefaultBinding(factory=fail)}) as defaults:
                 with default_scope(frame, defaults):
@@ -73,8 +73,8 @@ async def test_factory_failure_shared_and_new_execution_retries() -> None:
 @pytest.mark.asyncio
 async def test_cached_dependencies_remain_snapshots_across_default_scopes() -> None:
     """A borrowed Frame's existing calculations are neither invalidated nor rebound."""
-    module = lclang.define_module("config", {"double": "value * 2"})
-    async with lclang.define_frame(module) as frame:
+    module = define_module("config", {"double": "value * 2"})
+    async with define_frame(module) as frame:
         for value in (3, 7):
             async with create_default_frame({"value": DefaultBinding(value)}) as defaults:
                 with default_scope(frame, defaults):

@@ -12,11 +12,11 @@ import pytest
 
 from lclang.error import LclErrorGroup, LclLoggerError, LclStateError, LclValidationError
 from lclang.logger import use_logger, use_logger_handler
-from lclang.logger.context import LoggerRuntime, current_runtime
 from lclang.logger.logger import Logger
-from lclang.logger.metrics import Counters
+from lclang.logger.logging_metrics import Counters
+from lclang.logger.logging_takeover import LoggingTakeover
 from lclang.logger.queue_handler import LocalQueueHandler
-from lclang.logger.takeover import LoggingTakeover
+from lclang.logger.runtime_registry import LoggerRuntime, current_runtime
 
 
 @pytest.mark.asyncio
@@ -73,7 +73,7 @@ async def test_writer_startup_control_signal_keeps_original_identity() -> None:
     """A startup control signal returns from the writer to its process scope owner."""
     signal = SystemExit(2)
     with (
-        patch("lclang.logger.dispatcher.ConsoleSink", side_effect=signal),
+        patch("lclang.logger.sink_dispatcher.ConsoleSink", side_effect=signal),
         pytest.raises(SystemExit) as caught,
     ):
         async with use_logger_handler({}):
@@ -84,7 +84,7 @@ async def test_writer_startup_control_signal_keeps_original_identity() -> None:
 @pytest.mark.asyncio
 async def test_cleanup_cancellation_and_native_failure_are_both_retained() -> None:
     """Join failures accompanying cancellation retain the native signal and cleanup cause."""
-    from lclang.logger.api import finish_cleanup
+    from lclang.logger.logger_scope import finish_cleanup
 
     entered, finish = asyncio.Event(), asyncio.Event()
     native = OSError("join failed")
@@ -216,7 +216,9 @@ async def test_cancelled_exit_waits_for_drain_and_drops_late_records() -> None:
 async def test_startup_thread_failure_and_body_failure_release_scope() -> None:
     """Failure before launch and an exceptional body both restore scope availability."""
     with (
-        patch("lclang.logger.context.Thread.start", side_effect=RuntimeError("start failed")),
+        patch(
+            "lclang.logger.runtime_registry.Thread.start", side_effect=RuntimeError("start failed")
+        ),
         pytest.raises(LclLoggerError, match="start failed"),
     ):
         async with use_logger_handler({}):

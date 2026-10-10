@@ -7,8 +7,8 @@ from contextlib import suppress
 from typing import cast
 from weakref import ReferenceType, ref
 
-import lclang
 from lclang.error import LclEvaluationError
+from lclang.lang import Frame, define_module
 from lclang.workflow import ExecutionStatusManager
 from tests.support.concurrency import CountingGate
 
@@ -19,8 +19,8 @@ async def build_collectible_runtime() -> tuple[ReferenceType[object], ...]:
     :returns: Weak references to the Frame, closure, iterator, and cancelled task.
     """
     gate = CountingGate(99)
-    frame = lclang.Frame(
-        lclang.define_module(
+    frame = Frame(
+        define_module(
             "leak-probe",
             {
                 "closure": "(value) -> value + 1",
@@ -52,8 +52,8 @@ async def run_lifecycle_batch(count: int) -> None:
     if count <= 0:
         raise ValueError("lifecycle batch count must be positive")
     for index in range(count):
-        frame = lclang.Frame(
-            lclang.define_module(
+        frame = Frame(
+            define_module(
                 f"batch-{index}",
                 {
                     "closure": "(value) -> value + 1",

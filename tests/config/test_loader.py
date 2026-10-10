@@ -7,23 +7,27 @@ from typing import cast
 
 import pytest
 
-from lclang.ast import LclConstant
 from lclang.config import (
     ConfigLoader,
     ConfigLoadLimits,
     ConfigUsing,
-    LclConfigCycleError,
-    LclConfigLimitError,
-    LclConfigUsingError,
     ResolvedConfigSource,
     load_config,
     parse_config,
 )
-from lclang.config.errors import LclConfigSyntaxError
-from lclang.config.sources import LoadedConfigSource
-from lclang.config.using import evaluate_using_target, snapshot_using_overrides
-from lclang.error import LclErrorGroup, LclEvaluationError, LclValidationError
+from lclang.config.config_source import LoadedConfigSource
+from lclang.config.target_evaluation import evaluate_using_target, snapshot_using_overrides
+from lclang.error import (
+    LclConfigCycleError,
+    LclConfigLimitError,
+    LclConfigSyntaxError,
+    LclConfigUsingError,
+    LclErrorGroup,
+    LclEvaluationError,
+    LclValidationError,
+)
 from lclang.lang import parse_expression
+from lclang.lang.ast import LclConstant
 from tests.config.support import MappingResolver
 
 
@@ -48,7 +52,7 @@ async def test_grouped_resolver_and_target_failures_retain_members(
     async def target(*args: object, **kwargs: object) -> object:
         raise original
 
-    monkeypatch.setattr("lclang.config.using.evaluate_target_expression", target)
+    monkeypatch.setattr("lclang.config.target_evaluation.evaluate_target_expression", target)
     declaration = cast(ConfigUsing, parse_config('using f"{name}.lclcfg"').declarations[0])
     with pytest.raises(LclErrorGroup) as failed:
         await evaluate_using_target(declaration, [], {})
@@ -68,7 +72,7 @@ async def test_dynamic_target_retains_known_codes_and_original_failure(
         raise error
 
     declaration = cast(ConfigUsing, parse_config('using f"{name}.lclcfg"').declarations[0])
-    monkeypatch.setattr("lclang.config.using.evaluate_target_expression", broken)
+    monkeypatch.setattr("lclang.config.target_evaluation.evaluate_target_expression", broken)
     with pytest.raises(LclConfigUsingError) as caught:
         await evaluate_using_target(declaration, [], {})
     assert caught.value.code == ("APP" if existing else "LCL324983")
@@ -94,7 +98,7 @@ async def test_resolver_wrong_result_has_a_specific_validation_code() -> None:
 @pytest.mark.asyncio
 async def test_loader_rejects_an_unsupported_declaration_before_expansion() -> None:
     """Malformed parser-extension values cannot pass into target evaluation."""
-    from lclang.config.model import ConfigDeclaration
+    from lclang.config.config_document import ConfigDeclaration
 
     with TemporaryDirectory() as directory:
         path = Path(directory) / "settings.lclcfg"
@@ -272,7 +276,7 @@ async def test_dynamic_using_validates_overrides_masks_and_evaluated_type(
     async def wrong_result(*args: object, **kwargs: object) -> object:
         return 1
 
-    monkeypatch.setattr("lclang.config.using.evaluate_target_expression", wrong_result)
+    monkeypatch.setattr("lclang.config.target_evaluation.evaluate_target_expression", wrong_result)
     with pytest.raises(LclConfigUsingError, match="non-empty text"):
         await evaluate_using_target(declaration, (), {})
 

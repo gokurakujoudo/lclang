@@ -1,11 +1,11 @@
-"""Unit tests mirroring :mod:`lclang.stdlib.manifest`."""
+"""Unit tests mirroring :mod:`lclang.lang.stdlib.builtin_manifest`."""
 
 from dataclasses import FrozenInstanceError
 
 import pytest
 
 from lclang.error import LclValidationError
-from lclang.stdlib import StdlibEntry, StdlibManifest
+from lclang.lang.stdlib import StdlibEntry, StdlibManifest
 
 
 def test_entry_retains_opaque_value_and_immutable_metadata() -> None:

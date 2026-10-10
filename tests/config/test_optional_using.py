@@ -10,15 +10,17 @@ from lclang.config import (
     ConfigLoader,
     ConfigLoadLimits,
     FileConfigResolver,
+    ResolvedConfigSource,
+    load_config,
+)
+from lclang.config.config_source import LoadedConfigSource
+from lclang.error import (
     LclConfigCycleError,
     LclConfigLimitError,
     LclConfigSyntaxError,
     LclConfigUsingError,
     LclConfigVersionError,
-    ResolvedConfigSource,
-    load_config,
 )
-from lclang.config.sources import LoadedConfigSource
 from tests.config.support import MappingResolver
 
 

@@ -2,7 +2,7 @@
 
 import pytest
 
-from lclang.cli.validation import freeze_mapping, is_lcl_identifier, normalize_text
+from lclang.cli.declaration_validation import freeze_mapping, is_lcl_identifier, normalize_text
 from lclang.error import LclValidationError
 
 

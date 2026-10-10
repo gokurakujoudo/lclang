@@ -9,9 +9,9 @@ from typing import Any, cast
 
 import pytest
 
-import lclang
 import lclang.workflow as wf
 from lclang.error import LclValidationError
+from lclang.lang import define_frame
 from lclang.utils import safe_repr
 from lclang.workflow.mappings import mapped_outputs, materialize_args
 
@@ -207,7 +207,7 @@ def test_workflow_graph_rejects_wrong_roots_cycles_and_variable_aliases() -> Non
 async def test_mapping_edges_are_explicit_safe_and_bounded() -> None:
     """Output selection rejects ambiguity and rendering contains hostile reprs."""
     target = wf.define_variable[int]("target", is_masked=True)
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         assert await mapped_outputs(None, Pair(1), frame) == {}
         with pytest.raises(LclValidationError, match="mapping dataclass"):
             await mapped_outputs(Pair(target.quote), object(), frame)

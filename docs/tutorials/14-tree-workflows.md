@@ -108,7 +108,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import date
 
-from lclang import define_frame
+from lclang.lang import define_frame
 from lclang.workflow import (
     ExecutionStatus,
     ExecutionStatusManager,

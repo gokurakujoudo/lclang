@@ -4,8 +4,8 @@ import logging
 from dataclasses import dataclass
 from datetime import date
 
-import lclang
 import lclang.workflow as wf
+from lclang.lang import Frame
 
 
 @dataclass
@@ -24,7 +24,7 @@ async def echo(
     return args
 
 
-def execution_context(frame: lclang.Frame) -> wf.WorkflowExecutionContext:
+def execution_context(frame: Frame) -> wf.WorkflowExecutionContext:
     """Supply deterministic metadata."""
     return wf.WorkflowExecutionContext(
         False,

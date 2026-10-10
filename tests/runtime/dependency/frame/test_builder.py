@@ -1,10 +1,11 @@
-"""Behavioural tests mirroring :mod:`lclang.runtime.dependency.frame.builder`."""
+"""Behavioural tests mirroring :mod:`lclang.lang.runtime.dependency.frame.frame_graph_builder`."""
 
 import pytest
 
+from lclang.common.identifiers import FrameId, ModuleName, VarName
 from lclang.error import LclValidationError
-from lclang.lang.parser import parse_expression
-from lclang.runtime import (
+from lclang.lang.engine.parser import parse_expression
+from lclang.lang.runtime import (
     DependencyKind,
     Frame,
     FrameBindingKind,
@@ -13,7 +14,6 @@ from lclang.runtime import (
     Module,
     build_dependency_graph,
 )
-from lclang.types import FrameId, ModuleName, VarName
 
 
 def module(name: str, definitions: dict[str, str]) -> Module:

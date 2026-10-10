@@ -5,7 +5,7 @@ from collections.abc import Awaitable, Callable, Mapping
 import pytest
 
 from lclang.cli import CliContext, CliEntrance, CliResult, CommandGroup, ParameterDoc, cli
-from lclang.cli.help import render_command_help
+from lclang.cli.help_rendering import render_command_help
 
 
 async def unused(context: CliContext) -> CliResult:
@@ -70,7 +70,7 @@ async def test_entrance_help_merges_defaults_without_loading_config(
     def forbidden(*args: object, **kwargs: object) -> None:
         raise AssertionError("help loaded configuration")
 
-    monkeypatch.setattr("lclang.cli.binding.load_config", forbidden)
+    monkeypatch.setattr("lclang.cli.frame_binding.load_config", forbidden)
     command = cli.command(
         parameter_docs=[
             ParameterDoc("value", int, True, "Value"),

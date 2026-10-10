@@ -1,29 +1,26 @@
-"""Public `.lclcfg` parsing, loading, provenance, and runtime bridge."""
+"""Public `.lclcfg` parsing, loading, provenance, and runtime bridge.
 
-from lclang.config.api import evaluate_config, load_config
-from lclang.config.files import FileConfigResolver
-from lclang.config.limits import ConfigLoadLimits
-from lclang.config.loader import ConfigLoader
-from lclang.config.model import (
+Exports ``Config``, ``ConfigDefinition``, ``ConfigDeclaration``, ``ConfigDocument``,
+``ConfigLoadLimits``, ``ConfigLoader``, ``ConfigSourceResolver``, ``ConfigUsing``,
+``ConfigImport``, ``FileConfigResolver``, ``ResolvedConfigSource``, ``evaluate_config``,
+``load_config``, ``parse_config``.
+"""
+
+from lclang.config.config_document import (
     ConfigDeclaration,
     ConfigDefinition,
     ConfigDocument,
     ConfigImport,
     ConfigUsing,
 )
-from lclang.config.parser import parse_config
-from lclang.config.protocols import ConfigSourceResolver
-from lclang.config.result import Config
-from lclang.config.sources import ResolvedConfigSource
-from lclang.error import LclConfigError
-from lclang.error.configuration import (
-    LclConfigCycleError,
-    LclConfigLifecycleError,
-    LclConfigLimitError,
-    LclConfigSyntaxError,
-    LclConfigUsingError,
-    LclConfigVersionError,
-)
+from lclang.config.config_loader import ConfigLoader
+from lclang.config.config_loading import evaluate_config, load_config
+from lclang.config.config_source import ResolvedConfigSource
+from lclang.config.document_parser import parse_config
+from lclang.config.file_resolver import FileConfigResolver
+from lclang.config.loaded_config import Config
+from lclang.config.loading_limit import ConfigLoadLimits
+from lclang.config.source_resolver import ConfigSourceResolver
 
 # Unitless public export names come from this module's supported API; the explicit list keeps
 # implementation helpers out of wildcard imports.
@@ -38,13 +35,6 @@ __all__ = [
     "ConfigUsing",
     "ConfigImport",
     "FileConfigResolver",
-    "LclConfigCycleError",
-    "LclConfigError",
-    "LclConfigLifecycleError",
-    "LclConfigLimitError",
-    "LclConfigSyntaxError",
-    "LclConfigUsingError",
-    "LclConfigVersionError",
     "ResolvedConfigSource",
     "evaluate_config",
     "load_config",

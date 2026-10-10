@@ -6,16 +6,14 @@ from typing import cast
 
 import pytest
 
-from lclang.error import LclValidationError
+from lclang.error import CalendarCannotLoadException, CalendarLogicException, LclValidationError
 from lclang.utils.calendar import (
     ALL_DAYS,
     ALL_WEEKDAYS,
     BDCalendarLoader,
     BDCalendarManager,
     BuiltinBDCalendarLoader,
-    CalendarCannotLoadException,
     CalendarID,
-    CalendarLogicException,
     DayType,
     HardcodedBDCalendar,
     def_functional_calendar,

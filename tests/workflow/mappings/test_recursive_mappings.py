@@ -8,9 +8,9 @@ from typing import Any, assert_type, cast
 
 import pytest
 
-import lclang
 import lclang.workflow as wf
 from lclang.error import LclValidationError
+from lclang.lang import FrameProxy, define_frame
 from lclang.workflow.mappings import mapped_outputs, materialize_args
 
 
@@ -56,7 +56,7 @@ async def test_nested_quotes_materialize_publish_and_infer() -> None:
     assert [item.name for item in workflow.to_cli("run", "Run").parameter_docs] == [
         "csv.encoding",
     ]
-    async with lclang.define_frame(preset={"csv.encoding": "utf-8"}) as frame:
+    async with define_frame(preset={"csv.encoding": "utf-8"}) as frame:
         result = await workflow.execute(
             wf.WorkflowExecutionContext(
                 False,
@@ -92,7 +92,7 @@ async def test_nested_projection_reads_concrete_record() -> None:
         "source.options.encoding",
         "source.options.shared",
     ]
-    async with lclang.define_frame(preset={"source": Arguments(Options("utf-8", []))}) as frame:
+    async with define_frame(preset={"source": Arguments(Options("utf-8", []))}) as frame:
         result = await workflow.execute(
             wf.WorkflowExecutionContext(
                 False,
@@ -134,7 +134,7 @@ class Deferred:
 async def test_nested_scope_records_and_generic_projection() -> None:
     """Workflow recursively materializes scope records without changing proxy APIs."""
     source = wf.define_variable[Arguments]("source")
-    async with lclang.define_frame(
+    async with define_frame(
         preset={
             "source.options.encoding": "utf-8",
             "source.options.shared": [],
@@ -142,14 +142,14 @@ async def test_nested_scope_records_and_generic_projection() -> None:
     ) as frame:
         actual = await materialize_args(source.quote, frame)
         assert actual == Arguments(Options("utf-8", []))
-        proxy = cast(lclang.FrameProxy, await frame.get("source"))
+        proxy = cast(FrameProxy, await frame.get("source"))
         shallow = await proxy.as_record(Arguments)
-        assert isinstance(shallow.options, lclang.FrameProxy)
+        assert isinstance(shallow.options, FrameProxy)
     variable = wf.define_variable[Generic[int]]("generic")
     selected = variable.field("value", int)
     assert_type(selected.quote, int)
     value = Generic(7, [7], {"a": 7}, abs)
-    async with lclang.define_frame(preset={"generic": value}) as frame:
+    async with define_frame(preset={"generic": value}) as frame:
         result = await materialize_args(Flexible(selected.quote), frame)
         assert result == Flexible(7)
         assert await materialize_args(variable.quote, frame) is value
@@ -161,7 +161,7 @@ async def test_nested_whole_quote_and_shared_template_identity() -> None:
     """Concrete quoted resources retain identity and literal DAG templates resolve twice."""
     options = Options("utf-8", [])
     variable = wf.define_variable[Options]("options")
-    async with lclang.define_frame(preset={"options": options}) as frame:
+    async with define_frame(preset={"options": options}) as frame:
         result = cast(Arguments, await materialize_args(Arguments(variable.quote), frame))
         assert result.options is options
         template = Flexible([variable.quote])
@@ -175,7 +175,7 @@ async def test_nested_whole_quote_and_shared_template_identity() -> None:
         second: Options
 
     twice_template = Twice(options, options)
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         actual_twice = cast(Twice, await materialize_args(twice_template, frame))
         assert actual_twice == twice_template
         assert actual_twice.first.shared is options.shared
@@ -215,7 +215,7 @@ async def test_projection_runtime_errors_retain_mapping_path(value: object) -> N
     """Null and wrong Python values identify the failed reference and mapping."""
     source = wf.define_variable[Arguments]("source")
     projection = source.field("options", Options).field("encoding", str)
-    async with lclang.define_frame(preset={"source": Arguments(cast(Options, value))}) as frame:
+    async with define_frame(preset={"source": Arguments(cast(Options, value))}) as frame:
         with pytest.raises(LclValidationError, match="source.options.encoding") as caught:
             await materialize_args(Arguments(Options(projection.quote, [])), frame)
     assert any("options.encoding" in note for note in caught.value.__notes__)
@@ -227,7 +227,7 @@ async def test_nested_output_failures_publish_nothing() -> None:
     one = wf.define_variable[str]("result.value")
     duplicate = wf.define_variable[list[str]]("result.value", is_masked=True)
     source = wf.define_variable[Options]("source")
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         with pytest.raises(LclValidationError, match="duplicate"):
             await mapped_outputs(
                 Options(one.quote, duplicate.quote),
@@ -250,8 +250,8 @@ async def test_nested_logs_mask_before_reading_and_show_projection(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Masked whole-record fields never invoke a hostile attribute getter."""
-    from lclang.workflow.logging import mapping_message
     from lclang.workflow.mappings import mapping_text
+    from lclang.workflow.task_logging import mapping_message
 
     class GuardedOptions(Options):
         def __getattribute__(self, name: str) -> Any:
@@ -260,7 +260,7 @@ async def test_nested_logs_mask_before_reading_and_show_projection(
             return super().__getattribute__(name)
 
     source = wf.define_variable[Options]("source")
-    async with lclang.define_frame(preset={"source.encoding!": "secret"}) as frame:
+    async with define_frame(preset={"source.encoding!": "secret"}) as frame:
         context = wf.WorkflowExecutionContext(
             False,
             date(2026, 9, 22),
@@ -294,7 +294,7 @@ async def test_opaque_optional_projection_types_and_unresolved_annotations() -> 
 
     variable = wf.define_variable[Flexible]("flexible")
     generic = wf.define_variable[Generic[int]]("generic")
-    async with lclang.define_frame(
+    async with define_frame(
         preset={
             "flexible": Flexible(object()),
             "generic": Generic(1, [], {}, abs),
@@ -335,7 +335,7 @@ async def test_invalid_verbose_resource_keeps_original_error() -> None:
     target = wf.define_variable[Options]("target")
     scope = wf.define_context_task("scope", "Scope", wrong, Options("utf-8", []), target.quote)
     workflow = wf.define_workflow("Invalid", wf.define_task("root", "Root", context_tasks=[scope]))
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         result = await workflow.execute(
             wf.WorkflowExecutionContext(
                 False,
@@ -359,7 +359,7 @@ async def test_many_nested_mappings_remain_independent() -> None:
     template = Arguments(Options(variable.quote, []))
 
     async def run(index: int) -> None:
-        async with lclang.define_frame(preset={"encoding": str(index)}) as frame:
+        async with define_frame(preset={"encoding": str(index)}) as frame:
             result = cast(Arguments, await materialize_args(template, frame))
             assert result.options.encoding == str(index)
             assert result.options.shared is template.options.shared

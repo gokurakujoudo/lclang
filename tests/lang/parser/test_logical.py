@@ -1,8 +1,9 @@
-"""Unit tests mirroring :mod:`lclang.lang.parser.logical`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.parser.logical_parser`."""
 
 import pytest
 
-from lclang.ast import (
+from lclang.error import LclSyntaxError
+from lclang.lang.ast import (
     LclBoolean,
     LclCall,
     LclCoalesce,
@@ -12,9 +13,8 @@ from lclang.ast import (
     LclSubscript,
     LclUnary,
 )
-from lclang.ast.operators import BooleanOperator, ComparisonOperator, UnaryOperator
-from lclang.error import LclSyntaxError
-from lclang.lang.parser import parse_expression
+from lclang.lang.ast.operator_nodes import BooleanOperator, ComparisonOperator, UnaryOperator
+from lclang.lang.engine.parser import parse_expression
 
 
 def test_comparison_chain_preserves_all_operator_forms() -> None:

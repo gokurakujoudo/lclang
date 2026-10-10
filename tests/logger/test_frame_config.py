@@ -5,8 +5,9 @@ from io import StringIO
 
 import pytest
 
-from lclang import define_frame, define_module
 from lclang.error import LclValidationError
+from lclang.lang import define_frame, define_module
+from lclang.lang.runtime import Frame
 from lclang.logger import (
     ConsoleConfig,
     FileConfig,
@@ -20,8 +21,7 @@ from lclang.logger import (
     use_logger,
     use_logger_handler,
 )
-from lclang.logger.frame_config import logger_source, verbose_config
-from lclang.runtime import Frame
+from lclang.logger.frame_logger_config import logger_source, verbose_config
 
 
 @pytest.mark.asyncio

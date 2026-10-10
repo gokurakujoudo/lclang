@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pytest
 
+from lclang.common.identifiers import SourceName
+from lclang.common.source_location import SourceOrigin, SourcePosition, SourceSpan
 from lclang.error import (
     LclError,
     LclEvaluationError,
@@ -11,8 +13,6 @@ from lclang.error import (
     LclSyntaxError,
     LclValidationError,
 )
-from lclang.source import SourceOrigin, SourcePosition, SourceSpan
-from lclang.types import SourceName
 
 
 def test_error_without_span_has_stable_code_and_rendering() -> None:

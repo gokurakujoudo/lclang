@@ -10,11 +10,11 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from lclang.logger import LoggerHandlerConfig, use_logger, use_logger_handler
-from lclang.logger.file import FileSink
-from lclang.logger.formatter import RecordFormatter
-from lclang.logger.metrics import Counters
-from lclang.logger.rotation import RotationConfig, RotationTimer
-from lclang.logger.segments import next_sequence
+from lclang.logger.file_segment import next_sequence
+from lclang.logger.file_sink import FileSink
+from lclang.logger.logging_metrics import Counters
+from lclang.logger.record_formatter import RecordFormatter
+from lclang.logger.rotation_policy import RotationConfig, RotationTimer
 
 
 def test_timer_uses_monotonic_or_utc_boundaries_and_skips_missed_periods() -> None:
@@ -114,7 +114,7 @@ def test_name_collision_preserves_existing_file_and_sequence_survives_scopes() -
             asyncio.run(exercise())
         assert collided[0].read_text() == "historical"
         assert len(list(Path(directory).glob("*.log"))) == 3
-    with patch("lclang.logger.segments.SEQUENCE_PID", -1):
+    with patch("lclang.logger.file_segment.SEQUENCE_PID", -1):
         assert next_sequence() == 1
 
 
@@ -177,7 +177,7 @@ def test_busy_queue_does_not_starve_deadlines() -> None:
             assert runtime.metrics.rollover_count >= 2
 
         with patch(
-            "lclang.logger.dispatcher.time",
+            "lclang.logger.sink_dispatcher.time",
             SimpleNamespace(
                 monotonic=lambda: clock[0],
                 time=time.time,

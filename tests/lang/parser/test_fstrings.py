@@ -1,18 +1,18 @@
-"""Unit tests mirroring :mod:`lclang.lang.parser.fstrings`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.parser.fstring_parser`."""
 
 import pytest
 
-from lclang.ast import (
+from lclang.common.identifiers import SourceName, VarName
+from lclang.common.source_location import SourceOrigin
+from lclang.error import LclSyntaxError
+from lclang.lang.ast import (
     LclFormattedValue,
     LclJoinedString,
     LclName,
     LclStringText,
 )
-from lclang.error import LclSyntaxError
-from lclang.lang.parser import parse_expression
-from lclang.lang.printer import to_source
-from lclang.source import SourceOrigin
-from lclang.types import SourceName, VarName
+from lclang.lang.engine.parser import parse_expression
+from lclang.lang.engine.printer import to_source
 
 
 def test_fstring_parts_become_semantic_ast_nodes() -> None:

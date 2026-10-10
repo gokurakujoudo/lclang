@@ -1,18 +1,18 @@
-"""Unit tests mirroring :mod:`lclang.runtime.dependency.ordering`."""
+"""Unit tests mirroring :mod:`lclang.lang.runtime.dependency.dependency_ordering`."""
 
 import pytest
 
+from lclang.common.identifiers import ModuleName, VarName
 from lclang.error import LclCircularDependencyError
-from lclang.lang.parser import parse_expression
-from lclang.runtime import (
+from lclang.lang.engine.parser import parse_expression
+from lclang.lang.runtime import (
     DependencyGraph,
     DependencyKind,
     Module,
     build_dependency_graph,
     topological_order,
 )
-from lclang.runtime.dependency.ordering import internal_find_cycle
-from lclang.types import ModuleName, VarName
+from lclang.lang.runtime.dependency.dependency_ordering import internal_find_cycle
 
 
 def _graph(**definitions: str) -> DependencyGraph:

@@ -4,6 +4,10 @@ Version is the stable release of `lclang` for Python 3.14 and newer. The
 package is pure Python, MIT licensed, fully typed, and has no third-party
 runtime dependencies.
 
+Public APIs are grouped under `lang`, `config`, `cli`, `workflow`, `utils`,
+`logger` and `error`. Shared primitives live in `common`; language-only values
+live in `lang.common`. Package metadata reads the sole `__version__.py` definition.
+
 ## Language
 
 - Unicode lexer with source spans, comments, literals, bytes, raw strings, and

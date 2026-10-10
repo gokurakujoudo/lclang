@@ -1,7 +1,7 @@
-"""Unit tests mirroring :mod:`lclang.runtime.dependency.analysis`."""
+"""Unit tests mirroring :mod:`lclang.lang.runtime.dependency.ast_dependency_analysis`."""
 
-from lclang.lang.parser import parse_expression
-from lclang.runtime import DependencyKind, analyze_dependencies
+from lclang.lang.engine.parser import parse_expression
+from lclang.lang.runtime import DependencyKind, analyze_dependencies
 
 
 def _summary(source: str) -> list[tuple[str, DependencyKind]]:

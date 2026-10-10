@@ -5,13 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from lclang.config import (
-    Config,
-    ConfigLoader,
-    ConfigLoadLimits,
-    ResolvedConfigSource,
-    parse_config,
-)
+from lclang.config import Config, ConfigLoader, ConfigLoadLimits, ResolvedConfigSource, parse_config
 from tests.config.support import MappingResolver
 
 

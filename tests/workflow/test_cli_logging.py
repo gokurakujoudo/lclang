@@ -6,9 +6,9 @@ from unittest.mock import patch
 
 import pytest
 
-from lclang import define_frame
-from lclang.workflow.cli_logging import log_lunch_option
-from lclang.workflow.models import ExecutionStatus
+from lclang.lang import define_frame
+from lclang.workflow.cli_status_logging import log_lunch_option
+from lclang.workflow.execution_status import ExecutionStatus
 
 
 @pytest.mark.asyncio
@@ -23,7 +23,9 @@ async def test_lunch_ordinary_failures_never_escape(operation: str) -> None:
             "logger": (logger, "info"),
         }
         if operation == "choice":
-            with patch("lclang.workflow.cli_logging.random.choice", side_effect=RuntimeError):
+            with patch(
+                "lclang.workflow.cli_status_logging.random.choice", side_effect=RuntimeError
+            ):
                 await log_lunch_option(logger, frame, ExecutionStatus.SUCCESS)
         else:
             owner, name = targets[operation]

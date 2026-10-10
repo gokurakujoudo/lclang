@@ -1,11 +1,11 @@
-"""Unit tests mirroring :mod:`lclang.stdlib.json_values`."""
+"""Unit tests mirroring :mod:`lclang.lang.stdlib.json_codec`."""
 
 from collections.abc import Iterator
 
 import pytest
 
 from lclang.error import LclStandardError, LclValidationError
-from lclang.stdlib import json_decode, json_encode
+from lclang.lang.stdlib import json_decode, json_encode
 
 
 def test_host_container_failure_retains_the_native_cause() -> None:

@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from lclang.cli.parser import parse_cli_params, split_argv
+from lclang.cli.option_parser import parse_cli_params, split_argv
 from tests.cli.platform_support import materialize_platform_case
 
 

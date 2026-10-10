@@ -9,8 +9,8 @@ from typing import cast
 
 import pytest
 
-import lclang
 import lclang.workflow as wf
+from lclang.lang import Frame, define_frame
 
 
 @dataclass
@@ -31,7 +31,7 @@ class LoggedOutputs:
 
 
 def execution_context(
-    frame: lclang.Frame,
+    frame: Frame,
     logger: logging.Logger,
     *,
     dryrun: bool = False,
@@ -93,7 +93,7 @@ async def test_task_context_lifecycle_branch_and_verbose_mappings(
         children=(child,),
     )
     logger = logging.getLogger("workflow-logging")
-    async with lclang.define_frame(preset={"secret!": "hidden"}) as frame:
+    async with define_frame(preset={"secret!": "hidden"}) as frame:
         with caplog.at_level(logging.DEBUG, logger=logger.name):
             result = await wf.define_workflow("Logged", root).execute(
                 execution_context(frame, logger, dryrun=True, verbose=True)
@@ -144,7 +144,7 @@ async def test_task_error_keeps_traceback_and_still_completes(
         args_mapping=LoggedArgs("literal"),
     )
     logger = logging.getLogger("workflow-error-logging")
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         with caplog.at_level(logging.INFO, logger=logger.name):
             result = await wf.define_workflow("Failure", task).execute(
                 execution_context(frame, logger)
@@ -182,7 +182,7 @@ async def test_argument_materialization_error_uses_task_lifecycle(
         args_mapping=LoggedArgs(missing.quote),
     )
     logger = logging.getLogger("workflow-argument-error-logging")
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         with caplog.at_level(logging.INFO, logger=logger.name):
             result = await wf.define_workflow("Failure", task).execute(
                 execution_context(frame, logger)
@@ -222,7 +222,7 @@ async def test_context_output_mapping_error_uses_context_lifecycle(
     )
     task = wf.define_task("root", "Root", context_tasks=(context_task,))
     logger = logging.getLogger("workflow-context-output-error-logging")
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         with caplog.at_level(logging.INFO, logger=logger.name):
             result = await wf.define_workflow("Failure", task).execute(
                 execution_context(frame, logger)

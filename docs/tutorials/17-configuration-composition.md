@@ -289,7 +289,7 @@ import? f"{__dir__}/missing.lclcfg" as absent
 ```python
 import asyncio
 
-from lclang import FrameProxy
+from lclang.lang import FrameProxy
 from lclang.config import load_config
 
 
@@ -474,7 +474,8 @@ using f"{__dir__}/profiles/{profile}.lclcfg"
 ```python
 import asyncio
 
-from lclang.config import LclConfigUsingError, load_config
+from lclang.error import LclConfigUsingError
+from lclang.config import load_config
 
 
 async def main() -> None:
@@ -543,7 +544,7 @@ ratio: total / count
 import asyncio
 
 from lclang.config import load_config
-from lclang.errors import LclEvaluationError
+from lclang.error import LclEvaluationError
 
 
 async def main() -> None:
@@ -592,7 +593,7 @@ and existing Frames unchanged.
 ```python
 import asyncio
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 async def main() -> None:

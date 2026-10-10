@@ -15,9 +15,9 @@ from lclang.cli import (
     CommandGroup,
     cli,
 )
+from lclang.common.identifiers import ModuleName
 from lclang.error import LclValidationError
-from lclang.runtime import Frame, Module
-from lclang.types import ModuleName
+from lclang.lang.runtime import Frame, Module
 
 
 @cli.command()

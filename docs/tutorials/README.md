@@ -136,7 +136,7 @@ Name the result in a Module, then create a Frame with inputs for one run.
 ```python
 import asyncio
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 TOTAL = define_module("total", {"result": "unit_price * quantity"})
@@ -176,7 +176,7 @@ each run.
 ```python
 import asyncio
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 SERVICE_POLICY = define_module(
@@ -242,7 +242,7 @@ branch calls it.
 ```python
 import asyncio
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 PRICING = define_module(
@@ -405,7 +405,7 @@ Keep these rules nearby:
 4. Ask only for the outputs you need; evaluation follows dependencies lazily.
 5. Treat cached results as snapshots, not reactive cells.
 6. Use owned Frames as async context managers.
-7. Catch `lclang.LclError` at an application boundary when you need one family
+7. Catch `lclang.error.LclError` at an application boundary when you need one family
    for expected language, configuration, and runtime failures.
 8. Treat LCL source and host capabilities as trusted configuration.
 

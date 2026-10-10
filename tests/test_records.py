@@ -5,15 +5,15 @@ from typing import Any, cast
 
 import pytest
 
-import lclang
 from lclang.error import LclAttributeError, LclValidationError
+from lclang.lang import LclRecord
 
 
 def test_record_snapshots_fields_and_prioritizes_field_attributes() -> None:
     """Construction detaches its shallow mapping while ordinary names remain fields."""
     nested: list[int] = [1]
     fields: dict[str, object] = {"a": 1, "fields": 2, "nested": nested}
-    record = lclang.LclRecord(fields)
+    record = LclRecord(fields)
     fields["a"] = 9
     nested.append(2)
 
@@ -30,7 +30,7 @@ def test_record_snapshots_fields_and_prioritizes_field_attributes() -> None:
 
 def test_record_is_immutable_and_missing_fields_are_attributes_errors() -> None:
     """Python cannot add, replace, delete, or read an absent field."""
-    record = lclang.LclRecord({"a": 1})
+    record = LclRecord({"a": 1})
     with pytest.raises(LclAttributeError):
         cast(Any, record).a = 2
     with pytest.raises(LclAttributeError):
@@ -43,14 +43,14 @@ def test_record_is_immutable_and_missing_fields_are_attributes_errors() -> None:
 
 def test_record_equality_and_hash_ignore_declaration_order() -> None:
     """Names and values define record identity independently of source order."""
-    first = lclang.LclRecord({"a": 1, "b": 2})
-    second = lclang.LclRecord({"b": 2, "a": 1})
+    first = LclRecord({"a": 1, "b": 2})
+    second = LclRecord({"b": 2, "a": 1})
 
     assert first == second
     assert hash(first) == hash(second)
     assert first != {"a": 1, "b": 2}
     with pytest.raises(LclValidationError):
-        hash(lclang.LclRecord({"items": []}))
+        hash(LclRecord({"items": []}))
 
 
 @pytest.mark.parametrize(
@@ -70,4 +70,4 @@ def test_record_constructor_rejects_fields_unavailable_to_lcl(
 ) -> None:
     """Direct Python construction follows the record display's field grammar."""
     with pytest.raises(error):
-        lclang.LclRecord(cast(Any, fields))
+        LclRecord(cast(Any, fields))

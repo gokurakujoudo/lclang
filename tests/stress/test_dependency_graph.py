@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-import lclang
 from lclang.error import LclCircularDependencyError
-from lclang.runtime import build_dependency_graph, topological_order
+from lclang.lang import Frame, define_module
+from lclang.lang.runtime import build_dependency_graph, topological_order
 
 
 def test_ten_thousand_vertex_dag_has_stable_edges_and_order() -> None:
@@ -20,7 +20,7 @@ def test_ten_thousand_vertex_dag_has_stable_edges_and_order() -> None:
         )
         for index in range(size)
     }
-    graph = build_dependency_graph(lclang.define_module("large-dag", definitions))
+    graph = build_dependency_graph(define_module("large-dag", definitions))
     order = topological_order(graph)
     assert len(graph.definitions) == size
     assert len(graph.edges) == (size - 5) * 5
@@ -31,7 +31,7 @@ def test_ten_thousand_vertex_cycle_is_structured_not_recursive() -> None:
     """A deep ring reports the deterministic graph error category."""
     size = 10_000
     definitions = {f"n{index}": f"n{(index + 1) % size}" for index in range(size)}
-    graph = build_dependency_graph(lclang.define_module("large-cycle", definitions))
+    graph = build_dependency_graph(define_module("large-cycle", definitions))
     with pytest.raises(LclCircularDependencyError) as raised:
         topological_order(graph)
     message = str(raised.value)
@@ -49,12 +49,12 @@ def test_thousand_frame_graph_resolves_root_value_without_evaluation() -> None:
         calls += 1
         return 1
 
-    root_module = lclang.define_module("layer0", {"node0": "danger"})
-    root = lclang.Frame(root_module, "f0", values={"danger": danger})
+    root_module = define_module("layer0", {"node0": "danger"})
+    root = Frame(root_module, "f0", values={"danger": danger})
     child = root
     for index in range(1, 1_000):
-        module = lclang.define_module(f"layer{index}", {f"node{index}": "danger"})
-        child = lclang.Frame(module, f"f{index}", parent=child)
+        module = define_module(f"layer{index}", {f"node{index}": "danger"})
+        child = Frame(module, f"f{index}", parent=child)
     graph = build_dependency_graph(child)
     assert len(graph.definitions) == 1_000
     assert len(graph.values) == 1

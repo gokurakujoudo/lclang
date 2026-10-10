@@ -1,14 +1,14 @@
-"""Unit tests mirroring :mod:`lclang.lang.evaluator.operations`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.evaluator.operator_evaluation`."""
 
 from dataclasses import dataclass
 
 import pytest
 
+from lclang.common.identifiers import VarName
+from lclang.common.source_location import SourceSpan
 from lclang.error import LclEvaluationError
-from lclang.lang.evaluator.dispatch import interpret_expression
-from lclang.lang.parser import parse_expression
-from lclang.source import SourceSpan
-from lclang.types import VarName
+from lclang.lang.engine.evaluator.ast_interpreter import interpret_expression
+from lclang.lang.engine.parser import parse_expression
 
 
 @dataclass(frozen=True)

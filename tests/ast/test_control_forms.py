@@ -1,11 +1,11 @@
-"""Unit tests mirroring :mod:`lclang.ast.control_forms`."""
+"""Unit tests mirroring :mod:`lclang.lang.ast.control_form_nodes`."""
 
 import pytest
 
-from lclang.ast import LclConstant
-from lclang.ast.control_forms import LclExceptHandler, LclTry, LclWith, LclWithItem
+from lclang.common.identifiers import VarName
 from lclang.error import LclValidationError
-from lclang.types import VarName
+from lclang.lang.ast import LclConstant
+from lclang.lang.ast.control_form_nodes import LclExceptHandler, LclTry, LclWith, LclWithItem
 
 
 def test_control_form_children_preserve_source_order() -> None:

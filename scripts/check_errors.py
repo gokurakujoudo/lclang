@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 # The standalone gate audits the checkout before pytest or an editable install supplies src.
 sys.path.insert(0, str(ROOT / "src"))
 from lclang.error import get_error_code_path, get_error_codes  # noqa: E402
-from lclang.error.codes.catalog import CODE_ENUMS  # noqa: E402
+from lclang.error.codes.code_registry import CODE_ENUMS  # noqa: E402
 
 # These ordinary constructors participate in the same explicit-code contract.
 ERROR_CONSTRUCTORS = frozenset(
@@ -50,14 +50,17 @@ def check_error_source(source: str, path: Path) -> list[str]:
     """Find uncoded ordinary raises and unregistered code references in one module."""
     tree = ast.parse(source, filename=str(path))
     aliases = {
-        alias.asname or alias.name: statement.module.rsplit(".", 1)[-1]
+        alias.asname or alias.name: alias.name
         for statement in ast.walk(tree)
         if isinstance(statement, ast.ImportFrom)
-        and (statement.module or "").startswith("lclang.error.codes.")
+        and (
+            (statement.module or "").startswith("lclang.error.codes.")
+            or statement.module == "lclang.error"
+        )
         for alias in statement.names
-        if alias.name == "Code" and statement.module is not None
+        if alias.name in {group.__name__ for group in CODE_ENUMS}
     }
-    members = {group.__module__.rsplit(".", 1)[-1]: set(group.__members__) for group in CODE_ENUMS}
+    members = {group.__name__: set(group.__members__) for group in CODE_ENUMS}
     failures: list[str] = []
     for node in ast.walk(tree):
         reason: str | None = None
@@ -99,6 +102,13 @@ def check_error_registry() -> list[str]:
     """Verify builtin uniqueness, decimal shape, and complete hierarchy labels."""
     failures: list[str] = []
     codes = get_error_codes()
+    for group in CODE_ENUMS:
+        values = [str(member) for member in group]
+        if values != sorted(values):
+            failures.append(f"{group.__name__}: members must follow numeric code order")
+        for member in group:
+            if re.fullmatch(r"E" + str(member)[4:6] + r"_[A-Z][A-Z0-9_]*", member.name) is None:
+                failures.append(f"{group.__name__}.{member.name}: expected Exx_REASON naming")
     if len(codes) != len(set(codes)) or any(
         len(group) != len(group.__members__) for group in CODE_ENUMS
     ):

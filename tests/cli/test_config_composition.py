@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory
 import pytest
 
 from lclang.cli import CliConfig, CliContext, CliParams, CliResult, CliResultStatus, cli
-from lclang.cli.binding import build_binding
+from lclang.cli.frame_binding import build_binding
 from lclang.error import LclEvaluationError
 
 CONFIG_SOURCES = {

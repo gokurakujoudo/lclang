@@ -1,9 +1,9 @@
-"""Unit tests mirroring :mod:`lclang.stdlib.data`."""
+"""Unit tests mirroring :mod:`lclang.lang.stdlib.mapping_function`."""
 
 import pytest
 
 from lclang.error import LclValidationError
-from lclang.stdlib import lookup, merge
+from lclang.lang.stdlib import lookup, merge
 
 
 def test_merge_is_shallow_ordered_right_biased_and_read_only() -> None:

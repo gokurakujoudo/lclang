@@ -7,13 +7,13 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from lclang import define_frame, define_module
-from lclang.ast import LclBinary, LclConstant, LclName
-from lclang.ast.operators import BinaryOperator
+from lclang.common.identifiers import ModuleName, VarName
 from lclang.config import load_config
 from lclang.error import LclAttributeError, LclError, LclEvaluationError, LclValidationError
-from lclang.runtime import Module
-from lclang.types import ModuleName, VarName
+from lclang.lang import define_frame, define_module
+from lclang.lang.ast import LclBinary, LclConstant, LclName
+from lclang.lang.ast.operator_nodes import BinaryOperator
+from lclang.lang.runtime import Module
 
 
 class ObservedRepresentation:

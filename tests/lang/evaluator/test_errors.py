@@ -1,16 +1,19 @@
-"""Unit tests mirroring :mod:`lclang.lang.evaluator.errors`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.evaluator.error_form_evaluation`."""
 
 import asyncio
 
 import pytest
 
-from lclang.ast import LclAstNode, LclConstant, LclExceptHandler
+from lclang.common.source_location import UNKNOWN_SPAN
 from lclang.error import LclEvaluationError
-from lclang.lang.evaluator.context import MappingResolver, Resolver
-from lclang.lang.evaluator.dispatch import interpret_expression
-from lclang.lang.evaluator.errors import internal_matches, internal_wrap_failure
-from lclang.lang.parser import parse_expression
-from lclang.source import UNKNOWN_SPAN
+from lclang.lang.ast import LclAstNode, LclConstant, LclExceptHandler
+from lclang.lang.engine.evaluator.ast_interpreter import interpret_expression
+from lclang.lang.engine.evaluator.error_form_evaluation import (
+    internal_matches,
+    internal_wrap_failure,
+)
+from lclang.lang.engine.evaluator.name_resolver import MappingResolver, Resolver
+from lclang.lang.engine.parser import parse_expression
 
 
 @pytest.mark.parametrize(

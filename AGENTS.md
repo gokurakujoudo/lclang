@@ -26,6 +26,16 @@ reference documentation before changing the project.
   Dependencies flow toward core types; adapters depend on the core. Avoid
   cross-layer shortcuts and cyclic imports and initialization. Package `__init__.py` files
   curate exports without behavioral initialization.
+- Group public APIs under `lclang.lang`, `config`, `cli`, `workflow`, `utils`,
+  `logger`, and `error`; the package root exports no APIs. Keep only
+  `__init__.py` and the sole version definition `__version__.py` at the root.
+  Cross-package primitives belong to `lclang.common`; language-only shared
+  values belong to `lclang.lang.common`. Language engine, AST, runtime and
+  standard-library implementations belong under `lclang.lang`.
+- Name source files for their concrete contents. Use class names such as
+  `lcl_record.py`, and plural families such as `atom_nodes.py`; avoid generic
+  `_value` filenames for class definitions. Start each module docstring with a
+  short overview and the classes, functions or constants it contains.
 - Preserve typed public input, result, and error contracts, runtime validation,
   useful exception causes, and `src/lclang/py.typed`. Specify resource ownership,
   cleanup order, cancellation behavior, concurrency scope, and cache consistency
@@ -214,8 +224,8 @@ Trusted Publishing setup, and supported manual recovery procedures.
 - Start every documentation `using`, `using?`, `import`, and `import?` target
   with `f"{__dir__}/..."`. This makes the defining file's directory explicit,
   including in nested files. Keep relative-path compatibility tests.
-- User-facing Python examples use explicit `from lclang import ...` or
-  `from lclang.<submodule> import ...` statements for the symbols they need,
+- User-facing Python examples use explicit
+  `from lclang.<functional-module> import ...` statements for the symbols they need,
   rather than module imports and qualified calls. For direct loaded-config
   execution, prefer `async with config.to_frame(preset=...) as frame:`.
 - `docs/tutorials/README.md` is the human-oriented introduction and the single
@@ -276,6 +286,9 @@ changes. Update this file only when durable architecture or workflow changes.
   domain tables. Known causes use specific registered codes; incidental parameter
   names and paths belong in messages and context. Applications may use custom
   nonempty string codes.
+- Export self-explanatory error-code StrEnums from `lclang.error`. Name their
+  files `e<domain>_<meaning>_error_code.py`, sort members by full code, and use
+  `Exx_REASON` names, where `xx` identifies subsystem and operation.
 - Choose codes where a condition is detected or an operation fails. Never infer
   them from exception message text. Ordinary proactive library failures use LCL
   types, including validation and lifecycle failures. Native callback/operation

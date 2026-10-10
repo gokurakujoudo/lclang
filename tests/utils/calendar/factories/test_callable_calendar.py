@@ -4,12 +4,8 @@ from datetime import date
 
 import pytest
 
-from lclang.utils.calendar import (
-    CalendarID,
-    CalendarLogicException,
-    DayType,
-    def_functional_calendar,
-)
+from lclang.error import CalendarLogicException
+from lclang.utils.calendar import CalendarID, DayType, def_functional_calendar
 
 
 @pytest.mark.asyncio

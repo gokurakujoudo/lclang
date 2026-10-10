@@ -11,11 +11,11 @@ from unittest.mock import patch
 
 import pytest
 
-from lclang import define_frame, define_module
 from lclang.error import LclValidationError
+from lclang.lang import define_frame, define_module
 from lclang.logger import LoggerHandlerConfig, resolve_logger_config, use_logger_handler
-from lclang.logger.config import handler_config
-from lclang.logger.formatter import RecordFormatter
+from lclang.logger.handler_config import handler_config
+from lclang.logger.record_formatter import RecordFormatter
 
 
 class ServerDatetime(datetime):
@@ -48,7 +48,7 @@ def test_formatter_uses_local_offset_without_mutating_record(offset: int, expect
     )
     original = record.__dict__.copy()
     with (
-        patch("lclang.logger.formatter.datetime", ServerDatetime),
+        patch("lclang.logger.record_formatter.datetime", ServerDatetime),
         patch.object(ServerDatetime, "offset", offset),
     ):
         assert RecordFormatter("%(asctime)s %(message)s").format(record) == (
@@ -71,7 +71,7 @@ def test_local_conversion_uses_each_event_at_dst_fallback() -> None:
             return super().astimezone(timezone(timedelta(hours=offset)))
 
     formatter = RecordFormatter("%(asctime)s")
-    with patch("lclang.logger.formatter.datetime", FallBackDatetime):
+    with patch("lclang.logger.record_formatter.datetime", FallBackDatetime):
         for hour, expected in (
             (5, "2026-11-01T01:30:00.125000-04:00"),
             (6, "2026-11-01T01:30:00.125000-05:00"),
@@ -95,7 +95,7 @@ async def test_sinks_and_successive_scopes_share_selected_timezone() -> None:
             ("utc", "1970-01-01T00:00:00.125000Z ready"),
         ):
             stream = io.StringIO()
-            with patch("lclang.logger.formatter.datetime", ServerDatetime):
+            with patch("lclang.logger.record_formatter.datetime", ServerDatetime):
                 async with use_logger_handler(
                     {
                         "timezone": policy,

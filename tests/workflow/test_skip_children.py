@@ -9,9 +9,9 @@ from datetime import date
 
 import pytest
 
-import lclang
 import lclang.workflow as wf
 from lclang.error import LclStateError, LclWorkflowError
+from lclang.lang import Frame, define_frame, define_module
 
 
 @dataclass
@@ -21,7 +21,7 @@ class Value:
     value: int = 0
 
 
-def execution_context(frame: lclang.Frame) -> wf.WorkflowExecutionContext:
+def execution_context(frame: Frame) -> wf.WorkflowExecutionContext:
     """Return execution metadata with in-memory logging only."""
     return wf.WorkflowExecutionContext(
         False,
@@ -119,7 +119,7 @@ async def test_omission_preserves_outputs_steps_cleanup_and_siblings(
     workflow = wf.define_workflow("Workflow", root)
     assert "descendant" in "\n".join(workflow.to_lines())
     assert [p.name for p in workflow.to_cli("run", "Run").parameter_docs] == ["child_input"]
-    async with lclang.define_frame(preset={} if omit else {"child_input": 1}) as frame:
+    async with define_frame(preset={} if omit else {"child_input": 1}) as frame:
         with caplog.at_level(logging.INFO, logger="skip-children"):
             result = await workflow.execute(execution_context(frame))
         assert await frame.get("published") == 17
@@ -199,8 +199,8 @@ async def test_omission_survives_failures_and_cancellation(
     )
     root = wf.define_task("root", "Root", children=[parent, wf.define_task("sibling", "Sibling")])
     workflow = wf.define_workflow("Workflow", root)
-    module = lclang.define_module("config", {"output": "1 / 0"})
-    async with lclang.define_frame(module) as frame:
+    module = define_module("config", {"output": "1 / 0"})
+    async with define_frame(module) as frame:
         with caplog.at_level(logging.INFO, logger="skip-children"):
             if failure == "cancel":
                 with pytest.raises(asyncio.CancelledError):
@@ -252,7 +252,7 @@ async def test_skip_control_is_per_execution_and_allows_leaf_tasks() -> None:
     workflow = wf.define_workflow("Concurrent", task)
 
     async def run(omit: int) -> None:
-        async with lclang.define_frame(preset={"source": omit}) as frame:
+        async with define_frame(preset={"source": omit}) as frame:
             result = await workflow.execute(execution_context(frame))
         assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
         assert ("child" in status_names(result.execution_status)) is not bool(omit)
@@ -260,7 +260,7 @@ async def test_skip_control_is_per_execution_and_allows_leaf_tasks() -> None:
     await asyncio.gather(*(run(index % 2) for index in range(24)))
     await run(0)
     leaf = wf.define_task("leaf", "Leaf", task_action=action, args_mapping=Value(1))
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         result = await wf.define_workflow("Leaf", leaf).execute(execution_context(frame))
     assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
     assert not result.execution_status.sub_tasks[0].sub_tasks

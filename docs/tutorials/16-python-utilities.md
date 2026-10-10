@@ -58,7 +58,7 @@ from unittest.mock import patch
 from lclang.utils import SnowflakeGenerator
 
 ids = SnowflakeGenerator(worker_id=7)
-with patch("lclang.utils.snowflake.time_ns", return_value=(ids.epoch_ms + 1) * 1_000_000):
+with patch("lclang.utils.snowflake_id.time_ns", return_value=(ids.epoch_ms + 1) * 1_000_000):
     first = ids.next_id()
     second = ids.next_id()
     assert first == (1 << 22) | (7 << 12)
@@ -81,7 +81,7 @@ owns one generator; named ID results follow ordinary Frame snapshot rules.
 import asyncio
 from unittest.mock import patch
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 async def main() -> None:
@@ -90,7 +90,7 @@ async def main() -> None:
         "request_id": "ids.next_id()",
         "label": 'f"request-{request_id}"',
     })
-    with patch("lclang.utils.snowflake.time_ns", return_value=1_000_000):
+    with patch("lclang.utils.snowflake_id.time_ns", return_value=1_000_000):
         async with define_frame(module, preset={"worker_id": 7}) as frame:
             first = (1 << 22) | (7 << 12)
             assert await frame.get("request_id") == first
@@ -116,14 +116,14 @@ should instead borrow one application-owned Python instance:
 import asyncio
 from unittest.mock import patch
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 from lclang.utils import SnowflakeGenerator
 
 
 async def main() -> None:
     ids = SnowflakeGenerator(7, epoch_ms=0)
     module = define_module("request", {"id": "ids.next_id()"})
-    with patch("lclang.utils.snowflake.time_ns", return_value=1_000_000):
+    with patch("lclang.utils.snowflake_id.time_ns", return_value=1_000_000):
         generated = []
         for _ in range(2):
             async with define_frame(module, preset={"ids": ids}) as frame:
@@ -191,14 +191,14 @@ explains templates, rotation, filtering, cancellation, and worker initialization
 ## Reuse the reviewed standard helpers
 
 The functions behind LCL's `iter`, `text`, `data`, and `json` namespaces are
-also direct exports from `lclang.stdlib`. The iterable and join helpers accept
+also direct exports from `lclang.lang.stdlib`. The iterable and join helpers accept
 synchronous or asynchronous iteration.
 
 <!-- lclang-doc-exec -->
 ```python
 import asyncio
 
-from lclang.stdlib import collect, first, join, json_decode, json_encode, lookup, merge
+from lclang.lang.stdlib import collect, first, join, json_decode, json_encode, lookup, merge
 
 
 async def labels():
@@ -325,7 +325,7 @@ from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from lclang import define_frame
+from lclang.lang import define_frame
 from lclang.logger import use_logger, use_logger_handler
 from lclang.utils import invoke
 from lclang.workflow import (
@@ -457,7 +457,7 @@ Downstream code can adopt only the layer it needs:
 
 - `lclang.utils` provides the live environment, safe representations, callback invocation, and
   Snowflake IDs; `lclang.logger` owns process logging.
-- `lclang.stdlib` provides reviewed pure-data helpers and preset assembly.
+- `lclang.lang.stdlib` provides reviewed pure-data helpers and preset assembly.
 - `lclang.utils.calendar` provides date policy and managed calendar loading.
 - `lclang.workflow` provides typed task trees and nested execution status.
 - `lclang.cli` provides command discovery, binding, auditing, and process exit

@@ -7,31 +7,38 @@ modules:
 
 ```text
 src/lclang/
-  error/           exception roots, families, contexts, wrapping and rendering
-    codes/         domain tables and parent-relative classification labels
-  ast/             immutable node values and visitor contracts
-  lang/
-    lexer/         tokens, string scanning and f-string scanning
-    parser/        Pratt core, displays, comprehensions and special forms
-    printer/       precedence-aware canonical source rendering
-    evaluator/     node-family evaluation handlers and auto-await helpers
-  runtime/         modules, presets and public runtime exports
-    frame/         Frame API, binding lookup, evaluation, cache lifecycle and inspection
-    dependency/    static/dynamic analytics and qualified Frame graphs
-  stdlib/          reviewed manifests, namespaces and async helpers
-  config/          logical lines, includes, origins and config diagnostics
-  logger/          Frame configuration, process scope, queue writer, sinks and rotation
+  __version__.py   sole package version definition
+  common/          cross-package source types, identifiers, defaults, masks and proxies
+  error/           exceptions, diagnostic records, causes, groups and rendering
+    codes/         e0-e9 enum vocabularies and parent-relative classifications
+  lang/            preferred parsing and Module/Frame construction APIs
+    common/        language records, grammar version, names and declaration markers
+    ast/           immutable node families and visitor contracts
+    engine/
+      lexer/       tokens, string scanning and f-string scanning
+      parser/      Pratt core, displays, comprehensions and special forms
+      printer/     precedence-aware canonical source rendering
+      evaluator/   node-family evaluation handlers and auto-await helpers
+    runtime/       Modules, Presets and construction factories
+      frame/       lookup, evaluation, cache lifecycle and inspection
+      dependency/  static/dynamic analytics and qualified Frame graphs
+    stdlib/        manifests, namespaces, calendar adapter and async helpers
+  config/          logical lines, includes, origins and loading
+  logger/          configuration, process scope, queue writer, sinks and rotation
   cli/             typed contexts, parsing, routing, runners and built-ins
-  workflow/        immutable task trees, execution, CLI and status
-    mappings/      recursive structure, annotations, binding, and mapping diagnostics
+  workflow/        task trees, execution, CLI and status
+    mappings/      structure, annotations, binding and mapping diagnostics
   utils/
-    calendar/      async calendars, mappings, loaders, and manager utilities
+    calendar/      calendars, mappings, loaders and managers
 ```
 
-Shared public value objects remain small top-level modules. Errors live in
-`error/`; its root depends on primitive code and masking values. Source-aware
-records and presentation adapters resolve their types after root initialization. Package
-`__init__.py` files only re-export names; they contain no behavioural logic.
+Cross-package primitives live in `common/`; language-specific shared values live
+in `lang/common/`. Errors live in `error/`; its root depends on code tables and
+masking state. Source-aware records defer source-type imports until validation,
+and rendering imports source adapters when called. This keeps primitive/error
+imports acyclic. Package `__init__.py` files curate exports with static imports.
+The root exports no API. Only `__init__.py` and the sole version definition,
+`__version__.py`, remain directly under `src/lclang`.
 Each production Python file has at most 200 code-bearing physical lines,
 excluding imports, docstrings, pure comments, and blank lines. Multiline
 expressions, signatures, and runtime strings count; compressing statements or
@@ -81,22 +88,22 @@ property tests run in the default full behavior suite.
 
 ## Frame responsibilities
 
-`runtime/frame/defaults.py` owns isolated fallback Frames. Direct workflows use
+`lang/runtime/frame/default_scope.py` owns isolated fallback Frames. Direct workflows use
 a task-local lookup scope; CLI invocation owners attach a fallback to their own
 hierarchy. Neither mechanism rewrites borrowed parents or invalidates cached
 dependencies. Factory definitions reuse the interpreter's single-flight and
-failure caches. `workflow/defaults.py` collects declarations; mapping-local
+failure caches. `workflow/variable_default.py` collects declarations; mapping-local
 constructor fallbacks and scope-aware dependency discovery stay in `mappings/`.
 
-`runtime/frame/frame.py` owns Frame state and its public methods.
+`lang/runtime/frame/frame.py` owns Frame state and its public methods.
 `binding_lookup.py` selects owner, kind and diagnostic path for one operation;
-`host_bindings.py` validates and atomically publishes mixins. `evaluation.py`
-reads selected values, while `evaluation_flights.py` coordinates cycles,
+`host_binding.py` validates and atomically publishes mixins. `binding_evaluation.py`
+reads selected values, while `evaluation_flight.py` coordinates cycles,
 single-flight and recalculation. `cache_lifecycle.py` commits snapshots and
-closes owned resources. `dependency_snapshots.py` owns static and dynamic
-observations. `inspection_values.py`, `inspection_builder.py` and
+closes owned resources. `dependency_snapshot.py` owns static and dynamic
+observations. `variable_inspection.py`, `inspection_builder.py` and
 `inspection_rendering.py` separate the public result, construction and display.
-`frame_factory.py` and `evaluation_limits.py` contain reusable creation policy
+`frame_factory.py` and `evaluation_limit.py` contain reusable creation policy
 and work budgets. Public package exports retain the supported import surface.
 
 Calendar period boundaries, range boundaries, directional adjustments and sparse

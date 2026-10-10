@@ -1,4 +1,4 @@
-"""Tests mirroring :mod:`lclang.runtime.frame.dependency_snapshots`."""
+"""Tests mirroring :mod:`lclang.lang.runtime.frame.dependency_snapshot`."""
 
 import asyncio
 from collections.abc import Awaitable, Callable
@@ -6,10 +6,10 @@ from typing import cast
 
 import pytest
 
+from lclang.common.identifiers import FrameId, ModuleName, VarName
 from lclang.error import LclClosedFrameError, LclEvaluationError, LclNameError, LclValidationError
-from lclang.lang.parser import parse_expression
-from lclang.runtime import DependencyKind, Frame, Module
-from lclang.types import FrameId, ModuleName, VarName
+from lclang.lang.engine.parser import parse_expression
+from lclang.lang.runtime import DependencyKind, Frame, Module
 
 
 def _frame(definitions: dict[str, str], **values: object) -> Frame:

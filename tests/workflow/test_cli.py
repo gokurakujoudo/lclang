@@ -8,11 +8,11 @@ from datetime import date
 
 import pytest
 
-import lclang
 import lclang.workflow as wf
 from lclang.cli import CliContext, CliParams, CliResultStatus
 from lclang.error import LclCliUsageError, LclValidationError
-from lclang.workflow.cli import cli_status, log_status_tree, status_lines
+from lclang.lang import Module, ModuleName, define_frame, parse_expression
+from lclang.workflow.cli_adapter import cli_status, log_status_tree, status_lines
 
 
 @dataclass
@@ -120,8 +120,8 @@ async def test_to_cli_infers_external_values_and_logs_tree_last(
     def choose_first(values: list[str]) -> str:
         return values[0]
 
-    monkeypatch.setattr("lclang.workflow.cli_logging.random.choice", choose_first)
-    async with lclang.define_frame(preset={"source": 5, "lunch.options": ["noodles"]}) as frame:
+    monkeypatch.setattr("lclang.workflow.cli_status_logging.random.choice", choose_first)
+    async with define_frame(preset={"source": 5, "lunch.options": ["noodles"]}) as frame:
         context = CliContext(date(2026, 8, 27), False, frame, logger, params)
         with caplog.at_level(logging.INFO, logger=logger.name):
             result = await command.handler(context)
@@ -234,7 +234,7 @@ async def test_lunch_options_are_optional_and_never_change_status(
     key = "lunch.options!" if masked else "lunch.options"
     logger = logging.getLogger(f"workflow-lunch-{masked}-{failure}-{type(options).__name__}")
     params = CliParams("python", ("run",), date(2026, 8, 29), False, None, {})
-    async with lclang.define_frame(preset={"source": 1, key: options}) as frame:
+    async with define_frame(preset={"source": 1, key: options}) as frame:
         context = CliContext(date(2026, 8, 29), False, frame, logger, params)
         with caplog.at_level(logging.INFO, logger=logger.name):
             result = await command.handler(context)
@@ -270,13 +270,13 @@ async def test_failing_lunch_expression_is_ignored(
         args_mapping=ValueArgs(source.quote),
     )
     command = wf.define_workflow("Lunch", task).to_cli("run", "Run")
-    module = lclang.Module(
-        lclang.ModuleName("lunch-test"),
-        {"lunch.options": lclang.parse_expression("missing_name")},
+    module = Module(
+        ModuleName("lunch-test"),
+        {"lunch.options": parse_expression("missing_name")},
     )
     logger = logging.getLogger("workflow-lunch-evaluation-error")
     params = CliParams("python", ("run",), date(2026, 8, 29), False, None, {})
-    async with lclang.define_frame(module, preset={"source": 1}) as frame:
+    async with define_frame(module, preset={"source": 1}) as frame:
         context = CliContext(date(2026, 8, 29), False, frame, logger, params)
         with caplog.at_level(logging.INFO, logger=logger.name):
             result = await command.handler(context)
@@ -329,7 +329,7 @@ async def test_to_cli_validates_presets_and_rejects_internal_overrides() -> None
         None,
         {"result": "3"},
     )
-    async with lclang.define_frame(preset={"source": 2}) as frame:
+    async with define_frame(preset={"source": 2}) as frame:
         context = CliContext(date(2026, 8, 27), False, frame, logger, params)
         with pytest.raises(LclCliUsageError, match="non-external"):
             await command.handler(context)

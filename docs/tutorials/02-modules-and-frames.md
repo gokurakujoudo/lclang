@@ -48,7 +48,7 @@ follow only the names required to calculate it.
 ```python
 import asyncio
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 INVOICE = define_module(
@@ -109,7 +109,7 @@ from silently changing the meaning of a parent-owned policy.
 ```python
 import asyncio
 
-from lclang import define_frame, define_module
+from lclang.lang import define_frame, define_module
 
 
 ENVIRONMENT = define_module(

@@ -8,9 +8,9 @@ from typing import cast
 
 import pytest
 
-import lclang
 import lclang.workflow as wf
 from lclang.error import LclClosedFrameError, LclStateError, LclValidationError
+from lclang.lang import define_frame
 from tests.workflow.call_support import Value, make_child, run_parent
 
 
@@ -44,7 +44,7 @@ async def test_call_results_live_frame_isolation_and_detached_status(
         manager.current.sub_tasks[0].sub_tasks[0].task_description = "parent edit"
         return Value(2)
 
-    async with lclang.define_frame(preset={"parent_only": 17}) as frame:
+    async with define_frame(preset={"parent_only": 17}) as frame:
         with caplog.at_level(logging.DEBUG, logger="workflow-call"):
             result = await run_parent(parent, frame)
         assert await frame.get("parent_only") == 17
@@ -87,7 +87,7 @@ async def test_parent_retains_severity_and_publishes_summary_before_stopping_chi
             observed.append(manager.current.status)
         return Value(len(observed))
 
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         result = await run_parent(parent, frame, [wf.define_task("after", "Must not run")])
     assert observed == [
         wf.ExecutionStatus.FAILURE,
@@ -143,7 +143,7 @@ async def test_metadata_shared_explicit_objects_and_context_root_retention() -> 
                 assert manager.current.sub_tasks[-1].sub_tasks[0].task_name == "resource_root"
         return Value(2)
 
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         result = await run_parent(parent, frame)
     assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
     assert shared == ["enter", "exit", "enter", "exit"]
@@ -187,6 +187,6 @@ async def test_call_preflight_rejects_invalid_names_and_parents_before_execution
                 pytest.fail("entered")
         return Value(1)
 
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         result = await run_parent(parent, frame, [wf.define_task("reserved", "Reserved")])
     assert result.execution_status.status is wf.ExecutionStatus.SUCCESS

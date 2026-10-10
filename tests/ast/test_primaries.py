@@ -1,11 +1,11 @@
-"""Unit tests mirroring :mod:`lclang.ast.primaries`."""
+"""Unit tests mirroring :mod:`lclang.lang.ast.primary_nodes`."""
 
 import pytest
 
-from lclang.ast import LclConstant
-from lclang.ast.primaries import LclAttribute, LclSafeAttribute, LclSlice, LclSubscript
+from lclang.common.identifiers import VarName
 from lclang.error import LclValidationError
-from lclang.types import VarName
+from lclang.lang.ast import LclConstant
+from lclang.lang.ast.primary_nodes import LclAttribute, LclSafeAttribute, LclSlice, LclSubscript
 
 
 def test_attribute_subscript_and_slice_children_are_structural() -> None:

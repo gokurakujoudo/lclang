@@ -1,23 +1,23 @@
-"""Unit tests mirroring :mod:`lclang.lang.parser.comprehensions`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.parser.comprehension_parser`."""
 
 import pytest
 
-from lclang.ast import LclConstant, LclDictUnpack, LclKeyValue, LclName, LclStarred
-from lclang.ast.comprehensions import (
+from lclang.common.identifiers import VarName
+from lclang.error import LclSyntaxError
+from lclang.lang.ast import LclConstant, LclDictUnpack, LclKeyValue, LclName, LclStarred
+from lclang.lang.ast.comprehension_nodes import (
     LclDictComprehension,
     LclGenerator,
     LclListComprehension,
     LclSetComprehension,
 )
-from lclang.error import LclSyntaxError
-from lclang.lang.lexer import TokenKind, scan_tokens
-from lclang.lang.parser import parse_expression
-from lclang.lang.parser.comprehensions import (
+from lclang.lang.engine.lexer import TokenKind, scan_tokens
+from lclang.lang.engine.parser import parse_expression
+from lclang.lang.engine.parser.comprehension_parser import (
     ComprehensionKind,
     parse_comprehension,
 )
-from lclang.lang.parser.stream import TokenStream
-from lclang.types import VarName
+from lclang.lang.engine.parser.token_stream import TokenStream
 
 
 def test_generator_and_collection_comprehension_forms() -> None:

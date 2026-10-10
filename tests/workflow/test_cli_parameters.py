@@ -11,8 +11,8 @@ import pytest
 
 import lclang.workflow as wf
 from lclang.cli import CliConfig, CliParams
-from lclang.cli.binding import build_binding
-from lclang.cli.help import render_command_help
+from lclang.cli.frame_binding import build_binding
+from lclang.cli.help_rendering import render_command_help
 
 
 @dataclass

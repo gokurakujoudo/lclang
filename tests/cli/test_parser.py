@@ -4,8 +4,8 @@ from datetime import date
 
 import pytest
 
-from lclang.ast import LclConstant, LclName
-from lclang.cli.parser import (
+from lclang.cli.invocation_key import RUNTIME_DRYRUN_KEY, RUNTIME_VERBOSE_KEY
+from lclang.cli.option_parser import (
     help_requested,
     lazy_override_expression,
     override_expression,
@@ -13,8 +13,8 @@ from lclang.cli.parser import (
     parse_common_options,
     split_argv,
 )
-from lclang.cli.runtime_keys import RUNTIME_DRYRUN_KEY, RUNTIME_VERBOSE_KEY
 from lclang.error import LclCliUsageError
+from lclang.lang.ast import LclConstant, LclName
 
 
 def test_parser_accepts_aliases_last_override_and_dates() -> None:

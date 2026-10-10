@@ -1,4 +1,4 @@
-"""Unit tests mirroring :mod:`lclang.config.limits`."""
+"""Unit tests mirroring :mod:`lclang.config.loading_limit`."""
 
 import pytest
 

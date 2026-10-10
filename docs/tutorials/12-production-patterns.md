@@ -20,7 +20,7 @@ bindings; `create(values=...)` adds or replaces per-run inputs.
 ```python
 import asyncio
 
-from lclang import EvaluationLimits, FrameFactory, Preset, define_module
+from lclang.lang import EvaluationLimits, FrameFactory, Preset, define_module
 
 
 ORDER = define_module(
@@ -102,7 +102,8 @@ Run the following program beside the file:
 import asyncio
 from pathlib import Path
 
-from lclang import EvaluationLimits, LclNameError
+from lclang.lang import EvaluationLimits
+from lclang.error import LclNameError
 from lclang.config import load_config
 
 

@@ -7,12 +7,12 @@ from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-import lclang
 from lclang.cli import CliConfig, CliContext, CliParams, CliResult, ParameterDoc, cli
-from lclang.cli.audit import emit_execution_start, normalized_argv, selected_binding
-from lclang.cli.binding import build_binding
+from lclang.cli.frame_binding import build_binding
+from lclang.cli.invocation_audit import emit_execution_start, normalized_argv, selected_binding
+from lclang.lang import define_frame
+from lclang.lang.runtime import VariableInspectionStatus
 from lclang.logger import LoggerHandlerConfig
-from lclang.runtime import VariableInspectionStatus
 
 
 @cli.command(
@@ -132,7 +132,7 @@ def test_manual_params_reconstruct_a_redacted_argv_fallback() -> None:
         True,
         script_path="tool.py",
     )
-    frame = lclang.define_frame(preset={"token!": "secret"})
+    frame = define_frame(preset={"token!": "secret"})
     try:
         assert normalized_argv(params, frame) == [
             "python",
@@ -157,7 +157,7 @@ def test_manual_params_reconstruct_a_redacted_argv_fallback() -> None:
 def test_plain_params_omit_optional_canonical_tokens() -> None:
     """A manually built quiet invocation has no synthetic config or flag tokens."""
     params = CliParams("python", ("run",), date(2026, 9, 8), False, None, {})
-    frame = lclang.define_frame()
+    frame = define_frame()
     try:
         assert normalized_argv(params, frame) == [
             "python",

@@ -6,17 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from lclang.ast import LclBinary, LclConstant, LclJoinedString, LclList
-from lclang.config import (
-    ConfigDefinition,
-    ConfigUsing,
-    LclConfigSyntaxError,
-    LclConfigVersionError,
-    parse_config,
-)
-from lclang.diagnostics import internal_verbose_scope
-from lclang.error import LclValidationError
-from lclang.runtime import analyze_dependencies
+from lclang.config import ConfigDefinition, ConfigUsing, parse_config
+from lclang.error import LclConfigSyntaxError, LclConfigVersionError, LclValidationError
+from lclang.error.verbose_diagnostic import internal_verbose_scope
+from lclang.lang import FRAME_PROXY
+from lclang.lang.ast import LclBinary, LclConstant, LclJoinedString, LclList
+from lclang.lang.runtime import analyze_dependencies
 
 
 def test_parse_colon_definitions_comments_continuation_and_duplicates(tmp_path: Path) -> None:
@@ -156,15 +151,13 @@ def test_nested_file_magic_requires_a_physical_origin() -> None:
 
 def test_parse_qualified_definition_and_proxy_marker() -> None:
     """Config left-hand paths and the standalone marker use core syntax."""
-    import lclang
-
     document = parse_config("A: FRAME_PROXY\nA.B.x: 42\n")
     first, second = document.declarations
     assert isinstance(first, ConfigDefinition)
     assert isinstance(second, ConfigDefinition)
     assert str(first.name) == "A"
     assert isinstance(first.expression, LclConstant)
-    assert first.expression.value is lclang.FRAME_PROXY
+    assert first.expression.value is FRAME_PROXY
     assert str(second.name) == "A.B.x"
 
 

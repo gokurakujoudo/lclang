@@ -1,18 +1,18 @@
-"""Tests mirroring :mod:`lclang.runtime.dependency.snapshot`."""
+"""Tests mirroring :mod:`lclang.lang.runtime.dependency.dependency_snapshot`."""
 
 from dataclasses import FrozenInstanceError, replace
 
 import pytest
 
+from lclang.common.identifiers import VarName
 from lclang.error import LclValidationError
-from lclang.lang.parser import parse_expression
-from lclang.runtime import (
+from lclang.lang.engine.parser import parse_expression
+from lclang.lang.runtime import (
     DependencyEdge,
     DependencyKind,
     DependencySnapshot,
     reconcile_dependency_edges,
 )
-from lclang.types import VarName
 
 
 def _evidence() -> tuple[DependencyEdge, DependencyEdge]:

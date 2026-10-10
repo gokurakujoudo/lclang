@@ -8,16 +8,15 @@ from typing import cast
 
 import pytest
 
-from lclang.error import LclValidationError
+from lclang.error import CalendarCannotLoadException, LclValidationError
 from lclang.utils.calendar import (
-    CalendarCannotLoadException,
     CalendarID,
     DayType,
     FileSystemHardcodedBDCalendarLoader,
     use_calendar_manager,
     use_file_system_hardcoded_calendar_loader,
 )
-from lclang.utils.calendar.loading.filesystem import read_calendar_json
+from lclang.utils.calendar.loading.json_calendar_loader import read_calendar_json
 
 
 @pytest.mark.parametrize(

@@ -1,1 +1,1 @@
-"""Tests mirroring :mod:`lclang.runtime.frame`."""
+"""Tests mirroring :mod:`lclang.lang.runtime.frame`."""

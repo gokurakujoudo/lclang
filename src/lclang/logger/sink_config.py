@@ -1,4 +1,8 @@
-"""Resolve console and file declarations after template inheritance."""
+"""Resolve console and file declarations after template inheritance.
+
+Defines ``ConsoleConfig``, ``FileConfig``, ``console_config``, ``leaf_filename``,
+``file_config``.
+"""
 
 from __future__ import annotations
 
@@ -10,12 +14,11 @@ from pathlib import Path
 from string import Formatter
 from typing import cast
 
-from lclang.error import LclLoggerError
-from lclang.error.base import LclValidationError
-from lclang.error.boundary import guard_constructor, guard_failure
-from lclang.error.codes.logging import Code as logging_codes
-from lclang.logger.rotation import RotationConfig, rotation_config
-from lclang.logger.validation import boolean, fields, level, names, positive
+from lclang.error import LclLoggerError, LoggerErrorCode
+from lclang.error.exception_base import LclValidationError
+from lclang.error.operation_guard import guard_constructor, guard_failure
+from lclang.logger.config_validation import boolean, fields, level, names, positive
+from lclang.logger.rotation_policy import RotationConfig, rotation_config
 
 # Unitless field names from the public logger schema; shared with the CLI adapter for validation.
 CONSOLE_FIELDS = {"enabled", "level", "stream"}
@@ -31,7 +34,7 @@ FILE_FIELDS = {
 }
 
 
-@guard_constructor(LclValidationError, logging_codes.NATIVE_631)
+@guard_constructor(LclValidationError, LoggerErrorCode.E31_SINK_CONFIGURATION_NATIVE_FAILURE)
 @dataclass(frozen=True, slots=True)
 class ConsoleConfig:
     """Hold one borrowed output stream's settings.
@@ -46,7 +49,7 @@ class ConsoleConfig:
     stream: object
 
 
-@guard_constructor(LclValidationError, logging_codes.NATIVE_631)
+@guard_constructor(LclValidationError, LoggerErrorCode.E31_SINK_CONFIGURATION_NATIVE_FAILURE)
 @dataclass(frozen=True, slots=True)
 class FileConfig:
     """Hold a fully resolved file policy.
@@ -71,7 +74,7 @@ class FileConfig:
     rotation: RotationConfig
 
 
-@guard_failure(LclLoggerError, logging_codes.NATIVE_631)
+@guard_failure(LclLoggerError, LoggerErrorCode.E31_SINK_CONFIGURATION_NATIVE_FAILURE)
 def console_config(value: object) -> ConsoleConfig:
     """Validate a console declaration without writing to its stream.
 
@@ -87,7 +90,7 @@ def console_config(value: object) -> ConsoleConfig:
     ):
         raise LclValidationError(
             f"{path}.stream: expected stdout, stderr, or a text stream",
-            code=logging_codes.E31_VALUE_STREAM_EXPECTED_STDOUT_STDERR_OR_A_TEXT_STREAM,
+            code=LoggerErrorCode.E31_CONSOLE_STREAM_TYPE,
         )
     return ConsoleConfig(
         boolean(data.get("enabled", True), f"{path}.enabled"),
@@ -96,7 +99,7 @@ def console_config(value: object) -> ConsoleConfig:
     )
 
 
-@guard_failure(LclLoggerError, logging_codes.NATIVE_631)
+@guard_failure(LclLoggerError, LoggerErrorCode.E31_SINK_CONFIGURATION_NATIVE_FAILURE)
 def leaf_filename(value: object, path: str) -> str:
     """Check portable leaf names and supported template substitutions.
 
@@ -108,27 +111,27 @@ def leaf_filename(value: object, path: str) -> str:
     if not isinstance(value, str) or not value or value in (".", ".."):
         raise LclValidationError(
             f"{path}: expected nonempty leaf filename",
-            code=logging_codes.E31_VALUE_EXPECTED_NONEMPTY_LEAF_FILENAME,
+            code=LoggerErrorCode.E31_SINK_FILENAME_MUST_BE_NONEMPTY_LEAF,
         )
     if any(char in value for char in '/\\\x00\n\r<>:"|?*') or value.endswith((" ", ".")):
         raise LclValidationError(
             f"{path}: expected portable leaf filename",
-            code=logging_codes.E31_VALUE_EXPECTED_PORTABLE_LEAF_FILENAME,
+            code=LoggerErrorCode.E31_SINK_FILENAME_MUST_BE_PORTABLE_LEAF,
         )
     try:
         parts = list(Formatter().parse(value))
     except (ValueError, LclValidationError) as error:
-        raise LclValidationError(f"{path}: {error}", code=logging_codes.E31_VALUE_VALUE) from error
+        raise LclValidationError(f"{path}: {error}", code=LoggerErrorCode.E31_VALUE) from error
     for _, key, spec, conversion in parts:
         if key is not None and (key not in ("pid", "process") or spec or conversion):
             raise LclValidationError(
                 f"{path}: only {{pid}} and {{process}} are supported",
-                code=logging_codes.E31_VALUE_ONLY_PID_AND_PROCESS_ARE_SUPPORTED,
+                code=LoggerErrorCode.E31_UNSUPPORTED_SINK_FILENAME_PLACEHOLDER,
             )
     return value
 
 
-@guard_failure(LclLoggerError, logging_codes.NATIVE_631)
+@guard_failure(LclLoggerError, LoggerErrorCode.E31_SINK_CONFIGURATION_NATIVE_FAILURE)
 def file_config(name: str, value: Mapping[str, object], *, template: bool = False) -> FileConfig:
     """Validate a merged sink or a partial default template.
 
@@ -146,24 +149,24 @@ def file_config(name: str, value: Mapping[str, object], *, template: bool = Fals
     if directory is not None and not isinstance(directory, (str, os.PathLike)):
         raise LclValidationError(
             f"{path}.directory: expected a path",
-            code=logging_codes.E31_VALUE_DIRECTORY_EXPECTED_A_PATH,
+            code=LoggerErrorCode.E31_SINK_DIRECTORY_TYPE,
         )
     if enabled and not template and not directory:
         raise LclValidationError(
             f"{path}.directory: enabled sink requires a directory",
-            code=logging_codes.E31_VALUE_DIRECTORY_ENABLED_SINK_REQUIRES_A_DIRECTORY,
+            code=LoggerErrorCode.E31_ENABLED_SINK_REQUIRES_DIRECTORY,
         )
     encoding = data.get("encoding", "utf-8")
     if not isinstance(encoding, str):
         raise LclValidationError(
             f"{path}.encoding: expected encoding name",
-            code=logging_codes.E31_VALUE_ENCODING_EXPECTED_ENCODING_NAME,
+            code=LoggerErrorCode.E31_SINK_ENCODING_NAME_TYPE,
         )
     try:
         codecs.lookup(encoding)
     except LookupError as error:
         raise LclValidationError(
-            f"{path}.encoding: {error}", code=logging_codes.E31_VALUE_ENCODING_VALUE
+            f"{path}.encoding: {error}", code=LoggerErrorCode.E31_UNKNOWN_SINK_ENCODING
         ) from error
     return FileConfig(
         enabled,

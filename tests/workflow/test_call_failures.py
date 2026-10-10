@@ -5,10 +5,10 @@ from typing import cast
 
 import pytest
 
-import lclang
 import lclang.workflow as wf
 from lclang.error import LclValidationError, LclWorkflowError
-from lclang.runtime import Frame
+from lclang.lang import define_frame
+from lclang.lang.runtime import Frame
 from tests.workflow.call_support import Value, install_call_resource, make_child, run_parent
 
 
@@ -23,7 +23,7 @@ async def test_setup_failure_propagates_without_borrowing_parent_frame(
         raise failure
 
     async def parent(context: wf.TaskContext, manager: wf.ExecutionStatusManager) -> Value:
-        monkeypatch.setattr("lclang.workflow.calls.define_frame", fail)
+        monkeypatch.setattr("lclang.workflow.workflow_call.define_frame", fail)
         with pytest.raises(LclWorkflowError) as caught:
             async with make_child().execute_in_task(context, manager, name="creation"):
                 pytest.fail("entered")
@@ -32,7 +32,7 @@ async def test_setup_failure_propagates_without_borrowing_parent_frame(
         assert await context.frame.get("alive") == 1
         return Value(1)
 
-    async with lclang.define_frame(preset={"alive": 1}) as frame:
+    async with define_frame(preset={"alive": 1}) as frame:
         result = await run_parent(parent, frame)
         assert await frame.get("alive") == 1
     assert result.execution_status.status is wf.ExecutionStatus.ERROR
@@ -56,7 +56,7 @@ async def test_preflight_binding_errors_create_no_call_nodes() -> None:
         assert not manager.current.sub_tasks
         return Value(1)
 
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         result = await run_parent(parent, frame)
     assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
 
@@ -87,7 +87,7 @@ async def test_unexpected_execution_exception_yields_error_with_live_frame(
             assert "unexpected execution" in result.execution_status.task_description
         return Value(1)
 
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         result = await run_parent(parent, frame)
     assert result.execution_status.status is wf.ExecutionStatus.ERROR
     assert result.task_outputs[wf.TaskID("parent")] == Value(1)
@@ -143,7 +143,7 @@ async def test_body_and_cleanup_errors_preserve_native_values(
         assert manager.current.sub_tasks[0].status is wf.ExecutionStatus.ERROR
         return Value(1)
 
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         result = await run_parent(parent, frame)
     assert result.execution_status.status is wf.ExecutionStatus.ERROR
     assert result.task_outputs[wf.TaskID("parent")] == Value(1)

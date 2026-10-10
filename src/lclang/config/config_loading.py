@@ -1,0 +1,90 @@
+"""Curated async-first configuration loading and evaluation API.
+
+Defines ``load_config``, ``evaluate_config``.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+from pathlib import Path
+
+from lclang.common.identifiers import FrameId
+from lclang.config.config_loader import ConfigLoader
+from lclang.config.file_resolver import FileConfigResolver
+from lclang.config.loaded_config import Config
+from lclang.config.loading_limit import ConfigLoadLimits
+from lclang.config.source_resolver import ConfigSourceResolver
+from lclang.error import ConfigurationErrorCode, LclConfigError
+from lclang.error.exception_base import LclValidationError
+from lclang.error.operation_guard import guard_async_failure
+from lclang.lang.runtime import EvaluationLimits, Frame, Preset
+
+
+@guard_async_failure(LclConfigError, ConfigurationErrorCode.E33_CONFIG_LOADING_API_NATIVE_FAILURE)
+async def load_config(
+    path: str | Path,
+    *,
+    resolver: ConfigSourceResolver | None = None,
+    limits: ConfigLoadLimits | None = None,
+    overrides: Mapping[str, object] | None = None,
+) -> Config:
+    """Load and recursively expand one `.lclcfg` root.
+
+    :param path: Root configuration path.
+    :param resolver: Optional host-controlled resolver; filesystem is default.
+    :param limits: Optional resource ceilings.
+    :param overrides: Literal or semantic values overriding dynamic using context.
+    :returns: Immutable expanded configuration snapshot.
+    :raises Exception: If retrieval, parsing, expansion, or limits fail.
+
+    .. note::
+       Omitting the resolver opts into local filesystem access.
+    """
+    selected_resolver = FileConfigResolver() if resolver is None else resolver
+    selected_limits = ConfigLoadLimits() if limits is None else limits
+    return await ConfigLoader(selected_resolver, selected_limits).load(
+        path,
+        overrides=overrides,
+    )
+
+
+@guard_async_failure(LclConfigError, ConfigurationErrorCode.E33_CONFIG_LOADING_API_NATIVE_FAILURE)
+async def evaluate_config(
+    config: Config,
+    name: str,
+    *,
+    preset: Preset | None = None,
+    values: Mapping[str, object] | None = None,
+    parent: Frame | None = None,
+    limits: EvaluationLimits | None = None,
+) -> object:
+    """Evaluate one winning definition through a guaranteed-cleanup Frame.
+
+    :param config: Immutable expanded configuration.
+    :param name: Definition name to evaluate.
+    :param preset: Optional reusable host bindings.
+    :param values: Optional call-local host bindings.
+    :param parent: Optional borrowed parent Frame.
+    :param limits: Optional evaluation limits.
+    :returns: Evaluated definition value.
+    :raises LclValidationError: If *config* is not a Config.
+    :raises Exception: If Frame construction, evaluation, or cleanup fails.
+
+    .. note::
+       The temporary Frame is closed even when lookup fails.
+    """
+    if not isinstance(config, Config):
+        raise LclValidationError(
+            "evaluate_config requires a Config",
+            code=ConfigurationErrorCode.E33_EVALUATE_CONFIG_REQUIRES_A_CONFIG,
+        )
+    factory = config.frame_factory(preset=preset, limits=limits)
+    frame = factory.create(
+        FrameId(f"config:{config.root_origin.name}"),
+        values=values,
+        parent=parent,
+    )
+    try:
+        return await frame.get(name)
+    finally:
+        await frame.close()

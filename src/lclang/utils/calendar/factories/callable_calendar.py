@@ -1,23 +1,29 @@
-"""Callable-backed functional calendar factory."""
+"""Callable-backed functional calendar factory.
+
+Defines ``CallableBDCalendar``, ``def_functional_calendar``.
+"""
 
 from collections.abc import Awaitable, Callable, Set
 from datetime import date
 from typing import final
 
-from lclang.error import LclError, LclUtilityError
-from lclang.error.base import LclValidationError
-from lclang.error.boundary import guard_async_failure, guard_constructor, guard_failure
-from lclang.error.calendar import CalendarLogicException, wrap_calendar_failure
-from lclang.error.codes.utilities import Code as utilities_codes
-from lclang.utils.calendar.functional import FunctionalBDCalendar
-from lclang.utils.calendar.helpers import CALENDAR_ERRORS, require_day_type, resolve_result
-from lclang.utils.calendar.types import CalendarID, DayType
+from lclang.error import LclError, LclUtilityError, UtilityErrorCode
+from lclang.error.calendar_exception import CalendarLogicException, wrap_calendar_failure
+from lclang.error.exception_base import LclValidationError
+from lclang.error.operation_guard import guard_async_failure, guard_constructor, guard_failure
+from lclang.utils.calendar.calendar_date_operation import (
+    CALENDAR_ERRORS,
+    require_day_type,
+    resolve_result,
+)
+from lclang.utils.calendar.calendar_type import CalendarID, DayType
+from lclang.utils.calendar.functional_calendar import FunctionalBDCalendar
 
 type DayTypeFunction = Callable[[date], DayType | Awaitable[DayType]]
 type DependencyFunction = Callable[[], Set[CalendarID] | Awaitable[Set[CalendarID]]]
 
 
-@guard_constructor(LclValidationError, utilities_codes.NATIVE_715)
+@guard_constructor(LclValidationError, UtilityErrorCode.E15_CALENDAR_CONSTRUCTION_NATIVE_FAILURE)
 @final
 class CallableBDCalendar(FunctionalBDCalendar):
     """Delegate classification and dependencies to supplied callables.
@@ -46,18 +52,18 @@ class CallableBDCalendar(FunctionalBDCalendar):
         if not callable(day_type_function):
             raise LclValidationError(
                 "day type function must be callable",
-                code=utilities_codes.E15_DAY_TYPE_FUNCTION_MUST_BE_CALLABLE,
+                code=UtilityErrorCode.E15_DAY_TYPE_FUNCTION_MUST_BE_CALLABLE,
             )
         if dependency_function is not None and not callable(dependency_function):
             raise LclValidationError(
                 "dependency function must be callable",
-                code=utilities_codes.E15_DEPENDENCY_FUNCTION_MUST_BE_CALLABLE,
+                code=UtilityErrorCode.E15_DEPENDENCY_FUNCTION_MUST_BE_CALLABLE,
             )
         self.day_type_function = day_type_function
         self.dependency_function = dependency_function
         super().__init__(calendar_id)
 
-    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_715)
+    @guard_async_failure(LclUtilityError, UtilityErrorCode.E15_CALENDAR_CONSTRUCTION_NATIVE_FAILURE)
     async def get_day_type(self, d: date) -> DayType:
         """Invoke and validate the supplied classifier.
 
@@ -77,13 +83,13 @@ class CallableBDCalendar(FunctionalBDCalendar):
                     code=(
                         error.code
                         if isinstance(error, LclError)
-                        else utilities_codes.E15_SELF_CALENDAR_ID
+                        else UtilityErrorCode.E15_CALENDAR_CALLBACK_FAILURE
                     ),
                 ),
             )
             raise failure from failure.__cause__
 
-    @guard_async_failure(LclUtilityError, utilities_codes.NATIVE_715)
+    @guard_async_failure(LclUtilityError, UtilityErrorCode.E15_CALENDAR_CONSTRUCTION_NATIVE_FAILURE)
     async def get_dependency_ids(self) -> Set[CalendarID]:
         """Invoke and validate the optional dependency provider.
 
@@ -98,7 +104,7 @@ class CallableBDCalendar(FunctionalBDCalendar):
             if any(not isinstance(value, str) or not value for value in values):
                 raise LclValidationError(
                     "dependency IDs must be non-empty text",
-                    code=utilities_codes.E15_DEPENDENCY_IDS_MUST_BE_NON_EMPTY_TEXT,
+                    code=UtilityErrorCode.E15_DEPENDENCY_IDS_MUST_BE_NON_EMPTY_TEXT,
                 )
             return frozenset(CalendarID(value) for value in values)
         except CALENDAR_ERRORS:
@@ -111,14 +117,14 @@ class CallableBDCalendar(FunctionalBDCalendar):
                     code=(
                         error.code
                         if isinstance(error, LclError)
-                        else utilities_codes.E15_SELF_CALENDAR_ID
+                        else UtilityErrorCode.E15_CALENDAR_CALLBACK_FAILURE
                     ),
                 ),
             )
             raise failure from failure.__cause__
 
 
-@guard_failure(LclUtilityError, utilities_codes.NATIVE_715)
+@guard_failure(LclUtilityError, UtilityErrorCode.E15_CALENDAR_CONSTRUCTION_NATIVE_FAILURE)
 def def_functional_calendar(
     calendar_id: CalendarID,
     get_day_type_func: DayTypeFunction,

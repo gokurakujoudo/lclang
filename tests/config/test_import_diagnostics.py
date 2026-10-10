@@ -11,14 +11,13 @@ from lclang.config import (
     ConfigDefinition,
     ConfigLoader,
     FileConfigResolver,
-    LclConfigSyntaxError,
     load_config,
     parse_config,
 )
-from lclang.error import LclError, LclSyntaxError, LclValidationError
-from lclang.lang.lexer import scan_tokens
-from lclang.lang.lexer.fstring_values import FStringField
-from lclang.lang.parser.fstrings import internal_convert_part
+from lclang.error import LclConfigSyntaxError, LclError, LclSyntaxError, LclValidationError
+from lclang.lang.engine.lexer import scan_tokens
+from lclang.lang.engine.lexer.fstring_parts import FStringField
+from lclang.lang.engine.parser.fstring_parser import internal_convert_part
 from tests.config.support import source_span
 
 
@@ -93,7 +92,7 @@ def test_lexical_spanless_failure_and_manual_fstring_retain_error_contract() -> 
     """Custom lexical services and source-less token values do not invent snapshots."""
     failure = LclSyntaxError("custom scanner failure")
     with (
-        patch("lclang.lang.lexer.scanner.InternalScanner.scan", side_effect=failure),
+        patch("lclang.lang.engine.lexer.token_scanner.InternalScanner.scan", side_effect=failure),
         pytest.raises(LclSyntaxError) as caught,
     ):
         scan_tokens("x")

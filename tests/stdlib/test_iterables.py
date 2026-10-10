@@ -1,4 +1,4 @@
-"""Unit tests mirroring :mod:`lclang.stdlib.iterables`."""
+"""Unit tests mirroring :mod:`lclang.lang.stdlib.iterable_function`."""
 
 from collections.abc import AsyncIterator, Awaitable
 from inspect import isawaitable
@@ -7,7 +7,7 @@ from typing import cast
 import pytest
 
 from lclang.error import LclEvaluationError
-from lclang.stdlib import collect, first
+from lclang.lang.stdlib import collect, first
 
 
 @pytest.mark.asyncio

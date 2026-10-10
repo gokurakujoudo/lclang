@@ -1,12 +1,12 @@
-"""Unit tests mirroring :mod:`lclang.lang.evaluator.contexts`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.evaluator.context_manager_evaluation`."""
 
 import asyncio
 
 import pytest
 
 from lclang.error import LclEvaluationError
-from lclang.lang.evaluator.dispatch import interpret_expression
-from lclang.lang.parser import parse_expression
+from lclang.lang.engine.evaluator.ast_interpreter import interpret_expression
+from lclang.lang.engine.parser import parse_expression
 from tests.lang.evaluator.context_support import AsyncManager, SyncManager
 
 

@@ -9,7 +9,6 @@ from typing import cast
 
 import pytest
 
-import lclang
 from lclang.cli import (
     RUNTIME_AS_OF_DATE_KEY,
     RUNTIME_CLI_PARAMS_KEY,
@@ -21,12 +20,13 @@ from lclang.cli import (
     ParameterDoc,
     cli,
 )
-from lclang.cli.binding import FrameStack, build_binding, default_definitions
-from lclang.cli.execution import run_bound_command
+from lclang.cli.command_execution import run_bound_command
+from lclang.cli.frame_binding import FrameStack, build_binding, default_definitions
 from lclang.error import LclCliError, LclCliUsageError, LclErrorGroup
+from lclang.lang import FrameProxy
+from lclang.lang.runtime import Frame, VariableInspectionStatus
 from lclang.logger import use_logger, use_logger_handler
-from lclang.runtime import Frame, VariableInspectionStatus
-from lclang.utils.environment import BoundEnvironment
+from lclang.utils.process_environment import BoundEnvironment
 
 
 @pytest.mark.asyncio
@@ -217,7 +217,7 @@ async def test_scoped_cli_overrides_share_one_proxy() -> None:
     binding = await build_binding(bound_command, params, CliConfig())
     try:
         assert await binding.frame.get("A.y") == 42
-        assert isinstance(await binding.frame.get("A"), lclang.FrameProxy)
+        assert isinstance(await binding.frame.get("A"), FrameProxy)
     finally:
         await binding.stack.close()
 

@@ -1,4 +1,4 @@
-"""Unit tests mirroring :mod:`lclang.runtime.presets`."""
+"""Unit tests mirroring :mod:`lclang.lang.runtime.preset`."""
 
 from collections.abc import MutableMapping
 from dataclasses import FrozenInstanceError
@@ -7,7 +7,7 @@ from typing import cast
 import pytest
 
 from lclang.error import LclValidationError
-from lclang.runtime import Preset
+from lclang.lang.runtime import Preset
 
 
 def test_preset_detaches_an_ordered_read_only_binding_snapshot() -> None:

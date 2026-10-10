@@ -11,10 +11,10 @@ import pytest
 
 from lclang.error import LclLoggerError, LclStateError
 from lclang.logger import LoggerHandlerConfig, use_logger, use_logger_handler
-from lclang.logger.console import ConsoleSink
-from lclang.logger.file import FileSink
-from lclang.logger.formatter import RecordFormatter
-from lclang.logger.metrics import Counters
+from lclang.logger.console_sink import ConsoleSink
+from lclang.logger.file_sink import FileSink
+from lclang.logger.logging_metrics import Counters
+from lclang.logger.record_formatter import RecordFormatter
 
 
 def test_sink_requires_an_open_stream_after_initialization() -> None:
@@ -122,9 +122,9 @@ def test_failed_header_closes_new_stream_and_reports_startup_error() -> None:
 
     async def exercise() -> None:
         with (
-            patch("lclang.logger.segments.Path.mkdir"),
-            patch("lclang.logger.segments.Path.open", return_value=stream),
-            patch("lclang.logger.segments.path_line", side_effect=OSError("header")),
+            patch("lclang.logger.file_segment.Path.mkdir"),
+            patch("lclang.logger.file_segment.Path.open", return_value=stream),
+            patch("lclang.logger.file_segment.path_line", side_effect=OSError("header")),
             pytest.raises(LclLoggerError, match="header"),
         ):
             async with use_logger_handler({"file": {"app": {"directory": "."}}}):

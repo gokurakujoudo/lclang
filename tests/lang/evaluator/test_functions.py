@@ -1,4 +1,4 @@
-"""Unit tests mirroring :mod:`lclang.lang.evaluator.functions`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.evaluator.lcl_function`."""
 
 import asyncio
 from collections.abc import Awaitable, Callable
@@ -7,8 +7,8 @@ from typing import cast
 import pytest
 
 from lclang.error import LclEvaluationError
-from lclang.lang.evaluator.dispatch import interpret_expression
-from lclang.lang.parser import parse_expression
+from lclang.lang.engine.evaluator.ast_interpreter import interpret_expression
+from lclang.lang.engine.parser import parse_expression
 
 
 @pytest.mark.asyncio

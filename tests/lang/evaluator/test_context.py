@@ -1,15 +1,15 @@
-"""Unit tests mirroring :mod:`lclang.lang.evaluator.context`."""
+"""Unit tests mirroring :mod:`lclang.lang.engine.evaluator.name_resolver`."""
 
 import io
 import logging
 
 import pytest
 
-from lclang.diagnostics import internal_trace, internal_verbose_scope
+from lclang.common.identifiers import VarName
+from lclang.common.source_location import UNKNOWN_SPAN
 from lclang.error import LclEvaluationError, LclNameError
-from lclang.lang.evaluator import MappingResolver, Resolver, ScopedResolver
-from lclang.source import UNKNOWN_SPAN
-from lclang.types import VarName
+from lclang.error.verbose_diagnostic import internal_trace, internal_verbose_scope
+from lclang.lang.engine.evaluator import MappingResolver, Resolver, ScopedResolver
 
 
 @pytest.mark.asyncio

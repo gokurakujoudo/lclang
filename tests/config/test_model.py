@@ -1,12 +1,12 @@
-"""Unit tests mirroring :mod:`lclang.config.model`."""
+"""Unit tests mirroring :mod:`lclang.config.config_document`."""
 
 import pytest
 
-from lclang.ast import LclConstant
+from lclang.common.identifiers import SourceName, VarName
+from lclang.common.source_location import SourceOrigin, SourcePosition, SourceSpan
 from lclang.config import ConfigDefinition, ConfigDocument, ConfigUsing
 from lclang.error import LclValidationError
-from lclang.source import SourceOrigin, SourcePosition, SourceSpan
-from lclang.types import SourceName, VarName
+from lclang.lang.ast import LclConstant
 from tests.config.support import source_span
 
 

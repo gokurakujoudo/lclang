@@ -4,10 +4,10 @@ from typing import Any, cast
 
 import pytest
 
-from lclang import NEED_OVERRIDE, RUNTIME_OVERRIDE, define_frame, define_module
+from lclang.common.identifiers import ModuleName
 from lclang.error import LclEvaluationError, LclValidationError
-from lclang.runtime import Module, VariableInspectionStatus
-from lclang.types import ModuleName
+from lclang.lang import NEED_OVERRIDE, RUNTIME_OVERRIDE, define_frame, define_module
+from lclang.lang.runtime import Module, VariableInspectionStatus
 
 
 @pytest.mark.asyncio

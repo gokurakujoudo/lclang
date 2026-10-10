@@ -8,7 +8,7 @@ import tracemalloc
 import warnings
 from weakref import ReferenceType
 
-from lclang.runtime import Frame
+from lclang.lang.runtime import Frame
 from lclang.workflow import ExecutionStatusManager
 from tests.support.leaks import build_collectible_runtime, run_lifecycle_batch
 

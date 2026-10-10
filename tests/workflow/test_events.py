@@ -11,9 +11,9 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-import lclang
 import lclang.workflow as wf
 from lclang.error import LclValidationError
+from lclang.lang import define_frame
 from lclang.logger import use_logger, use_logger_handler
 
 
@@ -29,7 +29,7 @@ class EventRecord:
 async def test_business_event_fields_metadata_and_caller(caplog: pytest.LogCaptureFixture) -> None:
     """Explicit selections preserve branch, severity, dryrun, limits, and business location."""
     logger = logging.getLogger("workflow-events")
-    async with lclang.define_frame() as frame:
+    async with define_frame() as frame:
         context = wf.TaskContext(
             True,
             date(2026, 9, 22),
@@ -80,7 +80,7 @@ async def test_disabled_and_masked_events_do_not_read_or_format(
             return object.__getattribute__(self, name)
 
     logger = logging.getLogger("workflow-guarded-events")
-    async with lclang.define_frame(preset={"secret!": "same-object"}) as frame:
+    async with define_frame(preset={"secret!": "same-object"}) as frame:
         context = wf.TaskContext(
             False,
             date(2026, 9, 22),
@@ -114,7 +114,7 @@ async def test_event_selection_errors_are_explicit() -> None:
     previous = logger.level
     logger.setLevel(logging.INFO)
     try:
-        async with lclang.define_frame() as frame:
+        async with define_frame() as frame:
             context = wf.TaskContext(
                 False,
                 date(2026, 9, 22),
@@ -149,7 +149,7 @@ async def test_lclang_logger_keeps_business_caller_and_configuration() -> None:
                 "console": {"stream": stream},
             }
         ),
-        lclang.define_frame() as frame,
+        define_frame() as frame,
     ):
         logger = await use_logger(prefix="[APP]")
         context = wf.TaskContext(
@@ -184,7 +184,7 @@ async def test_multiline_events_reach_console_and_files(standard: bool) -> None:
                     "file": {"events": {"directory": directory}},
                 }
             ),
-            lclang.define_frame() as frame,
+            define_frame() as frame,
         ):
             logger = logging.getLogger("multiline") if standard else await use_logger("multiline")
             context = wf.TaskContext(
@@ -215,7 +215,7 @@ async def test_disabled_event_does_not_consume_selection_iterators() -> None:
     before = logger.level
     logger.setLevel(logging.ERROR)
     try:
-        async with lclang.define_frame() as frame:
+        async with define_frame() as frame:
             context = wf.TaskContext(
                 False,
                 date(2026, 9, 23),

@@ -2,15 +2,15 @@
 
 ## Import layers
 
-The package root exposes the preferred `define_module`/`define_frame` workflow,
+`lclang.lang` exposes the preferred `define_module`/`define_frame` workflow,
 the canonical `LCL_ROOT`, `LCL_BUILTINS`, `LCL_RUNTIME`, and `LCL_IMPORTS`
 Frames, and the lower-level `Module`, `Frame`, `FrameFactory`, `Preset`,
 `EvaluationLimits`, `DependencySnapshot`, `LclRecord`, `NO_FALLBACK`, and
 `STANDARD_PRESET` APIs.
 
-Use `lclang.runtime` for advanced static graph construction, topological order,
+Use `lclang.lang.runtime` for advanced static graph construction, topological order,
 dynamic tracing, reconciliation values, and standard runtime types. Use
-`lclang.stdlib` for manifests, namespace assembly, individual reviewed helpers,
+`lclang.lang.stdlib` for manifests, namespace assembly, individual reviewed helpers,
 `STANDARD_MANIFESTS`, and `STANDARD_PRESET`.
 
 ## Public evaluation boundary
@@ -29,7 +29,7 @@ within an existing context, use `await frame.evaluate(source)`.
 
 ## Record values
 
-`{a=expression, b=expression}` evaluates to `lclang.LclRecord`. LCL and Python
+`{a=expression, b=expression}` evaluates to `lclang.lang.LclRecord`. LCL and Python
 both read fields with ordinary attributes, such as `record.a`. The public
 `LclRecord(fields)` constructor copies one non-empty mapping whose keys obey the
 same identifier, reserved-word, and `__` restrictions as record syntax.
@@ -280,7 +280,7 @@ reconciliation. Before evaluation all static edges are inactive. Cached reads
 do not add observations. Deferred function/generator lookups extend their
 defining source's published trace. Parent lookups route to the owner.
 
-`lclang.runtime.build_dependency_graph(frame)` performs a separate static,
+`lclang.lang.runtime.build_dependency_graph(frame)` performs a separate static,
 non-evaluating hierarchy analysis. It returns `FrameDependencyGraph` with
 qualified `FrameDependencyBinding` definitions/value terminals and
 `FrameDependencyEdge` occurrences. Each edge contains `lookup_path`, its
@@ -297,7 +297,7 @@ collection. One root evaluation chain shares its task-local budget; cached reads
 consume none and recalculate starts fresh.
 
 Frames implement the asynchronous context-manager protocol. Prefer
-`async with lclang.define_frame(...) as frame:` so leaving the block always
+`async with lclang.lang.define_frame(...) as frame:` so leaving the block always
 awaits owned cleanup. The context manager returns the same Frame and never
 suppresses an exception raised by the block.
 

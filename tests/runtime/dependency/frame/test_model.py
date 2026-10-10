@@ -1,17 +1,17 @@
-"""Unit tests mirroring :mod:`lclang.runtime.dependency.frame.model`."""
+"""Unit tests mirroring :mod:`lclang.lang.runtime.dependency.frame.frame_dependency_graph`."""
 
 import pytest
 
+from lclang.common.identifiers import FrameId, VarName
+from lclang.common.source_location import UNKNOWN_SPAN
 from lclang.error import LclNameError, LclValidationError
-from lclang.runtime import (
+from lclang.lang.runtime import (
     DependencyKind,
     FrameBindingKind,
     FrameDependencyBinding,
     FrameDependencyEdge,
     FrameDependencyGraph,
 )
-from lclang.source import UNKNOWN_SPAN
-from lclang.types import FrameId, VarName
 
 
 def binding(
