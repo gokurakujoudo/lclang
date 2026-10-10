@@ -5,12 +5,15 @@ from __future__ import annotations
 import ast
 import builtins
 import re
+import sys
 from pathlib import Path
 
-from lclang.error import get_error_code_path, get_error_codes
-from lclang.error.codes.catalog import CODE_ENUMS
-
 ROOT = Path(__file__).resolve().parents[1]
+# The standalone gate audits the checkout before pytest or an editable install supplies src.
+sys.path.insert(0, str(ROOT / "src"))
+from lclang.error import get_error_code_path, get_error_codes  # noqa: E402
+from lclang.error.codes.catalog import CODE_ENUMS  # noqa: E402
+
 # These ordinary constructors participate in the same explicit-code contract.
 ERROR_CONSTRUCTORS = frozenset(
     {
