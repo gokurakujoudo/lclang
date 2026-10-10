@@ -2,7 +2,6 @@
 
 import re
 import subprocess
-import tomllib
 from pathlib import Path
 from typing import cast
 from urllib.parse import quote, unquote, urlsplit, urlunsplit
@@ -12,6 +11,7 @@ from mkdocs.structure.files import File, Files, InclusionLevel
 from mkdocs.structure.pages import Page
 
 from scripts.export_wiki import MARKDOWN_LINK, REPOSITORY
+from scripts.package_version import read_package_version
 from scripts.site_navigation import documentation_groups
 
 
@@ -25,11 +25,7 @@ def on_config(config: MkDocsConfig) -> MkDocsConfig:
         {name: [page.as_posix() for page in pages]}
         for name, pages in documentation_groups(root).items()
     ]
-    config.extra["version"] = tomllib.loads(
-        (root / "pyproject.toml").read_text(encoding="utf-8"),
-    )[
-        "project"
-    ]["version"]
+    config.extra["version"] = read_package_version(root)
     if "revision" not in config.extra:
         config.extra["revision"] = subprocess.check_output(
             ["git", "rev-parse", "HEAD"],

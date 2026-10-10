@@ -20,6 +20,7 @@ if str(SOURCE_ROOT) not in sys.path:
     sys.path.insert(0, str(SOURCE_ROOT))
 
 import lclang  # noqa: E402
+from lclang.__version__ import __version__  # noqa: E402
 from lclang.config import ConfigLoader, ResolvedConfigSource  # noqa: E402
 from lclang.runtime import build_dependency_graph, topological_order  # noqa: E402
 
@@ -169,7 +170,7 @@ def run_baseline(
     return {
         "schema": 1,
         "python": platform.python_version(),
-        "lclang": lclang.__version__,
+        "lclang": __version__,
         "platform": platform.platform(),
         "implementation": platform.python_implementation(),
         "executable": sys.executable,

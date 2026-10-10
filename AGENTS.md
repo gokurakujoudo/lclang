@@ -13,7 +13,8 @@ reference documentation before changing the project.
 - Security model: trusted configuration language, not a hostile-code sandbox.
 - Platform support: OS-independent pure Python, with platform-specific behavior
   verified in the applicable environment.
-- Version sources: `pyproject.toml` and `src/lclang/_version.py`; keep them equal.
+- Sole version definition: `src/lclang/__version__.py`. Hatchling reads it through
+  dynamic `pyproject.toml` metadata; runtime and maintenance consumers use that source.
 - GitHub remote: `origin` in `gokurakujoudo/lclang`; default branch `main`,
   persistent publishing branch `release`.
 - Documentation home: `docs/README.md`; development commands: `docs/development/README.md`.
@@ -161,8 +162,8 @@ Use this lifecycle when a version release is requested:
 -> CI verification/build -> PyPI -> version tag and GitHub Release`.
 
 1. Prepare the requested unused stable `1.0.x` version on the feature branch,
-   or on a dedicated branch using the issue/PR workflow above. Update both
-   `pyproject.toml` and `src/lclang/_version.py` to the same version. Move the
+   or on a dedicated branch using the issue/PR workflow above. Update
+   `src/lclang/__version__.py`; dynamic build metadata follows that source. Move the
    changes being released into a nonempty `CHANGELOG.md` section named
    `## <version> - YYYY-MM-DD`, retaining `Unreleased` for future changes.
 2. Validate release-note extraction with `scripts.release_notes`, run the full

@@ -97,7 +97,7 @@ delay. The standard Shields PyPI badge can retain a version for three hours.
 
 Every push to the persistent `release` branch publishes its wheel and source
 distribution to PyPI after the full quality gate and builds pass. Prepare a
-new version in `pyproject.toml` and its changelog on `main`, then fast-forward
+new version in `src/lclang/__version__.py` and its changelog on `main`, then fast-forward
 `release` to the tested commit and push it. The publishing gate fetches `main`
 and rejects any commit that is not already in its history. It also requires a
 nonempty dated changelog section matching the stable `1.0.x` package version;
@@ -169,7 +169,8 @@ resolve repository attachments at the built revision, and include the shared
 logo and assets from `site/`. Existing `.html` page URLs are retained.
 
 Tutorial navigation follows the series introduction, and the build rejects
-pages missing from navigation. The package version comes from `pyproject.toml`.
+pages missing from navigation. The package version comes from
+`src/lclang/__version__.py`, which also supplies dynamic build metadata.
 The library still has no runtime dependencies; MkDocs, PyMdown Extensions,
 Pygments, and markdown-it-py are documentation build dependencies only.
 

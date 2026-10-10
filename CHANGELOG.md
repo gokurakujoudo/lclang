@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Packaging
+
+- Define the package version once in `lclang.__version__`. Hatchling metadata,
+  release-note validation, documentation and CLI output read that source.
+
 ### Configuration and runtime
 
 - Add `import` and `import?` with required static aliases, independent loading
