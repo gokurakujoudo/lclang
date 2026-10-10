@@ -25,3 +25,5 @@
 
 - [Errors and diagnostic codes](errors.md): six-digit classifications, causes,
   context, exception groups, and executable troubleshooting examples.
+- [Exceptions and grouped failures](exceptions.md): exception families,
+  execution/cleanup combinations, actual diagnostics and application handling.

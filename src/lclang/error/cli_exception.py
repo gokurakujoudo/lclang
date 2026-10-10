@@ -5,10 +5,10 @@ Defines ``RouteFailure``.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self, cast
 
 from lclang.error.codes.e4_cli_error_code import CliErrorCode
-from lclang.error.exception_base import LclValidationError
+from lclang.error.exception_base import LclError, LclValidationError
 from lclang.error.exception_family import LclCliUsageError
 from lclang.error.operation_guard import guard_constructor
 
@@ -34,3 +34,14 @@ class RouteFailure(LclCliUsageError):
         super().__init__(message, code=code)
         self.group = group
         self.path = path
+
+    def copy_diagnostic_fields(self, target: LclError) -> None:
+        """Copy specialized fields after the shared diagnostic fields.
+
+        :param target: Compatible allocated error receiving retained fields.
+        :raises LclValidationError: If the target is incompatible.
+        """
+        super().copy_diagnostic_fields(target)
+        copied = cast(Self, target)
+        copied.group = self.group
+        copied.path = self.path

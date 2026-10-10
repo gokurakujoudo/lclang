@@ -1,8 +1,8 @@
-"""Unit tests mirroring :mod:`lclang.lang.engine.evaluator.awaitable_resolution`."""
+"""Unit tests mirroring :mod:`lclang.common.awaitable_resolution`."""
 
 import pytest
 
-from lclang.lang.engine.evaluator.awaitable_resolution import resolve_awaitable
+from lclang.common.awaitable_resolution import resolve_awaitable
 
 
 @pytest.mark.asyncio

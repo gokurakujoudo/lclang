@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sized
 from typing import Literal, cast
 
+from lclang.common.awaitable_resolution import resolve_awaitable
 from lclang.error import LanguageErrorCode, LclError, LclEvaluationError
 from lclang.error.operation_guard import guard_async_failure
 from lclang.error.verbose_diagnostic import (
@@ -49,7 +50,6 @@ from lclang.lang.ast import (
 )
 from lclang.lang.ast.operator_nodes import UnaryOperator
 from lclang.lang.common.binding_declaration import get_override_marker
-from lclang.lang.engine.evaluator.awaitable_resolution import resolve_awaitable
 from lclang.lang.engine.evaluator.call_evaluation import internal_evaluate_call
 from lclang.lang.engine.evaluator.collection_evaluation import internal_evaluate_display
 from lclang.lang.engine.evaluator.comprehension_evaluation import internal_evaluate_comprehension

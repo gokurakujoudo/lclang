@@ -56,6 +56,6 @@ async def invoke[**Params](
     :returns: Final non-awaitable value without copying or background work.
     :raises BaseException: If invocation or awaiting fails, including cancellation.
     """
-    from lclang.lang.engine.evaluator.awaitable_resolution import resolve_awaitable
+    from lclang.common.awaitable_resolution import resolve_awaitable
 
     return await resolve_awaitable(callback(*args, **kwargs))

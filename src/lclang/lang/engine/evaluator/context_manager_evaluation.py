@@ -10,11 +10,11 @@ from collections.abc import Callable
 from types import TracebackType
 from typing import Protocol, cast
 
+from lclang.common.awaitable_resolution import resolve_awaitable
 from lclang.error import LanguageErrorCode, LclError, LclEvaluationError
 from lclang.error.failure_aggregation import combine_failures
 from lclang.error.native_wrap import wrap_failure
 from lclang.lang.ast import LclWith
-from lclang.lang.engine.evaluator.awaitable_resolution import resolve_awaitable
 from lclang.lang.engine.evaluator.evaluation_callback import EvaluateNode
 from lclang.lang.engine.evaluator.name_resolver import Resolver, ScopedResolver
 

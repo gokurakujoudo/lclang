@@ -18,7 +18,7 @@ src/lclang/
       lexer/       tokens, string scanning and f-string scanning
       parser/      Pratt core, displays, comprehensions and special forms
       printer/     precedence-aware canonical source rendering
-      evaluator/   node-family evaluation handlers and auto-await helpers
+      evaluator/   node-family evaluation handlers
     runtime/       Modules, Presets and construction factories
       frame/       lookup, evaluation, cache lifecycle and inspection
       dependency/  static/dynamic analytics and qualified Frame graphs
@@ -88,7 +88,7 @@ property tests run in the default full behavior suite.
 
 ## Frame responsibilities
 
-`lang/runtime/frame/default_scope.py` owns isolated fallback Frames. Direct workflows use
+`lang/runtime/frame/default_frame_scope.py` owns isolated fallback Frames. Direct workflows use
 a task-local lookup scope; CLI invocation owners attach a fallback to their own
 hierarchy. Neither mechanism rewrites borrowed parents or invalidates cached
 dependencies. Factory definitions reuse the interpreter's single-flight and

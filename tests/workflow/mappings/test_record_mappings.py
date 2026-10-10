@@ -10,7 +10,7 @@ from typing import Any, cast
 import pytest
 
 import lclang.workflow as wf
-from lclang.error import LclValidationError
+from lclang.error import LclValidationError, WorkflowException
 from lclang.lang import FRAME_PROXY, Frame, FrameProxy, define_frame, define_module
 
 
@@ -212,7 +212,7 @@ async def test_non_record_action_return_retains_boundary_error() -> None:
         assert result.execution_status.status is wf.ExecutionStatus.ERROR
         assert not result.task_outputs
         error = await frame.get("__exception__")
-        assert isinstance(error, wf.WorkflowException)
+        assert isinstance(error, WorkflowException)
         assert "annotated dataclass" in str(error.exception)
 
 

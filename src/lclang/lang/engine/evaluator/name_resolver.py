@@ -9,6 +9,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
+from lclang.common.awaitable_resolution import resolve_operation_value
 from lclang.common.binding_mask import normalize_masked_mapping
 from lclang.common.identifiers import VarName
 from lclang.common.source_location import SourceSpan
@@ -20,7 +21,6 @@ from lclang.error.verbose_diagnostic import (
     internal_trace,
     internal_verbose_enabled,
 )
-from lclang.lang.engine.evaluator.awaitable_resolution import resolve_awaitable
 from lclang.lang.engine.evaluator.evaluation_journal import record_value_read
 
 
@@ -100,11 +100,21 @@ class MappingResolver:
                 code=LanguageErrorCode.E33_UNKNOWN_VARIABLE,
             ) from None
         if not internal_verbose_enabled():
-            result = await resolve_awaitable(selected)
+            result = await resolve_operation_value(
+                selected,
+                LclEvaluationError,
+                LanguageErrorCode.E33_NAME_RESOLUTION_NATIVE_FAILURE,
+                span=span,
+            )
             record_value_read(str(name), result, span, masked=masked)
             return result
         try:
-            result = await resolve_awaitable(selected)
+            result = await resolve_operation_value(
+                selected,
+                LclEvaluationError,
+                LanguageErrorCode.E33_NAME_RESOLUTION_NATIVE_FAILURE,
+                span=span,
+            )
         except BaseException as error:
             internal_trace(
                 "lookup",
@@ -151,7 +161,12 @@ class ScopedResolver:
             if not internal_verbose_enabled():
                 return selected
             try:
-                result = await resolve_awaitable(selected)
+                result = await resolve_operation_value(
+                    selected,
+                    LclEvaluationError,
+                    LanguageErrorCode.E33_NAME_RESOLUTION_NATIVE_FAILURE,
+                    span=span,
+                )
             except BaseException as error:
                 internal_trace(
                     "lookup",

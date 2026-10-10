@@ -8,9 +8,9 @@ from __future__ import annotations
 from collections.abc import AsyncIterable, AsyncIterator, Iterable
 from typing import cast
 
+from lclang.common.awaitable_resolution import resolve_awaitable
 from lclang.error import LanguageErrorCode, LclError, LclEvaluationError
 from lclang.error.native_wrap import wrap_failure
-from lclang.lang.engine.evaluator.awaitable_resolution import resolve_awaitable
 
 
 async def iterate_values(value: object) -> AsyncIterator[object]:

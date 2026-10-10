@@ -208,3 +208,7 @@ the work being diagnosed.
 
 The [error reference](../reference/errors.md) lists each builtin code and shows
 how to inspect its cause, source scene, and retained context.
+
+See the [exception guide](../reference/exceptions.md) for failure families,
+combined execution and cleanup diagnostics, and examples of handling selected
+group members while retaining unhandled failures.

@@ -1,6 +1,6 @@
 """Recognize CLI logger parameters and flatten entry-point defaults.
 
-Defines ``logger_parameter``, ``logger_definitions``.
+Defines ``logger_parameter``, ``logger_definitions``, ``collect_borrowed_console_values``.
 """
 
 from __future__ import annotations
@@ -64,3 +64,25 @@ def logger_definitions(config: LoggerHandlerConfig) -> dict[str, LclAstNode]:
     for item in fields(config):
         flatten(f"logger.{item.name}", getattr(config, item.name))
     return result
+
+
+@guard_failure(LclCliError, CliErrorCode.E43_CLI_LOGGER_RESOLUTION_NATIVE_FAILURE)
+def collect_borrowed_console_values(
+    defaults: Mapping[str, LclAstNode], effective: Mapping[str, LclAstNode]
+) -> dict[str, object]:
+    """Retain a winning framework console object as a borrowed host binding.
+
+    :param defaults: Framework and command default definitions.
+    :param effective: Final definitions after file and invocation composition.
+    :returns: Borrowed stream binding when its default wins, otherwise an empty mapping.
+    :raises LclCliError: If native mapping access fails during default selection.
+    """
+    name = "logger.console.stream"
+    node = defaults.get(name)
+    if (
+        isinstance(node, LclConstant)
+        and not isinstance(node.value, str)
+        and effective.get(name) is node
+    ):
+        return {name: node.value}
+    return {}

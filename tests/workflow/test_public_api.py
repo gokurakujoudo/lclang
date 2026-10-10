@@ -19,7 +19,6 @@ def test_workflow_namespace_exports_complete_execution_contract() -> None:
         "TaskProjection",
         "TaskVar",
         "Workflow",
-        "WorkflowException",
         "WorkflowExecutionContext",
         "WorkflowExecutionResult",
         "define_context_task",

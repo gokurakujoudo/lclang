@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 import asyncio
 from typing import Any, cast
 
+from lclang.common.awaitable_resolution import resolve_operation_value
 from lclang.common.identifiers import VarName
 from lclang.common.source_location import SourceSpan
 from lclang.error import LclNameError
@@ -31,7 +32,6 @@ from lclang.error.verbose_diagnostic import (
     internal_verbose_enabled,
 )
 from lclang.lang.engine.evaluator.ast_interpreter import interpret_expression
-from lclang.lang.engine.evaluator.awaitable_resolution import resolve_awaitable
 from lclang.lang.engine.evaluator.definition_scope import definition_scope
 from lclang.lang.engine.evaluator.evaluation_journal import record_value_read
 from lclang.lang.engine.evaluator.name_resolver import Resolver
@@ -248,7 +248,11 @@ async def read_selected_binding(
         return result
     source = "native-provided" if frame.native_values else "external-provided"
     try:
-        result = await resolve_awaitable(frame.values[name])
+        result = await resolve_operation_value(
+            frame.values[name],
+            LclEvaluationError,
+            RuntimeErrorCode.E33_BINDING_EVALUATION_NATIVE_FAILURE,
+        )
     except BaseException as error:
         if internal_verbose_enabled():
             internal_trace(

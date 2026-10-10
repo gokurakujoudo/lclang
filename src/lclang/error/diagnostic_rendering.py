@@ -111,15 +111,29 @@ def render_failure(error: BaseException, *, action: str) -> str:
 
     reason = safe_repr(error, renderer=str, max_length=None)
     label = (
-        f" [{GeneralErrorCode.E22_NATIVE_DIAGNOSTIC_RENDERING_FAILURE}]"
+        f" [{GeneralErrorCode.E22_NATIVE_EXCEPTION_DIAGNOSTIC}]"
         if isinstance(error, Exception)
         else ""
     )
     diagnostic = f"Error in {action}{label}:\nCause: {type(error).__name__}: {reason}"
-    if isinstance(error.__cause__, LclError):
-        diagnostic += "\n" + "\n".join(
-            "  " + line for line in render_error(error.__cause__).splitlines()
+    cause: BaseException | None = error.__cause__
+    if isinstance(cause, (LclError, BaseExceptionGroup)):
+        cause_diagnostic = (
+            render_error(cause)
+            if isinstance(cause, LclError)
+            else render_failure(
+                cast(BaseExceptionGroup[BaseException], cause), action="handling cause"
+            )
         )
+        diagnostic += "\n" + "\n".join("  " + line for line in cause_diagnostic.splitlines())
+    if isinstance(error, BaseExceptionGroup):
+        for index, member in enumerate(
+            cast(BaseExceptionGroup[BaseException], error).exceptions, 1
+        ):
+            diagnostic += f"\n  Failure {index}:\n" + "\n".join(
+                "    " + line
+                for line in render_failure(member, action="handling failure").splitlines()
+            )
     return diagnostic
 
 

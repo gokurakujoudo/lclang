@@ -1,6 +1,7 @@
 """Layered logger configuration and CLI/Workflow output integration."""
 
 import asyncio
+import io
 import logging
 from datetime import date
 from pathlib import Path
@@ -35,6 +36,42 @@ async def logger_command(context: CliContext) -> CliResult:
     """Emit one diagnostic and one command result."""
     context.logger.info("command-record")
     return CliResult.success("command-result")
+
+
+def test_framework_console_stream_remains_borrowed_after_invocation() -> None:
+    """Invocation Frames retain the application's stream until all logs drain."""
+    stream = io.StringIO()
+    config = CliConfig(LoggerHandlerConfig(format="%(message)s", console={"stream": stream}))
+    entrance = CliEntrance(CommandGroup("root", "Root", [logger_command]), cli_config=config)
+    assert asyncio.run(entrance.run(["python", "tool.py", "logger"])) == 0
+    assert not stream.closed
+    assert "command-record" in stream.getvalue()
+    stream.write("still borrowed")
+
+
+STREAM_OVERRIDE_SOURCE = '__LCL_VERSION__: 1\nlogger.console.stream: "stderr"\n'
+
+
+@pytest.mark.parametrize("source", ["file", "override", "default-token"])
+def test_console_stream_defaults_preserve_file_and_override_precedence(
+    source: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A borrowed default does not replace a later stream token declaration."""
+    stream = io.StringIO()
+    selected: object = "stderr" if source == "default-token" else stream
+    config = CliConfig(LoggerHandlerConfig(format="%(message)s", console={"stream": selected}))
+    entrance = CliEntrance(CommandGroup("root", "Root", [logger_command]), cli_config=config)
+    with TemporaryDirectory() as directory:
+        path = Path(directory) / "stream.lclcfg"
+        path.write_text(STREAM_OVERRIDE_SOURCE, encoding="utf-8")
+        argv = ["python", "tool.py", "logger"]
+        if source == "file":
+            argv.extend(["-c", str(path)])
+        elif source == "override":
+            argv.extend(["-o", "logger.console.stream", "stderr"])
+        assert asyncio.run(entrance.run(argv)) == 0
+    assert not stream.closed and stream.getvalue() == ""
+    assert "command-record" in capsys.readouterr().err
 
 
 def test_default_override_preserves_explicit_sink_fields() -> None:

@@ -58,6 +58,7 @@ class LclError(Exception, metaclass=ErrorType):
     :param variable_stack: Ordered definition owners active at failure time.
     :param config_stack: Immutable file-introduction frames, outermost first.
     :param evaluation_context: Detached active expression and used-value snapshots.
+    :ivar binding_names: Conflicting declaration names, or an empty tuple.
     :raises LclValidationError: If *variable_stack* is not a tuple of strings.
     :raises LclValidationError: If the message, code, or a variable name is empty.
 
@@ -135,6 +136,7 @@ class LclError(Exception, metaclass=ErrorType):
         self.evaluation_context = evaluation_context
         self.masked = ACTIVE_MASKED_VALUE.get()
         self.native_cause: str | None = None
+        self.binding_names: tuple[str, ...] = ()
 
     def freeze_native_cause(self, cause: BaseException) -> None:
         """Retain the original native failure description without changing its object.
@@ -211,9 +213,35 @@ class LclError(Exception, metaclass=ErrorType):
         """
         result = Exception.__new__(type(self))
         result.args = self.args
-        vars(result).update(vars(self))
+        self.copy_diagnostic_fields(result)
         copy_failure_state(self, result)
         return result
+
+    def copy_diagnostic_fields(self, target: LclError) -> None:
+        """Copy declared fields into a compatible allocated diagnostic.
+
+        :param target: Same concrete error type or a subtype, already allocated.
+        :raises LclValidationError: If the target has an incompatible error type.
+
+        .. note::
+           Subclasses extend this hook for their fields. Group messages and
+           selected member arguments are retained by the native group allocator.
+        """
+        if not isinstance(target, type(self)):
+            raise LclValidationError(
+                "diagnostic copy target must have a compatible LCL error type",
+                code=GeneralErrorCode.E11_COPY_TARGET_TYPE,
+            )
+        if not isinstance(target, ExceptionGroup):
+            target.message = self.message
+        target.span = self.span
+        target.code = self.code
+        target.variable_stack = self.variable_stack
+        target.config_stack = self.config_stack
+        target.evaluation_context = self.evaluation_context
+        target.masked = self.masked
+        target.native_cause = self.native_cause
+        target.binding_names = self.binding_names
 
     def __str__(self) -> str:
         """Render a detached multiline diagnostic without further evaluation.
@@ -226,7 +254,11 @@ class LclError(Exception, metaclass=ErrorType):
 
 
 class LclValidationError(LclError):
-    """Report invalid arguments or inconsistent public values."""
+    """Report invalid arguments or inconsistent public values.
+
+    :ivar binding_names: Unitless conflicting names in detection order; empty
+       when the validation failure does not describe a binding conflict.
+    """
 
     default_code = str(GeneralErrorCode.E11_VALIDATION)
 

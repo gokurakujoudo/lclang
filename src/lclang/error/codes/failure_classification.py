@@ -121,6 +121,7 @@ CAUSE_OVERRIDES = {
     "52281": "Mapping materialization",
     "53181": "Business action callback",
     "53281": "Context or resource lifecycle callback",
+    "53381": "Context or resource lifecycle callback",
     "54181": "Child workflow call lifecycle",
     "44181": "Owned CLI Frame lifecycle",
     "45181": "Command handler or output callback",

@@ -1,5 +1,10 @@
 # Command-line API
 
+A console stream supplied through `CliConfig.log_config` is borrowed from the
+application. Invocation cleanup does not close that stream, so accepted log
+records can drain before the logger scope ends. File or override definitions
+still take precedence over framework defaults.
+
 Workflow variable defaults occupy a separate lowest-priority binding environment.
 `Command.default_bindings` retains these declarations without evaluating them;
 each invocation owns fresh factory caches. Existing entrance, preset, parameter,
@@ -109,3 +114,7 @@ See [errors and diagnostic codes](errors.md) for exception fields, specific
 codes, cause chains, and executable troubleshooting examples. Ordinary library
 validation uses `LclValidationError`; native callback and operation failures
 retain their original exception in `__cause__`.
+
+The [exception guide](exceptions.md) describes each failure family, grouped
+execution and cleanup failures, actual diagnostic output, and application
+handling with `except*` and native control signals.

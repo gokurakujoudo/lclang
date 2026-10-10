@@ -8,7 +8,7 @@ Defines ``DateOperationOutOfScopeException``, ``CalendarCannotLoadException``,
 from __future__ import annotations
 
 from datetime import date
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Self, cast
 
 from lclang.error.codes.e7_utility_error_code import UtilityErrorCode
 from lclang.error.exception_base import LclError, LclValidationError
@@ -57,6 +57,17 @@ class DateOperationOutOfScopeException(LclUtilityError):
         self.source_date = source_date
         self.source_calendar = source_calendar
 
+    def copy_diagnostic_fields(self, target: LclError) -> None:
+        """Copy specialized fields after the shared diagnostic fields.
+
+        :param target: Compatible allocated error receiving retained fields.
+        :raises LclValidationError: If the target is incompatible.
+        """
+        super().copy_diagnostic_fields(target)
+        copied = cast(Self, target)
+        copied.source_date = self.source_date
+        copied.source_calendar = self.source_calendar
+
 
 class CalendarCannotLoadException(LclUtilityError):
     """Report that a named calendar could not be loaded.
@@ -79,6 +90,16 @@ class CalendarCannotLoadException(LclUtilityError):
         super().__init__(f"cannot load calendar {calendar_id!r}", code=code)
         self.calendar_id = calendar_id
 
+    def copy_diagnostic_fields(self, target: LclError) -> None:
+        """Copy specialized fields after the shared diagnostic fields.
+
+        :param target: Compatible allocated error receiving retained fields.
+        :raises LclValidationError: If the target is incompatible.
+        """
+        super().copy_diagnostic_fields(target)
+        copied = cast(Self, target)
+        copied.calendar_id = self.calendar_id
+
 
 class CalendarLogicException(LclUtilityError):
     """Report an unexpected failure inside calendar logic.
@@ -100,6 +121,16 @@ class CalendarLogicException(LclUtilityError):
         validate_calendar_error_id(calendar_id)
         super().__init__(f"calendar logic failed for {calendar_id!r}", code=code)
         self.calendar_id = calendar_id
+
+    def copy_diagnostic_fields(self, target: LclError) -> None:
+        """Copy specialized fields after the shared diagnostic fields.
+
+        :param target: Compatible allocated error receiving retained fields.
+        :raises LclValidationError: If the target is incompatible.
+        """
+        super().copy_diagnostic_fields(target)
+        copied = cast(Self, target)
+        copied.calendar_id = self.calendar_id
 
 
 class UnappliedCalendarOperationException(LclUtilityError):

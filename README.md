@@ -58,6 +58,9 @@ to supply its own values and callables:
 - Inspect definitions, owners, cache states, lookup paths, and dependencies.
 - Diagnose failures with specific six-digit codes, retained causes and source
   snapshots; catch the shared `LclError` family in `lclang.error`.
+- Handle combined execution and cleanup failures with Python's exception-group
+  protocol; follow the [exception guide](docs/reference/exceptions.md) for actual
+  diagnostics and ownership examples.
 - Compose configuration files without losing source and history information.
 - Use the same evaluation model in services, batch jobs, CLIs, and tests.
 - Stay fully typed with no third-party runtime dependencies.
