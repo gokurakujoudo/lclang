@@ -24,9 +24,11 @@ scoped-values, and tree-workflow chapters. It demonstrates how to:
 - run sunny, rainy, dry-run, verbose, and help commands; and
 - prove that help exposes every external value but no intermediate value.
 
-Everything runs inside `TemporaryDirectory`, so the configuration, reports, and
-log disappear automatically after the example. A production application would
-retain the workflow definition and point the configuration at durable paths.
+Documentation tests run this case inside a separate `TemporaryDirectory`, so
+its configuration, reports, and logs disappear after verification. To try the
+example, save the shown configuration files and run the Python code from the
+same directory. A production application would retain the workflow definition
+and point the configuration at durable paths.
 
 ## Start with the configuration contract
 

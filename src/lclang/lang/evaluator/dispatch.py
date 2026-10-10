@@ -57,6 +57,7 @@ from lclang.lang.evaluator.definition_context import active_definition_stack
 from lclang.lang.evaluator.displays import internal_evaluate_display
 from lclang.lang.evaluator.errors import internal_evaluate_error_form, internal_wrap_failure
 from lclang.lang.evaluator.evaluation_context import (
+    ACTIVE_TARGET_EXPRESSION,
     capture_evaluation_context,
     collect_evaluation_context,
     record_value_read,
@@ -88,7 +89,7 @@ async def interpret_expression(node: LclAstNode, resolver: ResolverSource = None
     try:
         name = active_definition_stack()[-1] if active_definition_stack() else "<expr>"
         kind: Literal["definition", "function", "target"] = (
-            "target" if name == "using_target" else "definition"
+            "target" if node is ACTIVE_TARGET_EXPRESSION.get() else "definition"
         )
         with collect_evaluation_context(name, node, kind=kind):
             result = await internal_evaluate(node, internal_coerce_resolver(resolver))

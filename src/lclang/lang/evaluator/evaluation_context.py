@@ -42,6 +42,12 @@ ACTIVE_EVALUATION_CONTEXT: ContextVar[tuple[EvaluationReadJournal, ...]] = Conte
     "lclang_evaluation_context", default=()
 )
 
+# Unitless, task-local AST identity identifies the loader's generated target
+# definition. None means ordinary evaluation, preserving same-name user bindings.
+ACTIVE_TARGET_EXPRESSION: ContextVar[LclAstNode | None] = ContextVar(
+    "lclang_target_expression", default=None
+)
+
 
 @contextmanager
 def collect_evaluation_context(

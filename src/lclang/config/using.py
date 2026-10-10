@@ -8,6 +8,7 @@ from pathlib import Path
 from lclang.ast import LclAstNode
 from lclang.config.errors import LclConfigUsingError
 from lclang.config.model import ConfigDefinition, ConfigImport, ConfigUsing
+from lclang.lang.evaluator.evaluation_context import ACTIVE_TARGET_EXPRESSION
 from lclang.masking import normalize_masked_mapping
 from lclang.runtime import Module
 from lclang.types import ModuleName
@@ -19,8 +20,9 @@ from lclang.types import ModuleName
 USING_CONTEXT_MODULE = ModuleName("using_context")
 # Transient module name for call-level using overrides.
 USING_OVERRIDES_MODULE = ModuleName("using_overrides")
-# Transient binding name holding the dynamic target expression.
-USING_TARGET_NAME = "using_target"
+# Unitless transient target binding uses the configuration-reserved __ prefix
+# so an ordinary user definition cannot be shadowed during target selection.
+USING_TARGET_NAME = "__lclang_file_target"
 # Transient module name for the dynamic target expression.
 USING_TARGET_MODULE = ModuleName("using_target")
 
@@ -134,4 +136,8 @@ async def evaluate_target_expression(
     async with context:
         target = context.derive(Module(USING_TARGET_MODULE, {USING_TARGET_NAME: expression}))
         async with target:
-            return await target.get(USING_TARGET_NAME)
+            token = ACTIVE_TARGET_EXPRESSION.set(expression)
+            try:
+                return await target.get(USING_TARGET_NAME)
+            finally:
+                ACTIVE_TARGET_EXPRESSION.reset(token)

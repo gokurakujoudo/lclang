@@ -32,6 +32,33 @@ class ObservedRepresentation:
         return "visible payload"
 
 
+class UnprintableFailure(Exception):
+    """Reject string conversion without changing the original exception identity."""
+
+    def __str__(self) -> str:
+        """Simulate an external exception with a broken display implementation."""
+        raise RuntimeError("display unavailable")
+
+
+@pytest.mark.asyncio
+async def test_broken_native_exception_display_retains_original_cause() -> None:
+    """Error presentation cannot replace an external failure with a display failure."""
+    native = UnprintableFailure("original reason")
+
+    def fail() -> object:
+        """Raise the original external exception."""
+        raise native
+
+    async with define_frame(
+        define_module("native", {"bad": "fail()"}), preset={"fail": fail}
+    ) as frame:
+        with pytest.raises(LclEvaluationError) as failure:
+            await frame.get("bad")
+        assert failure.value.__cause__ is native
+        assert "UnprintableFailure" in str(failure.value)
+        assert "repr failed" in str(failure.value)
+
+
 @pytest.mark.asyncio
 async def test_success_does_not_render_and_failure_protects_masked_values() -> None:
     """Capturing reads is silent, and exact-name masking precedes representation."""
@@ -200,3 +227,24 @@ async def test_file_changed_and_frame_closed_do_not_change_error_source() -> Non
         assert str(failure.value) == original
         assert "result: price / 0" in original
         assert "price = (int) 5" in original
+
+
+@pytest.mark.asyncio
+async def test_unicode_continuation_retains_physical_crlf_source() -> None:
+    """Masked logical continuation text does not replace the original source excerpt."""
+    with TemporaryDirectory() as directory:
+        path = Path(directory) / "main.lclcfg"
+        source = "数量: 5\r\n零: 0\r\n结果: (数量 + \\\r\n    1) / 零\r\n"
+        path.write_text(source, encoding="utf-8", newline="")
+        config = await load_config(path)
+        async with config.to_frame() as frame:
+            with pytest.raises(LclEvaluationError) as failure:
+                await frame.get("结果")
+            assert failure.value.span is not None
+            assert failure.value.span.snapshot is not None
+            assert failure.value.span.snapshot.text == source
+            diagnostic = str(failure.value)
+            assert "结果: (数量 + \\" in diagnostic
+            assert "1) / 零" in diagnostic
+            assert "数量 = (int) 5" in diagnostic
+            assert "零 = (int) 0" in diagnostic

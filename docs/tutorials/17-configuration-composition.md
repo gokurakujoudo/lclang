@@ -15,7 +15,8 @@ boundaries.
 | `import? f"{__dir__}/file.lclcfg" as m` | Independent, with explicit loading overrides and builtins | Local definitions become `m.*` | Skip |
 
 Every form accepts a quoted path or an f-string path ending in `.lclcfg`.
-Relative paths start beside the introducing file. Optionality applies only to
+Use `f"{__dir__}/..."` for all four forms to make the defining directory explicit.
+Optionality applies only to
 the directly requested target. Existing files still report read, decoding,
 syntax, nested dependency, cycle, and resource-limit errors.
 
@@ -146,12 +147,16 @@ comprehension targets, handler bindings, and context-manager bindings stay local
 
 <!-- lclang-doc-case: lexical-names -->
 
+`functions.lclcfg`:
+
 <!-- lclang-doc-file: functions.lclcfg -->
 ```lclcfg
 offset: 2
 add: m -> offset + m
 result: add(3)
 ```
+
+`main.lclcfg`:
 
 <!-- lclang-doc-file: main.lclcfg -->
 ```lclcfg
@@ -192,11 +197,15 @@ earlier undeclared input local.
 
 <!-- lclang-doc-case: nested-fields -->
 
+`main.lclcfg`:
+
 <!-- lclang-doc-file: main.lclcfg -->
 ```lclcfg
 import f"{__dir__}/service.lclcfg" as services.api
 import f"{__dir__}/patch.lclcfg" as services.api
 ```
+
+`service.lclcfg`:
 
 <!-- lclang-doc-file: service.lclcfg -->
 ```lclcfg
@@ -206,10 +215,14 @@ import f"{__dir__}/retry.lclcfg" as retry
 endpoint: f"{host}:{port}"
 ```
 
+`retry.lclcfg`:
+
 <!-- lclang-doc-file: retry.lclcfg -->
 ```lclcfg
 attempts: 3
 ```
+
+`patch.lclcfg`:
 
 <!-- lclang-doc-file: patch.lclcfg -->
 ```lclcfg
@@ -258,9 +271,13 @@ creates nothing, including no definitions or history.
 
 `empty.lclcfg` is deliberately empty:
 
+`empty.lclcfg`:
+
 <!-- lclang-doc-file: empty.lclcfg -->
 ```lclcfg
 ```
+
+`main.lclcfg`:
 
 <!-- lclang-doc-file: main.lclcfg -->
 ```lclcfg
@@ -313,11 +330,15 @@ only if evaluation reaches that definition.
 
 <!-- lclang-doc-case: required-value -->
 
+`service.lclcfg`:
+
 <!-- lclang-doc-file: service.lclcfg -->
 ```lclcfg
 port: NEED_OVERRIDE # Deployment must select the listener.
 result: port + 1
 ```
+
+`main.lclcfg`:
 
 <!-- lclang-doc-file: main.lclcfg -->
 ```lclcfg
@@ -371,11 +392,15 @@ An explicit `None` is a supplied value. Prefer an ordinary default or
 
 <!-- lclang-doc-case: runtime-input -->
 
+`service.lclcfg`:
+
 <!-- lclang-doc-file: service.lclcfg -->
 ```lclcfg
 port: RUNTIME_OVERRIDE # Python supplies the listener.
 result: port + 1
 ```
+
+`main.lclcfg`:
 
 <!-- lclang-doc-file: main.lclcfg -->
 ```lclcfg
@@ -430,10 +455,14 @@ before the alias has been applied:
 
 <!-- lclang-doc-case: loading-failure -->
 
+`main.lclcfg`:
+
 <!-- lclang-doc-file: main.lclcfg -->
 ```lclcfg
 import f"{__dir__}/service.lclcfg" as m
 ```
+
+`service.lclcfg`:
 
 <!-- lclang-doc-file: service.lclcfg -->
 ```lclcfg
@@ -492,11 +521,15 @@ the failure. Rendering the error never evaluates an unused definition.
 
 <!-- lclang-doc-case: evaluation-failure -->
 
+`main.lclcfg`:
+
 <!-- lclang-doc-file: main.lclcfg -->
 ```lclcfg
 import f"{__dir__}/metrics.lclcfg" as m
 result: m.ratio * 100
 ```
+
+`metrics.lclcfg`:
 
 <!-- lclang-doc-file: metrics.lclcfg -->
 ```lclcfg
@@ -614,6 +647,8 @@ local file changes one field after import.
 
 <!-- lclang-doc-case: deployment-combination -->
 
+`main.lclcfg`:
+
 <!-- lclang-doc-file: main.lclcfg -->
 ```lclcfg
 using f"{__dir__}/deployment.lclcfg"
@@ -622,16 +657,22 @@ using? f"{__dir__}/local.lclcfg"
 result: {endpoint=service.endpoint, retries=service.retries, authenticated=service.authenticated}
 ```
 
+`deployment.lclcfg`:
+
 <!-- lclang-doc-file: deployment.lclcfg -->
 ```lclcfg
 profile: "production"
 ```
+
+`profiles/production.lclcfg`:
 
 <!-- lclang-doc-file: profiles/production.lclcfg -->
 ```lclcfg
 using f"{__dir__}/../service-defaults.lclcfg"
 host: "api.example.com"
 ```
+
+`service-defaults.lclcfg`:
 
 <!-- lclang-doc-file: service-defaults.lclcfg -->
 ```lclcfg
@@ -641,6 +682,8 @@ token!: RUNTIME_OVERRIDE
 endpoint: f"https://{host}:{port}"
 authenticated: bool(token)
 ```
+
+`local.lclcfg`:
 
 <!-- lclang-doc-file: local.lclcfg -->
 ```lclcfg

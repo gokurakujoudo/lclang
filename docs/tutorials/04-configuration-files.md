@@ -75,8 +75,9 @@ cases where empty imported namespaces matter.
 
 ## Expand shared files in source order
 
-`using` inserts another file's definitions at the declaration position. Relative
-paths start in the importing file's directory. Later same-name declarations
+`using` inserts another file's definitions at the declaration position. Start
+its target with `f"{__dir__}/..."` to identify that file's directory explicitly.
+Later same-name declarations
 replace values while retaining every occurrence in `Config.history`.
 
 <!-- lclang-doc-case: shared-pricing -->
@@ -144,7 +145,9 @@ continues to fail loading.
 
 <!-- lclang-doc-case: absent-local-file -->
 
-`application.lclcfg`, with no `local.lclcfg` beside it:
+The local override file is absent in this example.
+
+`application.lclcfg`:
 
 <!-- lclang-doc-file: application.lclcfg -->
 ```lclcfg
@@ -247,20 +250,28 @@ process environment.
 
 <!-- lclang-doc-case: environment-selection -->
 
+`application.lclcfg`:
+
 <!-- lclang-doc-file: application.lclcfg -->
 ```lclcfg
 using f"{__dir__}/{env.LCLANG_TUTORIAL_PROFILE ?? 'local'}.lclcfg"
 ```
+
+`local.lclcfg`:
 
 <!-- lclang-doc-file: local.lclcfg -->
 ```lclcfg
 profile_name: "local"
 ```
 
+`blue.lclcfg`:
+
 <!-- lclang-doc-file: blue.lclcfg -->
 ```lclcfg
 profile_name: "blue"
 ```
+
+`green.lclcfg`:
 
 <!-- lclang-doc-file: green.lclcfg -->
 ```lclcfg
@@ -308,6 +319,8 @@ Use `Config.frame_factory()` when several independent runs share one loaded
 configuration. Each created Frame receives its own result and failure snapshots.
 
 <!-- lclang-doc-case: independent-runs -->
+
+`policy.lclcfg`:
 
 <!-- lclang-doc-file: policy.lclcfg -->
 ```lclcfg

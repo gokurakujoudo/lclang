@@ -18,6 +18,8 @@ def render_error(error: LclError) -> str:
     from lclang.errors import LclError
 
     frames = tuple(frame for frame in error.evaluation_context if frame.kind != "target")
+    generated = {frame.name for frame in error.evaluation_context if frame.kind == "target"}
+    variable_stack = tuple(name for name in error.variable_stack if name not in generated)
     if error.config_stack:
         lines = [
             f'Error in loading config file "{error.config_stack[0].origin.name}" [{error.code}]:'
@@ -30,8 +32,8 @@ def render_error(error: LclError) -> str:
                 "    " + line
                 for line in render_source_excerpt(loading_frame.declaration_span, underline=False)
             )
-    elif frames or error.variable_stack:
-        name = frames[0].name if frames else error.variable_stack[0]
+    elif frames or variable_stack:
+        name = frames[0].name if frames else variable_stack[0]
         lines = [f"Error in evaluating {name} [{error.code}]:"]
     else:
         action = select_error_action(error.default_code)
@@ -53,7 +55,7 @@ def render_error(error: LclError) -> str:
             payload = MASKED_VALUE if value.masked else f"({value.type_name}) {value.value}"
             lines.append(f"    {value.name} = {payload}")
     if not frames:
-        lines.extend("  " + name for name in error.variable_stack)
+        lines.extend("  " + name for name in variable_stack)
         if error.span is not None and not any(
             frame.declaration_span == error.span for frame in error.config_stack
         ):

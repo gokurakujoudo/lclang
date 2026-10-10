@@ -15,7 +15,7 @@ from lclang.config import (
     load_config,
     parse_config,
 )
-from lclang.errors import LclSyntaxError
+from lclang.errors import LclError, LclSyntaxError
 from lclang.lang.lexer import scan_tokens
 from lclang.lang.lexer.fstring_values import FStringField
 from lclang.lang.parser.fstrings import internal_convert_part
@@ -102,3 +102,26 @@ def test_lexical_spanless_failure_and_manual_fstring_retain_error_contract() -> 
     part = FStringField("1 + 2", expression_offset=0)
     converted = internal_convert_part(part, source_span())
     assert converted.span.snapshot is None
+
+
+@pytest.mark.asyncio
+async def test_dynamic_missing_name_hides_generated_target_but_keeps_user_owner() -> None:
+    """A missing field has physical coordinates without exposing a loader binding."""
+    with TemporaryDirectory() as directory:
+        path = Path(directory) / "main.lclcfg"
+        source = 'using f"{__dir__}/profiles/{missing}.lclcfg"\r\n'
+        path.write_text(source, encoding="utf-8", newline="")
+        with pytest.raises(Exception) as failure:
+            await load_config(path)
+        assert "using_target" not in str(failure.value)
+        cause = failure.value.__cause__
+        assert isinstance(cause, LclError)
+        assert cause.span is not None
+        assert cause.span.start.column == source.index("missing") + 1
+        assert cause.span.snapshot is not None
+        assert cause.span.snapshot.text == source
+        source = 'using_target: NEED_OVERRIDE\nusing f"{__dir__}/{using_target}.lclcfg"'
+        path.write_text(source, encoding="utf-8")
+        with pytest.raises(Exception) as user_failure:
+            await load_config(path)
+        assert "Error in evaluating using_target [LCL3001]" in str(user_failure.value)

@@ -80,6 +80,8 @@ printing the error does not request missing values or take an unused branch.
 
 <!-- lclang-doc-case: complete-failure-scene -->
 
+`metrics.lclcfg`:
+
 <!-- lclang-doc-file: metrics.lclcfg -->
 ```lclcfg
 total: 5
