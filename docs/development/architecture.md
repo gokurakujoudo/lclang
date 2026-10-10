@@ -58,12 +58,15 @@ Tests mirror subsystem ownership:
 ```text
 tests/
   error/           code registry, constructor, protocol, cause and cleanup contracts
-  ast/             node, visitor and round-trip contracts
-  lang/            lexer/parser/printer/evaluator behaviour
-  runtime/         module and preset behaviour
-    frame/         cache, concurrency, lifecycle and inspection behaviour
-    dependency/    static/dynamic and qualified graph behaviour
-  stdlib/          manifest and async-helper behaviour
+  common/          cross-package identifiers, source locations and awaiting
+  lang/            public language facade contracts
+    common/        language records and grammar-version contracts
+    ast/           node, visitor and round-trip contracts
+    engine/        lexer/parser/printer/evaluator behaviour
+    runtime/       module and preset behaviour
+      frame/       cache, concurrency, lifecycle and inspection behaviour
+      dependency/  static/dynamic and qualified graph behaviour
+    stdlib/        manifest and async-helper behaviour
   config/          text, include, origin and diagnostic behaviour
   logger/          configuration, ownership, output, timers and failure isolation
   cli/             argv, routing, stream and exit-code behaviour
@@ -79,6 +82,12 @@ One test file may cover several closely related implementation files. Explicit
 integration contracts live in `test_integration_*.py` modules. First pass the
 existing tests, refactor production code, pass the same tests, and only then
 reorganize test files and shared fixtures to match the resulting responsibilities.
+
+Source contracts reject obsolete import paths and forwarding modules, require
+module overviews to name their declared contents, keep error enums in their
+owning facade, and prevent instance dictionary state copying. Native module
+discovery remains an explicit reflection exception. Shared packages retain
+their inward dependency direction.
 
 A behaviour has one obvious owning test module. Tests assert public behaviour,
 structured state, or diagnostics rather than private method calls. Shared

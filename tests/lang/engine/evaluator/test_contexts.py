@@ -7,7 +7,7 @@ import pytest
 from lclang.error import LclEvaluationError
 from lclang.lang.engine.evaluator.ast_interpreter import interpret_expression
 from lclang.lang.engine.parser import parse_expression
-from tests.lang.evaluator.context_support import AsyncManager, SyncManager
+from tests.lang.engine.evaluator.context_support import AsyncManager, SyncManager
 
 
 @pytest.mark.asyncio

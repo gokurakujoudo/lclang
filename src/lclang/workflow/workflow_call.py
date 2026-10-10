@@ -14,7 +14,7 @@ from lclang.error import LclWorkflowError, WorkflowErrorCode
 from lclang.error.diagnostic_rendering import render_failure
 from lclang.error.exception_base import LclStateError, LclValidationError
 from lclang.error.failure_aggregation import combine_failures
-from lclang.error.native_wrap import wrap_failure
+from lclang.error.native_wrap import is_ordinary_failure, wrap_failure
 from lclang.error.operation_guard import guard_async_failure
 from lclang.lang.runtime import Frame, Preset
 from lclang.lang.runtime.module_frame_factory import define_frame
@@ -52,7 +52,7 @@ async def close_call_frame(frame: Frame) -> BaseException | None:
     except BaseException as error:
         cleanup = (
             wrap_failure(error, LclWorkflowError, WorkflowErrorCode.E41_CALL_CLEANUP_FAILURE)
-            if isinstance(error, Exception)
+            if is_ordinary_failure(error)
             else error
         )
         failure = combine_failures(failure, cleanup, code=WorkflowErrorCode.E35_COMPOSITE_FAILURE)
@@ -133,6 +133,8 @@ async def execute_workflow_in_task(
         try:
             result = await workflow.execute(execution)
         except Exception as error:
+            if not is_ordinary_failure(error):
+                raise
             context.logger.error(
                 "%s", render_failure(error, action=f"calling workflow {branch!r}"), exc_info=True
             )
@@ -154,7 +156,7 @@ async def execute_workflow_in_task(
             else WorkflowErrorCode.E41_CALL_BODY_FAILURE
         )
         pending = (
-            wrap_failure(error, LclWorkflowError, code) if isinstance(error, Exception) else error
+            wrap_failure(error, LclWorkflowError, code) if is_ordinary_failure(error) else error
         )
     finally:
         if frame is not None:

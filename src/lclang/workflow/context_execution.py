@@ -13,7 +13,7 @@ from typing import cast
 
 from lclang.error import LclWorkflowError, WorkflowErrorCode
 from lclang.error.failure_aggregation import combine_failures
-from lclang.error.native_wrap import wrap_failure
+from lclang.error.native_wrap import is_ordinary_failure, wrap_failure
 from lclang.error.operation_guard import guard_async_failure
 from lclang.workflow.execution_context import (
     TaskContext,
@@ -80,7 +80,7 @@ async def execute_context_scope(
         )
         resource = await scope.__aenter__()
     except BaseException as error:
-        if isinstance(error, Exception):
+        if is_ordinary_failure(error):
             error = record_exception(
                 state,
                 context_manager,
@@ -118,14 +118,14 @@ async def execute_context_scope(
     except BaseException as error:
         cleanup = (
             wrap_failure(error, LclWorkflowError, WorkflowErrorCode.E32_CONTEXT_EXIT_FAILURE)
-            if isinstance(error, Exception)
+            if is_ordinary_failure(error)
             else error
         )
         failure = combine_failures(incoming, cleanup, code=WorkflowErrorCode.E35_COMPOSITE_FAILURE)
-        if isinstance(error, Exception):
+        if is_ordinary_failure(error):
             recorded = (
                 failure
-                if isinstance(failure, Exception)
+                if is_ordinary_failure(failure)
                 else wrap_failure(
                     error, LclWorkflowError, WorkflowErrorCode.E32_CONTEXT_EXIT_FAILURE
                 )
@@ -154,7 +154,7 @@ async def execute_context_scope(
     )
     if incoming is not None:
         if (
-            isinstance(incoming, Exception)
+            is_ordinary_failure(incoming)
             and suppressed
             and context_manager.current.status is ExecutionStatus.FAILURE_COVERED
         ):

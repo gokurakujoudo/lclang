@@ -13,7 +13,7 @@ from lclang.error.diagnostic_records import ConfigLoadFrame
 from lclang.error.failure_aggregation import combine_failures
 from lclang.error.loading_context import derive_loading_error
 from lclang.lang import define_frame, define_module
-from tests.lang.evaluator.context_support import SyncManager
+from tests.lang.engine.evaluator.context_support import SyncManager
 
 
 @pytest.mark.asyncio
@@ -47,16 +47,56 @@ async def test_native_groups_keep_protocol_through_evaluation(source: str, code:
     assert [item.__cause__ for item in caught.value.exceptions] == list(original.exceptions)
 
 
-def test_compatibility_paths_reexport_the_central_error_types() -> None:
-    """Supported historical import paths expose the same centralized class objects."""
-    from lclang.error import CalendarLogicException
-    from lclang.error import CalendarLogicException as HistoricalCalendar
-    from lclang.error import ConfigLoadFrame as HistoricalContext
-    from lclang.error import LclError as HistoricalError
+def test_error_types_and_records_are_exported_by_their_single_owner() -> None:
+    """Specialized failure classes and diagnostic records belong to lclang.error."""
+    import lclang.config as configuration
+    import lclang.error as errors
+    import lclang.utils.calendar as calendars
+    import lclang.workflow as workflow
+    from lclang.error import CalendarLogicException, WorkflowException
 
-    assert HistoricalError is LclError
-    assert HistoricalContext is ConfigLoadFrame
-    assert HistoricalCalendar is CalendarLogicException
+    for failure_type in (LclError, ConfigLoadFrame, CalendarLogicException, WorkflowException):
+        assert failure_type.__module__.startswith("lclang.error.")
+        assert getattr(errors, failure_type.__name__) is failure_type
+        assert errors.__all__.count(failure_type.__name__) == 1
+        assert all(
+            failure_type.__name__ not in module.__all__
+            for module in (configuration, calendars, workflow)
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("signal_first", [False, True])
+async def test_cached_cleanup_retains_protocol_control_and_other_failure(
+    signal_first: bool,
+) -> None:
+    """Either encounter order keeps the same control and every ordinary close cause."""
+    signal = StopAsyncIteration("done")
+    ordinary = OSError("close")
+    attempts: list[str] = []
+
+    class Resource:
+        def __init__(self, name: str, failure: Exception) -> None:
+            self.name = name
+            self.failure = failure
+
+        async def aclose(self) -> None:
+            attempts.append(self.name)
+            raise self.failure
+
+    first = Resource("first", ordinary if signal_first else signal)
+    second = Resource("second", signal if signal_first else ordinary)
+    frame = define_frame(
+        define_module("resources", {"first": "make_first()", "second": "make_second()"}),
+        preset={"make_first": lambda: first, "make_second": lambda: second},
+    )
+    await frame.get("first")
+    await frame.get("second")
+    with pytest.raises(StopAsyncIteration) as caught:
+        await frame.close()
+    assert caught.value is signal and frame.closed and attempts == ["second", "first"]
+    assert isinstance(signal.__cause__, LclError)
+    assert signal.__cause__.code == "LCL236811" and signal.__cause__.__cause__ is ordinary
 
 
 @pytest.mark.parametrize("signal", [StopIteration(), StopAsyncIteration()])

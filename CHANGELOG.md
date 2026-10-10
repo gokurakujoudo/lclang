@@ -27,6 +27,14 @@
 
 ### Diagnostics and documentation
 
+- Align behavioral tests with the functional package layout after production
+  validation. Enforce obsolete-path removal, static package exports, module
+  overviews, shared-layer dependencies and declared-field state copying.
+- Preserve iterator controls through workflow recovery, dynamic calls, CLI
+  routing and evaluated inspection. Settle owned resources and keep prior
+  ordinary failures in the original control's cause chain.
+- Retain invocation Frame cleanup failures when CLI logger setup fails, and
+  display native control groups without ordinary error-code labels.
 - Add a dedicated exception guide with executable group, workflow, CLI, logger
   and control-signal examples and their actual diagnostic output.
 - Copy declared diagnostic fields through a public hook, preserving subclass

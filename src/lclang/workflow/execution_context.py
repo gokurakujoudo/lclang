@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 from lclang.error import LclWorkflowError, WorkflowErrorCode
 from lclang.error.exception_base import LclStateError, LclValidationError
 from lclang.error.failure_aggregation import combine_failures
-from lclang.error.native_wrap import wrap_failure
+from lclang.error.native_wrap import is_ordinary_failure, wrap_failure
 from lclang.error.operation_guard import guard_async_failure, guard_constructor, guard_failure
 from lclang.lang.runtime import Frame
 from lclang.logger import Logger
@@ -240,29 +240,30 @@ class FailureCoveringContextTask[ArgsT, ResourceT]:
         pending: BaseException | None = None
         try:
             yield resource
-        except Exception as exception:
-            try:
-                await self.handle_exception(context, args, status_mgr, resource, exception)
-                covered = True
-            except BaseException as error:
-                handling = (
-                    wrap_failure(
-                        error, LclWorkflowError, WorkflowErrorCode.E33_CONTEXT_HANDLING_FAILURE
+        except BaseException as exception:
+            if not is_ordinary_failure(exception):
+                pending = exception
+            else:
+                try:
+                    await self.handle_exception(context, args, status_mgr, resource, exception)
+                    covered = True
+                except BaseException as error:
+                    handling = (
+                        wrap_failure(
+                            error, LclWorkflowError, WorkflowErrorCode.E33_CONTEXT_HANDLING_FAILURE
+                        )
+                        if is_ordinary_failure(error)
+                        else error
                     )
-                    if isinstance(error, Exception)
-                    else error
-                )
-                pending = combine_failures(
-                    exception, handling, code=WorkflowErrorCode.E35_COMPOSITE_FAILURE
-                )
-        except BaseException as error:
-            pending = error
+                    pending = combine_failures(
+                        exception, handling, code=WorkflowErrorCode.E35_COMPOSITE_FAILURE
+                    )
         try:
             await self.release(context, args, status_mgr, resource)
         except BaseException as error:
             cleanup = (
                 wrap_failure(error, LclWorkflowError, WorkflowErrorCode.E32_CONTEXT_EXIT_FAILURE)
-                if isinstance(error, Exception)
+                if is_ordinary_failure(error)
                 else error
             )
             pending = combine_failures(

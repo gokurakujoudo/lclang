@@ -1,1 +1,1 @@
-"""Tests mirroring :mod:`lclang.lang`."""
+"""Public language contracts and tests grouped by language subsystem."""

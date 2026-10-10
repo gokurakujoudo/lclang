@@ -26,3 +26,14 @@ def test_native_ordinary_group_renders_nested_members() -> None:
     output = render_failure(errors, action="running tasks")
     assert "ValueError: first" in output and "OSError: second" in output
     assert "[LCL022890]" in output
+
+
+def test_iterator_signals_and_groups_have_no_ordinary_failure_code() -> None:
+    """Native iterator termination retains its protocol role in diagnostic output."""
+    for signal in [StopIteration("done"), StopAsyncIteration("done")]:
+        output = render_failure(signal, action="ending iteration")
+        assert "[LCL" not in output and type(signal).__name__ in output
+        grouped = ExceptionGroup("iterator and cleanup", [signal, OSError("close")])
+        output = render_failure(grouped, action="ending iteration")
+        assert output.splitlines()[0] == "Error in ending iteration:"
+        assert "OSError: close" in output

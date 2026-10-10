@@ -45,7 +45,7 @@ async def test_standard_preset_composes_async_helpers_in_a_frame() -> None:
 
 def test_helper_modules_import_only_reviewed_capability_roots() -> None:
     """The concrete helper surface cannot acquire ambient I/O capabilities."""
-    root = Path(__file__).parents[2] / "src" / "lclang" / "lang" / "stdlib"
+    root = Path(__file__).parents[3] / "src" / "lclang" / "lang" / "stdlib"
     # Runtime casts and finite-number checks add no ambient connectivity or file access.
     allowed = {"__future__", "collections", "json", "lclang", "types", "typing", "math"}
     for name in (

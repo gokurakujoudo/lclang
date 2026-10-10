@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from lclang.error import LclEvaluationError, RuntimeErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.failure_aggregation import combine_failures
-from lclang.error.native_wrap import wrap_failure
+from lclang.error.native_wrap import is_ordinary_failure, wrap_failure
 from lclang.error.operation_guard import guard_async_failure, guard_constructor, guard_failure
 
 if TYPE_CHECKING:
@@ -151,7 +151,7 @@ class InternalFrameLifecycle:
                     RuntimeErrorCode.E36_RESOURCE_CLEANUP_FAILURE,
                     message="Frame cleanup failed",
                 )
-                if isinstance(error, Exception)
+                if is_ordinary_failure(error)
                 else error
             )
             failure = combine_failures(

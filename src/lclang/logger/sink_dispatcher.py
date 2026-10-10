@@ -15,7 +15,7 @@ from threading import Event
 from lclang.error import LclLoggerError, LoggerErrorCode
 from lclang.error.diagnostic_rendering import render_failure
 from lclang.error.exception_base import LclValidationError
-from lclang.error.native_wrap import wrap_failure
+from lclang.error.native_wrap import is_ordinary_failure, wrap_failure
 from lclang.error.operation_guard import guard_constructor, guard_failure
 from lclang.logger.console_sink import ConsoleSink
 from lclang.logger.file_sink import FileSink
@@ -58,7 +58,7 @@ class Dispatcher:
             if sys.__stderr__ is not None:
                 failure = (
                     wrap_failure(error, LclLoggerError, LoggerErrorCode.E35_WRITE_FAILURE)
-                    if isinstance(error, Exception)
+                    if is_ordinary_failure(error)
                     else error
                 )
                 diagnostic = render_failure(failure, action=f"writing log sink {sink.key!r}")
