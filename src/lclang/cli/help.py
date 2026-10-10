@@ -162,4 +162,9 @@ def render_usage_error(message: str, help_text: str) -> str:
     :param help_text: Already rendered nearest-scope help.
     :returns: Combined diagnostic ending in one newline.
     """
-    return f"error: {message}\n\n{help_text}"
+    diagnostic = (
+        message
+        if message.startswith("Error ")
+        else f"Error in command-line usage:\nCause: {message}"
+    )
+    return f"{diagnostic}\n\n{help_text}"

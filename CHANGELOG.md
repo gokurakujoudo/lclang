@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Configuration and runtime
+
+- Add `import` and `import?` with required static aliases, independent loading
+  contexts, scope-aware name qualification, repeated-alias field merging, and
+  empty namespace reservations. Optional imports skip only directly missing files.
+- Add lazy `NEED_OVERRIDE` and `RUNTIME_OVERRIDE` declarations and immutable
+  `Module.mixin()` composition. CLI defaults, configuration, and overrides now
+  compose before evaluation so dependant expressions read effective overrides.
+- Keep configuration version 1 and existing relative-target compatibility.
+
+### Diagnostics and documentation
+
+- Unify production diagnostic presentation in English with complete loading
+  and evaluation stacks, retained source, and masked snapshots of already-read
+  values. Preserve concrete exceptions, codes, causes, and Python tracebacks.
+- Add the configuration composition tutorial. Markdown declares configuration
+  fixtures directly in `lclcfg` blocks and executable examples verify their exact
+  source and displayed outputs in independent temporary directories.
+- Start documented file introductions with `f"{__dir__}/..."`, and adopt
+  Humanizer for English documentation prose while preserving technical contracts.
+
 ## 1.0.16 - 2026-10-10
 
 ### Configuration

@@ -24,9 +24,11 @@ scoped-values, and tree-workflow chapters. It demonstrates how to:
 - run sunny, rainy, dry-run, verbose, and help commands; and
 - prove that help exposes every external value but no intermediate value.
 
-Everything runs inside `TemporaryDirectory`, so the configuration, reports, and
-log disappear automatically after the example. A production application would
-retain the workflow definition and point the configuration at durable paths.
+Documentation tests run this case inside a separate `TemporaryDirectory`, so
+its configuration, reports, and logs disappear after verification. To try the
+example, save the shown configuration files and run the Python code from the
+same directory. A production application would retain the workflow definition
+and point the configuration at durable paths.
 
 ## Start with the configuration contract
 
@@ -36,59 +38,68 @@ so no `FRAME_PROXY` declarations are needed. The writer credential has a
 trailing `!`, so lclang-owned diagnostics mask its definition, value, and
 failures without changing the runtime name.
 
+<!-- lclang-doc-case: settlement-config -->
+
+`settlement.lclcfg`:
+
+<!-- lclang-doc-file: settlement.lclcfg -->
+```lclcfg
+# scope: report paths
+paths.output_dir: f"{__dir__}/results" # Output directory
+paths.output_name: "settlement.txt" # Output filename
+
+# scope: meter readings
+meter.start: 1000.0 # Opening cumulative kWh
+meter.end: 1250.0 # Closing cumulative kWh
+
+# scope: tariff policy
+tariff.unit_rate: 0.18 # USD per kWh
+tariff.tax_rate: 0.08 # Tax decimal
+
+# Customer and credential
+customer.name: "North Harbor Cold Storage" # Report customer
+secrets.account_token!: "warehouse-writer-token" # Writer token
+
+# CLI logging and lunch
+logger.file.app.directory: __dir__ # Formal log directory
+logger.file.app.filename: "settlement.log" # Formal log filename
+logger.file.app.level: "INFO" # Application threshold
+lunch.options: ["noodles"] # Successful-run lunch choice
+```
+
+Run the following program beside the file:
+
 <!-- lclang-doc-exec -->
 ```python
 import asyncio
-import json
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 from lclang.config import load_config
 
 
 async def main() -> None:
-    with TemporaryDirectory(prefix="lclang-energy-config-") as directory:
-        root = Path(directory)
-        config_path = root / "settlement.lclcfg"
-        config_path.write_text(
-            "# scope: report paths\n"
-            f"paths.output_dir: {json.dumps(str(root / 'results'))} # Output directory\n"
-            'paths.output_name: "settlement.txt" # Output filename\n'
-            "\n"
-            "# scope: meter readings\n"
-            "meter.start: 1000.0 # Opening cumulative kWh\n"
-            "meter.end: 1250.0 # Closing cumulative kWh\n"
-            "\n"
-            "# scope: tariff policy\n"
-            "tariff.unit_rate: 0.18 # USD per kWh\n"
-            "tariff.tax_rate: 0.08 # Tax decimal\n"
-            "\n"
-            "# Customer and credential\n"
-            'customer.name: "North Harbor Cold Storage" # Report customer\n'
-            'secrets.account_token!: "warehouse-writer-token" # Writer token\n'
-            "\n"
-            "# CLI logging and lunch\n"
-            f"logger.file.app.directory: {json.dumps(str(root))} # Formal log directory\n"
-            'logger.file.app.filename: "settlement.log" # Formal log filename\n'
-            'logger.file.app.level: "INFO" # Application threshold\n'
-            'lunch.options: ["noodles"] # Successful-run lunch choice\n',
-            encoding="utf-8",
-        )
+    directory = str(Path.cwd())
+    root = Path(directory)
+    config_path = root / "settlement.lclcfg"
 
-        config = await load_config(config_path)
-        frame = config.to_frame()
-        try:
-            assert await frame.get("paths.output_name") == "settlement.txt"
-            assert await frame.get("tariff.unit_rate") == 0.18
-            assert await frame.get("customer.name") == "North Harbor Cold Storage"
-            assert frame.is_masked("secrets.account_token") is True
-            assert config.masked_names == frozenset({"secrets.account_token"})
-        finally:
-            await frame.close()
+    config = await load_config(config_path)
+    frame = config.to_frame()
+    try:
+        assert await frame.get("paths.output_name") == "settlement.txt"
+        assert await frame.get("tariff.unit_rate") == 0.18
+        assert await frame.get("customer.name") == "North Harbor Cold Storage"
+        assert frame.is_masked("secrets.account_token") is True
+        assert config.masked_names == frozenset({"secrets.account_token"})
+    finally:
+        await frame.close()
 
 
 asyncio.run(main())
 ```
+
+The program completes without console output. Its assertions check the
+results and log contents described below.
+<!-- /lclang-doc-case -->
 
 The scoped names are still exact names. `tariff.unit_rate` does not use relative
 lookup, and a CLI override must use that complete spelling. The log settings are
@@ -114,16 +125,45 @@ Notice the keyword form used for every dataclass value, such as
 which workflow variable feeds which Python field without remembering field
 order. The same form is used when actions return outputs.
 
+<!-- lclang-doc-case: settlement-workflow -->
+
+`settlement.lclcfg`:
+
+<!-- lclang-doc-file: settlement.lclcfg -->
+```lclcfg
+# scope: report paths
+paths.output_dir: f"{__dir__}/results" # Output directory
+paths.output_name: "settlement.txt" # Output filename
+
+# scope: meter readings
+meter.start: 1000.0 # Opening cumulative kWh
+meter.end: 1250.0 # Closing cumulative kWh
+
+# scope: tariff policy
+tariff.unit_rate: 0.18 # USD per kWh
+tariff.tax_rate: 0.08 # Tax decimal
+
+# Customer and credential
+customer.name: "North Harbor Cold Storage" # Report customer
+secrets.account_token!: "warehouse-writer-token" # Writer token
+
+# CLI logging and lunch
+logger.file.app.directory: __dir__ # Formal log directory
+logger.file.app.filename: "settlement.log" # Formal log filename
+logger.file.app.level: "INFO" # Application threshold
+lunch.options: ["noodles"] # Successful-run lunch choice
+```
+
+Run the following program beside the file:
+
 <!-- lclang-doc-exec -->
 ```python
 import asyncio
 import io
-import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, redirect_stderr, redirect_stdout
 from dataclasses import dataclass
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from typing import TextIO
 
 from lclang.cli import CliEntrance, CommandGroup
@@ -383,30 +423,6 @@ application = CliEntrance(
 )
 
 
-def config_source(root: Path) -> str:
-    return (
-        "# scope: report paths\n"
-        f"paths.output_dir: {json.dumps(str(root / 'results'))} # Output directory\n"
-        'paths.output_name: "settlement.txt" # Output filename\n'
-        "\n"
-        "# scope: meter readings\n"
-        "meter.start: 1000.0 # Opening cumulative kWh\n"
-        "meter.end: 1250.0 # Closing cumulative kWh\n"
-        "\n"
-        "# scope: tariff policy\n"
-        "tariff.unit_rate: 0.18 # USD per kWh\n"
-        "tariff.tax_rate: 0.08 # Tax decimal\n"
-        "\n"
-        "# Customer and credential\n"
-        'customer.name: "North Harbor Cold Storage" # Report customer\n'
-        'secrets.account_token!: "warehouse-writer-token" # Writer token\n'
-        "\n"
-        "# CLI logging and lunch\n"
-        f"logger.file.app.directory: {json.dumps(str(root))} # Formal log directory\n"
-        'logger.file.app.filename: "settlement.log" # Formal log filename\n'
-        'logger.file.app.level: "INFO" # Application threshold\n'
-        'lunch.options: ["noodles"] # Successful-run lunch choice\n'
-    )
 
 
 async def invoke(config_path: Path, *options: str) -> tuple[int, str, str]:
@@ -427,129 +443,132 @@ async def invoke(config_path: Path, *options: str) -> tuple[int, str, str]:
 
 
 async def main() -> None:
-    with TemporaryDirectory(prefix="lclang-energy-workflow-") as directory:
-        root = Path(directory)
-        config_path = root / "settlement.lclcfg"
-        config_path.write_text(config_source(root), encoding="utf-8")
-        result_dir = root / "results"
+    directory = str(Path.cwd())
+    root = Path(directory)
+    config_path = root / "settlement.lclcfg"
+    result_dir = root / "results"
 
-        # Help lists the eight external variables and hides five intermediates.
-        help_stdout = io.StringIO()
-        with redirect_stdout(help_stdout):
-            help_status = await application.run(
-                ["python", "settlement.py", "settle", "--help"]
-            )
-        help_text = help_stdout.getvalue()
-        assert help_status == 0
-        assert "Usage: settlement.py settle [options]" in help_text
-        assert "meter.start" in help_text and "secrets.account_token" in help_text
-        assert "logger.file.<sink>" in help_text
-        assert "logger.file.default" in help_text
+    # Help lists the eight external variables and hides five intermediates.
+    help_stdout = io.StringIO()
+    with redirect_stdout(help_stdout):
+        help_status = await application.run(
+            ["python", "settlement.py", "settle", "--help"]
+        )
+    help_text = help_stdout.getvalue()
+    assert help_status == 0
+    assert "Usage: settlement.py settle [options]" in help_text
+    assert "meter.start" in help_text and "secrets.account_token" in help_text
+    assert "logger.file.<sink>" in help_text
+    assert "logger.file.default" in help_text
 
-        # Sunny: config supplies most inputs; one scoped CLI override changes price.
-        sunny_status, sunny_stdout, sunny_stderr = await invoke(
-            config_path,
-            "--override",
-            "tariff.unit_rate",
-            "LCL[0.20]",
-        )
-        assert (sunny_status, sunny_stdout) == (0, "")
-        assert "validated usage=250.00 kWh" in sunny_stderr
-        assert "[SUCCESS] Energy settlement workflow" in sunny_stderr
-        result_path = result_dir / "settlement.txt"
-        assert result_path.read_text(encoding="utf-8") == (
-            "Warehouse energy settlement\n"
-            "Customer: North Harbor Cold Storage\n"
-            "Usage: 250.00 kWh\n"
-            "Subtotal: 50.00 USD\n"
-            "Tax: 4.00 USD\n"
-            "Total: 54.00 USD\n"
-        )
-        sunny_log = sorted(root.glob("settlement.*.log"))[-1].read_text(encoding="utf-8")
-        assert "validated usage=250.00 kWh" in sunny_log
-        assert "calculated subtotal=50.00 USD" in sunny_log
-        assert "calculated tax=4.00 USD total=54.00 USD" in sunny_log
-        assert "[SUCCESS] Energy settlement workflow" in sunny_log
-        assert "lunch option: noodles" in sunny_stderr
-        assert "lunch option: noodles" in sunny_log
+    # Sunny: config supplies most inputs; one scoped CLI override changes price.
+    sunny_status, sunny_stdout, sunny_stderr = await invoke(
+        config_path,
+        "--override",
+        "tariff.unit_rate",
+        "LCL[0.20]",
+    )
+    assert (sunny_status, sunny_stdout) == (0, "")
+    assert "validated usage=250.00 kWh" in sunny_stderr
+    assert "[SUCCESS] Energy settlement workflow" in sunny_stderr
+    result_path = result_dir / "settlement.txt"
+    assert result_path.read_text(encoding="utf-8") == (
+        "Warehouse energy settlement\n"
+        "Customer: North Harbor Cold Storage\n"
+        "Usage: 250.00 kWh\n"
+        "Subtotal: 50.00 USD\n"
+        "Tax: 4.00 USD\n"
+        "Total: 54.00 USD\n"
+    )
+    sunny_log = sorted(root.glob("settlement.*.log"))[-1].read_text(encoding="utf-8")
+    assert "validated usage=250.00 kWh" in sunny_log
+    assert "calculated subtotal=50.00 USD" in sunny_log
+    assert "calculated tax=4.00 USD total=54.00 USD" in sunny_log
+    assert "[SUCCESS] Energy settlement workflow" in sunny_log
+    assert "lunch option: noodles" in sunny_stderr
+    assert "lunch option: noodles" in sunny_log
 
-        # Rainy: an invalid scoped override fails the first task and logs the error.
-        rainy_status, rainy_stdout, rainy_stderr = await invoke(
-            config_path,
-            "--override",
-            "meter.end",
-            "LCL[900.0]",
-            "--override",
-            "paths.output_name",
-            "rainy.txt",
-        )
-        assert rainy_status == 2
-        assert "[SKIPPED] calculate_subtotal" in rainy_stderr
-        assert "task error: [settlement.calculate_usage] ERROR" in rainy_stderr
-        assert "ValueError: end reading 900.0" in rainy_stderr
-        assert "[ERROR] Energy settlement workflow" in rainy_stderr
-        assert "lunch option: no lunch!" in rainy_stderr
-        assert not (result_dir / "rainy.txt").exists()
-        rainy_log = sorted(root.glob("settlement.*.log"))[-1].read_text(encoding="utf-8")
-        assert "end reading 900.0 must exceed start reading 1000.0" in rainy_log
-        assert "task error: [settlement.calculate_usage] ERROR" in rainy_log
-        assert "task complete: [settlement.calculate_usage] ERROR" in rainy_log
-        assert "[ERROR] Energy settlement workflow" in rainy_log
-        assert "[SKIPPED] calculate_subtotal" in rainy_log
-        assert "lunch option: no lunch!" in rainy_log
+    # Rainy: an invalid scoped override fails the first task and logs the error.
+    rainy_status, rainy_stdout, rainy_stderr = await invoke(
+        config_path,
+        "--override",
+        "meter.end",
+        "LCL[900.0]",
+        "--override",
+        "paths.output_name",
+        "rainy.txt",
+    )
+    assert rainy_status == 2
+    assert "[SKIPPED] calculate_subtotal" in rainy_stderr
+    assert "Error in running workflow task 'settlement.calculate_usage':" in rainy_stderr
+    assert "ValueError: end reading 900.0" in rainy_stderr
+    assert "[ERROR] Energy settlement workflow" in rainy_stderr
+    assert "lunch option: no lunch!" in rainy_stderr
+    assert not (result_dir / "rainy.txt").exists()
+    rainy_log = sorted(root.glob("settlement.*.log"))[-1].read_text(encoding="utf-8")
+    assert "end reading 900.0 must exceed start reading 1000.0" in rainy_log
+    assert "Error in running workflow task 'settlement.calculate_usage':" in rainy_log
+    assert "task complete: [settlement.calculate_usage] ERROR" in rainy_log
+    assert "[ERROR] Energy settlement workflow" in rainy_log
+    assert "[SKIPPED] calculate_subtotal" in rainy_log
+    assert "lunch option: no lunch!" in rainy_log
 
-        # Dry-run follows every calculation but substitutes an in-memory file.
-        dry_status, dry_stdout, dry_stderr = await invoke(
-            config_path,
-            "--override",
-            "paths.output_name",
-            "preview.txt",
-            "--dryrun",
-        )
-        assert (dry_status, dry_stdout) == (0, "")
-        assert "DRY RUN would create settlement report" in dry_stderr
-        assert "DRY RUN rendered settlement report" in dry_stderr
-        assert not (result_dir / "preview.txt").exists()
-        dry_log = sorted(root.glob("settlement.*.log"))[-1].read_text(encoding="utf-8")
-        assert "DRY RUN would create settlement report" in dry_log
-        assert "DRY RUN rendered settlement report" in dry_log
-        assert "discarded dry-run settlement report" in dry_log
+    # Dry-run follows every calculation but substitutes an in-memory file.
+    dry_status, dry_stdout, dry_stderr = await invoke(
+        config_path,
+        "--override",
+        "paths.output_name",
+        "preview.txt",
+        "--dryrun",
+    )
+    assert (dry_status, dry_stdout) == (0, "")
+    assert "DRY RUN would create settlement report" in dry_stderr
+    assert "DRY RUN rendered settlement report" in dry_stderr
+    assert not (result_dir / "preview.txt").exists()
+    dry_log = sorted(root.glob("settlement.*.log"))[-1].read_text(encoding="utf-8")
+    assert "DRY RUN would create settlement report" in dry_log
+    assert "DRY RUN rendered settlement report" in dry_log
+    assert "discarded dry-run settlement report" in dry_log
 
-        # Verbose adds parser/evaluation traces to stderr and the same log file.
-        verbose_status, verbose_stdout, verbose_stderr = await invoke(
-            config_path,
-            "--verbose",
-            "--override",
-            "paths.output_name",
-            "verbose.txt",
-        )
-        assert verbose_status == 0
-        assert "validated usage=250.00 kWh" in verbose_stderr
-        assert (result_dir / "verbose.txt").is_file()
-        assert "[lclang.parse]" not in verbose_stderr
-        assert "[lclang.evaluate]" in verbose_stderr
-        assert "*masked*" in verbose_stderr
-        assert "warehouse-writer-token" not in verbose_stderr
-        verbose_lines = [line.rsplit(" | ", 1)[-1] for line in verbose_stderr.splitlines()]
-        exact_verbose_messages = (
-            "[lclang.evaluate] definition='meter.start' expression=(LclConstant) 1000.0 result=(float) 1000.0",
-            "[lclang.evaluate] definition='meter.end' expression=(LclConstant) 1250.0 result=(float) 1250.0",
-            "[lclang.lookup] name='usage' owner='cli_runtime' source=external-provided value=(float) 250.0",
-            "[lclang.evaluate] definition='tariff.unit_rate' expression=(LclConstant) 0.18 result=(float) 0.18",
-            "[lclang.lookup] name='subtotal' owner='cli_runtime' source=external-provided value=(float) 45.0",
-            "[lclang.evaluate] definition='tariff.tax_rate' expression=(LclConstant) 0.08 result=(float) 0.08",
-            "[lclang.evaluate] definition='secrets.account_token' expression=*masked* result=*masked*",
-        )
-        positions = [verbose_lines.index(message) for message in exact_verbose_messages]
-        assert positions == sorted(positions)
-        final_log = sorted(root.glob("settlement.*.log"))[-1].read_text(encoding="utf-8")
-        assert "[lclang.parse]" not in final_log
-        assert "*masked*" in final_log
-        assert "warehouse-writer-token" not in final_log
+    # Verbose adds parser/evaluation traces to stderr and the same log file.
+    verbose_status, verbose_stdout, verbose_stderr = await invoke(
+        config_path,
+        "--verbose",
+        "--override",
+        "paths.output_name",
+        "verbose.txt",
+    )
+    assert verbose_status == 0
+    assert "validated usage=250.00 kWh" in verbose_stderr
+    assert (result_dir / "verbose.txt").is_file()
+    assert "[lclang.parse]" not in verbose_stderr
+    assert "[lclang.evaluate]" in verbose_stderr
+    assert "*masked*" in verbose_stderr
+    assert "warehouse-writer-token" not in verbose_stderr
+    verbose_lines = [line.rsplit(" | ", 1)[-1] for line in verbose_stderr.splitlines()]
+    exact_verbose_messages = (
+        "[lclang.evaluate] definition='meter.start' expression=(LclConstant) 1000.0 result=(float) 1000.0",
+        "[lclang.evaluate] definition='meter.end' expression=(LclConstant) 1250.0 result=(float) 1250.0",
+        "[lclang.lookup] name='usage' owner='cli_runtime' source=external-provided value=(float) 250.0",
+        "[lclang.evaluate] definition='tariff.unit_rate' expression=(LclConstant) 0.18 result=(float) 0.18",
+        "[lclang.lookup] name='subtotal' owner='cli_runtime' source=external-provided value=(float) 45.0",
+        "[lclang.evaluate] definition='tariff.tax_rate' expression=(LclConstant) 0.08 result=(float) 0.08",
+        "[lclang.evaluate] definition='secrets.account_token' expression=*masked* result=*masked*",
+    )
+    positions = [verbose_lines.index(message) for message in exact_verbose_messages]
+    assert positions == sorted(positions)
+    final_log = sorted(root.glob("settlement.*.log"))[-1].read_text(encoding="utf-8")
+    assert "[lclang.parse]" not in final_log
+    assert "*masked*" in final_log
+    assert "warehouse-writer-token" not in final_log
 
 
 asyncio.run(main())
 ```
+
+The program completes without console output. Its assertions check the
+results and log contents described below.
+<!-- /lclang-doc-case -->
 
 The `invoke` helper passes exact argument tokens to `CliEntrance`, which is the
 same behavior a real shell process reaches after argument adaptation. The
@@ -596,7 +615,7 @@ logger, returns exit status `2`, prints the error records to stderr, and appends
 the same evidence to the configured file:
 
 ```text
-task error: [settlement.calculate_usage] ERROR
+Error in running workflow task 'settlement.calculate_usage':
 Traceback (most recent call last):
 ...
 ValueError: end reading 900.0 must exceed start reading 1000.0

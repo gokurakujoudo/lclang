@@ -41,8 +41,10 @@ declaration order, for example `LclRecord(a=1, b=2)`.
 
 ## Preferred definitions and canonical hierarchy
 
-`define_module(name, exprs)` parses a string-to-string dictionary into an
-immutable `Module`. `define_frame(module=None, base=LCL_RUNTIME, preset=None)`
+`define_module(name, exprs)` parses a string-keyed dictionary into an immutable
+`Module`. Values are expression strings or the singleton declaration markers
+`FRAME_PROXY`, `NEED_OVERRIDE`, and `RUNTIME_OVERRIDE`.
+`define_frame(module=None, base=LCL_RUNTIME, preset=None)`
 creates a fresh user Frame. Lookup proceeds from the nearest layer through:
 
 `user module -> LCL_IMPORTS -> LCL_RUNTIME -> LCL_BUILTINS -> LCL_ROOT`.
@@ -149,6 +151,24 @@ required.
 
 ## Frame caching and concurrency
 
+`Module.mixin(other, *, name=None)` returns a new immutable Module. Definitions
+on the right replace same-name definitions on the left, while names keep their
+first-appearance order. The default name is the left Module's name. Masks remain
+sticky, explicit `namespace_names` are combined, and the complete structure is
+validated before return. Existing Modules and Frames retain their snapshots.
+`Module.namespace_names` is a keyword-only frozenset, empty by default; it
+reserves namespaces even when they have no fields.
+
+`NEED_OVERRIDE` and `RUNTIME_OVERRIDE` are allowed only as complete right-hand
+expressions. Both fail lazily with `<name> needs a value` when requested without
+a provider. `NEED_OVERRIDE` blocks lower-priority preset or code fallback; replace
+its definition with a later configuration or CLI definition, or use Module
+composition. `RUNTIME_OVERRIDE` allows actual host values, including `None`,
+from a Frame, preset, or later `Frame.mixin()`. Its declaration discards any
+earlier configuration definition. Lookup and inspection report the selected
+host provider even if a placeholder previously failed. Ordinary Module
+definitions continue to take priority over host values in their own Frame.
+
 `await frame.get(name, fallback=NO_FALLBACK)` lazily evaluates a selected
 definition once, caching either its result or ordinary failure. If *name* is
 absent from the complete Frame hierarchy, an explicitly supplied fallback is
@@ -162,14 +182,38 @@ is isolated. Circular dependency paths raise a structured error before an owner
 can deadlock. Parent definitions always run in their defining Frame.
 
 Structured errors raised while evaluating Frame definitions expose
-`variable_stack`, an immutable direct-to-failing owner tuple. Their one-line
-text appends the same route, for example
-`[variable evaluation stack: RESULT -> intermediate -> failing]`. Lazy child
-definitions and LCL closure calls add their lexical owner; propagation and
-cached failures retain the first, deepest stack. An unnamed `frame.evaluate`
+`variable_stack`, an immutable direct-to-failing owner tuple. Multiline
+diagnostics start with `Error in evaluating <name> [<code>]:`, list the complete
+outer-to-inner route with available source coordinates and excerpts, and end
+with the cause. Lazy child definitions and LCL closure calls add their lexical
+owner; propagation and cached failures retain the first, deepest stack. An unnamed `frame.evaluate`
 expression uses `"<expr>"` as its owner. Fresh errors include that owner, and
 failures reached through named definitions add their owners; previously cached
 failures retain their original stack.
+
+`LclError` retains `message`, `span`, `code`, and `variable_stack`, and adds
+keyword-only `config_stack` and `evaluation_context` tuples, empty by default.
+The frozen, validated `ConfigLoadFrame`, `EvaluationContextFrame`, and
+`DiagnosticValue` records expose file introductions, active expressions or
+function calls, and already-read values. Each value has its actual name, source
+occurrence, concrete type label, and protected representation. Repeated reads
+at one occurrence keep their first position and last successful value. Unread
+short-circuit branches and unresolved values contribute no read evidence.
+
+Snapshots are fixed at failure time. Normal execution does not call `repr` for
+diagnostics; failure capture redacts first, applies the existing 200-character
+single-value budget, and tolerates failed representations. The records retain
+no Frame, resolver, AST, or host object. Rendering performs no lookup, evaluation,
+or file access. Cached failures retain their first scene and exception identity;
+recalculation creates a new scene. Concurrent evaluations have independent read
+journals. A masked function also protects its invocation arguments and body.
+
+`SourceSpan.snapshot` is optional keyword-only `SourceSnapshot(text, start)`
+metadata. It does not affect span comparison, and parsing preserves a supplied
+`SourceOrigin` object. Source-less manual ASTs use canonical expressions without
+invented file coordinates. CLI and logs use the same multiline diagnostic;
+logs retain the original Python traceback. Inspection escapes diagnostics into
+its compact single-line representation.
 
 All synchronous and asynchronous iterable items pass through the recursive
 auto-await boundary before comprehensions, starred expansion, or reviewed

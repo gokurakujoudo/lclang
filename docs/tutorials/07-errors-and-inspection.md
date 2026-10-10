@@ -72,6 +72,78 @@ useful. Catch narrower subclasses when recovery differs. Cancellation,
 `KeyboardInterrupt`, and other base exceptions are not converted into ordinary
 language failures.
 
+## Read the failure scene
+
+The diagnostic follows definitions from the requested result to the failing
+expression. Values listed beneath a frame were already read by that evaluation;
+printing the error does not request missing values or take an unused branch.
+
+<!-- lclang-doc-case: complete-failure-scene -->
+
+`metrics.lclcfg`:
+
+<!-- lclang-doc-file: metrics.lclcfg -->
+```lclcfg
+total: 5
+count: 0
+ratio: total / count
+result: ratio * 100
+```
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+
+from lclang.config import load_config
+from lclang.errors import LclEvaluationError
+
+
+async def main() -> None:
+    config = await load_config("metrics.lclcfg")
+    async with config.to_frame() as frame:
+        try:
+            await frame.get("result")
+        except LclEvaluationError as error:
+            assert error.variable_stack == ("result", "ratio")
+            assert error.evaluation_context[-1].used_values[1].name == "count"
+            print(error)
+
+
+asyncio.run(main())
+```
+
+The result is a division failure with both definition frames and the values
+`5` and `0`. The caret range identifies the failing expression:
+
+<!-- lclang-doc-output: stdout -->
+```text
+Error in evaluating result [LCL3001]:
+  result at "metrics.lclcfg":4:9
+    result: ratio * 100
+  ratio at "metrics.lclcfg":3:8
+    ratio: total / count
+           ^^^^^^^^^^^^^
+    total = (int) 5
+    count = (int) 0
+Cause: ZeroDivisionError: division by zero
+```
+<!-- /lclang-doc-case -->
+
+Snapshots retain parsed source even after a file changes or the Frame closes.
+Cached failures keep their first scene; recalculation creates a new one.
+Function calls add frames containing local parameters. Imported definitions
+use their actual qualified names, while loading failures retain original child
+names. [Configuration composition](17-configuration-composition.md) shows a
+nested dynamic-target error with both stacks.
+
+Mark sensitive exact names with `!`. Captured values and expressions then show
+`*masked*`; a masked LCL function also protects its body and invocation
+parameters. The mask is applied before representation. Derived values still
+need their own marker. Single values use a 200-character display budget, and a
+broken representation cannot replace the original failure. User messages,
+native exception causes, and Python tracebacks remain available as structured
+data; treat raw tracebacks as application-controlled logging output.
+
 ## Inspect before and after evaluation
 
 Inspection performs lookup and static dependency traversal but never calls,

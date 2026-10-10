@@ -473,4 +473,4 @@ For the complete stable names and contracts, see the
 public package instead of reaching into implementation modules; that leaves
 each application explicit about the subsystem and lifecycle it has adopted.
 
-[Previous: Case Study: Energy Settlement Workflow](15-energy-settlement-workflow.md) | [Return to the series introduction](README.md)
+[Previous: Case Study: Energy Settlement Workflow](15-energy-settlement-workflow.md) | [Next: Configuration composition](17-configuration-composition.md) | [Return to the series introduction](README.md)

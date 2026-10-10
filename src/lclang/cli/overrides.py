@@ -35,12 +35,14 @@ def forced_override_expression(value: str, *, masked: bool = False) -> LclAstNod
         start = 4 + span.start.offset
         end = max(start + 1, 4 + span.end.offset)
         if masked:
-            excerpt = "RESULT=<masked>"
+            excerpt = "RESULT=*masked*"
         else:
             token = f"RESULT={value}"
             underline = " " * (len("RESULT=") + start) + "^" * (end - start)
             excerpt = f"{token}\n{underline}"
-        raise LclCliUsageError(f"forced RESULT parse failed: {error}\n{excerpt}") from error
+        converted = LclCliUsageError(f"forced RESULT parse failed\n{excerpt}")
+        converted.masked = False  # The excerpt above is already redacted before formatting.
+        raise converted from error
 
 
 def partition_overrides(

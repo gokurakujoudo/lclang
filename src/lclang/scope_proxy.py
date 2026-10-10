@@ -162,7 +162,32 @@ class FrameProxy(ScopedProxyValue):
             return FrameProxy(self.frame, (*self.path, name), self.trace)
         if self.trace is not None:
             self.trace(full, span)
-        return await read_selected_binding(cast("Frame", self.frame), full, span, selected)
+        from lclang.lang.evaluator.evaluation_context import record_value_read
+        from lclang.runtime.frame.binding_lookup import is_name_masked
+
+        result = await read_selected_binding(cast("Frame", self.frame), full, span, selected)
+        record_value_read(full, result, span, masked=is_name_masked(self.frame, full))
+        return result
+
+    async def resolve_index(self, name: object, *, span: SourceSpan) -> object:
+        """Resolve an LCL index while retaining qualified read evidence.
+
+        :param name: Direct child identifier supplied by the index expression.
+        :param span: Source range of the complete subscription.
+        :returns: Nested proxy or resolved terminal value.
+        :raises TypeError: If the index is not text.
+        :raises AttributeError: If the child is absent or private.
+        """
+        from lclang.runtime.frame.binding_lookup import select_binding
+
+        if not isinstance(name, str):
+            raise TypeError("FrameProxy index must be text")
+        full = ".".join((*self.path, name))
+        if name.startswith("_"):
+            raise AttributeError(name)
+        if select_binding(self.frame, full).owner is None:
+            raise AttributeError(full)
+        return await self.resolve_attribute(name, safe=False, span=span)
 
     def with_trace(self, trace: Callable[[str, SourceSpan], None]) -> FrameProxy:
         """Return this proxy with one dynamic dependency recorder.

@@ -15,7 +15,7 @@ from lclang.errors import LclSyntaxError
 from lclang.lang.lexer import Token, TokenKind, scan_tokens
 from lclang.lang.parser.pratt import parse_tokens
 from lclang.lang.printer import to_source
-from lclang.source import SourceOrigin, SourcePosition
+from lclang.source import SourceOrigin, SourcePosition, SourceSnapshot
 
 
 def parse_config_expression(
@@ -23,12 +23,14 @@ def parse_config_expression(
     *,
     origin: SourceOrigin,
     start: SourcePosition,
+    snapshot: SourceSnapshot | None = None,
 ) -> LclAstNode:
     """Parse an expression with eager file-magic substitution.
 
     :param text: Position-preserving expression text.
     :param origin: Physical or synthetic source origin.
     :param start: Position of the expression text's first character.
+    :param snapshot: Optional original physical source owning the expression.
     :returns: Immutable semantic AST containing no file-magic references.
     :raises LclConfigSyntaxError: If syntax is invalid or magic lacks a path.
 
@@ -36,7 +38,7 @@ def parse_config_expression(
        Token replacement preserves each magic identifier's original span.
     """
     try:
-        tokens = scan_tokens(text, origin=origin, start=start)
+        tokens = scan_tokens(text, origin=origin, start=start, snapshot=snapshot)
         adapted = adapt_magic_tokens(tokens, origin.path)
         parsed = parse_tokens(adapted)
         result = replace_magic_nodes(parsed, origin.path)

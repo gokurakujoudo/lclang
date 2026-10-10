@@ -22,10 +22,10 @@ async def proxy_values(proxy: FrameProxy) -> dict[str, object]:
     for name in await proxy.field_names():
         try:
             value = await proxy.get(name)
-            values[name] = await proxy_values(value) if isinstance(value, FrameProxy) else value
         except Exception as error:
             path = ".".join((*proxy.path, name))
-            raise ValueError(f"{path}: {error}") from error
+            raise ValueError(f"cannot resolve logger setting {path!r}") from error
+        values[name] = await proxy_values(value) if isinstance(value, FrameProxy) else value
     return values
 
 

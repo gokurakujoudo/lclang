@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +26,7 @@ class FStringField:
     :param conversion: Optional ``s``, ``r``, or ``a`` conversion.
     :param format_spec: Optional recursive lexical format specification.
     :param debug: Whether the field used debug ``=`` syntax.
+    :param expression_offset: Optional code-point offset relative to the outer opening quote.
 
     .. note::
        Expression parsing occurs after lexical scanning, not in this value.
@@ -35,6 +36,7 @@ class FStringField:
     conversion: str | None = None
     format_spec: FStringValue | None = None
     debug: bool = False
+    expression_offset: int | None = field(default=None, kw_only=True, compare=False)
 
 
 @dataclass(frozen=True, slots=True)

@@ -139,7 +139,7 @@ def test_navigation_requires_all_pages_and_follows_tutorial_index() -> None:
         shutil.copytree(ROOT / "docs", root / "docs")
         groups = documentation_groups(root)
         assert groups["Tutorials"][1].name == "01-expressions-and-values.md"
-        assert groups["Tutorials"][-1].name == "16-python-utilities.md"
+        assert groups["Tutorials"][-1].name == "17-configuration-composition.md"
         (root / "docs/tutorials/17-unlisted.md").write_text("# Unlisted", encoding="utf-8")
         with pytest.raises(ValueError, match="Every documentation page"):
             documentation_groups(root)

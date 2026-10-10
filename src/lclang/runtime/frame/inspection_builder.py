@@ -70,7 +70,7 @@ def build_inspection_tree(
             [],
             masked,
         )
-    definition = owner.module.definitions.get(name)
+    definition = None if selected.kind == "host" else owner.module.definitions.get(name)
     if definition is None:
         status = (
             VariableInspectionStatus.NATIVE_PROVIDED

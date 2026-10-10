@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from lclang.errors import LclSyntaxError
 from lclang.lang.lexer.characters import ASCII_DIGITS
 from lclang.lang.lexer.literals import InternalLiteralScanError, scan_literal
 from lclang.lang.lexer.tokens import Token, TokenKind
-from lclang.source import SourceOrigin, SourcePosition, SourceSpan
+from lclang.source import SourceOrigin, SourcePosition, SourceSnapshot, SourceSpan
 from lclang.types import SourceName
 
 # Unitless token tables follow the language grammar; longest-token recognition and explicit
@@ -274,12 +274,14 @@ def scan_tokens(
     *,
     origin: SourceOrigin | None = None,
     start: SourcePosition | None = None,
+    snapshot: SourceSnapshot | None = None,
 ) -> list[Token]:
     """Scan source text into a source-aware token stream.
 
     :param text: Complete LCL source text.
     :param origin: Optional diagnostic origin; an in-memory origin is the default.
     :param start: Optional physical position of the first character.
+    :param snapshot: Optional complete physical source owning a parsed fragment.
     :returns: Tokens in source order ending with exactly one EOF token.
     :raises LclSyntaxError: If any character sequence is not valid LCL syntax.
 
@@ -288,10 +290,19 @@ def scan_tokens(
     """
     selected_origin = origin or SourceOrigin(SourceName("<string>"))
     selected_start = start or SourcePosition(1, 1, 0)
-    return InternalScanner(
-        text,
-        selected_origin,
-        base_offset=selected_start.offset,
-        line=selected_start.line,
-        column=selected_start.column,
-    ).scan()
+    selected_snapshot = snapshot or SourceSnapshot(text, selected_start)
+    try:
+        tokens = InternalScanner(
+            text,
+            selected_origin,
+            base_offset=selected_start.offset,
+            line=selected_start.line,
+            column=selected_start.column,
+        ).scan()
+    except LclSyntaxError as error:
+        if error.span is not None:
+            error.span = replace(error.span, snapshot=selected_snapshot)
+        raise
+    return [
+        replace(token, span=replace(token.span, snapshot=selected_snapshot)) for token in tokens
+    ]

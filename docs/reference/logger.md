@@ -88,46 +88,62 @@ normal effects. `verbose=True` lowers the global and enabled output thresholds
 to DEBUG while preserving lower thresholds, disabled outputs and source filters.
 No CLI invocation variables are injected; supply application inputs explicitly.
 
-<!-- lclang-doc-exec -->
-```python
-import asyncio
-from pathlib import Path
-from tempfile import TemporaryDirectory
+<!-- lclang-doc-case: file-logger -->
 
-from lclang.config import load_config
-from lclang.logger import Logger, resolve_logger_config, use_logger, use_logger_handler
+`service.lclcfg`:
 
-
-async def main() -> None:
-    with TemporaryDirectory() as directory:
-        path = Path(directory) / "service.lclcfg"
-        path.write_text('''
+<!-- lclang-doc-file: service.lclcfg -->
+```lclcfg
 __LCL_VERSION__: 1
 logger.timezone: "utc"
 logger.console.enabled: False
 logger.file.default.directory: log_directory
 logger.file.service.filename: f"{service}.log"
 logger.file.service.level: "INFO"
-''', encoding="utf-8")
-        loaded = await load_config(path)
-        async with loaded.to_frame(
-            preset={"service": "catalog", "log_directory": directory}
-        ) as frame:
-            config = await resolve_logger_config(frame)
-            assert config.timezone == "utc"
-            assert config.resolved_files()["service"].filename == "catalog.log"
-            async with use_logger_handler(config) as runtime:
-                logger: Logger = await use_logger("catalog")
-                logger.info("service ready")
-            metrics = runtime.metrics
-            assert metrics.records_written == 1
-            segment = metrics.sinks["file.service"].path
-            assert segment is not None
-            assert "service ready" in segment.read_text(encoding="utf-8")
+```
+
+Run the following program beside the file:
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+from pathlib import Path
+
+from lclang.config import load_config
+from lclang.logger import Logger, resolve_logger_config, use_logger, use_logger_handler
+
+
+async def main() -> None:
+    directory = str(Path.cwd())
+    path = Path(directory) / "service.lclcfg"
+    loaded = await load_config(path)
+    async with loaded.to_frame(
+        preset={"service": "catalog", "log_directory": directory}
+    ) as frame:
+        config = await resolve_logger_config(frame)
+        assert config.timezone == "utc"
+        assert config.resolved_files()["service"].filename == "catalog.log"
+        async with use_logger_handler(config) as runtime:
+            logger: Logger = await use_logger("catalog")
+            logger.info("service ready")
+        metrics = runtime.metrics
+        assert metrics.records_written == 1
+        segment = metrics.sinks["file.service"].path
+        assert segment is not None
+        assert "service ready" in segment.read_text(encoding="utf-8")
+    print(metrics.records_written, "service ready")
 
 
 asyncio.run(main())
 ```
+
+The program prints:
+
+<!-- lclang-doc-output: stdout -->
+```text
+1 service ready
+```
+<!-- /lclang-doc-case -->
 
 The application owns `service` and `log_directory`; the file derives the sink's
 filename and inherits its directory from `file.default`. Resolving the Frame

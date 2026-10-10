@@ -151,10 +151,10 @@ async def test_task_error_keeps_traceback_and_still_completes(
             )
 
     assert result.execution_status.status is wf.ExecutionStatus.ERROR
-    error = next(
-        record for record in caplog.records if record.getMessage().startswith("task error:")
+    error = next(record for record in caplog.records if record.getMessage().startswith("Error in"))
+    assert error.getMessage() == (
+        "Error in running workflow task 'root':\nCause: ValueError: broken\n  task status: ERROR"
     )
-    assert error.getMessage() == "task error: [root] ERROR"
     assert error.exc_info is not None
     assert any(record.getMessage() == "task complete: [root] ERROR" for record in caplog.records)
 
@@ -189,7 +189,10 @@ async def test_argument_materialization_error_uses_task_lifecycle(
 
     assert result.execution_status.status is wf.ExecutionStatus.ERROR
     messages = [record.getMessage() for record in caplog.records]
-    assert "task error: [root] ERROR" in messages
+    assert any(
+        "unknown variable: missing" in message and "task status: ERROR" in message
+        for message in messages
+    )
     assert "task complete: [root] ERROR" in messages
 
 
@@ -226,6 +229,10 @@ async def test_context_output_mapping_error_uses_context_lifecycle(
 
     assert result.execution_status.status is wf.ExecutionStatus.ERROR
     messages = [record.getMessage() for record in caplog.records]
-    assert "task error: [root.scope] ERROR" in messages
+    assert any(
+        message.startswith("Error in running workflow task 'root.scope':")
+        and "task status: ERROR" in message
+        for message in messages
+    )
     assert "task complete: [root.scope] ERROR" in messages
     assert "task complete: [root] ERROR" in messages

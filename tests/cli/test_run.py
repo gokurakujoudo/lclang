@@ -343,7 +343,7 @@ def test_low_level_result_writer_and_internal_params_guard(
     assert captured.out == "quiet\n"
     errors = captured.err
     assert "low" in errors
-    assert "params type mismatch" in errors
+    assert "CLI parameters must be CliParams" in errors
     assert script_label_from_args(["python", "folder/tool.py"]) == "tool.py"
     assert script_label_from_args(["python", r"folder\tool.py"]) == "tool.py"
     assert script_label_from_args(None) == "script.py"

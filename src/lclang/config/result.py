@@ -5,8 +5,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
+from typing import cast
 
 from lclang.config.model import ConfigDefinition
+from lclang.namespace_names import validate_namespace_conflicts, validate_namespace_names
 from lclang.runtime import EvaluationLimits, Frame, FrameFactory, Module, Preset
 from lclang.scopes import real_binding_names, validate_real_conflicts
 from lclang.source import SourceOrigin
@@ -23,6 +25,7 @@ class Config:
     :param definitions: Computed read-only final-winner mapping.
     :param history: Computed read-only chronological history mapping.
     :param masked_names: Computed immutable sticky exact-name mask policy.
+    :param namespace_names: Explicit namespace reservations, including empty imports.
 
     .. note::
        Reassigning an existing dictionary key preserves first-appearance order.
@@ -34,6 +37,7 @@ class Config:
     definitions: Mapping[str, ConfigDefinition] = field(init=False, repr=False)
     history: Mapping[str, tuple[ConfigDefinition, ...]] = field(init=False, repr=False)
     masked_names: frozenset[str] = field(init=False)
+    namespace_names: frozenset[str] = field(default_factory=frozenset[str], kw_only=True)
 
     def __post_init__(self) -> None:
         """Detach occurrences and build stable winners and histories.
@@ -57,12 +61,7 @@ class Config:
             "masked_names",
             frozenset(str(item.name) for item in expanded if item.masked),
         )
-        validate_real_conflicts(
-            real_binding_names(
-                {name: item.expression for name, item in winners.items()},
-                {},
-            )
-        )
+        validate_config_structure(winners, self.namespace_names)
         history = {name: tuple(items) for name, items in histories.items()}
         object.__setattr__(self, "history", MappingProxyType(history))
 
@@ -81,6 +80,7 @@ class Config:
             ModuleName(selected),
             {key: definition.expression for key, definition in self.definitions.items()},
             masked_names=self.masked_names,
+            namespace_names=self.namespace_names,
         )
 
     def to_frame(self, *, preset: dict[str, object] | None = None) -> Frame:
@@ -116,3 +116,25 @@ class Config:
 
         selected_parent = LCL_IMPORTS if parent is None else parent
         return FrameFactory(self.to_module(), preset, limits, selected_parent)
+
+
+def validate_config_structure(
+    winners: Mapping[str, ConfigDefinition], namespaces: frozenset[str]
+) -> None:
+    """Validate final configuration structure and retain the conflicting declaration.
+
+    :param winners: Last chronological definition for each actual binding name.
+    :param namespaces: Explicit namespace reservations, including empty imports.
+    :raises TypeError: If namespace metadata has an unsupported type.
+    :raises ValueError: If ordinary bindings or namespace reservations conflict.
+    """
+    validate_namespace_names(namespaces)
+    real_names = real_binding_names({key: item.expression for key, item in winners.items()}, {})
+    try:
+        validate_real_conflicts(real_names)
+        validate_namespace_conflicts(namespaces, real_names)
+    except ValueError as error:
+        names = cast(tuple[str, ...], error.__dict__["binding_names"])
+        conflicts = [definition for key, definition in winners.items() if key in names]
+        error.__dict__["source_span"] = conflicts[-1].span
+        raise

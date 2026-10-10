@@ -157,8 +157,6 @@ async def build_binding(command: Command, params: CliParams, cli_config: CliConf
                 if item.masked and item.default is not None
             ),
         )
-        defaults = imports.derive(defaults_module)
-        frames.append(defaults)
         if params.config_file_path is None:
             config_module = Module(EMPTY_CONFIG_MODULE_NAME, {})
         else:
@@ -168,32 +166,39 @@ async def build_binding(command: Command, params: CliParams, cli_config: CliConf
                     overrides=using_overrides,
                 )
             ).to_module()
-        config = defaults.derive(config_module, execution_values)
+        combined = defaults_module.mixin(config_module).mixin(
+            Module(
+                OVERRIDES_MODULE_NAME,
+                {
+                    **{key: LclConstant(value=value) for key, value in preliminary_values.items()},
+                    **preliminary_definitions,
+                },
+                masked_names=params.masked_names,
+            ),
+            name=str(config_module.name),
+        )
+        definitions = {
+            key: node for key, node in combined.definitions.items() if key not in preliminary_values
+        }
+        config = imports.derive(
+            Module(
+                combined.name,
+                definitions,
+                masked_names=combined.masked_names & definitions.keys(),
+                namespace_names=combined.namespace_names,
+            ),
+            {**preliminary_values, **execution_values},
+            masked_names=combined.masked_names | params.masked_names,
+        )
         frames.append(config)
         strict_result = command.name in {"parse_lcl", "eval_lcl"} and (
             params.overrides.get("FORCE") is True
         )
         if strict_result:
             require_forced_result(params, preliminary_definitions, config)
-        override_definitions = preliminary_definitions
-        override_values = preliminary_values
-        runtime_values: dict[str, object] = {
-            **override_values,
-            **execution_values,
-        }
-        overrides = config.derive(
-            Module(
-                OVERRIDES_MODULE_NAME,
-                override_definitions,
-                masked_names=params.masked_names & override_definitions.keys(),
-            ),
-            runtime_values,
-            masked_names=params.masked_names,
-        )
-        frames.append(overrides)
-        runtime = overrides.derive(
+        runtime = config.derive(
             Module(RUNTIME_MODULE_NAME, {}),
-            masked_names=get_parameter_masks(command.parameter_docs, overrides),
+            masked_names=get_parameter_masks(command.parameter_docs, config),
         )
         frames.append(runtime)
         stack = FrameStack(tuple(frames))

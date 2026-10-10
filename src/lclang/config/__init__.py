@@ -12,7 +12,13 @@ from lclang.config.errors import (
 from lclang.config.files import FileConfigResolver
 from lclang.config.limits import ConfigLoadLimits
 from lclang.config.loader import ConfigLoader
-from lclang.config.model import ConfigDeclaration, ConfigDefinition, ConfigDocument, ConfigUsing
+from lclang.config.model import (
+    ConfigDeclaration,
+    ConfigDefinition,
+    ConfigDocument,
+    ConfigImport,
+    ConfigUsing,
+)
 from lclang.config.parser import parse_config
 from lclang.config.protocols import ConfigSourceResolver
 from lclang.config.result import Config
@@ -30,6 +36,7 @@ __all__ = [
     "ConfigLoader",
     "ConfigSourceResolver",
     "ConfigUsing",
+    "ConfigImport",
     "FileConfigResolver",
     "LclConfigCycleError",
     "LclConfigError",

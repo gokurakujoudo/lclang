@@ -233,6 +233,19 @@ structure and link checks; changed examples must execute their exact source.
 Tutorial structure changes run all documentation tests, without a mandatory
 chapter/series/full-gate repetition.
 
+English documentation prose follows the installed Humanizer skill. Preserve
+technical contracts, code, commands, paths, diagnostic output, metadata, and
+links. Show configuration content directly in `lclcfg` blocks and start each
+file introduction with `f"{__dir__}/..."`.
+
+File-backed examples use `lclang-doc-case`, `lclang-doc-file`, and
+`lclang-doc-output` Markdown comments alongside the existing `lclang-doc-exec`
+marker. Tests extract those exact fences, run each case in an independent
+temporary directory, and compare stdout, stderr, exit status, and declared
+output files. Failures identify the chapter and case with an expected-versus-
+actual diff. Physical fixture paths in output are normalized to the filenames
+shown in the chapter; other output remains exact.
+
 Production files have a hard limit of 200 code-bearing physical lines, excluding
 imports, declaration/attribute docstrings, pure comments and blanks. Standalone
 strings outside documentation positions still count. Names must describe their behavior;

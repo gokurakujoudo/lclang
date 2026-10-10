@@ -10,6 +10,7 @@ from lclang.diagnostics import internal_masked_scope
 from lclang.lang.evaluator.definition_context import lhs
 from lclang.lang.parser import parse_expression
 from lclang.masking import normalize_masked_mapping
+from lclang.override_markers import OverrideMarker
 from lclang.runtime.frame import Frame
 from lclang.runtime.modules import Module
 from lclang.scopes import FRAME_PROXY, FrameProxyMarker
@@ -120,14 +121,14 @@ LCL_IMPORTS = Frame(
 
 def define_module(
     name: str,
-    exprs: Mapping[str, str | FrameProxyMarker],
+    exprs: Mapping[str, str | FrameProxyMarker | OverrideMarker],
 ) -> Module:
     """Parse source expressions into one immutable runtime Module.
 
     :param name: Non-empty module name.
     :param exprs: Definition names mapped to complete LCL source expressions.
     :returns: Detached Module containing parsed custom AST definitions.
-    :raises TypeError: If an input is not a string-keyed dictionary of strings.
+    :raises TypeError: If expressions are not a string-keyed dictionary of strings or markers.
     :raises ValueError: If the module or a definition name is empty.
     :raises LclSyntaxError: If an expression is empty or malformed.
 
@@ -141,14 +142,19 @@ def define_module(
         raise TypeError("module expressions must be a dictionary")
     if any(not isinstance(key, str) for key in exprs):
         raise TypeError("module definition names must be strings")
-    if any(not isinstance(source, str) and source is not FRAME_PROXY for source in exprs.values()):
-        raise TypeError("module expressions must be strings or FRAME_PROXY")
+    if any(
+        not isinstance(source, (str, OverrideMarker)) and source is not FRAME_PROXY
+        for source in exprs.values()
+    ):
+        raise TypeError("module expressions must be strings or declaration markers")
     normalized, masked_names = normalize_masked_mapping(exprs)
     definitions: dict[str, LclAstNode] = {}
     for key, source in normalized.items():
         with internal_masked_scope(key in masked_names):
             definitions[key] = parse_expression(
-                "FRAME_PROXY" if source is FRAME_PROXY else cast(str, source)
+                "FRAME_PROXY"
+                if source is FRAME_PROXY
+                else source.value if isinstance(source, OverrideMarker) else cast(str, source)
             )
     return Module(ModuleName(name), definitions, masked_names=masked_names)
 

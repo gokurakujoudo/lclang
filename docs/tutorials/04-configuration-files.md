@@ -1,60 +1,63 @@
 # Configuration files
 
-A `.lclcfg` file moves trusted definitions out of Python while keeping them
-parsed, source-aware, and convertible to the same Module/Frame runtime. Loading
-evaluates only the preceding definitions needed to select dynamic `using` targets.
-Those evaluations run in temporary Frames and do not seed final runtime caches.
+A `.lclcfg` file holds trusted LCL definitions outside Python. Loading preserves
+the defining file and source positions, then creates the same Module and Frame
+values used by Python applications. Ordinary results stay lazy; loading evaluates
+only the definitions needed to choose dynamic file targets.
 
-## What you will learn
+Start file introduction targets with `f"{__dir__}/..."`, including in child
+files. For example, `using f"{__dir__}/shared.lclcfg"` names a sibling, and
+`import f"{__dir__}/../pricing.lclcfg" as pricing` names a file in the parent
+directory. This convention makes each defining file's path base explicit.
 
-- the version, definition, comment, and continuation syntax;
-- how `using` expands files in source order;
-- how `using?` adds optional files while keeping errors in existing files visible;
-- how an f-string `using` target selects a file from prior values or `env`;
-- how later definitions win while complete history remains available;
-- how to group and comment configuration definitions for readers;
-- how to create a fresh Frame directly or share a reusable Frame factory.
+## Parse text that another system owns
 
-## Parse in-memory text
+Version 1 is the default. An optional version declaration must be the first
+meaningful declaration. Definitions use a colon, and a backslash is the only
+physical-line continuation marker. Opening a bracket alone does not continue
+the declaration.
 
-Use `parse_config` when another system already owns the text. It performs no
-file access and leaves `using` declarations unresolved.
+<!-- lclang-doc-case: parse-text -->
+
+`pricing.lclcfg`:
+
+<!-- lclang-doc-file: pricing.lclcfg -->
+```lclcfg
+__LCL_VERSION__: 1
+# Expressions may refer to inputs supplied later.
+subtotal: unit_price * quantity
+total: subtotal + \
+  shipping
+```
+
+Read the text and parse it without asking the parser to access a file:
 
 <!-- lclang-doc-exec -->
 ```python
+from pathlib import Path
+
 from lclang.config import parse_config
 
-document = parse_config(
-    "__LCL_VERSION__: 1\n"
-    "# Derived values remain expressions.\n"
-    "subtotal: unit_price * quantity\n"
-    "total: subtotal + \\\n"
-    "  shipping\n",
-    source_name="generated pricing",
-)
-
-assert document.version == 1
-assert len(document.declarations) == 2
+text = Path("pricing.lclcfg").read_text(encoding="utf-8")
+document = parse_config(text, source_name="generated pricing")
 assert str(document.origin.name) == "generated pricing"
+print(document.version, len(document.declarations))
 ```
 
-The metadata selects version 1 and is not counted as a definition declaration.
-The parser therefore records exactly `subtotal` and the continued `total`
-expression. Because the caller supplied `source_name`, diagnostics identify the
-document as `generated pricing` without requiring a file.
+This prints version `1` and two definitions. Metadata and comments do not
+contribute definitions, and continuation keeps `total` as one expression.
 
-A definition uses `name: expression`; `=` is not a separator. A backslash is
-the only physical-line continuation marker. Open brackets alone do not continue
-a definition. Version metadata may appear only as the first meaningful
-declaration.
+<!-- lclang-doc-output: stdout -->
+```text
+1 2
+```
+<!-- /lclang-doc-case -->
 
-## Lay out definitions for readers
+## Keep related definitions together
 
-Keep qualified names from one scope together without blank lines, then use a
-blank line before the next scope or functional group. Put a short inline `#`
-comment on definitions that need explanation and a standalone `# Section` or
-`# scope: <description>` line above each group. Qualified leaves infer their
-prefixes, so ordinary files should omit `scope: FRAME_PROXY`.
+Put definitions from one scope on consecutive rows. Separate scopes or functional
+groups with a blank line. Use an inline comment to explain an individual value
+and a standalone comment to name a group. Qualified leaves infer their prefixes.
 
 ```lclcfg
 # scope: service endpoint
@@ -66,322 +69,297 @@ retry.count: 3 # Maximum attempts
 retry.delay: 0.5 # Seconds between attempts
 ```
 
-`FRAME_PROXY` remains valid when an API deliberately needs an explicit
-placeholder, but it adds no value to the usual file layout above.
+`FRAME_PROXY` can declare a prefix explicitly, but ordinary files can rely on
+inference. See [configuration composition](17-configuration-composition.md) for
+cases where empty imported namespaces matter.
 
-## Compose files and evaluate final winners
+## Expand shared files in source order
 
-The next example writes an isolated two-file configuration. `using` inserts the
-shared definitions at its exact position. The later `discount_rate` overrides
-the shared value without losing its history. After loading, `config.to_frame`
-creates the context for named results.
+`using` inserts another file's definitions at the declaration position. Start
+its target with `f"{__dir__}/..."` to identify that file's directory explicitly.
+Later same-name declarations
+replace values while retaining every occurrence in `Config.history`.
+
+<!-- lclang-doc-case: shared-pricing -->
+
+`shared.lclcfg`:
+
+<!-- lclang-doc-file: shared.lclcfg -->
+```lclcfg
+discount_rate: 0.05 # Base discount
+shipping: 8 # Flat shipping charge
+currency: "USD"
+```
+
+`application.lclcfg`:
+
+<!-- lclang-doc-file: application.lclcfg -->
+```lclcfg
+using f"{__dir__}/shared.lclcfg"
+discount_rate: 0.10 # Application discount
+
+subtotal: unit_price * quantity
+total: subtotal * (1 - discount_rate) + shipping
+label: f"{currency} {total:.2f}"
+```
+
+Run this Python program beside the files:
 
 <!-- lclang-doc-exec -->
 ```python
 import asyncio
-from pathlib import Path
-from tempfile import TemporaryDirectory
 
 from lclang.config import load_config
 
 
 async def main() -> None:
-    with TemporaryDirectory(prefix="lclang-config-tutorial-") as directory:
-        root = Path(directory)
-        (root / "shared.lclcfg").write_text(
-            "# Shared pricing\n"
-            "discount_rate: 0.05 # Base discount\n"
-            "shipping: 8 # Flat shipping charge\n"
-            "currency: 'USD' # Display currency\n",
-            encoding="utf-8",
-        )
-        application = root / "application.lclcfg"
-        application.write_text(
-            "# Shared definitions\n"
-            'using "shared.lclcfg" # Expand at this source position\n'
-            "discount_rate: 0.10 # Application discount\n"
-            "\n"
-            "# Calculated totals\n"
-            "subtotal: unit_price * quantity # Before discount\n"
-            "total: subtotal * (1 - discount_rate) + shipping # Final charge\n"
-            'label: f"{currency} {total:.2f}" # Display text\n',
-            encoding="utf-8",
-        )
-
-        config = await load_config(application)
-        assert tuple(config.definitions) == (
-            "discount_rate",
-            "shipping",
-            "currency",
-            "subtotal",
-            "total",
-            "label",
-        )
-        assert len(config.history["discount_rate"]) == 2
-        async with config.to_frame(
-            preset={"unit_price": 25, "quantity": 4},
-        ) as frame:
-            assert await frame.get("label") == "USD 98.00"
-            assert await frame.get("total") == 98.0
+    config = await load_config("application.lclcfg")
+    assert len(config.history["discount_rate"]) == 2
+    async with config.to_frame(preset={"unit_price": 25, "quantity": 4}) as frame:
+        print(await frame.get("label"))
+        assert await frame.get("total") == 98.0
 
 
 asyncio.run(main())
 ```
 
-Expansion first contributes the shared `0.05` rate, shipping, and currency.
-The root's later `0.10` rate becomes the winner while both occurrences remain
-in history. With a `100` subtotal, the winning rate leaves `90`; adding `8`
-shipping gives `98`, which `label` formats as `USD 98.00`.
+The subtotal is `100`. The final discount rate is `0.10`, so the discounted
+subtotal is `90`; shipping brings it to `98`. The program prints:
 
-`config.to_frame(preset=...)` synchronously returns a fresh canonical Frame,
-equivalent to `define_frame(config.to_module(), preset=...)`. Its optional
-keyword-only `preset` accepts a dictionary or `None`. Creation does not evaluate
-the definitions: `get("label")` follows its dependencies lazily, and the second
-lookup reuses the resulting `total` snapshot. The Frame retains the loaded
-definitions' source origins and masking policy. Use `async with` so leaving the
-block closes the Frame and its owned resources.
+<!-- lclang-doc-output: stdout -->
+```text
+USD 98.00
+```
+<!-- /lclang-doc-case -->
 
-Expansion is recursive and deterministic. Relative targets resolve from the
-importing file, not the process working directory. Direct and indirect cycles
-raise structured configuration errors.
+The second `get` reuses the cached total. `config.to_frame(preset=...)` creates
+a fresh caller-owned Frame synchronously; `async with` closes its owned state.
+Configuration definitions normally take precedence over preset values.
 
-## Add optional local overrides
+## Allow an absent local file
 
-Use `using?` when deployments may omit a local override file. It skips only a
-directly missing target. The following example first uses its default rate,
-then adds the optional file and loads its override.
+Use `using?` when a deployment may omit a local override file. The question mark
+must immediately follow the keyword. Only a directly missing target is skipped.
+An existing file's read, decoding, syntax, nested dependency, or cycle error
+continues to fail loading.
 
-<!-- lclang-doc-exec -->
-```python
-import asyncio
-from pathlib import Path
-from tempfile import TemporaryDirectory
+<!-- lclang-doc-case: absent-local-file -->
 
-from lclang.config import LclConfigSyntaxError, load_config
+The local override file is absent in this example.
 
+`application.lclcfg`:
 
-async def main() -> None:
-    with TemporaryDirectory(prefix="lclang-optional-config-") as directory:
-        root = Path(directory)
-        application = root / "application.lclcfg"
-        application.write_text(
-            "discount_rate: 0.05\n"
-            'using? "local.lclcfg"\n'
-            "total: 100 * (1 - discount_rate)\n",
-            encoding="utf-8",
-        )
-
-        defaults = await load_config(application)
-        assert len(defaults.history["discount_rate"]) == 1
-        async with defaults.to_frame() as frame:
-            assert await frame.get("total") == 95.0
-
-        local = root / "local.lclcfg"
-        local.write_text("discount_rate: 0.10\n", encoding="utf-8")
-        overridden = await load_config(application)
-        assert len(overridden.history["discount_rate"]) == 2
-        async with overridden.to_frame() as frame:
-            assert await frame.get("total") == 90.0
-
-        local.write_text("discount_rate: (\n", encoding="utf-8")
-        try:
-            await load_config(application)
-        except LclConfigSyntaxError as error:
-            assert error.span is not None
-            assert error.span.origin.path == local.resolve()
-        else:
-            raise AssertionError("An existing invalid optional file must fail")
-
-
-asyncio.run(main())
+<!-- lclang-doc-file: application.lclcfg -->
+```lclcfg
+discount_rate: 0.05
+using? f"{__dir__}/local.lclcfg"
+total: 100 * (1 - discount_rate)
 ```
 
-With no local file, the only rate in history is `0.05`, so the total is `95`.
-Once the file exists, its `0.10` rate expands after the default and wins,
-producing `90`. A malformed existing file still raises a syntax error with
-that file's source location. Its permission, decoding, required nested-import,
-and cycle errors also remain errors.
-
-The `?` immediately follows `using`. Optional targets also support f-strings
-with the same earlier-definition and override rules explained below; target
-evaluation errors are never skipped. Each `load_config` call above uses a
-fresh loader. A reused `ConfigLoader` also retries missing files, while keeping
-successfully loaded sources as cached snapshots.
-
-## Select a file from earlier LCL values
-
-A `using` target may be an LCL f-string. Its fields can evaluate definitions
-that appeared earlier in source order, including definitions derived from
-other earlier values.
-
 <!-- lclang-doc-exec -->
 ```python
 import asyncio
-from pathlib import Path
-from tempfile import TemporaryDirectory
 
 from lclang.config import load_config
 
 
 async def main() -> None:
-    with TemporaryDirectory(prefix="lclang-dynamic-using-") as directory:
-        root = Path(directory)
-        profiles = root / "profiles"
-        profiles.mkdir()
-        (profiles / "production.lclcfg").write_text(
-            'endpoint: "https://api.example.com"\n',
-            encoding="utf-8",
-        )
-        (profiles / "development.lclcfg").write_text(
-            'endpoint: "http://localhost:8000"\n',
-            encoding="utf-8",
-        )
-        application = root / "application.lclcfg"
-        application.write_text(
-            'region: "eu"\n'
-            'profile: "production" if region == "eu" else "development"\n'
-            'using f"profiles/{profile}.lclcfg"\n'
-            'summary: f"{profile}: {endpoint}"\n',
-            encoding="utf-8",
-        )
-
-        config = await load_config(application)
-        async with config.to_frame() as frame:
-            assert await frame.get("summary") == (
-                "production: https://api.example.com"
-            )
+    config = await load_config("application.lclcfg")
+    assert len(config.history["discount_rate"]) == 1
+    async with config.to_frame() as frame:
+        print(await frame.get("total"))
 
 
 asyncio.run(main())
 ```
 
-The loader evaluates `profile` only to select `production.lclcfg`. That work
-uses a temporary Frame and does not warm the final configuration's runtime
-cache. `endpoint` is inserted at the `using` line, and the later `summary`
-definition resolves it normally when requested.
+The absent file contributes no definition or history. The base rate remains
+`0.05`, and the program prints:
 
-This lookup is deliberately position-sensitive. Moving `profile` below the
-`using` line would make the target fail with `LclConfigUsingError`, even though
-ordinary final configuration definitions may refer forward.
+<!-- lclang-doc-output: stdout -->
+```text
+95.0
+```
+<!-- /lclang-doc-case -->
 
-## Select a file from the live environment
+If `local.lclcfg` contains `discount_rate: 0.10`, it contributes a second history
+entry and changes the total to `90.0`. A reused loader retries absent targets;
+successful files keep their cached snapshots.
 
-The canonical `env` utility is also available to a dynamic target. Null
-coalescing supplies a deterministic fallback, while a loader override can
-select a different file without changing `os.environ`.
+## Choose a file from preceding values
+
+A dynamic target must be an f-string producing a nonempty `.lclcfg` path. It
+reads definitions available before that introduction. A later declaration does
+not change a target already selected.
+
+<!-- lclang-doc-case: profile-selection -->
+
+`profiles/production.lclcfg`:
+
+<!-- lclang-doc-file: profiles/production.lclcfg -->
+```lclcfg
+service_name: "production"
+```
+
+`profiles/development.lclcfg`:
+
+<!-- lclang-doc-file: profiles/development.lclcfg -->
+```lclcfg
+service_name: "development"
+```
+
+`application.lclcfg`:
+
+<!-- lclang-doc-file: application.lclcfg -->
+```lclcfg
+profile: "production"
+using f"{__dir__}/profiles/{profile}.lclcfg"
+profile: "development"
+```
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+
+from lclang.config import load_config
+
+
+async def main() -> None:
+    config = await load_config("application.lclcfg")
+    async with config.to_frame() as frame:
+        print(await frame.get("service_name"), await frame.get("profile"))
+
+
+asyncio.run(main())
+```
+
+Loading selects the production file. Final runtime winners still include the
+later development profile, so the two values differ:
+
+<!-- lclang-doc-output: stdout -->
+```text
+production development
+```
+<!-- /lclang-doc-case -->
+
+## Use explicit environment overrides
+
+`env.NAME` reads the live process environment, and `??` provides an absent-value
+fallback. Scoped loading overrides can select another file without changing the
+process environment.
+
+<!-- lclang-doc-case: environment-selection -->
+
+`application.lclcfg`:
+
+<!-- lclang-doc-file: application.lclcfg -->
+```lclcfg
+using f"{__dir__}/{env.LCLANG_TUTORIAL_PROFILE ?? 'local'}.lclcfg"
+```
+
+`local.lclcfg`:
+
+<!-- lclang-doc-file: local.lclcfg -->
+```lclcfg
+profile_name: "local"
+```
+
+`blue.lclcfg`:
+
+<!-- lclang-doc-file: blue.lclcfg -->
+```lclcfg
+profile_name: "blue"
+```
+
+`green.lclcfg`:
+
+<!-- lclang-doc-file: green.lclcfg -->
+```lclcfg
+profile_name: "green"
+```
 
 <!-- lclang-doc-exec -->
 ```python
 import asyncio
 import os
-from pathlib import Path
-from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from lclang.config import load_config
 
 
 async def main() -> None:
-    with TemporaryDirectory(prefix="lclang-env-using-") as directory:
-        root = Path(directory)
-        for profile in ("local", "blue", "green"):
-            (root / f"{profile}.lclcfg").write_text(
-                f'selected: "{profile}"\n',
-                encoding="utf-8",
-            )
-        application = root / "application.lclcfg"
-        application.write_text(
-            'using f"{env.LCLANG_TUTORIAL_PROFILE ?? \'local\'}.lclcfg"\n',
-            encoding="utf-8",
-        )
-
-        with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("LCLANG_TUTORIAL_PROFILE", None)
-            local = await load_config(application)
-            async with local.to_frame() as frame:
-                assert await frame.get("selected") == "local"
-
-            with patch.dict(
-                os.environ,
-                {"LCLANG_TUTORIAL_PROFILE": "blue"},
-            ):
-                blue = await load_config(application)
-                async with blue.to_frame() as frame:
-                    assert await frame.get("selected") == "blue"
-
-                green = await load_config(
-                    application,
-                    overrides={"env.LCLANG_TUTORIAL_PROFILE": "green"},
-                )
-                async with green.to_frame() as frame:
-                    assert await frame.get("selected") == "green"
-                assert os.environ["LCLANG_TUTORIAL_PROFILE"] == "blue"
+    with patch.dict(os.environ, {}, clear=False):
+        os.environ.pop("LCLANG_TUTORIAL_PROFILE", None)
+        for overrides in (None, None, {"env.LCLANG_TUTORIAL_PROFILE": "green"}):
+            config = await load_config("application.lclcfg", overrides=overrides)
+            async with config.to_frame() as frame:
+                print(await frame.get("profile_name"))
+            os.environ["LCLANG_TUTORIAL_PROFILE"] = "blue"
+        assert os.environ["LCLANG_TUTORIAL_PROFILE"] == "blue"
 
 
 asyncio.run(main())
 ```
 
-With no process value, `??` chooses `local.lclcfg`. The live value then chooses
-`blue.lclcfg`. Finally, the call-level scoped override wins only for loading
-and selects `green.lclcfg`; the process environment remains `blue`. Overrides
-may also be parsed LCL AST values when the selection itself should stay lazy.
+The fallback chooses local, the process value chooses blue, and the explicit
+loading override chooses green. Loading overrides do not become final runtime
+configuration values. The program prints:
 
-Each dynamic target sees prior expanded definitions, call-level overrides, and
-canonical builtins. It cannot see later declarations, command defaults, or CLI
-runtime-only values. The evaluated result must be non-empty text ending exactly
-in `.lclcfg`.
+<!-- lclang-doc-output: stdout -->
+```text
+local
+blue
+green
+```
+<!-- /lclang-doc-case -->
 
-## Share one loaded policy across several runs
+## Reuse construction policy with fresh caches
 
-Use `config.to_frame()` for one or several named results in a run. Every call
-creates independent snapshots. Use `config.frame_factory()` when the Frame
-construction policy itself should be reusable across many runs of the same
-loaded configuration.
+Use `Config.frame_factory()` when several independent runs share one loaded
+configuration. Each created Frame receives its own result and failure snapshots.
+
+<!-- lclang-doc-case: independent-runs -->
+
+`policy.lclcfg`:
+
+<!-- lclang-doc-file: policy.lclcfg -->
+```lclcfg
+total: unit_price * quantity
+origin: __file__
+```
 
 <!-- lclang-doc-exec -->
 ```python
 import asyncio
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 from lclang.config import load_config
+from lclang.runtime import Preset
 
 
 async def main() -> None:
-    with TemporaryDirectory(prefix="lclang-factory-tutorial-") as directory:
-        path = Path(directory) / "policy.lclcfg"
-        path.write_text(
-            "subtotal: price * quantity\n"
-            "large: subtotal >= threshold\n",
-            encoding="utf-8",
-        )
-        config = await load_config(path)
-        factory = config.frame_factory()
-
-        async with factory.create(
-            values={"price": 10, "quantity": 3, "threshold": 50}
-        ) as small:
-            assert await small.get("subtotal") == 30
-            assert await small.get("large") is False
-
-        async with factory.create(
-            values={"price": 10, "quantity": 8, "threshold": 50}
-        ) as large:
-            assert await large.get("subtotal") == 80
-            assert await large.get("large") is True
+    config = await load_config("policy.lclcfg")
+    factory = config.frame_factory(preset=Preset("pricing inputs", {"unit_price": 12, "quantity": 4}))
+    async with factory.create() as first, factory.create(values={"quantity": 5}) as second:
+        print(await first.get("total"), await second.get("total"))
+        assert Path(str(await first.get("origin"))).name == "policy.lclcfg"
 
 
 asyncio.run(main())
 ```
 
-Both Frames use the same parsed definitions and threshold. The first multiplies
-`10 * 3` and compares `30 >= 50`, while the second multiplies `10 * 8` and
-compares `80 >= 50`. Fresh Frame caches keep the false and true results
-independent.
+The first run uses four units and the second uses five. File magic retains the
+defining physical file, and separate Frames prevent shared result caches:
 
-File-backed AST nodes retain their physical source spans. `__file__` and
-`__dir__` become eager path constants in file-backed definitions. Apply
-`ConfigLoadLimits` and an allowed-root resolver policy when the application
-needs bounded, controlled loading.
+<!-- lclang-doc-output: stdout -->
+```text
+48 60
+```
+<!-- /lclang-doc-case -->
+
+Files decode as UTF-8, with a BOM accepted at byte zero. Loading performs no
+globbing or network access. Use `ConfigLoadLimits` and an allowed-root resolver
+when the application needs bounded loading. Treat configuration and supplied
+Python objects as trusted code.
 
 [Previous: The LCL language](03-language.md) | [Next: Async Python integration](05-async-python-integration.md) | [Return to the series introduction](README.md)

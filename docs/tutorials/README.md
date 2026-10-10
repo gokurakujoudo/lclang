@@ -67,11 +67,14 @@ example directly from its Markdown source.
     configured workflow command with result files, logs, masking, overrides, dry-run, verbose, and errors.
 16. **[Python utilities for downstream applications](16-python-utilities.md)** -- use the live environment,
     standalone logging, reviewed data helpers, and calendars without adopting LCL evaluation or the CLI.
+17. **[Configuration composition](17-configuration-composition.md)** -- choose shared expansion or isolated
+    imports, supply required and runtime values, compose Modules, and trace loading and evaluation failures.
 
 The sequence is deliberate: lessons 1-4 establish everyday use, lessons 5-8
 make behavior predictable in real applications, and lessons 9-15 apply the same
-model to larger systems, while lesson 16 shows which supporting Python APIs can
-stand alone. Read the lessons in order or jump to one topic after
+model to larger systems. Lesson 16 shows which supporting Python APIs can
+stand alone, and lesson 17 brings configuration composition and diagnostics
+together. Read the lessons in order or jump to one topic after
 finishing this introduction.
 
 ## Is lclang a good fit?

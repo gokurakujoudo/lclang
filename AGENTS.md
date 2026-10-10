@@ -202,6 +202,17 @@ Trusted Publishing setup, and supported manual recovery procedures.
 
 ## Tutorial maintenance
 
+- Apply the installed Humanizer skill at
+  `C:/Users/ym/.codex/skills/humanizer/SKILL.md` to English documentation prose.
+  Preserve facts, API contracts, code, commands, paths, diagnostic output,
+  metadata, and link targets.
+- Show configuration files directly in `lclcfg` fences. File-backed executable
+  examples declare their fixtures and expected output beside the Python code;
+  documentation tests extract and execute that exact Markdown in an isolated
+  `TemporaryDirectory`. Python examples perform API and business operations.
+- Start every documentation `using`, `using?`, `import`, and `import?` target
+  with `f"{__dir__}/..."`. This makes the defining file's directory explicit,
+  including in nested files. Keep relative-path compatibility tests.
 - User-facing Python examples use explicit `from lclang import ...` or
   `from lclang.<submodule> import ...` statements for the symbols they need,
   rather than module imports and qualified calls. For direct loaded-config
@@ -219,8 +230,9 @@ Trusted Publishing setup, and supported manual recovery procedures.
 - Teach in a simple to composite progression. Start with the smallest useful
   operation, add one concept at a time, and finish with a realistic combination
   that demonstrates why the feature matters.
-- Put observable results in inline `assert` statements when practical. Do not
-  repeat those assertions in an `Expected result` section. Follow each example
+- Put observable results in inline `assert` statements when practical. State
+  results and emitted logs in the accompanying prose; capture printed output
+  in executable output fences where appropriate. Follow each example
   with enough prose to trace how names resolve, which branch or dependency runs,
   who owns state, and why the asserted value follows from the code.
 - Examples must be deterministic and independent. Mock external connectivity;

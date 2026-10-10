@@ -110,6 +110,6 @@ def dependency_snapshot(frame: Frame, name: str) -> DependencySnapshot:
     owner._lifecycle.ensure_open(None)
     if selected.kind == "proxy":
         raise LclEvaluationError(f"Frame proxy has no dependency snapshot: {name}")
-    if name in owner.module.definitions:
+    if selected.kind != "host" and name in owner.module.definitions:
         return owner._dependencies.snapshot(name)
     raise LclEvaluationError(f"host binding has no dependency snapshot: {name}")

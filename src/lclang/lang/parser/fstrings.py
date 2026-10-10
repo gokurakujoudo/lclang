@@ -11,9 +11,9 @@ from lclang.ast import (
     LclStringText,
 )
 from lclang.errors import LclSyntaxError
-from lclang.lang.lexer import Token
+from lclang.lang.lexer import Token, scan_tokens
 from lclang.lang.lexer.fstring_values import FStringField, FStringText, FStringValue
-from lclang.source import SourceSpan
+from lclang.source import SourceSpan, advance_source_position
 
 
 def internal_parse_fstring(token: Token) -> LclJoinedString:
@@ -56,6 +56,7 @@ def internal_convert_part(
     :param part: Lexical text segment or replacement field.
     :param span: Source span attached to the semantic part.
     :returns: String-text or formatted-value AST node.
+    :raises LclSyntaxError: If the replacement field expression is invalid.
 
     .. note::
        Field conversion, format specifications, debug markers, and explicit
@@ -63,7 +64,22 @@ def internal_convert_part(
     """
     if isinstance(part, FStringText):
         return LclStringText(text=part.text, span=span)
-    expression = internal_parse_field_expression(part.expression, span)
+    expression_span = span
+    if part.expression_offset is not None and span.snapshot is not None:
+        offset = span.start.offset - span.snapshot.start.offset
+        original = span.snapshot.text[offset : span.end.offset - span.snapshot.start.offset]
+        quote_at = next((index for index, char in enumerate(original) if char in "'\""), 0)
+        start = advance_source_position(span.start, original[: quote_at + part.expression_offset])
+        expression_span = SourceSpan(
+            span.origin,
+            start,
+            advance_source_position(start, part.expression),
+            snapshot=span.snapshot,
+        )
+    try:
+        expression = internal_parse_field_expression(part.expression, expression_span)
+    except LclSyntaxError as error:
+        raise LclSyntaxError(error.message, span=span) from error
     format_spec = (
         None if part.format_spec is None else internal_convert_value(part.format_spec, span)
     )
@@ -88,10 +104,12 @@ def internal_parse_field_expression(source: str, span: SourceSpan) -> LclAstNode
        Nested parser errors are reissued with an f-string-specific message and
        the enclosing f-string span so callers receive one consistent location.
     """
-    from lclang.lang.parser.pratt import parse_expression
+    from lclang.lang.parser.pratt import parse_tokens
 
     try:
-        return parse_expression(source, origin=span.origin)
+        return parse_tokens(
+            scan_tokens(source, origin=span.origin, start=span.start, snapshot=span.snapshot)
+        )
     except LclSyntaxError as error:
         message = f"invalid f-string expression: {error.message}"
         raise LclSyntaxError(message, span=span) from error

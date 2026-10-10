@@ -32,6 +32,8 @@ LCL_RESERVED_NAMES = frozenset(
         "with",
         "as",
         "FRAME_PROXY",
+        "NEED_OVERRIDE",
+        "RUNTIME_OVERRIDE",
     }
 )
 
@@ -150,4 +152,6 @@ def validate_real_conflicts(names: Iterable[str]) -> None:
         for index in range(1, len(parts)):
             ancestor = ".".join(parts[:index])
             if ancestor in selected:
-                raise ValueError(f"scoped binding conflict between {ancestor!r} and {name!r}")
+                error = ValueError(f"scoped binding conflict between {ancestor!r} and {name!r}")
+                error.__dict__["binding_names"] = (ancestor, name)
+                raise error

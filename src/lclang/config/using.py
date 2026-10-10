@@ -7,7 +7,8 @@ from pathlib import Path
 
 from lclang.ast import LclAstNode
 from lclang.config.errors import LclConfigUsingError
-from lclang.config.model import ConfigDefinition, ConfigUsing
+from lclang.config.model import ConfigDefinition, ConfigImport, ConfigUsing
+from lclang.lang.evaluator.evaluation_context import ACTIVE_TARGET_EXPRESSION
 from lclang.masking import normalize_masked_mapping
 from lclang.runtime import Module
 from lclang.types import ModuleName
@@ -19,8 +20,9 @@ from lclang.types import ModuleName
 USING_CONTEXT_MODULE = ModuleName("using_context")
 # Transient module name for call-level using overrides.
 USING_OVERRIDES_MODULE = ModuleName("using_overrides")
-# Transient binding name holding the dynamic target expression.
-USING_TARGET_NAME = "using_target"
+# Unitless transient target binding uses the configuration-reserved __ prefix
+# so an ordinary user definition cannot be shadowed during target selection.
+USING_TARGET_NAME = "__lclang_file_target"
 # Transient module name for the dynamic target expression.
 USING_TARGET_MODULE = ModuleName("using_target")
 
@@ -45,15 +47,18 @@ def snapshot_using_overrides(
 
 
 async def evaluate_using_target(
-    declaration: ConfigUsing,
+    declaration: ConfigUsing | ConfigImport,
     preceding: Sequence[ConfigDefinition],
     overrides: Mapping[str, object],
+    *,
+    namespace_names: frozenset[str] = frozenset(),
 ) -> str:
     """Evaluate one dynamic target against its chronological context.
 
     :param declaration: Dynamic using declaration to resolve.
     :param preceding: Expanded definitions occurring before the declaration.
     :param overrides: Detached call-level values or semantic expressions.
+    :param namespace_names: Explicit namespaces visible before this declaration.
     :returns: Non-empty path text ending in ``.lclcfg``.
     :raises LclConfigUsingError: If construction or evaluation fails.
     """
@@ -64,10 +69,11 @@ async def evaluate_using_target(
             declaration.target,
             preceding,
             overrides,
+            namespace_names=namespace_names,
         )
     except Exception as error:
         raise LclConfigUsingError(
-            f"cannot evaluate using target: {error}",
+            "cannot evaluate file target",
             span=declaration.span,
         ) from error
     if not isinstance(result, str) or not result:
@@ -87,12 +93,15 @@ async def evaluate_target_expression(
     expression: LclAstNode,
     preceding: Sequence[ConfigDefinition],
     overrides: Mapping[str, object],
+    *,
+    namespace_names: frozenset[str] = frozenset(),
 ) -> object:
     """Run one target expression in disposable Frame layers.
 
     :param expression: Parsed semantic f-string expression.
     :param preceding: Expanded chronological definitions.
     :param overrides: Detached call-level override mapping.
+    :param namespace_names: Explicit namespaces in the chronological context.
     :returns: Fully evaluated target value.
     """
     from lclang.api import LCL_IMPORTS
@@ -111,22 +120,24 @@ async def evaluate_target_expression(
     override_values = {
         name: value for name, value in normalized.items() if not isinstance(value, LclAstNode)
     }
+    definitions = {**winners, **override_definitions}
+    definitions = {name: node for name, node in definitions.items() if name not in override_values}
+    all_masks = frozenset(masks) | override_masks
     context = LCL_IMPORTS.derive(
-        Module(USING_CONTEXT_MODULE, winners, masked_names=frozenset(masks))
+        Module(
+            USING_CONTEXT_MODULE,
+            definitions,
+            masked_names=all_masks & definitions.keys(),
+            namespace_names=namespace_names,
+        ),
+        override_values,
+        masked_names=all_masks,
     )
     async with context:
-        override_frame = context.derive(
-            Module(
-                USING_OVERRIDES_MODULE,
-                override_definitions,
-                masked_names=(override_masks | masks) & override_definitions.keys(),
-            ),
-            override_values,
-            masked_names=override_masks | (masks & override_values.keys()),
-        )
-        async with override_frame:
-            target = override_frame.derive(
-                Module(USING_TARGET_MODULE, {USING_TARGET_NAME: expression})
-            )
-            async with target:
+        target = context.derive(Module(USING_TARGET_MODULE, {USING_TARGET_NAME: expression}))
+        async with target:
+            token = ACTIVE_TARGET_EXPRESSION.set(expression)
+            try:
                 return await target.get(USING_TARGET_NAME)
+            finally:
+                ACTIVE_TARGET_EXPRESSION.reset(token)

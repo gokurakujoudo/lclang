@@ -9,6 +9,7 @@ from contextlib import suppress
 from queue import Empty, SimpleQueue
 from threading import Event
 
+from lclang.error_rendering import render_failure
 from lclang.logger.config import LoggerHandlerConfig
 from lclang.logger.console import ConsoleSink
 from lclang.logger.file import FileSink
@@ -46,7 +47,8 @@ class Dispatcher:
         self.counters.add("writer_errors")
         with suppress(Exception):
             if sys.__stderr__ is not None:
-                sys.__stderr__.write(f"lclang.logger {sink.key}: {type(error).__name__}\n")
+                diagnostic = render_failure(error, action=f"writing log sink {sink.key!r}")
+                sys.__stderr__.write(diagnostic + "\n")
 
     def initialize(self) -> None:
         """Create all enabled sinks before producer admission begins."""
