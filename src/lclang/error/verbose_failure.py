@@ -14,6 +14,7 @@ from lclang.error.verbose_context import (
     allocate_verbose_id,
     is_verbose_enabled,
 )
+from lclang.error.verbose_propagation import collect_verbose_failure_event
 from lclang.error.verbose_records import describe_verbose_context, emit_verbose_record
 
 
@@ -118,6 +119,8 @@ def trace_verbose_failure(
             heading = f"Returned the cached failure of {subject}; no new evaluation"
         elif ACTIVE_VERBOSE_CONTEXT.get().execution == "shared evaluation":
             heading = f"Returned the failed shared evaluation of {subject}"
+        elif stage == "command":
+            heading = f"Failed during {subject}"
         else:
             frames = error.evaluation_context
             dependency = frames[-1].name if frames else "an evaluation"
@@ -130,5 +133,7 @@ def trace_verbose_failure(
                 if dependency == subject
                 else f"Could not complete {subject} because {dependency} failed"
             )
+            if collect_verbose_failure_event(identity, "Propagation", heading):
+                return identity
         emit_verbose_record(stage, f"{heading} (failure {identity})", failure_id=identity)
     return identity

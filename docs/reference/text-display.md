@@ -18,6 +18,11 @@ failure identifier and execution context; exception output expands the failing
 path and its already-read value leaves. Source excerpts appear only at the
 innermost failure. Logging never evaluates extra branches or reloads sources.
 
+Failure propagation produces one summary per failure at the end of a root request,
+with the names of bindings whose failure caches were actually committed. Individual
+propagation relations and cache owners remain in detached record context. A root
+that recovers is not described as failed. Cache hits and shared returns stay explicit.
+
 Exception trees show the explicit Cause before expanding the diagnostic stack.
 An unsuppressed handling context takes that position when there is no explicit
 cause. Python traceback trees follow the same order. Stack frames, notes and
@@ -80,6 +85,9 @@ async def main() -> None:
     assert "VERBOSE Failed while evaluating total [LCL131421: division by zero]" in text
     assert text.count("Error in evaluating RESULT") == 1
     assert "Returned the cached failure of total; no new evaluation" in text
+    assert "Could not evaluate RESULT" in text
+    assert text.count("Cached failures: total, RESULT") == 1
+    assert "Could not complete" not in text
     assert "Reason:" not in text
     assert "total: subtotal / divisor (" in text
 
@@ -88,6 +96,7 @@ asyncio.run(main())
 ```
 
 The first verbose failure explains the arithmetic stage and requesting context.
+The root summary lists `total` and `RESULT` after both failure caches have committed.
 The explicit exception record adds the full failed dependency path and retained
 value snapshots. Both use the same failure identifier; the later cache read adds
 a short reference. The logger and its handler belong to this application.

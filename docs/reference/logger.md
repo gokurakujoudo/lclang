@@ -184,7 +184,11 @@ and masked before they enter a record.
 
 The first observed failure has a short reason and execution context, including
 the requesting Frame, binding owner and lookup path when available. Later
-propagation, shared returns and cached failures reference its failure identifier.
+propagation and committed failure caches are summarized once when the root
+request ends. The summary lists the cached binding names; detached record context
+retains the individual propagation relations and cache owners. Recovered failures
+are described as observed failures, without claiming that the root failed.
+Shared returns and cached failures remain separate short references.
 A cached failure was not evaluated again. Its identifier survives another
 verbose scope, diagnostic copies and exception-group derivation. A new failure
 object receives a new identifier. If tracing first observes an old cache entry,

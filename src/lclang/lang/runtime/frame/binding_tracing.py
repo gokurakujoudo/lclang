@@ -13,6 +13,7 @@ from lclang.error.mask_scope import ACTIVE_MASKED_VALUE
 from lclang.error.verbose_context import ACTIVE_VERBOSE_CONTEXT
 from lclang.error.verbose_diagnostic import internal_verbose_enabled
 from lclang.error.verbose_failure import trace_verbose_failure
+from lclang.error.verbose_propagation import collect_verbose_failure_event
 from lclang.error.verbose_records import emit_verbose_record
 from lclang.lang.engine.evaluator.display_capture import (
     ACTIVE_DISPLAY_CAPTURE,
@@ -120,17 +121,23 @@ def trace_binding_failure(
         )
 
 
-def trace_cached_failure_publication(name: str, error: Exception) -> None:
+def trace_cached_failure_publication(
+    name: str, error: Exception, *, owner: str = "unknown"
+) -> None:
     """Describe publication only after the existing cache commit succeeds.
 
     :param name: Actual definition name committed to the failure cache.
     :param error: Committed failure whose identifier was established at detection.
+    :param owner: Actual committing Frame identifier, or unknown without owner evidence.
     """
     from lclang.error.exception_base import LclError
 
     if internal_verbose_enabled() and isinstance(error, LclError):
         identity = error.verbose_failure_id
         if identity is not None:
+            if collect_verbose_failure_event(identity, "Cached failures", name):
+                collect_verbose_failure_event(identity, "Cache owners", f'{name}: "{owner}"')
+                return
             emit_verbose_record(
                 "evaluate",
                 f"Stored the failed evaluation of {name} in cache (failure {identity})",
