@@ -17,7 +17,12 @@ from lclang.error.operation_guard import guard_constructor, guard_failure
 from lclang.error.verbose_diagnostic import ACTIVE_MASKED_VALUE
 from lclang.lang.ast import LclAstNode
 from lclang.lang.common.source_location import SourceSpan
+from lclang.lang.engine.evaluator.display_capture import render_canonical_value
 from lclang.lang.engine.printer import to_source
+from lclang.utils.python_callable_definition import (
+    PythonCallableDefinition,
+    describe_python_callable,
+)
 from lclang.utils.scoped_proxy import ScopedProxyValue
 from lclang.utils.value_representation import safe_repr
 
@@ -32,15 +37,19 @@ class EvaluationReadJournal:
     :param kind: Unitless definition, function, or dynamic-target category.
     :param masked: Whether the expression owner is masked.
     :param reads: Last successful value at each first-ordered name occurrence.
+    :param callable_definition: Detached Python implementation metadata.
+    :param callable_summary: Protected text for an actual host invocation.
     """
 
     name: str
     node: LclAstNode
-    kind: Literal["definition", "function", "target"]
+    kind: Literal["definition", "function", "target", "python-call"]
     masked: bool
     reads: dict[tuple[str, SourceSpan], tuple[object, bool, str]] = field(
         default_factory=dict[tuple[str, SourceSpan], tuple[object, bool, str]]
     )
+    callable_definition: PythonCallableDefinition | None = None
+    callable_summary: str | None = None
 
 
 # Task-local active scopes come from evaluator entry and lexical function calls.
@@ -59,16 +68,30 @@ ACTIVE_TARGET_EXPRESSION: ContextVar[LclAstNode | None] = ContextVar(
 
 @contextmanager
 def collect_evaluation_context(
-    name: str, node: LclAstNode, *, kind: Literal["definition", "function", "target"] = "definition"
+    name: str,
+    node: LclAstNode,
+    *,
+    kind: Literal["definition", "function", "target", "python-call"] = "definition",
+    callable_definition: PythonCallableDefinition | None = None,
+    callable_summary: str | None = None,
 ) -> Generator[None]:
     """Own one active read journal and restore the previous task-local path.
 
     :param name: Actual qualified definition or lexical owner name.
     :param node: Expression being evaluated within the scope.
     :param kind: Category used by the human diagnostic renderer.
+    :param callable_definition: Detached location of the actual Python implementation.
+    :param callable_summary: Protected implementation text, independent of its LCL call site.
     :returns: Context manager restoring the prior path on success, failure, or cancellation.
     """
-    journal = EvaluationReadJournal(name, node, kind, ACTIVE_MASKED_VALUE.get())
+    journal = EvaluationReadJournal(
+        name,
+        node,
+        kind,
+        ACTIVE_MASKED_VALUE.get(),
+        callable_definition=callable_definition,
+        callable_summary=callable_summary,
+    )
     token = ACTIVE_EVALUATION_CONTEXT.set((*ACTIVE_EVALUATION_CONTEXT.get(), journal))
     try:
         yield
@@ -108,16 +131,33 @@ def capture_evaluation_context() -> tuple[EvaluationContextFrame, ...]:
 
     :returns: Immutable records retaining no Frame, resolver, AST, or host value.
     """
+    from lclang.lang.engine.evaluator.lcl_function import LclFunctionValue
+    from lclang.lang.stdlib.recursive_function import RecursiveFunction
+
     records: list[EvaluationContextFrame] = []
     for journal in ACTIVE_EVALUATION_CONTEXT.get():
         used = tuple(
             DiagnosticValue(
-                name, span, type(value).__name__, safe_repr(value, masked=masked), masked, source
+                name,
+                span,
+                type(value).__name__,
+                safe_repr(value, renderer=render_canonical_value, masked=masked),
+                masked,
+                source,
+                (
+                    None
+                    if masked or isinstance(value, (LclFunctionValue, RecursiveFunction))
+                    else describe_python_callable(value)
+                ),
             )
             for (name, span), (value, masked, source) in journal.reads.items()
         )
-        expression = safe_repr(
-            journal.node, renderer=render_ast_source, max_length=None, masked=journal.masked
+        expression = (
+            safe_repr(journal.callable_summary, renderer=str, masked=journal.masked)
+            if journal.callable_summary is not None
+            else safe_repr(
+                journal.node, renderer=render_ast_source, max_length=None, masked=journal.masked
+            )
         )
         records.append(
             EvaluationContextFrame(
@@ -127,6 +167,7 @@ def capture_evaluation_context() -> tuple[EvaluationContextFrame, ...]:
                 used,
                 journal.kind,
                 journal.masked,
+                journal.callable_definition,
             )
         )
     return tuple(records)

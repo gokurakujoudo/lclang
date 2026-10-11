@@ -35,6 +35,7 @@ from lclang.error.exception_base import LclValidationError
 from lclang.error.loading_context import derive_loading_error
 from lclang.error.native_wrap import wrap_failure
 from lclang.error.operation_guard import guard_async_failure, guard_constructor, guard_failure
+from lclang.error.verbose_loading import scope_loading_route
 from lclang.lang.common.identifiers import SourceName
 from lclang.lang.common.source_location import SourceOrigin
 
@@ -272,37 +273,39 @@ class ConfigLoader:
                     code=ConfigurationErrorCode.E23_DECLARATION_TYPE,
                 )
             target_text: str | None = None
-            try:
-                target_text = await evaluate_using_target(
-                    declaration, output, overrides, namespace_names=frozenset(namespaces)
-                )
-                target = resolve_using_path(target_text, loaded.source)
+            with scope_loading_route(ConfigLoadFrame(loaded.document.origin, declaration.span)):
                 try:
-                    child = await self.source_for(target, loaded.source)
-                except LclConfigUsingError as error:
-                    if declaration.optional and isinstance(error.__cause__, FileNotFoundError):
-                        continue
-                    raise
-                if isinstance(declaration, ConfigImport):
-                    isolated: list[ConfigDefinition] = []
-                    child_namespaces: set[str] = set()
-                    await self.expand(
-                        child, active, depth + 1, isolated, overrides, child_namespaces
+                    target_text = await evaluate_using_target(
+                        declaration, output, overrides, namespace_names=frozenset(namespaces)
                     )
-                    Config(
-                        child.document.version,
-                        child.document.origin,
-                        tuple(isolated),
-                        namespace_names=frozenset(child_namespaces),
-                    )
-                    qualified, reservations = qualify_import(
-                        isolated, child_namespaces, declaration.alias
-                    )
-                    output.extend(qualified)
-                    namespaces.update(reservations)
-                else:
-                    await self.expand(child, active, depth + 1, output, overrides, namespaces)
-            except Exception as error:
-                raise derive_loading_error(
-                    error, ConfigLoadFrame(loaded.document.origin, declaration.span, target_text)
-                ) from error.__cause__
+                    target = resolve_using_path(target_text, loaded.source)
+                    try:
+                        child = await self.source_for(target, loaded.source)
+                    except LclConfigUsingError as error:
+                        if declaration.optional and isinstance(error.__cause__, FileNotFoundError):
+                            continue
+                        raise
+                    if isinstance(declaration, ConfigImport):
+                        isolated: list[ConfigDefinition] = []
+                        child_namespaces: set[str] = set()
+                        await self.expand(
+                            child, active, depth + 1, isolated, overrides, child_namespaces
+                        )
+                        Config(
+                            child.document.version,
+                            child.document.origin,
+                            tuple(isolated),
+                            namespace_names=frozenset(child_namespaces),
+                        )
+                        qualified, reservations = qualify_import(
+                            isolated, child_namespaces, declaration.alias
+                        )
+                        output.extend(qualified)
+                        namespaces.update(reservations)
+                    else:
+                        await self.expand(child, active, depth + 1, output, overrides, namespaces)
+                except Exception as error:
+                    raise derive_loading_error(
+                        error,
+                        ConfigLoadFrame(loaded.document.origin, declaration.span, target_text),
+                    ) from error.__cause__

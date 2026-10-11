@@ -103,7 +103,7 @@ def parse_using(
     target_text = line.text[keyword_end:]
     start = advance_position(line.start, line.text[:keyword_end])
     expression = parse_config_expression(
-        target_text, origin=origin, start=start, snapshot=line.span.snapshot
+        target_text, origin=origin, start=start, snapshot=line.span.snapshot, trace_result=False
     )
     if isinstance(expression, LclConstant) and isinstance(expression.value, str):
         target = expression.value

@@ -141,7 +141,8 @@ def test_verbose_reports_parse_lookup_evaluation_and_safe_values(
     trace = captured.err
     assert "Evaluated RESULT" in trace and "Result: (str) 'value!'" in trace
     assert "Read external from external input" in trace and ": (str) 'value'" in trace
-    assert "Read RESULT from a new LCL evaluation" in trace
+    assert "Read RESULT from a new LCL evaluation" not in trace
+    assert trace.count("Evaluated RESULT:") == 1
     assert "Read RESULT from a shared LCL evaluation" in trace
     assert "Read RESULT from cache" in trace
     assert "Read len from native input" in trace
@@ -281,5 +282,6 @@ def test_builtin_cli_verbose_keeps_result_on_stdout(
     captured = capsys.readouterr()
     assert captured.out == "42\n"
     assert "Evaluated RESULT" in captured.err
-    assert "Read RESULT from a new LCL evaluation" in captured.err
+    assert "Read RESULT from a new LCL evaluation" not in captured.err
+    assert captured.err.count("Evaluated RESULT:") == 1
     assert "Result: (int) 42" in captured.err

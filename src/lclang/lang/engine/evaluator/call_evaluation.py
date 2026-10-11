@@ -59,7 +59,13 @@ async def internal_evaluate_call(
             raise LclEvaluationError(
                 "unsupported call argument", code=LanguageErrorCode.E32_UNSUPPORTED_CALL_ARGUMENT
             )
-    return cast(Callable[..., object], target)(*positional, **keywords)
+    from lclang.lang.engine.evaluator.lcl_function import LclFunctionValue
+    from lclang.lang.engine.evaluator.python_call_evaluation import invoke_python_call
+    from lclang.lang.stdlib.recursive_function import RecursiveFunction
+
+    if isinstance(target, (LclFunctionValue, RecursiveFunction)):
+        return cast(Callable[..., object], target)(*positional, **keywords)
+    return await invoke_python_call(node, target, positional, keywords)
 
 
 def internal_check_duplicate(name: str, keywords: dict[str, object]) -> None:

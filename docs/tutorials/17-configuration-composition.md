@@ -496,17 +496,15 @@ requirement. There is no `m.profile` yet:
 Error in loading config file "main.lclcfg" [LCL139991: cannot evaluate file target]
 ├─ Cause
 │  └─ Error in evaluating profile [LCL139991: profile needs a value]
-│     └─ profile: NEED_OVERRIDE ("service.lclcfg":1:10)
-│        └─ Source: "service.lclcfg":1:10
-│           profile: NEED_OVERRIDE
-│                    ^^^^^^^^^^^^^
-├─ Loading route
-│  └─ main.lclcfg
-│     └─ main.lclcfg ("main.lclcfg":1:1): import f"{__dir__}/service.lclcfg" as m -> service.lclcfg
-│        └─ service.lclcfg ("service.lclcfg":2:1): using f"{__dir__}/profiles/{profile}.lclcfg"
-└─ Source: "service.lclcfg":2:1
-   using f"{__dir__}/profiles/{profile}.lclcfg"
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+│     └─ using target: f"{__dir__}/profiles/{profile}.lclcfg" ("service.lclcfg":2:7)
+│        └─ profile: NEED_OVERRIDE ("service.lclcfg":1:10)
+│           └─ Source: "service.lclcfg":1:10
+│              profile: NEED_OVERRIDE
+│                       ^^^^^^^^^^^^^
+└─ Loading route
+   └─ main.lclcfg
+      └─ import f"{__dir__}/service.lclcfg" as m ("main.lclcfg":1:1) -> service.lclcfg
+         └─ using f"{__dir__}/profiles/{profile}.lclcfg" ("service.lclcfg":2:1)
 ```
 <!-- /lclang-doc-case -->
 

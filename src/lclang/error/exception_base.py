@@ -1,7 +1,8 @@
 """Dependency-light exception root and API validation failures.
 
 Defines ``ErrorType``, ``LclError``, ``LclValidationError``, ``LclStateError``,
-``LclAttributeError``, ``LclFrozenAttributeError``, ``copy_failure_state``.
+``LclAttributeError``, ``LclFrozenAttributeError``, ``copy_failure_state``,
+``copy_diagnostic_context``.
 """
 
 from __future__ import annotations
@@ -247,14 +248,7 @@ class LclError(Exception, metaclass=ErrorType):
         if not isinstance(target, BaseExceptionGroup):
             target.args = self.args
         target.span = self.span
-        target.code = self.code
-        target.variable_stack = self.variable_stack
-        target.config_stack = self.config_stack
-        target.evaluation_context = self.evaluation_context
-        target.masked = self.masked
-        target.native_cause = self.native_cause
-        target.binding_names = self.binding_names
-        target.verbose_failure_id = self.verbose_failure_id
+        copy_diagnostic_context(self, target)
 
     def __str__(self) -> str:
         """Render a detached multiline diagnostic without further evaluation.
@@ -301,6 +295,22 @@ class LclFrozenAttributeError(LclAttributeError, FrozenInstanceError):
     """Retain frozen dataclass attribute semantics in a structured diagnostic."""
 
     default_code = str(GeneralErrorCode.E13_FROZEN_ATTRIBUTE)
+
+
+def copy_diagnostic_context(source: LclError, target: LclError) -> None:
+    """Preserve base diagnostic evidence across an intentional context wrapper.
+
+    :param source: Original typed LCL failure.
+    :param target: LCL wrapper retaining its own message, span and native state.
+    """
+    target.code = source.code
+    target.variable_stack = source.variable_stack
+    target.config_stack = source.config_stack
+    target.evaluation_context = source.evaluation_context
+    target.masked = source.masked
+    target.native_cause = source.native_cause
+    target.binding_names = source.binding_names
+    target.verbose_failure_id = source.verbose_failure_id
 
 
 def copy_failure_state(source: BaseException, target: BaseException) -> None:

@@ -63,7 +63,7 @@ def trace_binding_value(frame: Frame, name: str, source: str, value: object) -> 
     :param source: Existing source category.
     :param value: Already-resolved result, never an additional evaluation.
     """
-    if internal_verbose_enabled():
+    if source != "lcl-evaluated" and internal_verbose_enabled():
         rendered = render_binding_payload(frame, name, value)
         evaluation_id = ACTIVE_VERBOSE_CONTEXT.get().evaluation_id
         identity = "" if evaluation_id is None else f" (evaluation {evaluation_id})"

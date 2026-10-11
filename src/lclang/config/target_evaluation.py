@@ -13,9 +13,10 @@ from typing import cast
 from lclang.config.config_document import ConfigDefinition, ConfigImport, ConfigUsing
 from lclang.error import ConfigurationErrorCode, LclConfigError, LclError
 from lclang.error.configuration_exception import LclConfigUsingError
-from lclang.error.exception_base import LclValidationError
+from lclang.error.exception_base import LclValidationError, copy_diagnostic_context
 from lclang.error.native_wrap import wrap_failure
 from lclang.error.operation_guard import guard_async_failure, guard_failure
+from lclang.error.using_diagnostics import UsingDiagnosticContext, scope_using_diagnostics
 
 # Transient module name for definitions visible before one using declaration.
 # Unitless private evaluation labels below distinguish dynamic-using context, overrides and
@@ -86,12 +87,20 @@ async def evaluate_using_target(
     if isinstance(declaration.target, str):
         return declaration.target
     try:
-        result = await evaluate_target_expression(
-            declaration.target,
-            preceding,
-            overrides,
-            namespace_names=namespace_names,
-        )
+        with scope_using_diagnostics(
+            UsingDiagnosticContext(
+                USING_TARGET_NAME,
+                str(USING_TARGET_MODULE),
+                str(USING_CONTEXT_MODULE),
+                declaration.span,
+            )
+        ):
+            result = await evaluate_target_expression(
+                declaration.target,
+                preceding,
+                overrides,
+                namespace_names=namespace_names,
+            )
     except Exception as error:
         if isinstance(error, ExceptionGroup):
             failure = wrap_failure(
@@ -106,7 +115,7 @@ async def evaluate_using_target(
             )
             failure.add_note("configuration file target")
             raise failure from failure.__cause__
-        raise LclConfigUsingError(
+        failure = LclConfigUsingError(
             "cannot evaluate file target",
             span=declaration.span,
             code=(
@@ -114,7 +123,10 @@ async def evaluate_using_target(
                 if isinstance(error, LclError)
                 else ConfigurationErrorCode.E24_CANNOT_EVALUATE_FILE_TARGET
             ),
-        ) from error
+        )
+        if isinstance(error, LclError):
+            copy_diagnostic_context(error, failure)
+        raise failure from error
     if not isinstance(result, str) or not result:
         raise LclConfigUsingError(
             "using target must evaluate to non-empty text",

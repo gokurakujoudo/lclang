@@ -218,6 +218,12 @@ logs retain the original Python traceback on the exception. The default formatte
 shows application and external-library frames; `traceback_style="full"` also
 shows lclang frames. Inspection uses a protected single-line failure summary.
 
+Actual Python calls appear beneath the LCL expression that invoked them, including
+nested LCL requests made by the callback. Definition locations come from Python
+code metadata; diagnostics do not read source files to locate functions.
+Applications can opt into the same uncaught-error reports with
+`install_exception_hooks` from `lclang.logger`; see [text display](text-display.md).
+
 All synchronous and asynchronous iterable items pass through the recursive
 auto-await boundary before comprehensions, starred expansion, or reviewed
 `iter.collect`/`iter.first` helpers consume them. In particular,

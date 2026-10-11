@@ -11,7 +11,8 @@ from lclang.error.diagnostic_rendering import build_failure_tree
 from lclang.error.failure_summary import render_failure_summary
 from lclang.error.mask_scope import ACTIVE_MASKED_VALUE
 from lclang.error.native_wrap import is_ordinary_failure
-from lclang.error.source_excerpt import render_definition_location
+from lclang.error.source_excerpt import render_definition_location, render_source_excerpt
+from lclang.error.using_diagnostics import ACTIVE_USING_DIAGNOSTICS
 from lclang.error.verbose_context import (
     ACTIVE_VERBOSE_CONTEXT,
     allocate_verbose_id,
@@ -26,6 +27,7 @@ from lclang.lang.engine.evaluator.display_capture import (
     DisplayRequest,
     render_display_value,
 )
+from lclang.lang.engine.evaluator.evaluation_journal import ACTIVE_TARGET_EXPRESSION
 from lclang.lang.engine.printer import to_source
 from lclang.utils.value_representation import safe_repr
 
@@ -48,11 +50,14 @@ def scope_display_request(
         return
     masked = masked or ACTIVE_MASKED_VALUE.get() or (parent is not None and parent.masked)
     request = DisplayRequest(name, name + ": <pending>", execution, masked=masked)
+    if node is not None and node is ACTIVE_TARGET_EXPRESSION.get():
+        request.kind = "target"
     if node is not None and execution == "new evaluation":
         expression = safe_repr(
             node, renderer=lambda value: to_source(node), max_length=None, masked=masked
         )
-        request.label = f"{name}: {expression} ({render_definition_location(node.span)})"
+        label = "using target" if request.kind == "target" else name
+        request.label = f"{label}: {expression} ({render_definition_location(node.span)})"
     if parent is not None:
         parent.children.append(request)
     elif (capture := ACTIVE_DISPLAY_CAPTURE.get()) is not None:
@@ -170,6 +175,25 @@ def finish_display_request(request: DisplayRequest) -> None:
         return
     details = () if request.result is None else (("Result", request.result),)
     identity = "" if request.evaluation_id is None else f" (evaluation {request.evaluation_id})"
+    target = ACTIVE_TARGET_EXPRESSION.get()
+    if request.kind == "target" and target is not None:
+        using = ACTIVE_USING_DIAGNOSTICS.get()
+        span = target.span if using is None else using.span
+        original = safe_repr(
+            "\n".join(render_source_excerpt(span, underline=False)),
+            renderer=str,
+            masked=request.masked,
+        )
+        emit_verbose_record(
+            "evaluate",
+            f"Resolved using target: {request.result} "
+            f"({render_definition_location(span)}){identity}",
+            context_details=(("Input", original), ("Target", request.label)),
+            tree=tree,
+            evaluation_id=request.evaluation_id,
+            show_tree=False,
+        )
+        return
     emit_verbose_record(
         "evaluate",
         f"Evaluation tree for {request.name}{identity}",

@@ -233,12 +233,12 @@ Error in evaluating result [LCL132811: callback failed (2 sub-exceptions)]
 │        └─ Error in handling failure [LCL022890: nested (1 sub-exception)]: ExceptionGroup: nested (1 sub-exception)
 │           └─ Failure 1
 │              └─ Error in handling failure [APP/RULE: business rule]
-├─ result: callback() ("<string>":1:1)
-│  ├─ callback: *masked* (external)
-│  └─ Source: "<string>":1:1
-│     callback()
-│     ^^^^^^^^^^
 ├─ Operation: callback failed
+├─ result: callback() ("<string>":1:1)
+│  └─ callback: *masked* ("<string>":1:1)
+│     └─ Source: "<string>":1:1
+│        callback()
+│        ^^^^^^^^^^
 ├─ Failure 1
 │  └─ Error in handling failure [LCL132811: read failed]
 │     ├─ Cause
@@ -250,9 +250,6 @@ Error in evaluating result [LCL132811: callback failed (2 sub-exceptions)]
    └─ Error in handling failure [LCL132811: nested (1 sub-exception)]
       ├─ Cause
       │  └─ ExceptionGroup: nested (1 sub-exception) (already shown)
-      ├─ Source: "<string>":1:1
-      │  callback()
-      │  ^^^^^^^^^^
       ├─ Operation: nested
       └─ Failure 1
          └─ LclValidationError [APP/RULE: business rule] (already shown)
@@ -266,12 +263,12 @@ Error in evaluating result [LCL132811: callback failed (2 sub-exceptions)]
 │        └─ Error in handling failure [LCL022890: nested (1 sub-exception)]: ExceptionGroup: nested (1 sub-exception)
 │           └─ Failure 1
 │              └─ Error in handling failure [APP/RULE: business rule]
-├─ result: callback() ("<string>":1:1)
-│  ├─ callback: *masked* (external)
-│  └─ Source: "<string>":1:1
-│     callback()
-│     ^^^^^^^^^^
 ├─ Operation: callback failed
+├─ result: callback() ("<string>":1:1)
+│  └─ callback: *masked* ("<string>":1:1)
+│     └─ Source: "<string>":1:1
+│        callback()
+│        ^^^^^^^^^^
 ├─ Failure 1
 │  └─ Error in handling failure [LCL132811: read failed]
 │     ├─ Cause
@@ -283,9 +280,6 @@ Error in evaluating result [LCL132811: callback failed (2 sub-exceptions)]
    └─ Error in handling failure [LCL132811: nested (1 sub-exception)]
       ├─ Cause
       │  └─ ExceptionGroup: nested (1 sub-exception) (already shown)
-      ├─ Source: "<string>":1:1
-      │  callback()
-      │  ^^^^^^^^^^
       ├─ Operation: nested
       └─ Failure 1
          └─ LclValidationError [APP/RULE: business rule] (already shown)
@@ -297,12 +291,12 @@ Error in evaluating result [LCL132811: unhandled errors in a TaskGroup (2 sub-ex
 │     │  └─ Error in handling failure [LCL022890: first child]: OSError: first child
 │     └─ Failure 2
 │        └─ Error in handling failure [LCL022890: second child]: OSError: second child
-├─ result: callback() ("<string>":1:1)
-│  ├─ callback: *masked* (external)
-│  └─ Source: "<string>":1:1
-│     callback()
-│     ^^^^^^^^^^
 ├─ Operation: unhandled errors in a TaskGroup
+├─ result: callback() ("<string>":1:1)
+│  └─ callback: *masked* ("<string>":1:1)
+│     └─ Source: "<string>":1:1
+│        callback()
+│        ^^^^^^^^^^
 ├─ Failure 1
 │  └─ Error in handling failure [LCL132811: first child]
 │     ├─ Cause
@@ -404,23 +398,18 @@ asyncio.run(main())
 <!-- lclang-doc-output: stdout -->
 ```text
 Error in evaluating result [LCL136963: execution and cleanup failed]
-├─ result: try: 1 / 0 finally: 2 / 0 ("<string>":1:1)
-│  └─ Source: "<string>":1:1
-│     try: 1 / 0 finally: 2 / 0
-│     ^^^^^^^^^^^^^^^^^^^^^^^^^
-├─ Failure 1
-│  └─ Error in evaluating result [LCL131421: division by zero]
-│     ├─ Cause
-│     │  └─ ZeroDivisionError: division by zero
-│     └─ result: try: 1 / 0 finally: 2 / 0 ("<string>":1:1)
-│        └─ Source: "<string>":1:6
-│           try: 1 / 0 finally: 2 / 0
-│                ^^^^^
-└─ Failure 2
-   └─ Error in evaluating result [LCL131421: division by zero]
-      ├─ Cause
-      │  └─ ZeroDivisionError: division by zero
-      └─ result: try: 1 / 0 finally: 2 / 0 ("<string>":1:1)
+└─ result: try: 1 / 0 finally: 2 / 0 ("<string>":1:1)
+   ├─ Failure 1
+   │  └─ Error in evaluating result [LCL131421: division by zero]
+   │     ├─ Cause
+   │     │  └─ ZeroDivisionError: division by zero
+   │     └─ Source: "<string>":1:6
+   │        try: 1 / 0 finally: 2 / 0
+   │             ^^^^^
+   └─ Failure 2
+      └─ Error in evaluating result [LCL131421: division by zero]
+         ├─ Cause
+         │  └─ ZeroDivisionError: division by zero
          └─ Source: "<string>":1:21
             try: 1 / 0 finally: 2 / 0
                                 ^^^^^
@@ -482,12 +471,6 @@ asyncio.run(main())
 ```text
 body and exits:
 Error in evaluating result [LCL138911: execution and cleanup failed]
-├─ result: with first, second: 1 / 0 ("<string>":1:1)
-│  ├─ first: *masked* (external)
-│  ├─ second: *masked* (external)
-│  └─ Source: "<string>":1:1
-│     with first, second: 1 / 0
-│     ^^^^^^^^^^^^^^^^^^^^^^^^^
 ├─ Failure 1
 │  └─ Error in handling failure [LCL138911: execution and cleanup failed]
 │     ├─ Failure 1
@@ -1444,14 +1427,14 @@ Error in evaluating bad [LCL132811: mapping input (2 sub-exceptions)]
 │     │  └─ Error in handling failure [LCL022890: first]: ValueError: first
 │     └─ Failure 2
 │        └─ Error in handling failure [LCL022890: second]: OSError: second
-├─ bad: fail() ("<string>":1:1)
-│  ├─ fail: *masked* (external)
-│  └─ Source: "<string>":1:1
-│     fail()
-│     ^^^^^^
 ├─ Operation: mapping input
 ├─ Context: workflow mapping value <- bad
 ├─ Context: workflow task root
+├─ bad: fail() ("<string>":1:1)
+│  └─ fail: *masked* ("<string>":1:1)
+│     └─ Source: "<string>":1:1
+│        fail()
+│        ^^^^^^
 ├─ Failure 1
 │  └─ Error in handling failure [LCL132811: first]
 │     ├─ Cause
@@ -1477,14 +1460,14 @@ Error in running workflow task 'root.inner' [LCL535911: execution and cleanup fa
 │     │     │  └─ Error in handling failure [LCL022890: first]: ValueError: first
 │     │     └─ Failure 2
 │     │        └─ Error in handling failure [LCL022890: second]: OSError: second
-│     ├─ bad: fail() ("<string>":1:1)
-│     │  ├─ fail: *masked* (external)
-│     │  └─ Source: "<string>":1:1
-│     │     fail()
-│     │     ^^^^^^
 │     ├─ Operation: mapping input
 │     ├─ Context: workflow mapping value <- bad
 │     ├─ Context: workflow task root
+│     ├─ bad: fail() ("<string>":1:1)
+│     │  └─ fail: *masked* ("<string>":1:1)
+│     │     └─ Source: "<string>":1:1
+│     │        fail()
+│     │        ^^^^^^
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL132811: first]
 │     │     ├─ Cause
@@ -1520,14 +1503,14 @@ Error in running workflow task 'root.outer' [LCL535911: execution and cleanup fa
 │     │     │     │  └─ Error in handling failure [LCL022890: first]: ValueError: first
 │     │     │     └─ Failure 2
 │     │     │        └─ Error in handling failure [LCL022890: second]: OSError: second
-│     │     ├─ bad: fail() ("<string>":1:1)
-│     │     │  ├─ fail: *masked* (external)
-│     │     │  └─ Source: "<string>":1:1
-│     │     │     fail()
-│     │     │     ^^^^^^
 │     │     ├─ Operation: mapping input
 │     │     ├─ Context: workflow mapping value <- bad
 │     │     ├─ Context: workflow task root
+│     │     ├─ bad: fail() ("<string>":1:1)
+│     │     │  └─ fail: *masked* ("<string>":1:1)
+│     │     │     └─ Source: "<string>":1:1
+│     │     │        fail()
+│     │     │        ^^^^^^
 │     │     ├─ Failure 1
 │     │     │  └─ Error in handling failure [LCL132811: first]
 │     │     │     ├─ Cause

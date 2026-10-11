@@ -33,7 +33,66 @@ identifiers correlate verbose summaries, cache returns and exception output.
 `repr(error)` is a protected single-line summary; `str(error)` is the full tree.
 Ordinary LCL values and canonical `to_source` keep their existing meaning.
 
+Successful evaluations emit one completion event, followed by one tree for the
+root request. Dynamic using targets emit a single resolution event with the
+target path, declaration location and evaluation ID. Their expressions and
+dependencies remain in detached record metadata. Failed targets retain the
+expression, read values and loading route in the exception tree.
+
+Exception groups share identical evaluation prefixes and branch in member order.
+Failure IDs correlate reports; they do not suppress new evidence added by a
+wrapper. Each distinct failure retains its cause and innermost source excerpt.
+Python callables show their actual implementation's code location when available.
+Diagnostics do not open Python source files to locate a callable.
+
 ## Logger and CLI controls
+
+### Unhandled application exceptions
+
+`install_exception_hooks(*, traceback_style="compact", include_threads=True,
+loop=None)` installs explicit stderr reporting. Import it from `lclang.logger`.
+The returned `ExceptionHookInstallation.restore()` restores only handlers still
+owned by that installation. Native exceptions and control signals delegate to
+the previous handler. Passing a loop selects that loop alone; install and restore
+its handler on the loop's owning thread.
+
+Install hooks at application startup and keep them active until Python reports
+an uncaught failure. Restoring in a `finally` block before the failure reaches
+`sys.excepthook` would disable that report. Applications that catch failures can
+use `LclExceptionFormatter` instead. CLI already reports caught failures at its
+execution boundary and does not install these hooks.
+
+<!-- lclang-doc-exec -->
+```python
+import io
+import sys
+from contextlib import redirect_stderr
+
+from lclang.error import LclError
+from lclang.logger import install_exception_hooks
+
+previous = sys.excepthook
+installation = install_exception_hooks(include_threads=False)
+output = io.StringIO()
+try:
+    try:
+        raise LclError("billing failed", code="APP/BILLING")
+    except LclError as error:
+        original_trace = error.__traceback__
+        with redirect_stderr(output):
+            sys.excepthook(type(error), error, original_trace)
+        assert error.__traceback__ is original_trace
+finally:
+    installation.restore()
+assert sys.excepthook is previous
+assert "[APP/BILLING: billing failed]" in output.getvalue()
+assert "Python traceback:" in output.getvalue()
+```
+
+The hook and logger formatter show the LCL tree first, then application and
+external-library Python frames. Compact mode removes language implementation
+frames by module identity. Full mode restores them. Both leave the exception's
+original traceback, cause, context and group members available to the caller.
 
 `LoggerHandlerConfig.traceback_style` accepts `"compact"` (default) or `"full"`.
 The same field is available in mappings, `logger.traceback_style` in LCL and CLI

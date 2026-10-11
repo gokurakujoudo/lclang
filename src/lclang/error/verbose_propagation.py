@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 
 from lclang.error.exception_base import LclError
 from lclang.error.native_wrap import is_ordinary_failure
+from lclang.error.using_diagnostics import describe_using_subject
 from lclang.error.verbose_context import (
     ACTIVE_VERBOSE_LOGGER,
     VerboseLogger,
@@ -107,11 +108,15 @@ def emit_verbose_failure_batch(batch: VerboseFailureBatch, failed_id: str | None
     for identity, events in batch.events.items():
         cached = tuple(text for category, text in events if category == "Cached failures")
         heading = (
-            f"Could not evaluate {batch.name}"
+            f"Could not evaluate {describe_using_subject(batch.name)}"
             if identity == failed_id
-            else f"Failure observed while evaluating {batch.name}"
+            else f"Failure observed while evaluating {describe_using_subject(batch.name)}"
         )
-        details = () if not cached else (("Cached failures", ", ".join(cached)),)
+        details = (
+            ()
+            if not cached
+            else (("Cached failures", ", ".join(describe_using_subject(name) for name in cached)),)
+        )
         metadata = tuple(
             (category, "; ".join(text for kind, text in events if kind == category))
             for category in ("Propagation", "Cache owners")

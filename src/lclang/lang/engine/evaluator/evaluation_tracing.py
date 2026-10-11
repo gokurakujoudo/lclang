@@ -8,6 +8,8 @@ from lclang.error.verbose_context import ACTIVE_VERBOSE_CONTEXT
 from lclang.error.verbose_diagnostic import internal_render_value, internal_verbose_enabled
 from lclang.error.verbose_records import emit_verbose_record
 from lclang.lang.ast import LclAstNode, LclBinary, LclCall, LclCompare, LclName
+from lclang.lang.engine.evaluator.display_capture import render_display_value
+from lclang.lang.engine.evaluator.evaluation_journal import ACTIVE_TARGET_EXPRESSION
 from lclang.lang.engine.printer import to_source
 
 
@@ -36,9 +38,11 @@ def trace_evaluation_result(node: LclAstNode, result: object) -> None:
     """
     if not internal_verbose_enabled():
         return
+    if node is ACTIVE_TARGET_EXPRESSION.get():
+        return
     context = ACTIVE_VERBOSE_CONTEXT.get()
     name = context.request_path[-1] if context.request_path else "<expr>"
-    heading = f"Evaluated {name}: {internal_render_value(result)}"
+    heading = f"Evaluated {name}: {render_display_value(result)}"
     if context.evaluation_id is not None:
         heading += f" (evaluation {context.evaluation_id})"
     emit_verbose_record(

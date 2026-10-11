@@ -68,6 +68,8 @@ All of the following can be imported directly from `lclang.logger`:
 | `LoggerHandlerConfig` | Immutable declaration accepted by `use_logger_handler`. |
 | `LoggerRuntime` | Runtime yielded by the handler scope; read `metrics` for diagnostics. |
 | `LclExceptionFormatter` | Opt-in standard formatter with protected LCL trees and compact or full Python tracebacks. |
+| `install_exception_hooks` | Explicit stderr reporting for uncaught LCL exceptions in the main thread, worker threads and an optional selected loop. |
+| `ExceptionHookInstallation` | Installation handle with idempotent `restore()` that preserves later handler replacements. |
 | `ConsoleConfig`, `FileConfig`, `RotationConfig` | Resolved output policies returned by `resolved_console()` and `resolved_files()`. |
 | `RuntimeMetrics`, `SinkMetrics` | Detached aggregate and per-sink diagnostic snapshots. |
 

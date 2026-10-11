@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Diagnostics
+
+- Emit one completion event per new evaluation and concise using target results.
+  Share identical error-group prefixes while retaining distinct member evidence.
+- Preserve using target expressions, read values and failure IDs through loading
+  wrappers. Keep causes before the failed dependency tree.
+- Show Python callable implementation locations and actual nested invocations.
+- Add explicit `install_exception_hooks` for uncaught LCL failures in the main
+  thread, worker threads and a selected asyncio loop. Preserve original stacks
+  and prior handlers while sharing compact/full reporting with logger formatters.
+
 ### Packaging
 
 - Define the package version once in `lclang.__version__`. Hatchling metadata,

@@ -92,7 +92,7 @@ retain their native propagation behavior.
 | `message` | Description of the detected failure |
 | `span` | Source range, with its retained source snapshot when available |
 | `variable_stack` | Active definition names, from the request to the failure |
-| `evaluation_context` | Detached definition/function frames and values already read |
+| `evaluation_context` | Detached definition, LCL/Python call and using-target frames with values already read |
 | `config_stack` | Loading route, including source introductions and their ranges |
 | `masked` | Whether the failure was captured under masking |
 | `native_cause` | Protected description captured from a native exception |
@@ -117,6 +117,15 @@ independent notes list. Application exception subclasses can override
 fields. This hook copies state into an already allocated compatible error;
 it does not call the subclass constructor. Exception-group splitting keeps the
 selected member objects and arguments.
+
+Using wrappers preserve failure IDs and base diagnostic evidence while retaining
+their own operation message and declaration span. Equal IDs identify the same
+failure; a wrapper can still add a loading route or another distinct context.
+Groups share identical evaluation prefixes and retain members in their original
+order. `DiagnosticValue.callable_definition` and
+`EvaluationContextFrame.callable_definition` hold optional immutable
+`PythonCallableDefinition` metadata: qualified name, original code filename and
+one-based starting line. Missing metadata does not imply a guessed source.
 
 `LclValidationError` reports invalid types, invalid values, and declaration
 conflicts. `LclStateError` reports unavailable lifecycle operations. Neither is
@@ -1054,6 +1063,9 @@ inspect common failures.
 | `LCL622811` | Logging → Scopes → Initialize logger scope → External operation → Logging scope cleanup → cleanup failure | A logging scope cleanup operation failed. | Let an owned handler close or writer join raise `OSError`. | Inspect the cause; the scope attempts remaining cleanup and releases ownership. | LclErrorGroup (grouped failures) / LclLoggerError |
 | `LCL622890` | Logging → Scopes → Initialize logger scope → External operation → Native boundary failure → No further refinement | A native operation failed after entering this boundary. | A supplied value or implementation raises during `finish_cleanup`. | Inspect the native cause and the operation note. | LclErrorGroup (grouped failures) / LclLoggerError |
 | `LCL622911` | Logging → Scopes → Initialize logger scope → Invariant → Combined scope failures → composite failure | Logging execution and cleanup, or several cleanup operations, failed. | Raise in the logging scope and in its owned handler close. | Inspect every group member. | LclError |
+| `LCL623141` | Logging → Scopes → Install exception hooks → Input type → Numeric or boolean type → exception hook threads type | The hook thread flag is not Boolean. | Call `install_exception_hooks(include_threads=1)`. | Pass True or False. | LclValidationError |
+| `LCL623191` | Logging → Scopes → Install exception hooks → Input type → Other input type → exception hook loop type | The selected loop is not an AbstractEventLoop or None. | Call `install_exception_hooks(loop=object())`. | Pass an explicit event loop or None. | LclValidationError |
+| `LCL623890` | Logging → Scopes → Install exception hooks → External operation → Native boundary failure → No further refinement | A native operation failed while installing exception hooks. | A supplied loop raises from `set_exception_handler`. | Inspect the native cause and keep the previous handlers. | LclLoggerError / LclErrorGroup |
 | `LCL625811` | Logging → Scopes → Start logger sinks → External operation → Missing or closed value → startup failure | Log sink startup failed. | Call `use_logger_handler` when `isinstance(startup_error, Exception)` is true. | Inspect the retained cause and correct the failing operation. | LclErrorGroup (grouped failures) / LclLoggerError |
 | `LCL631111` | Logging → Sinks → Sink config → Input type → Text type → console stream type | The supplied value.stream: expected stdout, stderr, or a text stream. | Call `console_config` with `required input=None` for the required the supplied value.stream: expected stdout, stderr, or a text stream. | Supply the declared input type. | LclValidationError |
 | `LCL631191` | Logging → Sinks → Sink config → Input type → Other input type → sink directory type | The supplied value.directory: expected a path. | Call `file_config` with `directory=None` for the required the supplied value.directory: expected a path. | Supply the declared input type. | LclValidationError |
@@ -1224,7 +1236,10 @@ inspect common failures.
 | `LCL831141` | Core → Diagnostic records → Error context → Input type → Numeric or boolean type → diagnostic value requires a sourcespan and boolean mask | Diagnostic value requires a SourceSpan and Boolean mask. | Call `DiagnosticValue` with `self.span=None` for the required diagnostic value requires a sourcespan and boolean mask. | Supply the declared input type. | LclValidationError |
 | `LCL831181` | Core → Diagnostic records → Error context → Input type → Annotation or source type → config load declaration span must be a sourcespan or none | Config load declaration span must be a SourceSpan or None. | Call `ConfigLoadFrame` with `self.declaration_span=None` for the required config load declaration span must be a sourcespan or none. | Supply the declared input type. | LclValidationError |
 | `LCL831191` | Core → Diagnostic records → Error context → Input type → Other input type → config load origin must be a sourceorigin | Config load origin must be a SourceOrigin. | Call `ConfigLoadFrame` with `self.origin=None` for the required config load origin must be a sourceorigin. | Supply the declared input type. | LclValidationError |
+| `LCL831192` | Core → Diagnostic records → Error context → Input type → Other input type → callable definition type | Diagnostic callable metadata has an unsupported type. | Pass `callable_definition=1` to `DiagnosticValue`. | Pass PythonCallableDefinition or None. | LclValidationError |
 | `LCL831211` | Core → Diagnostic records → Error context → Input value → Empty value → diagnostic value name and type cannot be empty | Diagnostic value name and type cannot be empty. | Use an empty required value in `DiagnosticValue`. | Correct the invalid value or declaration. | LclValidationError |
+| `LCL831212` | Core → Diagnostic records → Error context → Input value → Empty value → callable definition text | Callable definition text is empty or not text. | Call `PythonCallableDefinition('', 'app.py', 1)`. | Provide nonempty qualified-name and filename text. | LclValidationError |
+| `LCL831221` | Core → Diagnostic records → Error context → Input value → Range violation → callable definition line | Callable definition line is not a positive integer. | Call `PythonCallableDefinition('callback', 'app.py', 0)`. | Use a positive integer line; Boolean values are invalid. | LclValidationError |
 | `LCL831251` | Core → Diagnostic records → Error context → Input value → Invalid spelling or format → evaluation context name or kind is invalid | Evaluation context name or kind is invalid. | Call `EvaluationContextFrame` when `not self.name or self.kind not in {'definition', 'function', 'target'}` is true. | Correct the invalid value or declaration. | LclValidationError |
 | `LCL831890` | Core → Diagnostic records → Error context → External operation → Native boundary failure → No further refinement | A native operation failed after entering this boundary. | A supplied value or implementation raises during `DiagnosticValue`. | Inspect the native cause and the operation note. | LclErrorGroup (grouped failures) / LclValidationError |
 | `LCL841111` | Core → Binding names → Scopes → Input type → Text type → binding name must be a string | Binding name must be a string. | Call `validate_qualified_name` with `name=None` for the required binding name must be a string. | Supply the declared input type. | LclValidationError |
