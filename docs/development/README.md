@@ -100,8 +100,10 @@ distribution to PyPI after the full quality gate and builds pass. Prepare a
 new version in `src/lclang/__version__.py` and its changelog on `main`, then fast-forward
 `release` to the tested commit and push it. The publishing gate fetches `main`
 and rejects any commit that is not already in its history. It also requires a
-nonempty dated changelog section matching the stable `1.0.x` package version;
-manual tag builds must match that version, and an existing version tag must
+nonempty dated changelog section matching the stable `1.x.y` package version,
+with decimal minor and patch numbers without leading zeroes. Minor releases
+can include documented migration changes; patch releases stay on their minor line.
+Manual tag builds must match that version, and an existing version tag must
 point to the publishing commit.
 
 After PyPI succeeds, CI creates the matching version tag and GitHub Release at

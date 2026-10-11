@@ -35,7 +35,9 @@ def test_version_metadata_has_one_source() -> None:
     assert len(definitions) == 1
     path, version = definitions[0]
     assert path == Path("src/lclang/__version__.py")
-    assert isinstance(version, str) and re.fullmatch(r"1\.0\.(0|[1-9][0-9]*)", version)
+    assert isinstance(version, str) and re.fullmatch(
+        r"1\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", version
+    )
     assert import_module("lclang.__version__").__version__ == version
     assert read_package_version(ROOT) == version
 

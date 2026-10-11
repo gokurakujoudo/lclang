@@ -75,6 +75,9 @@ and other trusted configuration that has real relationships between values.
 python -m pip install lclang
 ```
 
+For upgrades from 1.0.16, follow the [1.1.0 migration steps](CHANGELOG.md#upgrade-from-1016)
+for imports, error handling and logging changes.
+
 ## Start in 60 seconds
 
 Define a reusable Module once. Create a fresh Frame for one calculation, supply
@@ -507,7 +510,7 @@ clearer as a normal function than as configuration policy.
 
 ## Production characteristics
 
-- Stable 1.0 release line.
+- Stable 1.x release line, with migration notes for minor releases.
 - Pure Python for Python 3.14 and newer.
 - Fully typed and ships a `py.typed` marker.
 - No third-party runtime dependencies.

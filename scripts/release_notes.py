@@ -12,8 +12,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def release_notes(root: Path) -> tuple[str, str]:
     """Return the stable version and its nonempty, dated changelog section."""
     version = read_package_version(root)
-    if not re.fullmatch(r"1\.0\.(0|[1-9][0-9]*)", version):
-        raise ValueError(f"Expected stable 1.0.x version, got {version!r}")
+    if not re.fullmatch(r"1\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", version):
+        raise ValueError(f"Expected stable 1.x.y version, got {version!r}")
     changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
     heading = rf"^## {re.escape(version)} - \d{{4}}-\d{{2}}-\d{{2}}[ \t]*$"
     matches = list(re.finditer(heading, changelog, re.MULTILINE))

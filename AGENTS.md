@@ -9,7 +9,7 @@ reference documentation before changing the project.
 - Production package root: `src/lclang`.
 - Runtime: Python 3.14 or newer; no third-party runtime dependencies.
 - License: MIT.
-- Release line: stable 1.0.
+- Release line: stable 1.x; minor releases document any required migration.
 - Security model: trusted configuration language, not a hostile-code sandbox.
 - Platform support: OS-independent pure Python, with platform-specific behavior
   verified in the applicable environment.
@@ -172,7 +172,7 @@ Use this lifecycle when a version release is requested:
 `version update -> tested PR -> squash merge to main -> fast-forward release
 -> CI verification/build -> PyPI -> version tag and GitHub Release`.
 
-1. Prepare the requested unused stable `1.0.x` version on the feature branch,
+1. Prepare the requested unused stable `1.x.y` version on the feature branch,
    or on a dedicated branch using the issue/PR workflow above. Update
    `src/lclang/__version__.py`; dynamic build metadata follows that source. Move the
    changes being released into a nonempty `CHANGELOG.md` section named
@@ -267,7 +267,7 @@ Keep public documentation in English.
 - `docs/reference/`: language and public API contracts.
 - `docs/tutorials/`: executable user workflows and examples.
 - `tests/`: behavioral, source smoke, and executable documentation contracts.
-- `progress.md`: concise inventory of the stable 1.0 feature set.
+- `progress.md`: concise inventory of the stable 1.x feature set.
 - `README.md`: user-visible implemented capability only.
 - `pyproject.toml`: supported Python and tool configuration.
 - `CHANGELOG.md`: user-visible changes and dated release notes.
