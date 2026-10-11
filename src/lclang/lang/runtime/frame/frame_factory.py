@@ -17,12 +17,12 @@ if TYPE_CHECKING:
 from collections.abc import Mapping
 from dataclasses import dataclass
 
-from lclang.common.binding_mask import normalize_masked_mapping
-from lclang.common.identifiers import FrameId
+from lclang.lang.common.identifiers import FrameId
 from lclang.lang.runtime.frame.evaluation_limit import EvaluationLimits
 from lclang.lang.runtime.frame.frame import Frame
 from lclang.lang.runtime.module import Module
 from lclang.lang.runtime.preset import Preset
+from lclang.utils.binding_mask import normalize_masked_mapping
 
 
 @guard_constructor(LclValidationError, RuntimeErrorCode.E39_FRAME_FACTORY_NATIVE_FAILURE)

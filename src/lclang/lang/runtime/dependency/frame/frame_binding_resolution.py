@@ -14,7 +14,7 @@ from lclang.lang.runtime.frame.binding_lookup import select_binding, walk_hierar
 if TYPE_CHECKING:
     from lclang.lang.runtime.frame.frame import Frame
 
-from lclang.common.identifiers import FrameId
+from lclang.lang.common.identifiers import FrameId
 from lclang.lang.runtime.dependency.frame.frame_dependency_graph import FrameDependencyBinding
 
 

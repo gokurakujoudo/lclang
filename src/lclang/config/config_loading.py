@@ -8,7 +8,6 @@ from __future__ import annotations
 from collections.abc import Mapping
 from pathlib import Path
 
-from lclang.common.identifiers import FrameId
 from lclang.config.config_loader import ConfigLoader
 from lclang.config.file_resolver import FileConfigResolver
 from lclang.config.loaded_config import Config
@@ -17,6 +16,7 @@ from lclang.config.source_resolver import ConfigSourceResolver
 from lclang.error import ConfigurationErrorCode, LclConfigError
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_async_failure
+from lclang.lang.common.identifiers import FrameId
 from lclang.lang.runtime import EvaluationLimits, Frame, Preset
 
 

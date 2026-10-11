@@ -2,7 +2,6 @@
 
 import pytest
 
-from lclang.common.identifiers import VarName
 from lclang.error import LclValidationError
 from lclang.lang.ast import LclConstant, LclDictUnpack, LclKeyValue, LclName
 from lclang.lang.ast.comprehension_nodes import (
@@ -12,6 +11,7 @@ from lclang.lang.ast.comprehension_nodes import (
     LclListComprehension,
     LclSetComprehension,
 )
+from lclang.lang.common.identifiers import VarName
 
 
 def clause() -> LclComprehensionClause:

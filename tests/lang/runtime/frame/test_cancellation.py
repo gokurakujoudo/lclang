@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from lclang.common.identifiers import FrameId, ModuleName
+from lclang.lang.common.identifiers import FrameId, ModuleName
 from lclang.lang.engine.parser import parse_expression
 from lclang.lang.runtime import Frame, Module
 

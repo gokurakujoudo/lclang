@@ -31,7 +31,6 @@ def test_code_vocabularies_have_descriptive_public_names_and_order() -> None:
     "first",
     [
         "error",
-        "common",
         "lang",
         "lang.common",
         "lang.ast",

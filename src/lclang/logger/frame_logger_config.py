@@ -115,8 +115,7 @@ async def resolve_logger_config(frame: Frame, verbose: bool = False) -> LoggerHa
     except LclValidationError as error:
         path = error.message.partition(":")[0]
         failure = copy(error)
-        failure.message = f"{error.message} (source: {logger_source(frame, path)})"
-        failure.args = (failure.message,)
+        failure.args = (f"{error.message} (source: {logger_source(frame, path)})",)
         raise failure from error.__cause__
     return verbose_config(config) if verbose else config
 

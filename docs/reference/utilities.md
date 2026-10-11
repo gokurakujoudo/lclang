@@ -4,7 +4,7 @@
 
 `await lclang.utils.invoke(callback, *args, **kwargs)` calls a synchronous or
 asynchronous callable exactly once, then resolves any returned awaitables using
-the interpreter's existing awaitable resolver. Its type signature retains the
+the shared utility resolver. Its type signature retains the
 callback's parameters and final return type. Ordinary values retain identity;
 exceptions and cancellation propagate unchanged. The helper creates no thread,
 background task, or synchronous event-loop boundary.
@@ -29,6 +29,9 @@ It also exposes these functions:
 `parse_ymd` converts strict eight-character `YYYYMMDD` strings to dates;
 `to_ymd` returns that string format. Integer inputs are rejected. `recursive(builder)` returns an eager fixed-point
 function suitable for recursive LCL programs.
+
+Python callers can import `parse_ymd` and `to_ymd` from `lclang.utils`; neither
+helper loads the LCL interpreter.
 
 ## Standard namespaces
 
@@ -110,6 +113,10 @@ See the [executable Python and LCL examples](../tutorials/16-python-utilities.md
 missing names return the default and reads never snapshot or mutate the process
 environment. The canonical LCL `env` utility adds scoped Frame overrides on top
 of this view.
+
+Python `env.field_names()` returns sorted Unicode identifier names, including
+language keywords. The Frame adapter removes names reserved by LCL from its
+attribute listing; `env.get(name)` still supports those names explicitly.
 
 Process logging lives in `lclang.logger`. Its two async entry points are
 `use_logger_handler(config)` and `use_logger(name=None, prefix="", emit_level=0)`.
@@ -232,3 +239,131 @@ See [errors and diagnostic codes](errors.md) for exception fields, specific
 codes, cause chains, and executable troubleshooting examples. Ordinary library
 validation uses `LclValidationError`; native callback and operation failures
 retain their original exception in `__cause__`.
+
+## Awaitable resolution
+
+Import `resolve_awaitable` from `lclang.utils` to unwrap a value that may contain
+several layers of awaitables. Immediate values retain their identity. The helper
+awaits each layer in the current task; it creates no task, thread or event loop.
+Failures and cancellation propagate unchanged. The caller owns any resources
+acquired by the awaited operations.
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+
+from lclang.utils import resolve_awaitable
+
+
+async def main():
+    async def inner():
+        return 42
+
+    async def outer():
+        return inner()
+
+    value = []
+    assert await resolve_awaitable(value) is value
+    assert await resolve_awaitable(outer()) == 42
+
+
+asyncio.run(main())
+```
+
+The outer coroutine returns another coroutine, which resolves to `42`. The
+ordinary list passes through unchanged. Library boundaries that add diagnostic
+codes use a separate error adapter; the utility itself preserves the exception.
+
+## Binding masks
+
+`split_masked_name`, `normalize_masked_mapping` and `normalize_masked_names`
+operate on string keys without parsing LCL. A single trailing `!` marks a key as
+masked. Normalization returns a new dictionary and a `frozenset` of exact names;
+values remain shared. A collision such as `token` and `token!`, a malformed
+marker, or an explicit mask without a matching key raises `LclValidationError`.
+These helpers record masking metadata. Apply that metadata when rendering values.
+
+<!-- lclang-doc-exec -->
+```python
+from lclang.utils import (
+    MASKED_VALUE,
+    normalize_masked_mapping,
+    normalize_masked_names,
+    safe_repr,
+    split_masked_name,
+)
+
+secret = ["token-value"]
+values, masks = normalize_masked_mapping({"token!": secret, "count": 3})
+assert values == {"token": ["token-value"], "count": 3}
+assert values["token"] is secret
+assert masks == frozenset({"token"})
+assert split_masked_name("count") == ("count", False)
+assert normalize_masked_names(["token", "token"]) == masks
+assert safe_repr(values["token"], masked="token" in masks) == MASKED_VALUE
+```
+
+`token!` becomes `token`, while its payload retains identity. The mask makes
+`safe_repr` return `*masked*` without inspecting the payload.
+
+## Default declarations
+
+`DefaultBinding`, `DefaultOmission` and `NO_DEFAULT` describe defaults for Python
+integrations. `NO_DEFAULT` distinguishes omission from an explicit `None`.
+A declaration holds either a value or a no-argument factory. Construction never
+calls the factory. The consumer decides when to call it and whether to await its
+result; supplying both forms raises `LclValidationError`.
+
+<!-- lclang-doc-exec -->
+```python
+from lclang.utils import DefaultBinding, DefaultOmission, NO_DEFAULT
+
+omitted = DefaultBinding()
+null = DefaultBinding(value=None)
+fresh = DefaultBinding(factory=list)
+assert omitted.value is NO_DEFAULT is DefaultOmission.ABSENT
+assert null.value is None
+assert fresh.factory is not None
+first = fresh.factory()
+second = fresh.factory()
+assert first == second == []
+assert first is not second
+```
+
+The literal null remains an explicit default. Calling the factory twice creates
+independent lists, so consumers can avoid sharing mutable defaults.
+
+## Scoped proxy markers
+
+`ScopedProxyFactory` and `ScopedProxyValue` are marker base classes for utilities
+whose consumers bind a value to a scope. They contain no language or execution
+logic. `scoped_proxy_factory(value)` returns a factory instance unchanged, or
+`None` for any other object. A consumer defines its own binding and lookup rules;
+the LCL runtime supplies its Frame adapter separately.
+
+<!-- lclang-doc-exec -->
+```python
+from dataclasses import dataclass
+
+from lclang.utils import ScopedProxyFactory, ScopedProxyValue, scoped_proxy_factory
+
+
+@dataclass(frozen=True)
+class ScopedLabel(ScopedProxyValue):
+    label: str
+
+
+class LabelFactory(ScopedProxyFactory):
+    def bind(self, scope, path):
+        return ScopedLabel(f"{scope}:{'.'.join(path)}")
+
+
+factory = LabelFactory()
+selected = scoped_proxy_factory(factory)
+assert selected is factory
+assert scoped_proxy_factory("ordinary") is None
+assert factory.bind("request-7", ("service", "label")).label == "request-7:service.label"
+```
+
+The application selects a factory and binds its label to one request. The marker
+does not cache the value or own the scope; the application controls both.

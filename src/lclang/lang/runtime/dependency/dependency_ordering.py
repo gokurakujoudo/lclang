@@ -9,9 +9,9 @@ from collections import deque
 from collections.abc import Set
 from typing import cast
 
-from lclang.common.identifiers import VarName
 from lclang.error import LclCircularDependencyError, LclEvaluationError, RuntimeErrorCode
 from lclang.error.operation_guard import guard_failure
+from lclang.lang.common.identifiers import VarName
 from lclang.lang.runtime.dependency.dependency_types import DependencyEdge, DependencyKind
 from lclang.lang.runtime.dependency.module_dependency_graph import DependencyGraph
 

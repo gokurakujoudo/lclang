@@ -20,11 +20,11 @@ from lclang.cli.declaration_validation import (
     require_lcl_qualified_name,
 )
 from lclang.cli.invocation_context import CliContext
-from lclang.common.binding_mask import normalize_masked_mapping
-from lclang.common.default_binding import DefaultBinding
 from lclang.error import CliErrorCode, LclCliError
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_async_failure, guard_constructor, guard_failure
+from lclang.utils.binding_mask import normalize_masked_mapping
+from lclang.utils.default_binding import DefaultBinding
 
 CommandHandler = Callable[[CliContext], Awaitable[CliResult]]
 

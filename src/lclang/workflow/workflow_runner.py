@@ -8,12 +8,12 @@ Defines ``add_unexecuted_statuses``, ``execute_task``, ``execute_workflow``.
 
 from __future__ import annotations
 
-from lclang.common.identifiers import ModuleName
 from lclang.error import LclWorkflowError, WorkflowErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.failure_aggregation import combine_failures
 from lclang.error.native_wrap import is_ordinary_failure, wrap_failure
 from lclang.error.operation_guard import guard_async_failure, guard_failure
+from lclang.lang.common.identifiers import ModuleName
 from lclang.lang.runtime import Frame, Module
 from lclang.workflow.context_execution import execute_context_scope
 from lclang.workflow.execution_context import (

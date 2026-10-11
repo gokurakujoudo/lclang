@@ -7,10 +7,10 @@ from collections.abc import Callable, Iterable, Set
 from dataclasses import fields, is_dataclass
 from typing import cast
 
-from lclang.common.binding_mask import MASKED_VALUE
 from lclang.error import LclUtilityError, UtilityErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_failure
+from lclang.utils.binding_mask import MASKED_VALUE
 
 # Unitless names identify this module's public downstream interface; helper constants stay local.
 __all__ = ["make_multi_log_lines", "make_repr_lines", "safe_repr"]

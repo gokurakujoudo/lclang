@@ -2,7 +2,6 @@
 
 import pytest
 
-from lclang.common.identifiers import VarName
 from lclang.error import LclSyntaxError
 from lclang.lang.ast import LclConstant, LclDictUnpack, LclKeyValue, LclName, LclStarred
 from lclang.lang.ast.comprehension_nodes import (
@@ -11,6 +10,7 @@ from lclang.lang.ast.comprehension_nodes import (
     LclListComprehension,
     LclSetComprehension,
 )
+from lclang.lang.common.identifiers import VarName
 from lclang.lang.engine.lexer import TokenKind, scan_tokens
 from lclang.lang.engine.parser import parse_expression
 from lclang.lang.engine.parser.comprehension_parser import (

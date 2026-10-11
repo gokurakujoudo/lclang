@@ -9,12 +9,12 @@ from contextlib import nullcontext
 from contextvars import ContextVar
 from dataclasses import dataclass
 
-from lclang.common.source_location import SourceSpan
 from lclang.error import LanguageErrorCode, LclEvaluationError
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_async_failure, guard_constructor
 from lclang.error.verbose_diagnostic import ACTIVE_MASKED_VALUE, internal_masked_scope
 from lclang.lang.ast import LclAstNode, LclFunction
+from lclang.lang.common.source_location import SourceSpan
 from lclang.lang.engine.evaluator.definition_scope import active_definition, definition_scope
 from lclang.lang.engine.evaluator.evaluation_callback import EvaluateNode
 from lclang.lang.engine.evaluator.evaluation_journal import collect_evaluation_context

@@ -7,10 +7,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from lclang.common.identifiers import FrameId
 from lclang.config import evaluate_config, load_config
 from lclang.error import LclNameError, LclValidationError
 from lclang.lang import LCL_IMPORTS, LCL_RUNTIME
+from lclang.lang.common.identifiers import FrameId
 from lclang.lang.runtime import DependencyKind, Frame, FrameDependencyGraph, build_dependency_graph
 
 

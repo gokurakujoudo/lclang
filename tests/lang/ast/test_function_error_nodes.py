@@ -2,7 +2,6 @@
 
 import pytest
 
-from lclang.common.identifiers import VarName
 from lclang.error import LclValidationError
 from lclang.lang.ast import LclConstant
 from lclang.lang.ast.function_error_nodes import (
@@ -12,6 +11,7 @@ from lclang.lang.ast.function_error_nodes import (
     LclRaise,
     ParameterKind,
 )
+from lclang.lang.common.identifiers import VarName
 
 
 def test_parameter_and_form_children_are_deterministic() -> None:

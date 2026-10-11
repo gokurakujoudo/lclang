@@ -4,10 +4,10 @@ from collections.abc import Coroutine
 
 import pytest
 
-from lclang.common.identifiers import SourceName, VarName
-from lclang.common.source_location import SourceOrigin, SourceSpan
 from lclang.error import LclEvaluationError, LclNameError
 from lclang.lang.ast import LclStringText
+from lclang.lang.common.identifiers import SourceName, VarName
+from lclang.lang.common.source_location import SourceOrigin, SourceSpan
 from lclang.lang.engine.evaluator.ast_interpreter import interpret_expression
 from lclang.lang.engine.parser import parse_expression
 

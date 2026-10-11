@@ -2,8 +2,8 @@
 
 import pytest
 
-from lclang.common.identifiers import ModuleName, VarName
 from lclang.error import LclNameError, LclValidationError
+from lclang.lang.common.identifiers import ModuleName, VarName
 from lclang.lang.engine.parser import parse_expression
 from lclang.lang.runtime import (
     DependencyGraph,

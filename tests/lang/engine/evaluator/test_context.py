@@ -5,10 +5,10 @@ import logging
 
 import pytest
 
-from lclang.common.identifiers import VarName
-from lclang.common.source_location import UNKNOWN_SPAN
 from lclang.error import LclEvaluationError, LclNameError
 from lclang.error.verbose_diagnostic import internal_trace, internal_verbose_scope
+from lclang.lang.common.identifiers import VarName
+from lclang.lang.common.source_location import UNKNOWN_SPAN
 from lclang.lang.engine.evaluator import MappingResolver, Resolver, ScopedResolver
 
 

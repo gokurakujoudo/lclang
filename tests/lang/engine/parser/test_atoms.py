@@ -2,10 +2,10 @@
 
 import pytest
 
-from lclang.common.identifiers import VarName
 from lclang.error import LclSyntaxError
 from lclang.lang import FRAME_PROXY
 from lclang.lang.ast import LclConstant, LclName
+from lclang.lang.common.identifiers import VarName
 from lclang.lang.engine.lexer import scan_tokens
 from lclang.lang.engine.parser.atom_parser import parse_atom
 from lclang.lang.engine.parser.token_stream import TokenStream

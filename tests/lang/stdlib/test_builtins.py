@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from lclang.common.identifiers import FrameId, ModuleName
+from lclang.lang.common.identifiers import FrameId, ModuleName
 from lclang.lang.engine.parser import parse_expression
 from lclang.lang.runtime import FrameFactory, Module
 from lclang.lang.stdlib import STANDARD_MANIFESTS, STANDARD_PRESET

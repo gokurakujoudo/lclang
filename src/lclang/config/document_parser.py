@@ -8,9 +8,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from lclang.common.binding_mask import split_masked_name
-from lclang.common.identifiers import SourceName, VarName
-from lclang.common.source_location import SourceOrigin
 from lclang.config.config_document import ConfigDeclaration, ConfigDefinition, ConfigDocument
 from lclang.config.declaration_parser import (
     following_boundary,
@@ -27,6 +24,9 @@ from lclang.error.configuration_exception import LclConfigSyntaxError, LclConfig
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_failure
 from lclang.error.verbose_diagnostic import internal_masked_scope
+from lclang.lang.common.identifiers import SourceName, VarName
+from lclang.lang.common.source_location import SourceOrigin
+from lclang.utils.binding_mask import split_masked_name
 
 
 @guard_failure(LclConfigError, ConfigurationErrorCode.E11_CONFIG_PARSING_NATIVE_FAILURE)

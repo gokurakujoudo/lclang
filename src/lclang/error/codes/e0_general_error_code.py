@@ -11,6 +11,8 @@ class GeneralErrorCode(StrEnum):
 
     Values follow domain, subsystem, operation, category, cause and refinement.
     Exx names retain the subsystem and operation digits within this domain.
+    Members ending in NATIVE_FAILURE wrap a Python exception from the named
+    operation; its original type is retained in ``__cause__``.
     """
 
     # Unitless identifiers follow the error reference and identify detected failure reasons.
@@ -32,7 +34,6 @@ class GeneralErrorCode(StrEnum):
     E21_GROUP_CONTENT = "LCL021111"
     E21_GROUP_MEMBER = "LCL021811"
     E21_GROUP = "LCL021910"
-    # Unexpected ordinary native Exception at this operation; __cause__ retains its type.
     E22_NATIVE_EXCEPTION_DIAGNOSTIC = "LCL022890"
     E31_CALL_SIGNATURE = "LCL031191"
 

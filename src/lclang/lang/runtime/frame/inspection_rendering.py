@@ -17,8 +17,6 @@ if TYPE_CHECKING:
     pass
 from typing import TYPE_CHECKING
 
-from lclang.common.binding_mask import MASKED_VALUE
-from lclang.common.scoped_proxy import ScopedProxyFactory
 from lclang.lang.ast import LclAstNode
 from lclang.lang.engine.printer import to_source
 from lclang.lang.runtime.frame.variable_inspection import (
@@ -27,6 +25,8 @@ from lclang.lang.runtime.frame.variable_inspection import (
 )
 from lclang.lang.stdlib.recursive_function import RecursiveFunction
 from lclang.lang.stdlib.stdlib_namespace import StdlibNamespace
+from lclang.utils.binding_mask import MASKED_VALUE
+from lclang.utils.scoped_proxy import ScopedProxyFactory
 
 
 @guard_failure(LclEvaluationError, RuntimeErrorCode.E51_VARIABLE_INSPECTION_NATIVE_FAILURE)

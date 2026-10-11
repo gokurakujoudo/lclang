@@ -17,8 +17,8 @@ if TYPE_CHECKING:
 
 from contextvars import ContextVar, Token
 
-from lclang.common.source_location import SourceSpan
 from lclang.error import LclCircularDependencyError
+from lclang.lang.common.source_location import SourceSpan
 
 type FlightKey = tuple[int, str]
 type FlightPath = tuple[FlightKey, ...]

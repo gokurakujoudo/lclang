@@ -9,10 +9,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from lclang.common.identifiers import SourceName
 from lclang.error import DataModelErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
+from lclang.lang.common.identifiers import SourceName
 
 
 @guard_constructor(

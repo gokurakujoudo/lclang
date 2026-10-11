@@ -9,13 +9,13 @@ from typing import cast
 
 from lclang.cli.cli_models import CliParams
 from lclang.cli.option_parser import lazy_override_expression
-from lclang.common.identifiers import SourceName
-from lclang.common.source_location import SourceOrigin, SourceSpan
 from lclang.error import CliErrorCode, LclCliError, LclCliUsageError, LclSyntaxError
 from lclang.error.operation_guard import guard_failure
 from lclang.error.verbose_diagnostic import internal_masked_scope
 from lclang.lang import parse_expression
 from lclang.lang.ast import LclAstNode
+from lclang.lang.common.identifiers import SourceName
+from lclang.lang.common.source_location import SourceOrigin, SourceSpan
 from lclang.lang.runtime import Frame
 
 

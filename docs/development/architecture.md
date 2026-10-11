@@ -8,11 +8,10 @@ modules:
 ```text
 src/lclang/
   __version__.py   sole package version definition
-  common/          cross-package source types, identifiers, defaults, masks and proxies
   error/           exceptions, diagnostic records, causes, groups and rendering
     codes/         e0-e9 enum vocabularies and parent-relative classifications
   lang/            preferred parsing and Module/Frame construction APIs
-    common/        language records, grammar version, names and declaration markers
+    common/        identifiers, source locations, records, grammar version and markers
     ast/           immutable node families and visitor contracts
     engine/
       lexer/       tokens, string scanning and f-string scanning
@@ -29,14 +28,19 @@ src/lclang/
   workflow/        task trees, execution, CLI and status
     mappings/      structure, annotations, binding and mapping diagnostics
   utils/
+    *.py           Python awaiting, masks, defaults, proxies, dates and value helpers
     calendar/      calendars, mappings, loaders and managers
 ```
 
-Cross-package primitives live in `common/`; language-specific shared values live
-in `lang/common/`. Errors live in `error/`; its root depends on code tables and
+Language-independent helpers live in `utils/`, which never imports `lang/`.
+Language-specific identifiers, source locations and shared values live in
+`lang/common/`. Errors live in `error/`; its root depends on code tables and
 masking state. Source-aware records defer source-type imports until validation,
-and rendering imports source adapters when called. This keeps primitive/error
-imports acyclic. Package `__init__.py` files curate exports with static imports.
+and source-free utility diagnostics avoid loading the language package.
+Frame-bound environment lookup lives in `lang/runtime/frame/environment_proxy.py`;
+live Python environment access and date conversion remain utilities. This keeps
+utility, language and error imports acyclic. Package `__init__.py` files curate
+exports with static imports.
 The root exports no API. Only `__init__.py` and the sole version definition,
 `__version__.py`, remain directly under `src/lclang`.
 Each production Python file has at most 200 code-bearing physical lines,
@@ -58,9 +62,8 @@ Tests mirror subsystem ownership:
 ```text
 tests/
   error/           code registry, constructor, protocol, cause and cleanup contracts
-  common/          cross-package identifiers, source locations and awaiting
   lang/            public language facade contracts
-    common/        language records and grammar-version contracts
+    common/        identifiers, source locations, records and grammar-version contracts
     ast/           node, visitor and round-trip contracts
     engine/        lexer/parser/printer/evaluator behaviour
     runtime/       module and preset behaviour
@@ -72,6 +75,7 @@ tests/
   cli/             argv, routing, stream and exit-code behaviour
   workflow/        definitions, execution, mappings, rendering and status
   utils/
+    test_*.py      Python utility behavior and language-independent imports
     calendar/      calendar strategies, algebra, mapping, loading, and LCL integration
   support/         reusable factories, fake resources and corpus loaders
   stress/          default full-suite scale, concurrency and leak scenarios

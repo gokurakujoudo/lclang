@@ -2,11 +2,11 @@
 
 import pytest
 
-from lclang.common.identifiers import SourceName, VarName
-from lclang.common.source_location import SourceOrigin, SourcePosition, SourceSpan
 from lclang.config import ConfigDefinition, ConfigDocument, ConfigUsing
 from lclang.error import LclValidationError
 from lclang.lang.ast import LclConstant
+from lclang.lang.common.identifiers import SourceName, VarName
+from lclang.lang.common.source_location import SourceOrigin, SourcePosition, SourceSpan
 from tests.config.support import source_span
 
 

@@ -5,7 +5,6 @@ Defines ``InternalPrattParser``, ``parse_expression``, ``parse_tokens``.
 
 from __future__ import annotations
 
-from lclang.common.source_location import SourceOrigin, merge_source_spans
 from lclang.error import LanguageErrorCode, LclSyntaxError
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
@@ -18,6 +17,7 @@ from lclang.lang.ast import LclAstNode, LclBinary, LclTuple, LclUnary
 from lclang.lang.ast.operator_nodes import BinaryOperator, UnaryOperator
 from lclang.lang.common.binding_declaration import get_override_marker, is_frame_proxy
 from lclang.lang.common.language_version import LCL_V1, LanguageVersion
+from lclang.lang.common.source_location import SourceOrigin, merge_source_spans
 from lclang.lang.engine.lexer import Token, TokenKind, scan_tokens
 from lclang.lang.engine.parser.atom_parser import parse_atom
 from lclang.lang.engine.parser.control_form_parser import parse_control_form

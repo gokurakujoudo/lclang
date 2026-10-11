@@ -6,8 +6,8 @@ from typing import cast
 
 import pytest
 
-from lclang.common.identifiers import FrameId, ModuleName, VarName
 from lclang.error import LclClosedFrameError, LclEvaluationError, LclNameError, LclValidationError
+from lclang.lang.common.identifiers import FrameId, ModuleName, VarName
 from lclang.lang.engine.parser import parse_expression
 from lclang.lang.runtime import DependencyKind, Frame, Module
 

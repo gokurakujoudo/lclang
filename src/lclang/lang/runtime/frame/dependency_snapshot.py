@@ -18,8 +18,8 @@ if TYPE_CHECKING:
     from lclang.lang.runtime.frame.frame import Frame
 
 
-from lclang.common.identifiers import VarName
 from lclang.error import LclNameError
+from lclang.lang.common.identifiers import VarName
 from lclang.lang.engine.evaluator.name_resolver import Resolver
 from lclang.lang.runtime.dependency.dependency_reconciliation import reconcile_dependency_edges
 from lclang.lang.runtime.dependency.dependency_snapshot import DependencySnapshot

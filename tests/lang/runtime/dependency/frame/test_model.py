@@ -2,9 +2,9 @@
 
 import pytest
 
-from lclang.common.identifiers import FrameId, VarName
-from lclang.common.source_location import UNKNOWN_SPAN
 from lclang.error import LclNameError, LclValidationError
+from lclang.lang.common.identifiers import FrameId, VarName
+from lclang.lang.common.source_location import UNKNOWN_SPAN
 from lclang.lang.runtime import (
     DependencyKind,
     FrameBindingKind,

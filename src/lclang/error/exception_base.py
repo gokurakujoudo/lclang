@@ -8,14 +8,14 @@ from __future__ import annotations
 
 from copy import copy
 from dataclasses import FrozenInstanceError
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Self, cast
 
 from lclang.error.codes.e0_general_error_code import GeneralErrorCode
 from lclang.error.mask_scope import ACTIVE_MASKED_VALUE
 
 if TYPE_CHECKING:
-    from lclang.common.source_location import SourceSpan
     from lclang.error.diagnostic_records import ConfigLoadFrame, EvaluationContextFrame
+    from lclang.lang.common.source_location import SourceSpan
 
 
 class ErrorType(type):
@@ -89,7 +89,6 @@ class LclError(Exception, metaclass=ErrorType):
         :raises LclValidationError: If *variable_stack* is not a tuple of strings.
         :raises LclValidationError: If the message, code, or a variable name is empty.
         """
-        from lclang.common.source_location import SourceSpan
         from lclang.error.diagnostic_records import (
             ConfigLoadFrame,
             EvaluationContextFrame,
@@ -101,10 +100,14 @@ class LclError(Exception, metaclass=ErrorType):
             raise LclValidationError(
                 "LCL error message and code must be strings", code=GeneralErrorCode.E11_MESSAGE_TYPE
             )
-        if span is not None and not isinstance(span, SourceSpan):
-            raise LclValidationError(
-                "LCL error span must be a SourceSpan or None", code=GeneralErrorCode.E11_SPAN_TYPE
-            )
+        if span is not None:
+            from lclang.lang.common.source_location import SourceSpan
+
+            if not isinstance(span, SourceSpan):
+                raise LclValidationError(
+                    "LCL error span must be a SourceSpan or None",
+                    code=GeneralErrorCode.E11_SPAN_TYPE,
+                )
         validate_record_tuple(config_stack, ConfigLoadFrame, "config stack")
         validate_record_tuple(evaluation_context, EvaluationContextFrame, "evaluation context")
         if not message:
@@ -128,7 +131,6 @@ class LclError(Exception, metaclass=ErrorType):
                 code=GeneralErrorCode.E11_MESSAGE_EMPTY,
             )
         super().__init__(message)
-        self.message = message
         self.span = span
         self.code = selected_code
         self.variable_stack = variable_stack
@@ -137,6 +139,14 @@ class LclError(Exception, metaclass=ErrorType):
         self.masked = ACTIVE_MASKED_VALUE.get()
         self.native_cause: str | None = None
         self.binding_names: tuple[str, ...] = ()
+
+    @property
+    def message(self) -> str:
+        """Return the validated description held in the native exception arguments.
+
+        :returns: Read-only description, matching Python exception-group semantics.
+        """
+        return cast(str, self.args[0])
 
     def freeze_native_cause(self, cause: BaseException) -> None:
         """Retain the original native failure description without changing its object.
@@ -232,8 +242,8 @@ class LclError(Exception, metaclass=ErrorType):
                 "diagnostic copy target must have a compatible LCL error type",
                 code=GeneralErrorCode.E11_COPY_TARGET_TYPE,
             )
-        if not isinstance(target, ExceptionGroup):
-            target.message = self.message
+        if not isinstance(target, BaseExceptionGroup):
+            target.args = self.args
         target.span = self.span
         target.code = self.code
         target.variable_stack = self.variable_stack

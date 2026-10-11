@@ -9,10 +9,10 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import Protocol, TypeVar
 
-from lclang.common.source_location import UNKNOWN_SPAN, SourceSpan
 from lclang.error import DataModelErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
+from lclang.lang.common.source_location import UNKNOWN_SPAN, SourceSpan
 
 ResultT_co = TypeVar("ResultT_co", covariant=True)
 

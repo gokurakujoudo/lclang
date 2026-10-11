@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from lclang.common.source_location import SourceSpan
 from lclang.error import LanguageErrorCode, LclError, LclEvaluationError
 from lclang.error.failure_aggregation import combine_failures
 from lclang.error.native_wrap import is_ordinary_failure, wrap_failure
 from lclang.lang.ast import LclAssert, LclAstNode, LclCall, LclExceptHandler, LclRaise, LclTry
+from lclang.lang.common.source_location import SourceSpan
 from lclang.lang.engine.evaluator.evaluation_callback import EvaluateNode
 from lclang.lang.engine.evaluator.name_resolver import Resolver, ScopedResolver
 

@@ -1,19 +1,17 @@
 """Structured ordinary failure groups with Python splitting semantics.
 
-Defines ``LclErrorGroup``.
+Defines ``LclErrorGroup`` and ``validate_group_members``.
 """
 
 from collections.abc import Sequence
-from typing import Self
+from typing import Self, cast, overload
 
 from lclang.error.codes.e0_general_error_code import GeneralErrorCode
 from lclang.error.exception_base import LclError, LclValidationError, copy_failure_state
 from lclang.error.native_wrap import is_ordinary_failure, wrap_failure
 
 
-# ExceptionGroup owns a read-only C message descriptor; the shared LCL payload
-# receives the remaining declared diagnostic fields through the copy hook.
-class LclErrorGroup(ExceptionGroup, LclError):  # type: ignore[override]
+class LclErrorGroup(ExceptionGroup, LclError):
     """Retain several ordinary failures as one structured diagnostic.
 
     :param message: Nonempty description of the combined failure.
@@ -27,7 +25,7 @@ class LclErrorGroup(ExceptionGroup, LclError):  # type: ignore[override]
     def __new__(
         cls,
         message: str,
-        exceptions: Sequence[Exception],
+        exceptions: Sequence[BaseException],
         *,
         code: str = GeneralErrorCode.E21_GROUP,
     ) -> Self:
@@ -40,20 +38,8 @@ class LclErrorGroup(ExceptionGroup, LclError):  # type: ignore[override]
         :raises LclValidationError: If the message, code or members are invalid.
         """
         record: LclError = LclError(message, code=code)
-        if (
-            not isinstance(exceptions, Sequence)
-            or not exceptions
-            or any(
-                not isinstance(error, Exception) or not is_ordinary_failure(error)
-                for error in exceptions
-            )
-        ):
-            raise LclValidationError(
-                "error group requires a nonempty sequence of ordinary exceptions",
-                code=GeneralErrorCode.E21_GROUP_CONTENT,
-            )
         members: list[LclError] = []
-        for error in exceptions:
+        for error in validate_group_members(exceptions):
             if isinstance(error, LclError):
                 members.append(error)
             else:
@@ -65,7 +51,7 @@ class LclErrorGroup(ExceptionGroup, LclError):  # type: ignore[override]
     def __init__(
         self,
         message: str,
-        exceptions: Sequence[Exception],
+        exceptions: Sequence[BaseException],
         *,
         code: str = GeneralErrorCode.E21_GROUP,
     ) -> None:
@@ -76,15 +62,36 @@ class LclErrorGroup(ExceptionGroup, LclError):  # type: ignore[override]
         :param code: Diagnostic identifier already installed.
         """
 
-    # Python supplies ordinary members when splitting an ExceptionGroup. The
-    # generic BaseExceptionGroup overload also advertises control-signal members.
-    def derive(self, exceptions: Sequence[Exception]) -> Self:  # type: ignore[override]
+    @overload
+    def derive[E: Exception](self, exceptions: Sequence[E], /) -> ExceptionGroup[E]:  # noqa: D418
+        """Preserve the native ordinary-member typing contract.
+
+        :param exceptions: Selected ordinary exception members.
+        :returns: Same concrete group retaining the selected member types.
+        """
+        ...
+
+    @overload
+    def derive[E: BaseException](  # noqa: D418
+        self, exceptions: Sequence[E], /
+    ) -> BaseExceptionGroup[E]:
+        """Accept the native base-group signature while validating ordinary members.
+
+        :param exceptions: Selected members supplied through the base-group interface.
+        :returns: Same concrete group when every member is an ordinary failure.
+        :raises LclValidationError: If any member is a control signal.
+        """
+        ...
+
+    def derive(self, exceptions: Sequence[BaseException], /) -> BaseExceptionGroup[BaseException]:
         """Preserve diagnostic metadata when Python splits this group.
 
         :param exceptions: Members selected by subgroup or split operations.
         :returns: Same concrete group type with the selected members and original code.
         """
-        result = type(self)(self.message, exceptions, code=self.code)
+        result = ExceptionGroup.__new__(
+            type(self), self.message, validate_group_members(exceptions)
+        )
         self.copy_diagnostic_fields(result)
         copy_failure_state(self, result)
         return result
@@ -94,7 +101,7 @@ class LclErrorGroup(ExceptionGroup, LclError):  # type: ignore[override]
 
         :returns: Independent diagnostic state containing the same member objects.
         """
-        return self.derive(self.exceptions)
+        return cast(Self, self.derive(self.exceptions))
 
     def __str__(self) -> str:
         """Render the combined diagnostic followed by each preserved failure.
@@ -104,3 +111,22 @@ class LclErrorGroup(ExceptionGroup, LclError):  # type: ignore[override]
         from lclang.error.diagnostic_rendering import render_error
 
         return render_error(self)
+
+
+def validate_group_members(exceptions: Sequence[BaseException]) -> Sequence[Exception]:
+    """Require ordinary members before allocating or deriving an LCL group.
+
+    :param exceptions: Nonempty member sequence supplied by an application or Python.
+    :returns: Validated sequence with cancellation and iterator controls excluded.
+    :raises LclValidationError: If the sequence is empty or contains a control signal.
+    """
+    if (
+        not isinstance(exceptions, Sequence)
+        or not exceptions
+        or any(not is_ordinary_failure(error) for error in exceptions)
+    ):
+        raise LclValidationError(
+            "error group requires a nonempty sequence of ordinary exceptions",
+            code=GeneralErrorCode.E21_GROUP_CONTENT,
+        )
+    return cast(Sequence[Exception], exceptions)

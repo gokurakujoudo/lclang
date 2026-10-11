@@ -5,7 +5,6 @@ Defines ``parse_import``.
 
 from dataclasses import replace
 
-from lclang.common.source_location import SourceOrigin
 from lclang.config.config_document import ConfigImport
 from lclang.config.declaration_parser import (
     parse_using,
@@ -17,6 +16,7 @@ from lclang.config.source_coordinate import advance_position
 from lclang.error import ConfigurationErrorCode, LclConfigError, LclSyntaxError
 from lclang.error.configuration_exception import LclConfigSyntaxError
 from lclang.error.operation_guard import guard_failure
+from lclang.lang.common.source_location import SourceOrigin
 from lclang.lang.engine.lexer import TokenKind, scan_tokens
 
 

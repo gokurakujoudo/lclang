@@ -3,14 +3,14 @@
 Defines ``advance_position``, ``physical_end``, ``span_for_physical``, ``end_position``.
 """
 
-from lclang.common.source_location import (
+from lclang.error import ConfigurationErrorCode, LclConfigError
+from lclang.error.operation_guard import guard_failure
+from lclang.lang.common.source_location import (
     SourceOrigin,
     SourcePosition,
     SourceSpan,
     advance_source_position,
 )
-from lclang.error import ConfigurationErrorCode, LclConfigError
-from lclang.error.operation_guard import guard_failure
 
 
 @guard_failure(LclConfigError, ConfigurationErrorCode.E11_CONFIG_PARSING_NATIVE_FAILURE)

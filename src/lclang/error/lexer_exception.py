@@ -32,7 +32,6 @@ class EscapeDecodeError(LclSyntaxError):
            complete source document.
         """
         super().__init__(message, code=code)
-        self.message = message
         self.end = end
 
     def copy_diagnostic_fields(self, target: LclError) -> None:
@@ -66,7 +65,6 @@ class InternalLiteralScanError(LclSyntaxError):
            The offset is already adjusted for escape-decoder failures.
         """
         super().__init__(message, code=code)
-        self.message = message
         self.end = end
 
     def copy_diagnostic_fields(self, target: LclError) -> None:
@@ -101,7 +99,6 @@ class FStringScanError(LclSyntaxError):
            span reported to callers.
         """
         super().__init__(message, code=code)
-        self.message = message
         self.end = end
 
     def copy_diagnostic_fields(self, target: LclError) -> None:

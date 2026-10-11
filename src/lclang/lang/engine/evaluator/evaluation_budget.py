@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from typing import Protocol
 
-from lclang.common.source_location import SourceSpan
+from lclang.lang.common.source_location import SourceSpan
 
 
 class InternalEvaluationGuard(Protocol):

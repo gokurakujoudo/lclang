@@ -22,7 +22,7 @@ def coerce_calendar_date(value: date | str | int) -> date:
     :raises LclValidationError: If *value* has an unsupported type.
     :raises LclValidationError: If an integer or string is not a valid date.
     """
-    from lclang.lang.stdlib.date_conversion import parse_ymd
+    from lclang.utils.date_conversion import parse_ymd
 
     if isinstance(value, date):
         return value
@@ -58,7 +58,7 @@ class FewBusinessDaysBDCalendar(HardcodedBDCalendar):
         :param business_days: Sorted unique business dates.
         :returns: ``None``.
         """
-        from lclang.lang.stdlib.date_conversion import to_ymd
+        from lclang.utils.date_conversion import to_ymd
 
         self.business_day_values = business_days
         identifier = CalendarID(f"at({', '.join(to_ymd(d) for d in business_days)})")

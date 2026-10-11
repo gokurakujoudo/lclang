@@ -5,13 +5,13 @@ import logging
 
 import pytest
 
-from lclang.common.identifiers import SourceName
-from lclang.common.source_location import SourceOrigin
 from lclang.error import LclSyntaxError, LclValidationError
 from lclang.error.verbose_diagnostic import internal_verbose_scope
 from lclang.lang.ast import LclBinary, LclConstant, LclName, LclUnary
 from lclang.lang.ast.operator_nodes import BinaryOperator, UnaryOperator
+from lclang.lang.common.identifiers import SourceName
 from lclang.lang.common.language_version import LanguageVersion
+from lclang.lang.common.source_location import SourceOrigin
 from lclang.lang.engine.parser import parse_expression
 
 

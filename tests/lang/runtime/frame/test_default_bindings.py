@@ -5,10 +5,10 @@ from typing import cast
 
 import pytest
 
-from lclang.common.default_binding import DefaultBinding
 from lclang.error import LclNameError, LclValidationError
 from lclang.lang import FrameProxy, define_frame, define_module
 from lclang.lang.runtime.frame.default_frame_scope import create_default_frame, default_scope
+from lclang.utils.default_binding import DefaultBinding
 
 
 def test_binding_rejects_non_callable_factory() -> None:

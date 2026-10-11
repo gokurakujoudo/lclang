@@ -6,13 +6,13 @@ from typing import cast
 
 import pytest
 
-from lclang.common.source_location import UNKNOWN_SPAN
 from lclang.error import LclError, LclErrorGroup, LclEvaluationError, LclValidationError
 from lclang.error.cleanup_wait import settle_cleanup
 from lclang.error.diagnostic_records import ConfigLoadFrame
 from lclang.error.failure_aggregation import combine_failures
 from lclang.error.loading_context import derive_loading_error
 from lclang.lang import define_frame, define_module
+from lclang.lang.common.source_location import UNKNOWN_SPAN
 from tests.lang.engine.evaluator.context_support import SyncManager
 
 

@@ -3,10 +3,16 @@
 Defines ``render_source_location``, ``render_source_excerpt``.
 """
 
-from lclang.common.source_location import SourceSpan
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from lclang.error.codes.e8_data_model_error_code import DataModelErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_failure
+
+if TYPE_CHECKING:
+    from lclang.lang.common.source_location import SourceSpan
 
 
 @guard_failure(LclValidationError, DataModelErrorCode.E41_BINDING_NAME_VALIDATION_NATIVE_FAILURE)

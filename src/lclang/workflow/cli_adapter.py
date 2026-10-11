@@ -10,10 +10,10 @@ from typing import cast
 
 from lclang.cli import CliContext, CliResult, CliResultStatus, Command, ParameterDoc
 from lclang.cli.logger_parameter import logger_parameter
-from lclang.common.binding_mask import normalize_masked_mapping
 from lclang.error import LclCliUsageError, LclWorkflowError, WorkflowErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_failure
+from lclang.utils.binding_mask import normalize_masked_mapping
 from lclang.workflow.cli_parameter import expand_record_parameters
 from lclang.workflow.cli_status_logging import log_lunch_option, log_status_tree, status_lines
 from lclang.workflow.execution_context import WorkflowExecutionContext

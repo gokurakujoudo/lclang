@@ -9,8 +9,6 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
 
-from lclang.common.binding_mask import normalize_masked_mapping
-from lclang.common.identifiers import ModuleName
 from lclang.error import LclEvaluationError, RuntimeErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
@@ -18,10 +16,12 @@ from lclang.lang.ast import LclAstNode, LclConstant
 from lclang.lang.common.binding_declaration import real_binding_names
 from lclang.lang.common.binding_names import validate_binding_names, validate_real_conflicts
 from lclang.lang.common.frame_proxy_marker import FRAME_PROXY
+from lclang.lang.common.identifiers import ModuleName
 from lclang.lang.common.namespace_names import (
     validate_namespace_conflicts,
     validate_namespace_names,
 )
+from lclang.utils.binding_mask import normalize_masked_mapping
 
 
 @guard_constructor(LclValidationError, RuntimeErrorCode.E11_MODULE_CONSTRUCTION_NATIVE_FAILURE)

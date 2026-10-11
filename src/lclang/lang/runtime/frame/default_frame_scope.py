@@ -13,11 +13,11 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from lclang.common.default_binding import NO_DEFAULT, DefaultBinding
 from lclang.error import LclEvaluationError, RuntimeErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
 from lclang.lang.ast import LclCall, LclConstant
+from lclang.utils.default_binding import NO_DEFAULT, DefaultBinding
 
 if TYPE_CHECKING:
     from lclang.lang.runtime.frame.frame import Frame
@@ -50,7 +50,7 @@ def create_default_frame(bindings: Mapping[str, DefaultBinding]) -> Frame:
     :param bindings: Normalized or masked names with default declarations.
     :returns: Caller-owned Frame with fresh single-flight result/failure caches.
     """
-    from lclang.common.identifiers import ModuleName
+    from lclang.lang.common.identifiers import ModuleName
     from lclang.lang.runtime.frame.frame import Frame
     from lclang.lang.runtime.module import Module
 

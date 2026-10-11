@@ -4,9 +4,9 @@ import asyncio
 
 import pytest
 
-from lclang.common.source_location import UNKNOWN_SPAN
 from lclang.error import LclEvaluationError
 from lclang.lang.ast import LclAstNode, LclConstant, LclExceptHandler
+from lclang.lang.common.source_location import UNKNOWN_SPAN
 from lclang.lang.engine.evaluator.ast_interpreter import interpret_expression
 from lclang.lang.engine.evaluator.error_form_evaluation import (
     internal_matches,

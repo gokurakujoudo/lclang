@@ -10,10 +10,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from lclang.common.identifiers import VarName
 from lclang.error import LclEvaluationError, LclNameError, RuntimeErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_failure
+from lclang.lang.common.identifiers import VarName
 from lclang.lang.runtime.dependency.ast_dependency_analysis import analyze_dependencies
 from lclang.lang.runtime.frame.binding_lookup import (
     hierarchy_binding_names,

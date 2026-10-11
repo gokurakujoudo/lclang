@@ -5,7 +5,8 @@ package is pure Python, MIT licensed, fully typed, and has no third-party
 runtime dependencies.
 
 Public APIs are grouped under `lang`, `config`, `cli`, `workflow`, `utils`,
-`logger` and `error`. Shared primitives live in `common`; language-only values
+`logger` and `error`. Language-independent helpers live in `utils`, which has no
+language dependency. Language identifiers, source locations and shared values
 live in `lang.common`. Package metadata reads the sole `__version__.py` definition.
 
 ## Language

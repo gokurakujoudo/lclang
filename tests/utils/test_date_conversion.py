@@ -1,12 +1,11 @@
-"""Behavioural tests for locale-independent LCL calendar builtins."""
+"""Behavioural tests for locale-independent Python date conversion."""
 
 from datetime import date
 
 import pytest
 
 from lclang.error import LclValidationError
-from lclang.lang import define_frame, define_module
-from lclang.lang.stdlib.date_conversion import parse_ymd, to_ymd
+from lclang.utils.date_conversion import parse_ymd, to_ymd
 
 
 def test_date_helpers_round_trip_leap_day_and_early_year() -> None:
@@ -32,22 +31,3 @@ def test_date_helpers_reject_wrong_types() -> None:
         parse_ymd(20240229)  # type: ignore[arg-type]
     with pytest.raises(LclValidationError):
         to_ymd("20240229")  # type: ignore[arg-type]
-
-
-@pytest.mark.asyncio
-async def test_date_helpers_are_available_through_lcl_builtins() -> None:
-    """Canonical Frames parse and format dates through ordinary definitions."""
-    frame = define_frame(
-        define_module(
-            "dates",
-            {
-                "parsed": 'parse_ymd("20240229")',
-                "formatted": "to_ymd(parsed)",
-            },
-        )
-    )
-    try:
-        assert await frame.get("parsed") == date(2024, 2, 29)
-        assert await frame.get("formatted") == "20240229"
-    finally:
-        await frame.close()

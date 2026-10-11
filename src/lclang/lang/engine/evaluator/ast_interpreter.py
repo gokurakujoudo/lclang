@@ -9,7 +9,6 @@ from __future__ import annotations
 from collections.abc import Mapping, Sized
 from typing import Literal, cast
 
-from lclang.common.awaitable_resolution import resolve_awaitable
 from lclang.error import LanguageErrorCode, LclError, LclEvaluationError
 from lclang.error.operation_guard import guard_async_failure
 from lclang.error.verbose_diagnostic import (
@@ -77,6 +76,7 @@ from lclang.lang.engine.evaluator.name_resolver import MappingResolver, Resolver
 from lclang.lang.engine.evaluator.operator_evaluation import internal_evaluate_operation
 from lclang.lang.engine.evaluator.primary_evaluation import internal_evaluate_primary
 from lclang.lang.engine.printer import to_source
+from lclang.utils.awaitable_resolution import resolve_awaitable
 
 type ResolverSource = Resolver | Mapping[str, object] | None
 

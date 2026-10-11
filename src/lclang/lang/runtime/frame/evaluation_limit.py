@@ -18,7 +18,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 
-from lclang.common.source_location import SourceSpan
+from lclang.lang.common.source_location import SourceSpan
 from lclang.lang.engine.evaluator.evaluation_budget import (
     internal_has_guard,
     internal_install_guard,

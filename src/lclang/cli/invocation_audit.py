@@ -11,7 +11,6 @@ import logging
 
 from lclang.cli.cli_models import CliParams
 from lclang.cli.option_parser import OVERRIDE_OPTIONS
-from lclang.common.binding_mask import MASKED_VALUE, split_masked_name
 from lclang.error import CliErrorCode, LclCliError
 from lclang.error.operation_guard import guard_failure
 from lclang.error.verbose_diagnostic import internal_render_value
@@ -20,6 +19,7 @@ from lclang.lang.runtime import Frame
 from lclang.lang.runtime.frame.binding_lookup import find_scoped_binding
 from lclang.logger import Logger
 from lclang.logger.record_formatter import FILE_ONLY_ATTRIBUTE
+from lclang.utils.binding_mask import MASKED_VALUE, split_masked_name
 
 # Characters; the existing execution-banner layout fixes 51 for compact centered
 # headings independent of the terminal width.

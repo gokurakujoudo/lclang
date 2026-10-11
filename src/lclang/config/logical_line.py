@@ -8,12 +8,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from lclang.common.source_location import SourceOrigin, SourcePosition, SourceSnapshot, SourceSpan
 from lclang.config.source_coordinate import end_position, physical_end, span_for_physical
 from lclang.error import ConfigurationErrorCode, LclConfigError
 from lclang.error.configuration_exception import LclConfigSyntaxError
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
+from lclang.lang.common.source_location import (
+    SourceOrigin,
+    SourcePosition,
+    SourceSnapshot,
+    SourceSpan,
+)
 
 
 @guard_constructor(

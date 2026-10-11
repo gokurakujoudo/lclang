@@ -14,7 +14,7 @@ from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor
 
 if TYPE_CHECKING:
-    from lclang.common.source_location import SourceOrigin, SourceSpan
+    from lclang.lang.common.source_location import SourceOrigin, SourceSpan
 
 
 @guard_constructor(
@@ -45,7 +45,7 @@ class DiagnosticValue:
         :raises LclValidationError: If a snapshot field has an unsupported type.
         :raises LclValidationError: If the name or type label is empty.
         """
-        from lclang.common.source_location import SourceSpan
+        from lclang.lang.common.source_location import SourceSpan
 
         if not all(isinstance(item, str) for item in (self.name, self.type_name, self.value)):
             raise LclValidationError(
@@ -94,7 +94,7 @@ class EvaluationContextFrame:
         :raises LclValidationError: If a frame field has an unsupported type.
         :raises LclValidationError: If the name or category is invalid.
         """
-        from lclang.common.source_location import SourceSpan
+        from lclang.lang.common.source_location import SourceSpan
 
         if not isinstance(self.name, str) or not isinstance(self.expression, str):
             raise LclValidationError(
@@ -136,7 +136,7 @@ class ConfigLoadFrame:
 
         :raises LclValidationError: If any frame field has an unsupported type.
         """
-        from lclang.common.source_location import SourceOrigin, SourceSpan
+        from lclang.lang.common.source_location import SourceOrigin, SourceSpan
 
         if not isinstance(self.origin, SourceOrigin):
             raise LclValidationError(

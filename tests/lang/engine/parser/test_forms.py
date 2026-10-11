@@ -2,10 +2,10 @@
 
 import pytest
 
-from lclang.common.identifiers import VarName
 from lclang.error import LclSyntaxError
 from lclang.lang.ast import LclBinary, LclCall, LclList, LclName, LclTuple
 from lclang.lang.ast.function_error_nodes import LclAssert, LclFunction, LclRaise, ParameterKind
+from lclang.lang.common.identifiers import VarName
 from lclang.lang.engine.parser import parse_expression
 
 

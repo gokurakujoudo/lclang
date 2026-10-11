@@ -7,12 +7,12 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from lclang.common.identifiers import VarName
-from lclang.common.source_location import merge_source_spans
 from lclang.error import LanguageErrorCode, LclSyntaxError
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
 from lclang.lang.ast import LclAstNode, LclExceptHandler, LclTry, LclWith, LclWithItem
+from lclang.lang.common.identifiers import VarName
+from lclang.lang.common.source_location import merge_source_spans
 from lclang.lang.engine.lexer import TokenKind
 from lclang.lang.engine.parser.binding_validation import validate_binding_name
 from lclang.lang.engine.parser.token_stream import TokenStream

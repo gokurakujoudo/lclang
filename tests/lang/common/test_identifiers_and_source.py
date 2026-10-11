@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from lclang.common.identifiers import FrameId, ModuleName, SourceName, VarName
-from lclang.common.source_location import SourceOrigin, SourcePosition, SourceSpan
 from lclang.error import LclValidationError
+from lclang.lang.common.identifiers import FrameId, ModuleName, SourceName, VarName
+from lclang.lang.common.source_location import SourceOrigin, SourcePosition, SourceSpan
 
 
 def test_identifier_newtypes_preserve_strings_at_runtime() -> None:

@@ -4,8 +4,8 @@ import asyncio
 
 import pytest
 
-from lclang.common.identifiers import FrameId, ModuleName, VarName
 from lclang.error import LclClosedFrameError, LclEvaluationError
+from lclang.lang.common.identifiers import FrameId, ModuleName, VarName
 from lclang.lang.engine.parser import parse_expression
 from lclang.lang.runtime import Frame, Module
 from tests.lang.runtime.frame.lifecycle_support import (

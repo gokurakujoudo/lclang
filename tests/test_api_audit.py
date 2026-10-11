@@ -11,7 +11,6 @@ from typing import Any, get_args, get_type_hints
 
 import lclang
 import lclang.cli
-import lclang.common
 import lclang.config
 import lclang.error
 import lclang.lang
@@ -29,7 +28,6 @@ ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_MODULES = (
     lclang,
     lclang.lang,
-    lclang.common,
     lclang.error,
     lclang.lang.ast,
     lclang.lang.common,

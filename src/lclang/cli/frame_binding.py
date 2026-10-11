@@ -23,13 +23,13 @@ from lclang.cli.invocation_key import (
 )
 from lclang.cli.logger_parameter import collect_borrowed_console_values, logger_definitions
 from lclang.cli.parameter_metadata import DerivedParameterDoc, get_parameter_masks
-from lclang.common.identifiers import ModuleName
 from lclang.config import load_config
 from lclang.error import CliErrorCode, LclCliError, LclCliUsageError
 from lclang.error.exception_base import LclValidationError
 from lclang.error.failure_aggregation import combine_failures
 from lclang.error.operation_guard import guard_async_failure, guard_constructor, guard_failure
 from lclang.lang.ast import LclAstNode, LclConstant
+from lclang.lang.common.identifiers import ModuleName
 from lclang.lang.runtime import Frame, Module
 from lclang.lang.runtime.frame.default_frame_scope import attach_defaults, create_default_frame
 from lclang.lang.runtime.module_frame_factory import LCL_RUNTIME

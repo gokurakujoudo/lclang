@@ -7,11 +7,11 @@ from __future__ import annotations
 
 from collections.abc import Collection
 
-from lclang.common.identifiers import VarName
-from lclang.common.source_location import SourceSpan
 from lclang.error import LclEvaluationError, RuntimeErrorCode
 from lclang.error.operation_guard import guard_failure
 from lclang.lang.ast import LclAstNode, LclAttribute, LclName, LclSafeAttribute
+from lclang.lang.common.identifiers import VarName
+from lclang.lang.common.source_location import SourceSpan
 from lclang.lang.runtime.dependency.dependency_types import DependencyReference
 
 

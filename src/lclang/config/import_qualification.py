@@ -6,12 +6,12 @@ Defines ``qualify_import``, ``qualify_expression``, ``qualify_value``.
 from dataclasses import fields, replace
 from typing import cast
 
-from lclang.common.identifiers import VarName
-from lclang.common.source_location import SourceSpan
 from lclang.config.config_document import ConfigDefinition
 from lclang.error import ConfigurationErrorCode, LclConfigError
 from lclang.error.operation_guard import guard_failure
 from lclang.lang.ast import LclAstNode, LclName
+from lclang.lang.common.identifiers import VarName
+from lclang.lang.common.source_location import SourceSpan
 from lclang.lang.runtime.dependency.ast_dependency_analysis import analyze_dependencies
 
 

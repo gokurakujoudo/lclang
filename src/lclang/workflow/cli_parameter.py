@@ -8,10 +8,10 @@ from typing import get_origin
 
 from lclang.cli.cli_models import ParameterDoc
 from lclang.cli.parameter_metadata import DerivedParameterDoc
-from lclang.common.default_binding import DefaultBinding
 from lclang.error import LclWorkflowError, WorkflowErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_failure
+from lclang.utils.default_binding import DefaultBinding
 from lclang.utils.value_box import get_box_type
 from lclang.workflow.mappings.record_annotation import record_annotations
 

@@ -16,8 +16,8 @@ from lclang.error.operation_guard import guard_constructor, guard_failure
 if TYPE_CHECKING:
     from lclang.workflow.field_projection import TaskProjection
 
-from lclang.common.default_binding import NO_DEFAULT, DefaultBinding, DefaultOmission
 from lclang.lang.common.binding_names import validate_qualified_name
+from lclang.utils.default_binding import NO_DEFAULT, DefaultBinding, DefaultOmission
 
 
 @guard_constructor(LclValidationError, WorkflowErrorCode.E26_TASK_VARIABLE_NATIVE_FAILURE)

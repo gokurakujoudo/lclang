@@ -4,10 +4,10 @@ from collections.abc import AsyncIterator
 
 import pytest
 
-from lclang.common.identifiers import VarName
-from lclang.common.source_location import SourceSpan
 from lclang.error import LclEvaluationError
 from lclang.lang.ast import LclCall, LclConstant
+from lclang.lang.common.identifiers import VarName
+from lclang.lang.common.source_location import SourceSpan
 from lclang.lang.engine.evaluator.ast_interpreter import interpret_expression
 from lclang.lang.engine.parser import parse_expression
 

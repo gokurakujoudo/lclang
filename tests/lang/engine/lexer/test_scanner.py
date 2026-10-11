@@ -2,9 +2,9 @@
 
 import pytest
 
-from lclang.common.identifiers import SourceName
-from lclang.common.source_location import SourceOrigin
 from lclang.error import LclSyntaxError
+from lclang.lang.common.identifiers import SourceName
+from lclang.lang.common.source_location import SourceOrigin
 from lclang.lang.engine.lexer import TokenKind, scan_tokens
 
 

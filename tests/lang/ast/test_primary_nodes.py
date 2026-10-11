@@ -2,10 +2,10 @@
 
 import pytest
 
-from lclang.common.identifiers import VarName
 from lclang.error import LclValidationError
 from lclang.lang.ast import LclConstant
 from lclang.lang.ast.primary_nodes import LclAttribute, LclSafeAttribute, LclSlice, LclSubscript
+from lclang.lang.common.identifiers import VarName
 
 
 def test_attribute_subscript_and_slice_children_are_structural() -> None:

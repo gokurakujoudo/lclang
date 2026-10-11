@@ -7,11 +7,11 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from lclang.cli.cli_models import ParameterDoc
-from lclang.common.default_binding import DefaultBinding
 from lclang.error import CliErrorCode, LclCliError
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
 from lclang.lang.runtime import Frame
+from lclang.utils.default_binding import DefaultBinding
 
 
 @guard_constructor(

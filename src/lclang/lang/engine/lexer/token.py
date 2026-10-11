@@ -8,10 +8,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from lclang.common.source_location import SourceSpan
 from lclang.error import LanguageErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor
+from lclang.lang.common.source_location import SourceSpan
 
 
 class TokenKind(StrEnum):
