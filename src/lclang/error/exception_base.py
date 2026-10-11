@@ -59,6 +59,7 @@ class LclError(Exception, metaclass=ErrorType):
     :param config_stack: Immutable file-introduction frames, outermost first.
     :param evaluation_context: Detached active expression and used-value snapshots.
     :ivar binding_names: Conflicting declaration names, or an empty tuple.
+    :ivar verbose_failure_id: Optional process-local correlation ID assigned by tracing.
     :raises LclValidationError: If *variable_stack* is not a tuple of strings.
     :raises LclValidationError: If the message, code, or a variable name is empty.
 
@@ -139,6 +140,7 @@ class LclError(Exception, metaclass=ErrorType):
         self.masked = ACTIVE_MASKED_VALUE.get()
         self.native_cause: str | None = None
         self.binding_names: tuple[str, ...] = ()
+        self.verbose_failure_id: str | None = None
 
     @property
     def message(self) -> str:
@@ -252,6 +254,7 @@ class LclError(Exception, metaclass=ErrorType):
         target.masked = self.masked
         target.native_cause = self.native_cause
         target.binding_names = self.binding_names
+        target.verbose_failure_id = self.verbose_failure_id
 
     def __str__(self) -> str:
         """Render a detached multiline diagnostic without further evaluation.

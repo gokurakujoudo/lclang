@@ -6,12 +6,12 @@ Defines ``internal_verbose_enabled``, ``internal_render_value``, ``internal_trac
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
-from contextvars import ContextVar
 
 from lclang.error.mask_scope import ACTIVE_MASKED_VALUE
+from lclang.error.verbose_context import ACTIVE_VERBOSE_LOGGER, VerboseLogger, is_verbose_enabled
+from lclang.error.verbose_records import emit_verbose_record
 from lclang.utils.binding_mask import MASKED_VALUE
 from lclang.utils.value_representation import safe_repr
 
@@ -21,10 +21,6 @@ type ValueRenderer = Callable[[], str]
 # Unitless diagnostic context keys are local to this implementation. Logger state starts at None
 # and masking at False so ordinary execution remains silent and unmasked until an invocation
 # explicitly opts in.
-ACTIVE_VERBOSE_LOGGER: ContextVar[logging.Logger | None] = ContextVar(
-    "lclang_active_verbose_logger",
-    default=None,
-)
 
 
 def internal_verbose_enabled() -> bool:
@@ -32,7 +28,7 @@ def internal_verbose_enabled() -> bool:
 
     :returns: Whether trace values should be rendered and emitted.
     """
-    return ACTIVE_VERBOSE_LOGGER.get() is not None
+    return is_verbose_enabled()
 
 
 def internal_render_value(
@@ -64,21 +60,16 @@ def internal_trace(stage: str, message: str) -> None:
     :param message: One-line diagnostic payload.
     :returns: ``None``.
     """
-    logger = ACTIVE_VERBOSE_LOGGER.get()
-    if logger is not None:
-        logger.debug("[lclang.%s] %s", stage, message, stacklevel=2)
+    emit_verbose_record(stage, message)
 
 
 @contextmanager
-def internal_verbose_scope(logger: logging.Logger | None) -> Generator[None]:
+def internal_verbose_scope(logger: VerboseLogger | None) -> Generator[None]:
     """Activate one logger for the current context and inherited child Tasks.
 
     :param logger: Invocation logger, or ``None`` to retain silent behavior.
     :returns: Context manager iterator restoring the previous task-local logger.
     """
-    if logger is None:
-        yield
-        return
     token = ACTIVE_VERBOSE_LOGGER.set(logger)
     try:
         yield

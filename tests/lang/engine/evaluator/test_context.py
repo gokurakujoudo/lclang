@@ -2,6 +2,8 @@
 
 import io
 import logging
+from collections.abc import Awaitable
+from typing import cast
 
 import pytest
 
@@ -69,14 +71,16 @@ async def test_resolvers_trace_active_values_missing_names_and_await_failures() 
         with pytest.raises(LclEvaluationError):
             await mapping.resolve(VarName("bad"), span=UNKNOWN_SPAN)
         assert await scoped.resolve(VarName("local"), span=UNKNOWN_SPAN) == "value"
-        with pytest.raises(LclEvaluationError):
-            await scoped.resolve(VarName("bad_local"), span=UNKNOWN_SPAN)
+        deferred = await scoped.resolve(VarName("bad_local"), span=UNKNOWN_SPAN)
+        assert deferred is scoped.values["bad_local"]
+        with pytest.raises(RuntimeError, match="resolver failed"):
+            await cast(Awaitable[object], deferred)
     trace = output.getvalue()
-    assert "source=external-provided value=(int) 42" in trace
-    assert "source=missing" in trace
-    assert "source=external-provided error=(LclEvaluationError)" in trace
-    assert "source=local-provided value=(str) 'value'" in trace
-    assert "source=local-provided error=(LclEvaluationError)" in trace
+    assert "Read answer from external input: (int) 42" in trace
+    assert "No binding for missing" in trace
+    assert "Failed to read bad" in trace and "Type: LclEvaluationError" in trace
+    assert "Read local from local input: (str) 'value'" in trace
+    assert "Selected bad_local from local input; awaiting remains with the evaluator" in trace
 
 
 @pytest.mark.asyncio
@@ -89,7 +93,7 @@ async def test_mapping_resolver_accepts_masked_binding_spelling() -> None:
     with internal_verbose_scope(logger):
         result = await resolver.resolve(VarName("token"), span=UNKNOWN_SPAN)
     assert result == "secret"
-    assert "name='token' source=external-provided value=*masked*" in output.getvalue()
+    assert "Read token from external input: *masked*" in output.getvalue()
     values: dict[str, object] = {"token!": "secret"}
     mutable = MappingResolver(values)
     values["token"] = "collision"

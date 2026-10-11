@@ -11,11 +11,7 @@ from typing import Literal, cast
 
 from lclang.error import LanguageErrorCode, LclError, LclEvaluationError
 from lclang.error.operation_guard import guard_async_failure
-from lclang.error.verbose_diagnostic import (
-    internal_render_value,
-    internal_trace,
-    internal_verbose_enabled,
-)
+from lclang.error.verbose_context import scope_verbose_evaluation
 from lclang.lang.ast import (
     LclAssert,
     LclAstNode,
@@ -65,17 +61,17 @@ from lclang.lang.engine.evaluator.evaluation_budget import (
 )
 from lclang.lang.engine.evaluator.evaluation_journal import (
     ACTIVE_TARGET_EXPRESSION,
-    capture_evaluation_context,
     collect_evaluation_context,
     record_value_read,
 )
+from lclang.lang.engine.evaluator.evaluation_tracing import trace_evaluation_result
+from lclang.lang.engine.evaluator.failure_context import capture_node_failure
 from lclang.lang.engine.evaluator.fstring_evaluation import internal_evaluate_joined
 from lclang.lang.engine.evaluator.lcl_function import create_function
 from lclang.lang.engine.evaluator.logical_evaluation import internal_evaluate_logical
 from lclang.lang.engine.evaluator.name_resolver import MappingResolver, Resolver
 from lclang.lang.engine.evaluator.operator_evaluation import internal_evaluate_operation
 from lclang.lang.engine.evaluator.primary_evaluation import internal_evaluate_primary
-from lclang.lang.engine.printer import to_source
 from lclang.utils.awaitable_resolution import resolve_awaitable
 
 type ResolverSource = Resolver | Mapping[str, object] | None
@@ -95,31 +91,14 @@ async def interpret_expression(node: LclAstNode, resolver: ResolverSource = None
        Structured LCL failures pass unchanged; ordinary failures are wrapped and
        every result is recursively auto-awaited.
     """
-    try:
-        name = active_definition_stack()[-1] if active_definition_stack() else "<expr>"
+    name = active_definition_stack()[-1] if active_definition_stack() else "<expr>"
+    with scope_verbose_evaluation(name):
         kind: Literal["definition", "function", "target"] = (
             "target" if node is ACTIVE_TARGET_EXPRESSION.get() else "definition"
         )
         with collect_evaluation_context(name, node, kind=kind):
             result = await internal_evaluate(node, internal_coerce_resolver(resolver))
-    except BaseException as error:
-        if internal_verbose_enabled():
-            definition = " -> ".join(active_definition_stack()) or "<direct>"
-            internal_trace(
-                "evaluate",
-                f"definition={definition!r} "
-                f"expression={internal_render_value(node, lambda: to_source(node))} "
-                f"error={internal_render_value(error)}",
-            )
-        raise
-    if internal_verbose_enabled():
-        definition = " -> ".join(active_definition_stack()) or "<direct>"
-        internal_trace(
-            "evaluate",
-            f"definition={definition!r} "
-            f"expression={internal_render_value(node, lambda: to_source(node))} "
-            f"result={internal_render_value(result)}",
-        )
+        trace_evaluation_result(node, result)
     return result
 
 
@@ -159,16 +138,11 @@ async def internal_evaluate(node: LclAstNode, resolver: Resolver) -> object:
         token = internal_enter_node(node.span)
         return await internal_evaluate_node(node, resolver)
     except LclError as error:
-        if error.span is None:
-            error.span = node.span
-        error.attach_variable_stack(active_definition_stack())
-        if not error.evaluation_context:
-            error.attach_evaluation_context(capture_evaluation_context())
+        capture_node_failure(error, node)
         raise
     except Exception as error:
         wrapped = internal_wrap_failure(error, node.span, node=node)
-        wrapped.attach_variable_stack(active_definition_stack())
-        wrapped.attach_evaluation_context(capture_evaluation_context())
+        capture_node_failure(wrapped, node)
         raise wrapped from error
     finally:
         internal_leave_node(token)
@@ -231,7 +205,23 @@ async def internal_evaluate_node(node: LclAstNode, resolver: Resolver) -> object
             span=node.span,
             code=LanguageErrorCode.E39_UNSUPPORTED_AST_NODE,
         )
-    resolved = await resolve_awaitable(result)
+    try:
+        resolved = await resolve_awaitable(result)
+    except Exception as error:
+        failure = (
+            error
+            if isinstance(error, LclError)
+            else internal_wrap_failure(error, node.span, node=node)
+        )
+        phase = (
+            "awaiting function result"
+            if isinstance(node, LclCall)
+            else "awaiting expression result"
+        )
+        capture_node_failure(failure, node, phase=phase)
+        if failure is error:
+            raise
+        raise failure from error
     if isinstance(node, LclName):
         record_value_read(str(node.identifier), resolved, node.span)
     if isinstance(node, LclRecordDisplay):

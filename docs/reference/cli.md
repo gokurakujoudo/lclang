@@ -65,6 +65,18 @@ stay disabled and source filters remain effective. Preparation records are not
 replayed. Value rendering remains bounded and respects trailing-bang masks.
 `-v/--version` retains its existing meaning.
 
+Verbose records describe successful evaluations, input sources, cached values
+and shared results. A first failure includes a short reason, the actual
+execution phase and the request/owner context. Later propagation and cached
+failures reference the same failure identifier. The final exception diagnostic
+shows that identifier and retains complete source and value snapshots.
+
+Command execution and resource cleanup produce one final exception report on
+stderr. File reports retain the Python stacks and native causes; the traceback
+portion uses concise references for LCL exceptions whose full diagnostic was
+already shown. A later output failure is reported separately and references an
+earlier command failure when present. Successful command output remains stdout.
+
 Logger expressions can use `__as_of_date__`, `__dryrun__`, `__verbose__`,
 `__ymd__`, `__execution_timestamp__`, `__command__`, and `__cli_params__`.
 The date and command metadata retain the existing runtime-key semantics.

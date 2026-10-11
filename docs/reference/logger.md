@@ -151,6 +151,95 @@ produces the same immutable configuration used by CLI. The handler scope drains
 the queued record before the assertions read its permanent segment, then the
 Frame and temporary directory close.
 
+## Verbose execution diagnostics
+
+`use_verbose(logger, *, enabled=True)` selects a borrowed standard-library
+`logging.Logger` or `lclang.logger.Logger` for execution diagnostics. It is a
+synchronous context manager that can span `await`. It does not configure
+handlers, change logging levels, or own tasks. Child tasks inherit the selected
+context; callers remain responsible for awaiting them. Exit restores the prior
+context, including after cancellation. `enabled=False` or `logger=None` silences
+verbose diagnostics inside the scope, even when an outer scope is active.
+`enabled` must be Boolean. Diagnostics remain DEBUG records and obey the
+selected logger's levels and filters. Disabled tracing skips trace-only value
+rendering.
+
+Messages describe actual parsing, evaluation and lookup operations. Complex
+events use indented details; cache and fallback reads use short lines. Record
+extras include `lclang_verbose`, `lclang_stage`, `lclang_evaluation_id`,
+`lclang_failure_id` and an immutable `lclang_context` of text field pairs.
+Stages are `parse`, `evaluate`, `lookup` and `command`. Evaluation and failure
+identifiers are None when that event has no corresponding evaluation or failure.
+Handlers can filter these fields without parsing the message. Values are bounded
+and masked before they enter a record.
+
+The first observed failure has a short reason and execution context, including
+the requesting Frame, binding owner and lookup path when available. Later
+propagation, shared returns and cached failures reference its failure identifier.
+A cached failure was not evaluated again. Its identifier survives another
+verbose scope, diagnostic copies and exception-group derivation. A new failure
+object receives a new identifier. If tracing first observes an old cache entry,
+the record says so; it does not reconstruct earlier execution.
+
+Complete source excerpts, read-value snapshots, causes and Python tracebacks
+belong to the exception report. `LclError.verbose_failure_id` connects that report
+to the execution records. Error rendering includes the identifier when present;
+untraced failures keep their ordinary display. A caught exception still has a
+useful first verbose record even if the application does not log the exception.
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+import io
+import logging
+
+from lclang.error import LclError
+from lclang.lang import define_frame, define_module
+from lclang.logger import use_verbose
+
+
+async def main() -> None:
+    output = io.StringIO()
+    logger = logging.Logger("application.verbose", logging.DEBUG)
+    handler = logging.StreamHandler(output)
+    logger.addHandler(handler)
+    identity = None
+    module = define_module("pricing", {"total": "amount / divisor"})
+    try:
+        async with define_frame(module, preset={"amount": 39, "divisor": 0}) as frame:
+            with use_verbose(logger, enabled=False):
+                assert await frame.get("amount") == 39
+            assert output.getvalue() == ""
+            with use_verbose(logger, enabled=True):
+                for _ in range(2):
+                    try:
+                        await frame.get("total")
+                    except LclError as error:
+                        if identity is None:
+                            identity = error.verbose_failure_id
+                        assert identity is not None
+                        assert error.verbose_failure_id == identity
+                        assert f"(failure {identity})" in str(error)
+        text = output.getvalue()
+        assert text.count("Reason:") == 1
+        assert "cached failure" in text and "Cause:" not in text
+        assert identity is not None and identity in text
+    finally:
+        logger.removeHandler(handler)
+        handler.close()
+
+
+asyncio.run(main())
+```
+
+The disabled scope reads the external `amount` without producing a verbose
+record. The first `total` lookup reads `amount` and `divisor`, then fails during
+division. Its short failure record includes the request and lookup context. The second
+lookup returns the same failure from the Frame cache and references its identifier.
+The application owns the handler and captures the DEBUG records in memory.
+Neither failure is logged as an exception here; its complete diagnostic remains
+available through `str(error)` and retains the same identifier.
+
 ## Records and ownership
 
 `use_logger(name=None, prefix="", emit_level=0)` selects a stdlib logger;

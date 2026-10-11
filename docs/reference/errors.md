@@ -5,6 +5,14 @@ records, code tables, and rendering helpers live in `lclang.error`. Each builtin
 code has a specific meaning; argument names, source paths, and task names belong
 in the diagnostic message and context.
 
+`LclError.verbose_failure_id` is None until an enabled verbose logger first
+observes the failure. The process-local identifier survives propagation,
+diagnostic copies, group derivation and cached returns. Error rendering includes
+it when present. A newly combined group has its own identifier while its members
+retain theirs. This field does not replace the error code or change the retained
+source, value, cause or traceback snapshots. See [verbose diagnostics](logger.md#verbose-execution-diagnostics)
+for application-controlled logging scopes.
+
 See [Exceptions and grouped failures](exceptions.md) for the exception hierarchy,
 multiple-failure scenarios, diagnostic output and application handling examples.
 
@@ -1023,6 +1031,8 @@ inspect common failures.
 | `LCL621692` | Logging → Scopes → Context → State → Operation-specific failure → only one logger handler scope is allowed per process initialize a | Only one logger handler scope is allowed per process; initialize after fork. | Call `reserve` when `ACTIVE_RUNTIME is not None` is true. | Use the operation in its supported lifecycle state. | LclStateError |
 | `LCL621890` | Logging → Scopes → Context → External operation → Native boundary failure → No further refinement | A native operation failed after entering this boundary. | A supplied value or implementation raises during `LoggerRuntime`. | Inspect the native cause and the operation note. | LclErrorGroup (grouped failures) / LclLoggerError / LclValidationError |
 | `LCL622111` | Logging → Scopes → Initialize logger scope → Input type → Text type → logger name and prefix must be text | Logger name and prefix must be text. | Call `use_logger` with `name=None` for the required logger name and prefix must be text. | Supply the declared input type. | LclValidationError |
+| `LCL622141` | Logging → Scopes → Initialize logger scope → Input type → Numeric or boolean type → verbose enabled must be boolean | The verbose switch must be Boolean. | Enter `use_verbose(logger, enabled=1)`. | Pass True or False without coercion. | LclValidationError |
+| `LCL622191` | Logging → Scopes → Initialize logger scope → Input type → Other input type → verbose logger type | The verbose destination has an unsupported type. | Enter `use_verbose(object())`. | Pass a standard-library logger, an lclang Logger, or None. | LclValidationError |
 | `LCL622221` | Logging → Scopes → Initialize logger scope → Input value → Range violation → emit level must be a nonnegative integer | Emit_level must be a nonnegative integer. | Call `use_logger` when `type(emit_level) is not int or emit_level < 0` is true. | Correct the invalid value or declaration. | LclValidationError |
 | `LCL622691` | Logging → Scopes → Initialize logger scope → State → Operation-specific failure → logger handler scope is closing | Logger handler scope is closing. | Call `use_logger` when `runtime.handler.closing` is true. | Use the operation in its supported lifecycle state. | LclStateError |
 | `LCL622811` | Logging → Scopes → Initialize logger scope → External operation → Logging scope cleanup → cleanup failure | A logging scope cleanup operation failed. | Let an owned handler close or writer join raise `OSError`. | Inspect the cause; the scope attempts remaining cleanup and releases ownership. | LclErrorGroup (grouped failures) / LclLoggerError |

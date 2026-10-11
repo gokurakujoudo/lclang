@@ -4,7 +4,7 @@
 """Lazy Frame lookup, evaluation, and cache publication.
 
 Defines ``get_value``, ``evaluate_expression``, ``resolve_name``, ``get_resolved``,
-``read_selected_binding``, ``evaluate_definition``.
+``read_selected_binding``, ``read_binding_result``, ``evaluate_definition``.
 """
 
 from __future__ import annotations
@@ -19,15 +19,14 @@ if TYPE_CHECKING:
     from lclang.lang.runtime.frame.frame import Frame
 
 import asyncio
+import inspect
 from typing import Any, cast
 
 from lclang.error import LclNameError
 from lclang.error.awaitable_failure import resolve_operation_value
+from lclang.error.verbose_context import scope_verbose_request
 from lclang.error.verbose_diagnostic import (
     internal_masked_scope,
-    internal_render_value,
-    internal_trace,
-    internal_verbose_enabled,
 )
 from lclang.lang.common.identifiers import VarName
 from lclang.lang.common.source_location import SourceSpan
@@ -41,6 +40,13 @@ from lclang.lang.runtime.frame.binding_lookup import (
     find_scoped_factory,
     is_name_masked,
     select_binding,
+)
+from lclang.lang.runtime.frame.binding_tracing import (
+    describe_binding_execution,
+    trace_binding_failure,
+    trace_binding_value,
+    trace_cached_failure_publication,
+    trace_missing_binding,
 )
 from lclang.lang.runtime.frame.evaluation_flight import (
     internal_check_cycle,
@@ -78,20 +84,8 @@ async def get_value(requester: Frame, name: str, fallback: object = NO_FALLBACK)
     selected = select_binding(requester, name)
     if selected.owner is None:
         if fallback is NO_FALLBACK:
-            if internal_verbose_enabled():
-                internal_trace(
-                    "lookup",
-                    f"name={name!r} owner={str(frame.frame_id)!r} source=missing",
-                )
-            raise LclNameError(
-                f"unknown variable: {name}", code=RuntimeErrorCode.E33_UNKNOWN_VARIABLE
-            )
-        if internal_verbose_enabled():
-            internal_trace(
-                "lookup",
-                f"name={name!r} owner={str(frame.frame_id)!r} source=fallback "
-                f"value={internal_render_value(fallback)}",
-            )
+            return await read_selected_binding(requester, name, None, selected)
+        trace_binding_value(frame, name, "fallback", fallback)
         return fallback
     return await read_selected_binding(requester, name, None, selected)
 
@@ -180,19 +174,44 @@ async def read_selected_binding(
     :raises LclNameError: If selection has no owner.
     :raises Exception: If evaluation or lifecycle validation fails.
     """
+    owner = selected.owner
+    with scope_verbose_request(
+        name,
+        str(requester.frame_id),
+        None if owner is None else str(owner.frame_id),
+        tuple(str(item) for item in selected.path),
+        describe_binding_execution(owner, name, selected.kind),
+    ):
+        return await read_binding_result(requester, name, span, selected)
+
+
+async def read_binding_result(
+    requester: Frame,
+    name: str,
+    span: SourceSpan | None,
+    selected: BindingSelection,
+) -> object:
+    """Read the selection while the request context remains active.
+
+    :param requester: Concrete Frame requesting the selected binding.
+    :param name: Actual normalized binding name.
+    :param span: Optional requesting source location.
+    :param selected: Selection already obtained by ordinary hierarchy lookup.
+    :returns: Existing proxy, host value, cached result or shared evaluation result.
+    :raises LclNameError: If selection has no owner.
+    :raises Exception: If the existing evaluation fails.
+    """
     frame = requester
     frame._lifecycle.ensure_open(span)
     internal_check_cycle(requester, name, span)
     owner = selected.owner
     if owner is None:
-        if internal_verbose_enabled():
-            internal_trace(
-                "lookup",
-                f"name={name!r} owner={str(frame.frame_id)!r} source=missing",
-            )
-        raise LclNameError(
+        trace_missing_binding(frame, name)
+        error = LclNameError(
             f"unknown variable: {name}", span=span, code=RuntimeErrorCode.E33_UNKNOWN_VARIABLE
         )
+        trace_binding_failure(error, name, frame=frame)
+        raise error
     binding_kind = selected.kind
     if binding_kind == "proxy":
         return FrameProxy(requester, tuple(name.split(".")))
@@ -209,24 +228,10 @@ async def read_selected_binding(
     internal_check_cycle(owner, name, span)
     if selected.kind != "host" and name in frame._results:
         result = frame._results[name]
-        if internal_verbose_enabled():
-            internal_trace(
-                "lookup",
-                f"name={name!r} owner={str(frame.frame_id)!r} source=cached "
-                f"value={internal_render_value(result, masked=is_name_masked(frame, name))}",
-            )
+        trace_binding_value(frame, name, "cached", result)
         return result
     if selected.kind != "host" and name in frame._failures:
-        if internal_verbose_enabled():
-            rendered_error = internal_render_value(
-                frame._failures[name],
-                masked=is_name_masked(frame, name),
-            )
-            internal_trace(
-                "lookup",
-                f"name={name!r} owner={str(frame.frame_id)!r} source=cached-failure "
-                f"error={rendered_error}",
-            )
+        trace_binding_failure(frame._failures[name], name, frame=frame, cached=True)
         raise frame._failures[name]
     if selected.kind != "host" and name in frame.module.definitions:
         task = frame._inflight.get(name)
@@ -237,41 +242,31 @@ async def read_selected_binding(
         try:
             result = await asyncio.shield(task)
         except BaseException as error:
-            if internal_verbose_enabled():
-                internal_trace(
-                    "lookup",
-                    f"name={name!r} owner={str(frame.frame_id)!r} source={source} "
-                    f"error={internal_render_value(error, masked=is_name_masked(frame, name))}",
-                )
+            trace_binding_failure(error, name, frame=frame)
             raise
-        if internal_verbose_enabled():
-            internal_trace(
-                "lookup",
-                f"name={name!r} owner={str(frame.frame_id)!r} source={source} "
-                f"value={internal_render_value(result, masked=is_name_masked(frame, name))}",
-            )
+        trace_binding_value(frame, name, source, result)
         return result
     source = "native-provided" if frame.native_values else "external-provided"
+    value = frame.values[name]
     try:
         result = await resolve_operation_value(
-            frame.values[name],
+            value,
             LclEvaluationError,
             RuntimeErrorCode.E33_BINDING_EVALUATION_NATIVE_FAILURE,
         )
     except BaseException as error:
-        if internal_verbose_enabled():
-            internal_trace(
-                "lookup",
-                f"name={name!r} owner={str(frame.frame_id)!r} source={source} "
-                f"error={internal_render_value(error, masked=is_name_masked(frame, name))}",
-            )
-        raise
-    if internal_verbose_enabled():
-        internal_trace(
-            "lookup",
-            f"name={name!r} owner={str(frame.frame_id)!r} source={source} "
-            f"value={internal_render_value(result, masked=is_name_masked(frame, name))}",
+        trace_binding_failure(
+            error,
+            name,
+            frame=frame,
+            phase=(
+                "awaiting external input"
+                if inspect.isawaitable(value)
+                else "reading external input"
+            ),
         )
+        raise
+    trace_binding_value(frame, name, source, result)
     return result
 
 
@@ -300,6 +295,7 @@ async def evaluate_definition(requester: Frame, name: str) -> object:
                 result = await interpret_expression(frame.module.definitions[name], resolver)
         except Exception as error:
             frame._lifecycle.commit_failure(name, error)
+            trace_cached_failure_publication(name, error)
             frame._dependencies.publish(name, trace)
             raise
         frame._lifecycle.commit_result(name, result)

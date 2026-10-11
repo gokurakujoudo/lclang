@@ -103,5 +103,5 @@ def test_failed_parse_trace_uses_default_and_explicit_origins() -> None:
         with pytest.raises(LclSyntaxError):
             parse_expression("1 +", origin=SourceOrigin(SourceName("named")))
     trace = output.getvalue()
-    assert "origin='<string>'" in trace
-    assert "origin='named'" in trace
+    assert 'Source: "<string>":1:4' in trace
+    assert 'Source: "named":1:4' in trace

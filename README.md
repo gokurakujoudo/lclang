@@ -317,6 +317,12 @@ already read. The multiline English display preserves original causes and
 tracebacks without performing another evaluation. Exact-name masks protect
 expressions and captured values, including masked function arguments.
 
+For execution details, use `use_verbose(logger, enabled=verbose)` from
+`lclang.logger`. It sends readable DEBUG records through the application's
+standard-library or lclang logger. Failure identifiers connect the first observed
+failure, later cached returns and the complete exception diagnostic. See the
+[logging reference](docs/reference/logger.md#verbose-execution-diagnostics).
+
 ### Async-first evaluation
 
 Frame inputs, host callables, call results, iterators, and context-manager
