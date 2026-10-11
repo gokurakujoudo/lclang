@@ -44,10 +44,7 @@ async def test_shared_failure_records_one_scene_and_one_committed_cache() -> Non
     error = results[0]
     assert isinstance(error, LclError) and error.verbose_failure_id is not None
     text = output.getvalue()
-    assert (
-        text.count("Failed while evaluating") == 1
-        and text.count("Stored the failed evaluation") == 1
-    )
+    assert text.count("Failed while evaluating") == 1 and text.count("Cached failures: answer") == 1
     assert "Reason:" not in text
     assert "Returned the failed shared evaluation of answer" in text
     summary = next(

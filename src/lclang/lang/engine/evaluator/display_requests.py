@@ -17,6 +17,7 @@ from lclang.error.verbose_context import (
     allocate_verbose_id,
     is_verbose_enabled,
 )
+from lclang.error.verbose_propagation import scope_verbose_failure_batch
 from lclang.error.verbose_records import emit_verbose_record
 from lclang.lang.ast import LclAstNode
 from lclang.lang.engine.evaluator.display_capture import (
@@ -58,7 +59,8 @@ def scope_display_request(
         capture.tree = capture.result = None
     token = ACTIVE_DISPLAY_REQUEST.set(request)
     try:
-        yield request
+        with scope_verbose_failure_batch(name):
+            yield request
     except BaseException as error:
         if is_ordinary_failure(error) and (
             is_verbose_enabled() or ACTIVE_DISPLAY_CAPTURE.get() is not None

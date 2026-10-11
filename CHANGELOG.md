@@ -28,6 +28,9 @@
 
 ### Diagnostics and documentation
 
+- Summarize verbose failure propagation and committed caches once per root
+  request. Retain propagation relations and cache owners in record metadata;
+  keep first failure scenes, cache hits and shared returns explicit.
 - Show causes and unsuppressed handling contexts before expanding diagnostic
   and Python stack trees, retaining source evidence, notes and group members.
 - Unify verbose, error, inspection, CLI and workflow text with shared tree

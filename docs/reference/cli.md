@@ -74,8 +74,9 @@ replayed. Value rendering remains bounded and respects trailing-bang masks.
 
 Verbose records describe successful evaluations, input sources, cached values
 and shared results. A first failure includes a short reason, the actual
-execution phase and the request/owner context. Later propagation and cached
-failures reference the same failure identifier. The final exception diagnostic
+execution phase and the request/owner context. Root requests summarize propagation
+and committed failure caches once. Cached failures reference the same failure
+identifier. The final exception diagnostic
 shows that identifier and retains complete source and value snapshots.
 
 Command execution and resource cleanup produce one final exception report on

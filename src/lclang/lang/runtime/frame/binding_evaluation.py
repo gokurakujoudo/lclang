@@ -336,7 +336,7 @@ async def evaluate_definition(requester: Frame, name: str) -> object:
                 result = await interpret_expression(frame.module.definitions[name], resolver)
         except Exception as error:
             frame._lifecycle.commit_failure(name, error)
-            trace_cached_failure_publication(name, error)
+            trace_cached_failure_publication(name, error, owner=str(frame.frame_id))
             frame._dependencies.publish(name, trace)
             raise
         frame._lifecycle.commit_result(name, result)
