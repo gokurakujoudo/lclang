@@ -1,5 +1,9 @@
 """Framework traceback summaries preserve native evidence without LCL paragraphs."""
 
+from typing import Literal
+
+import pytest
+
 from lclang.error import LclError, LclErrorGroup
 from lclang.error.failure_traceback import render_failure_traceback
 
@@ -34,3 +38,27 @@ def test_group_stacks_retain_every_native_member_and_optional_ids() -> None:
     assert "LclError [APP/FIRST: first detail]" in text
     assert "LclError [APP/SECOND: second detail]" in text
     assert "Error in" not in text
+
+
+@pytest.mark.parametrize("style", ["compact", "full"])
+@pytest.mark.parametrize("relation", ["cause", "context"])
+def test_python_relationship_precedes_outer_stack_without_modifying_tracebacks(
+    style: Literal["compact", "full"], relation: str
+) -> None:
+    """Both policies retain native relationships before the application's outer stack."""
+    native = ValueError("native cause")
+    error = LclError("outer operation", code="APP/OUTER")
+    if relation == "cause":
+        error.__cause__ = native
+    else:
+        error.__context__ = native
+    try:
+        raise error
+    except LclError:
+        traceback = error.__traceback__
+    text = render_failure_traceback(error, traceback, style=style)
+    label = "Direct cause" if relation == "cause" else "During handling"
+    assert text.splitlines()[1] == "├─ " + label
+    assert text.index("ValueError: native cause") < text.index("Traceback (most recent call last)")
+    assert text.count("ValueError: native cause") == 1
+    assert error.__traceback__ is traceback

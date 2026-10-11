@@ -28,6 +28,8 @@
 
 ### Diagnostics and documentation
 
+- Show causes and unsuppressed handling contexts before expanding diagnostic
+  and Python stack trees, retaining source evidence, notes and group members.
 - Unify verbose, error, inspection, CLI and workflow text with shared tree
   connectors and inline error-code reasons. Runtime trees show actual dependencies;
   cached and shared values remain leaves. Failed trees expand the failure path

@@ -16,6 +16,8 @@ for application-controlled logging scopes.
 Human-readable codes include their protected reason on the same line. Exception
 `str` expands the failed dependency and loading paths as trees; `repr` returns a
 single-line reference. Source excerpts appear only at the innermost failure.
+The Cause branch precedes the diagnostic stack; an unsuppressed handling context
+occupies that position when no explicit cause exists.
 See [text diagnostics](text-display.md) for shared rendering and traceback controls.
 
 See [Exceptions and grouped failures](exceptions.md) for the exception hierarchy,
@@ -213,15 +215,15 @@ asyncio.run(main())
 <!-- lclang-doc-output: stdout -->
 ```text
 Error in evaluating result [LCL131421: division by zero]
-├─ result: ratio * 100 ("<string>":1:1)
-│  └─ ratio: total / count ("<string>":1:1)
-│     ├─ count: (int) 0 (external)
-│     ├─ total: (int) 5 (external)
-│     └─ Source: "<string>":1:1
-│        total / count
-│        ^^^^^^^^^^^^^
-└─ Cause
-   └─ ZeroDivisionError: division by zero
+├─ Cause
+│  └─ ZeroDivisionError: division by zero
+└─ result: ratio * 100 ("<string>":1:1)
+   └─ ratio: total / count ("<string>":1:1)
+      ├─ count: (int) 0 (external)
+      ├─ total: (int) 5 (external)
+      └─ Source: "<string>":1:1
+         total / count
+         ^^^^^^^^^^^^^
 ```
 <!-- /lclang-doc-case -->
 
@@ -309,10 +311,10 @@ asyncio.run(main())
 <!-- lclang-doc-output: stdout -->
 ```text
 Error in loading config file "settings.lclcfg" [LCL321794: disk unavailable]
-├─ Loading route
-│  └─ settings.lclcfg
-└─ Cause
-   └─ OSError: disk unavailable
+├─ Cause
+│  └─ OSError: disk unavailable
+└─ Loading route
+   └─ settings.lclcfg
 ```
 <!-- /lclang-doc-case -->
 
@@ -410,9 +412,9 @@ asyncio.run(main())
 <!-- lclang-doc-output: stdout -->
 ```text
 Error in executing a workflow [LCL531811: backend unavailable]
-├─ Context: workflow task root
-└─ Cause
-   └─ OSError: backend unavailable
+├─ Cause
+│  └─ OSError: backend unavailable
+└─ Context: workflow task root
 ```
 <!-- /lclang-doc-case -->
 
@@ -480,9 +482,9 @@ Error in executing a workflow [LCL535911: execution and cleanup failed]
 ├─ Context: workflow task root.resource
 ├─ Failure 1
 │  └─ Error in handling failure [LCL531811: backend unavailable]
-│     ├─ Context: workflow task root
-│     └─ Cause
-│        └─ OSError: backend unavailable
+│     ├─ Cause
+│     │  └─ OSError: backend unavailable
+│     └─ Context: workflow task root
 └─ Failure 2
    └─ Error in handling failure [LCL532812: cleanup failed]
       └─ Cause

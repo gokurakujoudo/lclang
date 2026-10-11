@@ -154,7 +154,7 @@ async def test_task_error_keeps_traceback_and_still_completes(
     error = next(record for record in caplog.records if record.getMessage().startswith("Error in"))
     assert error.getMessage() == (
         "Error in running workflow task 'root' [LCL531811: broken]\n"
-        "├─ Context: workflow task root\n└─ Cause\n   └─ ValueError: broken\n  task status: ERROR"
+        "├─ Cause\n│  └─ ValueError: broken\n└─ Context: workflow task root\n  task status: ERROR"
     )
     assert error.exc_info is not None
     assert any(record.getMessage() == "task complete: [root] ERROR" for record in caplog.records)

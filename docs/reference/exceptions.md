@@ -225,12 +225,6 @@ asyncio.run(main())
 ```text
 sync:
 Error in evaluating result [LCL132811: callback failed (2 sub-exceptions)]
-├─ result: callback() ("<string>":1:1)
-│  ├─ callback: *masked* (external)
-│  └─ Source: "<string>":1:1
-│     callback()
-│     ^^^^^^^^^^
-├─ Operation: callback failed
 ├─ Cause
 │  └─ ExceptionGroup: callback failed (2 sub-exceptions)
 │     ├─ Failure 1
@@ -239,31 +233,31 @@ Error in evaluating result [LCL132811: callback failed (2 sub-exceptions)]
 │        └─ Error in handling failure [LCL022890: nested (1 sub-exception)]: ExceptionGroup: nested (1 sub-exception)
 │           └─ Failure 1
 │              └─ Error in handling failure [APP/RULE: business rule]
+├─ result: callback() ("<string>":1:1)
+│  ├─ callback: *masked* (external)
+│  └─ Source: "<string>":1:1
+│     callback()
+│     ^^^^^^^^^^
+├─ Operation: callback failed
 ├─ Failure 1
 │  └─ Error in handling failure [LCL132811: read failed]
-│     ├─ Source: "<string>":1:1
-│     │  callback()
-│     │  ^^^^^^^^^^
-│     └─ Cause
-│        └─ OSError: read failed (already shown)
+│     ├─ Cause
+│     │  └─ OSError: read failed (already shown)
+│     └─ Source: "<string>":1:1
+│        callback()
+│        ^^^^^^^^^^
 └─ Failure 2
    └─ Error in handling failure [LCL132811: nested (1 sub-exception)]
+      ├─ Cause
+      │  └─ ExceptionGroup: nested (1 sub-exception) (already shown)
       ├─ Source: "<string>":1:1
       │  callback()
       │  ^^^^^^^^^^
       ├─ Operation: nested
-      ├─ Cause
-      │  └─ ExceptionGroup: nested (1 sub-exception) (already shown)
       └─ Failure 1
          └─ LclValidationError [APP/RULE: business rule] (already shown)
 async:
 Error in evaluating result [LCL132811: callback failed (2 sub-exceptions)]
-├─ result: callback() ("<string>":1:1)
-│  ├─ callback: *masked* (external)
-│  └─ Source: "<string>":1:1
-│     callback()
-│     ^^^^^^^^^^
-├─ Operation: callback failed
 ├─ Cause
 │  └─ ExceptionGroup: callback failed (2 sub-exceptions)
 │     ├─ Failure 1
@@ -272,51 +266,57 @@ Error in evaluating result [LCL132811: callback failed (2 sub-exceptions)]
 │        └─ Error in handling failure [LCL022890: nested (1 sub-exception)]: ExceptionGroup: nested (1 sub-exception)
 │           └─ Failure 1
 │              └─ Error in handling failure [APP/RULE: business rule]
-├─ Failure 1
-│  └─ Error in handling failure [LCL132811: read failed]
-│     ├─ Source: "<string>":1:1
-│     │  callback()
-│     │  ^^^^^^^^^^
-│     └─ Cause
-│        └─ OSError: read failed (already shown)
-└─ Failure 2
-   └─ Error in handling failure [LCL132811: nested (1 sub-exception)]
-      ├─ Source: "<string>":1:1
-      │  callback()
-      │  ^^^^^^^^^^
-      ├─ Operation: nested
-      ├─ Cause
-      │  └─ ExceptionGroup: nested (1 sub-exception) (already shown)
-      └─ Failure 1
-         └─ LclValidationError [APP/RULE: business rule] (already shown)
-TaskGroup callback:
-Error in evaluating result [LCL132811: unhandled errors in a TaskGroup (2 sub-exceptions)]
 ├─ result: callback() ("<string>":1:1)
 │  ├─ callback: *masked* (external)
 │  └─ Source: "<string>":1:1
 │     callback()
 │     ^^^^^^^^^^
-├─ Operation: unhandled errors in a TaskGroup
+├─ Operation: callback failed
+├─ Failure 1
+│  └─ Error in handling failure [LCL132811: read failed]
+│     ├─ Cause
+│     │  └─ OSError: read failed (already shown)
+│     └─ Source: "<string>":1:1
+│        callback()
+│        ^^^^^^^^^^
+└─ Failure 2
+   └─ Error in handling failure [LCL132811: nested (1 sub-exception)]
+      ├─ Cause
+      │  └─ ExceptionGroup: nested (1 sub-exception) (already shown)
+      ├─ Source: "<string>":1:1
+      │  callback()
+      │  ^^^^^^^^^^
+      ├─ Operation: nested
+      └─ Failure 1
+         └─ LclValidationError [APP/RULE: business rule] (already shown)
+TaskGroup callback:
+Error in evaluating result [LCL132811: unhandled errors in a TaskGroup (2 sub-exceptions)]
 ├─ Cause
 │  └─ ExceptionGroup: unhandled errors in a TaskGroup (2 sub-exceptions)
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL022890: first child]: OSError: first child
 │     └─ Failure 2
 │        └─ Error in handling failure [LCL022890: second child]: OSError: second child
+├─ result: callback() ("<string>":1:1)
+│  ├─ callback: *masked* (external)
+│  └─ Source: "<string>":1:1
+│     callback()
+│     ^^^^^^^^^^
+├─ Operation: unhandled errors in a TaskGroup
 ├─ Failure 1
 │  └─ Error in handling failure [LCL132811: first child]
-│     ├─ Source: "<string>":1:1
-│     │  callback()
-│     │  ^^^^^^^^^^
-│     └─ Cause
-│        └─ OSError: first child (already shown)
+│     ├─ Cause
+│     │  └─ OSError: first child (already shown)
+│     └─ Source: "<string>":1:1
+│        callback()
+│        ^^^^^^^^^^
 └─ Failure 2
    └─ Error in handling failure [LCL132811: second child]
-      ├─ Source: "<string>":1:1
-      │  callback()
-      │  ^^^^^^^^^^
-      └─ Cause
-         └─ OSError: second child (already shown)
+      ├─ Cause
+      │  └─ OSError: second child (already shown)
+      └─ Source: "<string>":1:1
+         callback()
+         ^^^^^^^^^^
 ```
 <!-- /lclang-doc-case -->
 
@@ -355,19 +355,19 @@ asyncio.run(main())
 <!-- lclang-doc-output: stdout -->
 ```text
 Error in evaluating first [LCL131421: division by zero]
-├─ first: 1 / 0 ("<string>":1:1)
-│  └─ Source: "<string>":1:1
-│     1 / 0
-│     ^^^^^
-└─ Cause
-   └─ ZeroDivisionError: division by zero
+├─ Cause
+│  └─ ZeroDivisionError: division by zero
+└─ first: 1 / 0 ("<string>":1:1)
+   └─ Source: "<string>":1:1
+      1 / 0
+      ^^^^^
 Error in evaluating second [LCL131421: division by zero]
-├─ second: 2 / 0 ("<string>":1:1)
-│  └─ Source: "<string>":1:1
-│     2 / 0
-│     ^^^^^
-└─ Cause
-   └─ ZeroDivisionError: division by zero
+├─ Cause
+│  └─ ZeroDivisionError: division by zero
+└─ second: 2 / 0 ("<string>":1:1)
+   └─ Source: "<string>":1:1
+      2 / 0
+      ^^^^^
 ```
 <!-- /lclang-doc-case -->
 
@@ -410,20 +410,20 @@ Error in evaluating result [LCL136963: execution and cleanup failed]
 │     ^^^^^^^^^^^^^^^^^^^^^^^^^
 ├─ Failure 1
 │  └─ Error in evaluating result [LCL131421: division by zero]
-│     ├─ result: try: 1 / 0 finally: 2 / 0 ("<string>":1:1)
-│     │  └─ Source: "<string>":1:6
-│     │     try: 1 / 0 finally: 2 / 0
-│     │          ^^^^^
-│     └─ Cause
-│        └─ ZeroDivisionError: division by zero
+│     ├─ Cause
+│     │  └─ ZeroDivisionError: division by zero
+│     └─ result: try: 1 / 0 finally: 2 / 0 ("<string>":1:1)
+│        └─ Source: "<string>":1:6
+│           try: 1 / 0 finally: 2 / 0
+│                ^^^^^
 └─ Failure 2
    └─ Error in evaluating result [LCL131421: division by zero]
-      ├─ result: try: 1 / 0 finally: 2 / 0 ("<string>":1:1)
-      │  └─ Source: "<string>":1:21
-      │     try: 1 / 0 finally: 2 / 0
-      │                         ^^^^^
-      └─ Cause
-         └─ ZeroDivisionError: division by zero
+      ├─ Cause
+      │  └─ ZeroDivisionError: division by zero
+      └─ result: try: 1 / 0 finally: 2 / 0 ("<string>":1:1)
+         └─ Source: "<string>":1:21
+            try: 1 / 0 finally: 2 / 0
+                                ^^^^^
 ```
 <!-- /lclang-doc-case -->
 
@@ -492,32 +492,32 @@ Error in evaluating result [LCL138911: execution and cleanup failed]
 │  └─ Error in handling failure [LCL138911: execution and cleanup failed]
 │     ├─ Failure 1
 │     │  └─ Error in evaluating result [LCL131421: division by zero]
-│     │     ├─ result: with first, second: 1 / 0 ("<string>":1:1)
-│     │     │  ├─ first: *masked* (external)
-│     │     │  ├─ second: *masked* (external)
-│     │     │  └─ Source: "<string>":1:21
-│     │     │     with first, second: 1 / 0
-│     │     │                         ^^^^^
-│     │     └─ Cause
-│     │        └─ ZeroDivisionError: division by zero
+│     │     ├─ Cause
+│     │     │  └─ ZeroDivisionError: division by zero
+│     │     └─ result: with first, second: 1 / 0 ("<string>":1:1)
+│     │        ├─ first: *masked* (external)
+│     │        ├─ second: *masked* (external)
+│     │        └─ Source: "<string>":1:21
+│     │           with first, second: 1 / 0
+│     │                               ^^^^^
 │     └─ Failure 2
 │        └─ Error in handling failure [LCL138812: close second]
-│           ├─ Source: "<string>":1:13
-│           │  with first, second: 1 / 0
-│           │              ^^^^^^
-│           └─ Cause
-│              └─ OSError: close second
-│                 └─ During handling
-│                    └─ LclEvaluationError [LCL131421: division by zero] (already shown)
+│           ├─ Cause
+│           │  └─ OSError: close second
+│           │     └─ During handling
+│           │        └─ LclEvaluationError [LCL131421: division by zero] (already shown)
+│           └─ Source: "<string>":1:13
+│              with first, second: 1 / 0
+│                          ^^^^^^
 └─ Failure 2
    └─ Error in handling failure [LCL138812: close first]
-      ├─ Source: "<string>":1:6
-      │  with first, second: 1 / 0
-      │       ^^^^^
-      └─ Cause
-         └─ OSError: close first
-            └─ During handling
-               └─ LclErrorGroup [LCL138911: execution and cleanup failed] (already shown)
+      ├─ Cause
+      │  └─ OSError: close first
+      │     └─ During handling
+      │        └─ LclErrorGroup [LCL138911: execution and cleanup failed] (already shown)
+      └─ Source: "<string>":1:6
+         with first, second: 1 / 0
+              ^^^^^
 Unwind: enter first, enter second, exit second, exit first
 acquisition and earlier exit:
 Error in evaluating result [LCL138911: execution and cleanup failed]
@@ -529,20 +529,20 @@ Error in evaluating result [LCL138911: execution and cleanup failed]
 │     ^^^^^^^^^^^^^^^^^^^^^
 ├─ Failure 1
 │  └─ Error in handling failure [LCL138811: acquire second]
-│     ├─ Source: "<string>":1:13
-│     │  with first, second: 1
-│     │              ^^^^^^
-│     └─ Cause
-│        └─ ValueError: acquire second
+│     ├─ Cause
+│     │  └─ ValueError: acquire second
+│     └─ Source: "<string>":1:13
+│        with first, second: 1
+│                    ^^^^^^
 └─ Failure 2
    └─ Error in handling failure [LCL138812: close first]
-      ├─ Source: "<string>":1:6
-      │  with first, second: 1
-      │       ^^^^^
-      └─ Cause
-         └─ OSError: close first
-            └─ During handling
-               └─ LclEvaluationError [LCL138811: acquire second] (already shown)
+      ├─ Cause
+      │  └─ OSError: close first
+      │     └─ During handling
+      │        └─ LclEvaluationError [LCL138811: acquire second] (already shown)
+      └─ Source: "<string>":1:6
+         with first, second: 1
+              ^^^^^
 Unwind: enter first, enter second, exit first
 ```
 <!-- /lclang-doc-case -->
@@ -610,14 +610,14 @@ Error in evaluating an expression [LCL236912: execution and cleanup failed]
    └─ Error in handling failure [LCL236911: execution and cleanup failed]
       ├─ Failure 1
       │  └─ Error in handling failure [LCL236811: close 2]
-      │     ├─ Operation: Frame cleanup failed
-      │     └─ Cause
-      │        └─ OSError: close 2
+      │     ├─ Cause
+      │     │  └─ OSError: close 2
+      │     └─ Operation: Frame cleanup failed
       └─ Failure 2
          └─ Error in handling failure [LCL236811: close 1]
-            ├─ Operation: Frame cleanup failed
-            └─ Cause
-               └─ OSError: close 1
+            ├─ Cause
+            │  └─ OSError: close 1
+            └─ Operation: Frame cleanup failed
 Closed: True
 Resources attempted: 2, 1
 ```
@@ -685,14 +685,14 @@ Error in cancelling operation: CancelledError: requested stop
    └─ Error in handling cause [LCL236911: execution and cleanup failed]
       ├─ Failure 1
       │  └─ Error in handling failure [LCL236811: close second]
-      │     ├─ Operation: Frame cleanup failed
-      │     └─ Cause
-      │        └─ OSError: close second
+      │     ├─ Cause
+      │     │  └─ OSError: close second
+      │     └─ Operation: Frame cleanup failed
       └─ Failure 2
          └─ Error in handling failure [LCL236811: close first]
-            ├─ Operation: Frame cleanup failed
-            └─ Cause
-               └─ OSError: close first
+            ├─ Cause
+            │  └─ OSError: close first
+            └─ Operation: Frame cleanup failed
 Caller observed cancellation: True
 ```
 <!-- /lclang-doc-case -->
@@ -752,14 +752,14 @@ asyncio.run(main())
 Error in command-line usage [LCL441971: execution and cleanup failed]
 ├─ Failure 1
 │  └─ Error in handling failure [LCL236811: close second]
-│     ├─ Operation: Frame cleanup failed
-│     └─ Cause
-│        └─ OSError: close second
+│     ├─ Cause
+│     │  └─ OSError: close second
+│     └─ Operation: Frame cleanup failed
 └─ Failure 2
    └─ Error in handling failure [LCL236811: close first]
-      ├─ Operation: Frame cleanup failed
-      └─ Cause
-         └─ OSError: close first
+      ├─ Cause
+      │  └─ OSError: close first
+      └─ Operation: Frame cleanup failed
 Frames closed: True
 Close order: second, first
 ```
@@ -935,9 +935,9 @@ Error in cleaning up command [LCL451911: command execution and cleanup failed]
             └─ Cause
                └─ OSError: invocation Frame close
 Error in writing command output [LCL451813: result output]
-├─ Context: Earlier command failure: LclErrorGroup [LCL451911: command execution and cleanup failed]
-└─ Cause
-   └─ OSError: result output
+├─ Cause
+│  └─ OSError: result output
+└─ Context: Earlier command failure: LclErrorGroup [LCL451911: command execution and cleanup failed]
 Exit status: 2
 Invocation Frames closed: 3
 ```
@@ -1350,14 +1350,14 @@ asyncio.run(main())
 ```text
 action:
 Error in running workflow task 'root' [LCL531811: action (2 sub-exceptions)]
-├─ Operation: action
-├─ Context: workflow task root
 ├─ Cause
 │  └─ ExceptionGroup: action (2 sub-exceptions)
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL022890: business]: ValueError: business
 │     └─ Failure 2
 │        └─ Error in handling failure [LCL022890: remote]: OSError: remote
+├─ Operation: action
+├─ Context: workflow task root
 ├─ Failure 1
 │  └─ Error in handling failure [LCL531811: business]
 │     └─ Cause
@@ -1371,14 +1371,14 @@ Error in running workflow task 'root.inner' [LCL535911: execution and cleanup fa
 ├─ Context: workflow task root.inner
 ├─ Failure 1
 │  └─ Error in handling failure [LCL531811: action (2 sub-exceptions)]
-│     ├─ Operation: action
-│     ├─ Context: workflow task root
 │     ├─ Cause
 │     │  └─ ExceptionGroup: action (2 sub-exceptions)
 │     │     ├─ Failure 1
 │     │     │  └─ Error in handling failure [LCL022890: business]: ValueError: business
 │     │     └─ Failure 2
 │     │        └─ Error in handling failure [LCL022890: remote]: OSError: remote
+│     ├─ Operation: action
+│     ├─ Context: workflow task root
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL531811: business]
 │     │     └─ Cause
@@ -1402,14 +1402,14 @@ Error in running workflow task 'root.outer' [LCL535911: execution and cleanup fa
 │     ├─ Context: workflow task root.inner
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL531811: action (2 sub-exceptions)]
-│     │     ├─ Operation: action
-│     │     ├─ Context: workflow task root
 │     │     ├─ Cause
 │     │     │  └─ ExceptionGroup: action (2 sub-exceptions)
 │     │     │     ├─ Failure 1
 │     │     │     │  └─ Error in handling failure [LCL022890: business]: ValueError: business
 │     │     │     └─ Failure 2
 │     │     │        └─ Error in handling failure [LCL022890: remote]: OSError: remote
+│     │     ├─ Operation: action
+│     │     ├─ Context: workflow task root
 │     │     ├─ Failure 1
 │     │     │  └─ Error in handling failure [LCL531811: business]
 │     │     │     └─ Cause
@@ -1438,6 +1438,12 @@ Unwind: enter 0, enter 1, action, exit 1, exit 0
 Task Frames closed: True
 mapping:
 Error in evaluating bad [LCL132811: mapping input (2 sub-exceptions)]
+├─ Cause
+│  └─ ExceptionGroup: mapping input (2 sub-exceptions)
+│     ├─ Failure 1
+│     │  └─ Error in handling failure [LCL022890: first]: ValueError: first
+│     └─ Failure 2
+│        └─ Error in handling failure [LCL022890: second]: OSError: second
 ├─ bad: fail() ("<string>":1:1)
 │  ├─ fail: *masked* (external)
 │  └─ Source: "<string>":1:1
@@ -1446,31 +1452,31 @@ Error in evaluating bad [LCL132811: mapping input (2 sub-exceptions)]
 ├─ Operation: mapping input
 ├─ Context: workflow mapping value <- bad
 ├─ Context: workflow task root
-├─ Cause
-│  └─ ExceptionGroup: mapping input (2 sub-exceptions)
-│     ├─ Failure 1
-│     │  └─ Error in handling failure [LCL022890: first]: ValueError: first
-│     └─ Failure 2
-│        └─ Error in handling failure [LCL022890: second]: OSError: second
 ├─ Failure 1
 │  └─ Error in handling failure [LCL132811: first]
-│     ├─ Source: "<string>":1:1
-│     │  fail()
-│     │  ^^^^^^
-│     └─ Cause
-│        └─ ValueError: first (already shown)
+│     ├─ Cause
+│     │  └─ ValueError: first (already shown)
+│     └─ Source: "<string>":1:1
+│        fail()
+│        ^^^^^^
 └─ Failure 2
    └─ Error in handling failure [LCL132811: second]
-      ├─ Source: "<string>":1:1
-      │  fail()
-      │  ^^^^^^
-      └─ Cause
-         └─ OSError: second (already shown)
+      ├─ Cause
+      │  └─ OSError: second (already shown)
+      └─ Source: "<string>":1:1
+         fail()
+         ^^^^^^
   task status: ERROR
 Error in running workflow task 'root.inner' [LCL535911: execution and cleanup failed]
 ├─ Context: workflow task root.inner
 ├─ Failure 1
 │  └─ Error in evaluating bad [LCL132811: mapping input (2 sub-exceptions)]
+│     ├─ Cause
+│     │  └─ ExceptionGroup: mapping input (2 sub-exceptions)
+│     │     ├─ Failure 1
+│     │     │  └─ Error in handling failure [LCL022890: first]: ValueError: first
+│     │     └─ Failure 2
+│     │        └─ Error in handling failure [LCL022890: second]: OSError: second
 │     ├─ bad: fail() ("<string>":1:1)
 │     │  ├─ fail: *masked* (external)
 │     │  └─ Source: "<string>":1:1
@@ -1479,26 +1485,20 @@ Error in running workflow task 'root.inner' [LCL535911: execution and cleanup fa
 │     ├─ Operation: mapping input
 │     ├─ Context: workflow mapping value <- bad
 │     ├─ Context: workflow task root
-│     ├─ Cause
-│     │  └─ ExceptionGroup: mapping input (2 sub-exceptions)
-│     │     ├─ Failure 1
-│     │     │  └─ Error in handling failure [LCL022890: first]: ValueError: first
-│     │     └─ Failure 2
-│     │        └─ Error in handling failure [LCL022890: second]: OSError: second
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL132811: first]
-│     │     ├─ Source: "<string>":1:1
-│     │     │  fail()
-│     │     │  ^^^^^^
-│     │     └─ Cause
-│     │        └─ ValueError: first (already shown)
+│     │     ├─ Cause
+│     │     │  └─ ValueError: first (already shown)
+│     │     └─ Source: "<string>":1:1
+│     │        fail()
+│     │        ^^^^^^
 │     └─ Failure 2
 │        └─ Error in handling failure [LCL132811: second]
-│           ├─ Source: "<string>":1:1
-│           │  fail()
-│           │  ^^^^^^
-│           └─ Cause
-│              └─ OSError: second (already shown)
+│           ├─ Cause
+│           │  └─ OSError: second (already shown)
+│           └─ Source: "<string>":1:1
+│              fail()
+│              ^^^^^^
 └─ Failure 2
    └─ Error in handling failure [LCL532812: context exit 1]
       └─ Cause
@@ -1514,6 +1514,12 @@ Error in running workflow task 'root.outer' [LCL535911: execution and cleanup fa
 │     ├─ Context: workflow task root.inner
 │     ├─ Failure 1
 │     │  └─ Error in evaluating bad [LCL132811: mapping input (2 sub-exceptions)]
+│     │     ├─ Cause
+│     │     │  └─ ExceptionGroup: mapping input (2 sub-exceptions)
+│     │     │     ├─ Failure 1
+│     │     │     │  └─ Error in handling failure [LCL022890: first]: ValueError: first
+│     │     │     └─ Failure 2
+│     │     │        └─ Error in handling failure [LCL022890: second]: OSError: second
 │     │     ├─ bad: fail() ("<string>":1:1)
 │     │     │  ├─ fail: *masked* (external)
 │     │     │  └─ Source: "<string>":1:1
@@ -1522,26 +1528,20 @@ Error in running workflow task 'root.outer' [LCL535911: execution and cleanup fa
 │     │     ├─ Operation: mapping input
 │     │     ├─ Context: workflow mapping value <- bad
 │     │     ├─ Context: workflow task root
-│     │     ├─ Cause
-│     │     │  └─ ExceptionGroup: mapping input (2 sub-exceptions)
-│     │     │     ├─ Failure 1
-│     │     │     │  └─ Error in handling failure [LCL022890: first]: ValueError: first
-│     │     │     └─ Failure 2
-│     │     │        └─ Error in handling failure [LCL022890: second]: OSError: second
 │     │     ├─ Failure 1
 │     │     │  └─ Error in handling failure [LCL132811: first]
-│     │     │     ├─ Source: "<string>":1:1
-│     │     │     │  fail()
-│     │     │     │  ^^^^^^
-│     │     │     └─ Cause
-│     │     │        └─ ValueError: first (already shown)
+│     │     │     ├─ Cause
+│     │     │     │  └─ ValueError: first (already shown)
+│     │     │     └─ Source: "<string>":1:1
+│     │     │        fail()
+│     │     │        ^^^^^^
 │     │     └─ Failure 2
 │     │        └─ Error in handling failure [LCL132811: second]
-│     │           ├─ Source: "<string>":1:1
-│     │           │  fail()
-│     │           │  ^^^^^^
-│     │           └─ Cause
-│     │              └─ OSError: second (already shown)
+│     │           ├─ Cause
+│     │           │  └─ OSError: second (already shown)
+│     │           └─ Source: "<string>":1:1
+│     │              fail()
+│     │              ^^^^^^
 │     └─ Failure 2
 │        └─ Error in handling failure [LCL532812: context exit 1]
 │           └─ Cause
@@ -1562,14 +1562,14 @@ Unwind: enter 0, enter 1, exit 1, exit 0
 Task Frames closed: True
 acquire:
 Error in running workflow task 'root.inner' [LCL532811: context acquisition (2 sub-exceptions)]
-├─ Operation: context acquisition
-├─ Context: workflow task root.inner
 ├─ Cause
 │  └─ ExceptionGroup: context acquisition (2 sub-exceptions)
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL022890: open]: OSError: open
 │     └─ Failure 2
 │        └─ Error in handling failure [LCL022890: validate]: ValueError: validate
+├─ Operation: context acquisition
+├─ Context: workflow task root.inner
 ├─ Failure 1
 │  └─ Error in handling failure [LCL532811: open]
 │     └─ Cause
@@ -1584,14 +1584,14 @@ Error in running workflow task 'root.outer' [LCL535911: execution and cleanup fa
 ├─ Context: workflow task root.outer
 ├─ Failure 1
 │  └─ Error in handling failure [LCL532811: context acquisition (2 sub-exceptions)]
-│     ├─ Operation: context acquisition
-│     ├─ Context: workflow task root.inner
 │     ├─ Cause
 │     │  └─ ExceptionGroup: context acquisition (2 sub-exceptions)
 │     │     ├─ Failure 1
 │     │     │  └─ Error in handling failure [LCL022890: open]: OSError: open
 │     │     └─ Failure 2
 │     │        └─ Error in handling failure [LCL022890: validate]: ValueError: validate
+│     ├─ Operation: context acquisition
+│     ├─ Context: workflow task root.inner
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL532811: open]
 │     │     └─ Cause
@@ -1614,14 +1614,14 @@ Unwind: enter 0, exit 0
 Task Frames closed: True
 frame:
 Error in running workflow task 'root' [LCL531811: action (2 sub-exceptions)]
-├─ Operation: action
-├─ Context: workflow task root
 ├─ Cause
 │  └─ ExceptionGroup: action (2 sub-exceptions)
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL022890: business]: ValueError: business
 │     └─ Failure 2
 │        └─ Error in handling failure [LCL022890: remote]: OSError: remote
+├─ Operation: action
+├─ Context: workflow task root
 ├─ Failure 1
 │  └─ Error in handling failure [LCL531811: business]
 │     └─ Cause
@@ -1635,14 +1635,14 @@ Error in running workflow task 'root.inner' [LCL535911: execution and cleanup fa
 ├─ Context: workflow task root.inner
 ├─ Failure 1
 │  └─ Error in handling failure [LCL531811: action (2 sub-exceptions)]
-│     ├─ Operation: action
-│     ├─ Context: workflow task root
 │     ├─ Cause
 │     │  └─ ExceptionGroup: action (2 sub-exceptions)
 │     │     ├─ Failure 1
 │     │     │  └─ Error in handling failure [LCL022890: business]: ValueError: business
 │     │     └─ Failure 2
 │     │        └─ Error in handling failure [LCL022890: remote]: OSError: remote
+│     ├─ Operation: action
+│     ├─ Context: workflow task root
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL531811: business]
 │     │     └─ Cause
@@ -1666,14 +1666,14 @@ Error in running workflow task 'root.outer' [LCL535911: execution and cleanup fa
 │     ├─ Context: workflow task root.inner
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL531811: action (2 sub-exceptions)]
-│     │     ├─ Operation: action
-│     │     ├─ Context: workflow task root
 │     │     ├─ Cause
 │     │     │  └─ ExceptionGroup: action (2 sub-exceptions)
 │     │     │     ├─ Failure 1
 │     │     │     │  └─ Error in handling failure [LCL022890: business]: ValueError: business
 │     │     │     └─ Failure 2
 │     │     │        └─ Error in handling failure [LCL022890: remote]: OSError: remote
+│     │     ├─ Operation: action
+│     │     ├─ Context: workflow task root
 │     │     ├─ Failure 1
 │     │     │  └─ Error in handling failure [LCL531811: business]
 │     │     │     └─ Cause
@@ -1706,14 +1706,14 @@ Error in running workflow task 'root' [LCL535911: execution and cleanup failed]
 │     │     ├─ Context: workflow task root.inner
 │     │     ├─ Failure 1
 │     │     │  └─ Error in handling failure [LCL531811: action (2 sub-exceptions)]
-│     │     │     ├─ Operation: action
-│     │     │     ├─ Context: workflow task root
 │     │     │     ├─ Cause
 │     │     │     │  └─ ExceptionGroup: action (2 sub-exceptions)
 │     │     │     │     ├─ Failure 1
 │     │     │     │     │  └─ Error in handling failure [LCL022890: business]: ValueError: business
 │     │     │     │     └─ Failure 2
 │     │     │     │        └─ Error in handling failure [LCL022890: remote]: OSError: remote
+│     │     │     ├─ Operation: action
+│     │     │     ├─ Context: workflow task root
 │     │     │     ├─ Failure 1
 │     │     │     │  └─ Error in handling failure [LCL531811: business]
 │     │     │     │     └─ Cause
@@ -1859,9 +1859,9 @@ Error in calling workflow 'root.nested' [LCL535911: execution and cleanup failed
          └─ OSError: call Frame close
 workflow call complete: [root.nested] Child ERROR
 Error in running workflow task 'root' [LCL535911: execution and cleanup failed]
-├─ Context: workflow task root
 ├─ During handling
 │  └─ Error in handling context [LCL022890: result processing]: ValueError: result processing
+├─ Context: workflow task root
 ├─ Failure 1
 │  └─ Error in handling failure [LCL541812: result processing]
 │     └─ Cause
@@ -1966,14 +1966,14 @@ asyncio.run(main())
 <!-- lclang-doc-output: stdout -->
 ```text
 Error in running workflow task 'root' [LCL531811: business (2 sub-exceptions)]
-├─ Operation: business
-├─ Context: workflow task root
 ├─ Cause
 │  └─ ExceptionGroup: business (2 sub-exceptions)
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL022890: first]: ValueError: first
 │     └─ Failure 2
 │        └─ Error in handling failure [LCL022890: second]: OSError: second
+├─ Operation: business
+├─ Context: workflow task root
 ├─ Failure 1
 │  └─ Error in handling failure [LCL531811: first]
 │     └─ Cause
@@ -1989,14 +1989,14 @@ Error in running workflow task 'root.recover' [LCL535911: execution and cleanup 
 │  └─ Error in handling failure [LCL535911: execution and cleanup failed]
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL531811: business (2 sub-exceptions)]
-│     │     ├─ Operation: business
-│     │     ├─ Context: workflow task root
 │     │     ├─ Cause
 │     │     │  └─ ExceptionGroup: business (2 sub-exceptions)
 │     │     │     ├─ Failure 1
 │     │     │     │  └─ Error in handling failure [LCL022890: first]: ValueError: first
 │     │     │     └─ Failure 2
 │     │     │        └─ Error in handling failure [LCL022890: second]: OSError: second
+│     │     ├─ Operation: business
+│     │     ├─ Context: workflow task root
 │     │     ├─ Failure 1
 │     │     │  └─ Error in handling failure [LCL531811: first]
 │     │     │     └─ Cause
@@ -2076,9 +2076,9 @@ except BaseExceptionGroup as errors:
 Error in stopping application: BaseExceptionGroup: shutdown (2 sub-exceptions)
 ├─ Cause
 │  └─ Error in handling cause [LCL236811: close]
-│     ├─ Operation: Frame cleanup failed
-│     └─ Cause
-│        └─ OSError: close
+│     ├─ Cause
+│     │  └─ OSError: close
+│     └─ Operation: Frame cleanup failed
 ├─ Failure 1
 │  └─ Error in handling failure: SystemExit: 2
 └─ Failure 2
@@ -2132,11 +2132,11 @@ print("Original notes:", error.__notes__)
 <!-- lclang-doc-output: stdout -->
 ```text
 Error [APP/JOB: storage]
+├─ Cause
+│  └─ OSError: storage
 ├─ Operation: job failed
 ├─ Context: attempt 1
-├─ Context: inspected copy
-└─ Cause
-   └─ OSError: storage
+└─ Context: inspected copy
 Original notes: ['attempt 1']
 ```
 <!-- /lclang-doc-case -->
@@ -2208,15 +2208,15 @@ asyncio.run(main())
 <!-- lclang-doc-output: stdout -->
 ```text
 Error in loading config file "settings.lclcfg" [LCL323931: host operations (2 sub-exceptions)]
-├─ Loading route
-│  └─ settings.lclcfg
-├─ Operation: cannot load config source settings.lclcfg
 ├─ Cause
 │  └─ ExceptionGroup: host operations (2 sub-exceptions)
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL022890: first]: OSError: first
 │     └─ Failure 2
 │        └─ Error in handling failure [LCL022890: second]: ValueError: second
+├─ Loading route
+│  └─ settings.lclcfg
+├─ Operation: cannot load config source settings.lclcfg
 ├─ Failure 1
 │  └─ Error in handling failure [LCL323931: first]
 │     └─ Cause
@@ -2226,14 +2226,14 @@ Error in loading config file "settings.lclcfg" [LCL323931: host operations (2 su
       └─ Cause
          └─ ValueError: second (already shown)
 Error in a standard-library operation [LCL961890: host operations (2 sub-exceptions)]
-├─ Operation: host operations
-├─ Context: lclang operation lines
 ├─ Cause
 │  └─ ExceptionGroup: host operations (2 sub-exceptions)
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL022890: first]: OSError: first
 │     └─ Failure 2
 │        └─ Error in handling failure [LCL022890: second]: ValueError: second
+├─ Operation: host operations
+├─ Context: lclang operation lines
 ├─ Failure 1
 │  └─ Error in handling failure [LCL961890: first]
 │     └─ Cause
@@ -2243,14 +2243,14 @@ Error in a standard-library operation [LCL961890: host operations (2 sub-excepti
       └─ Cause
          └─ ValueError: second (already shown)
 Error in a utility operation [LCL771811: host operations (2 sub-exceptions)]
-├─ Operation: host operations
-├─ Context: lclang operation invoke
 ├─ Cause
 │  └─ ExceptionGroup: host operations (2 sub-exceptions)
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL022890: first]: OSError: first
 │     └─ Failure 2
 │        └─ Error in handling failure [LCL022890: second]: ValueError: second
+├─ Operation: host operations
+├─ Context: lclang operation invoke
 ├─ Failure 1
 │  └─ Error in handling failure [LCL771811: first]
 │     └─ Cause
@@ -2328,9 +2328,9 @@ Error in executing command [LCL451911: execution and cleanup failed]
 │        └─ OSError: logger startup
 └─ Failure 2
    └─ Error in handling failure [LCL236811: owned stream close]
-      ├─ Operation: Frame cleanup failed
-      └─ Cause
-         └─ OSError: owned stream close
+      ├─ Cause
+      │  └─ OSError: owned stream close
+      └─ Operation: Frame cleanup failed
 Status: 2
 Owned stream closed: True
 ```
