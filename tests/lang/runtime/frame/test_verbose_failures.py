@@ -44,9 +44,15 @@ async def test_shared_failure_records_one_scene_and_one_committed_cache() -> Non
     error = results[0]
     assert isinstance(error, LclError) and error.verbose_failure_id is not None
     text = output.getvalue()
-    assert text.count("Reason:") == 1 and text.count("Stored the failed evaluation") == 1
+    assert (
+        text.count("Failed while evaluating") == 1
+        and text.count("Stored the failed evaluation") == 1
+    )
+    assert "Reason:" not in text
     assert "Returned the failed shared evaluation of answer" in text
-    summary = next(record for record in records.records if "Reason:" in record.getMessage())
+    summary = next(
+        record for record in records.records if "Failed while evaluating" in record.getMessage()
+    )
     assert getattr(summary, "lclang_failure_id", None) == error.verbose_failure_id
     evaluation_id = cast(str, getattr(summary, "lclang_evaluation_id", None))
     assert evaluation_id.startswith("E")
@@ -74,7 +80,7 @@ async def test_missing_lookup_and_parent_definition_preserve_actual_paths() -> N
     text = output.getvalue()
     assert 'Frames: requested from "request"; defined in "pricing"' in text
     assert "Lookup path: request -> pricing" in text
-    assert "Execution: missing binding" in text and "Reason: unknown variable: absent" in text
+    assert "Execution: missing binding" in text and ": unknown variable: absent]" in text
 
 
 @pytest.mark.asyncio
@@ -96,7 +102,7 @@ async def test_masked_external_failure_and_bad_repr_are_safe() -> None:
             with pytest.raises(LclError):
                 await frame.get("secret")
     assert "<repr failed: RuntimeError>" in output.getvalue()
-    assert "Reason: *masked*" in output.getvalue()
+    assert ": *masked*]" in output.getvalue()
     assert "private credential" not in output.getvalue() and "repr secret" not in output.getvalue()
     assert "Phase: awaiting external input" in output.getvalue()
 

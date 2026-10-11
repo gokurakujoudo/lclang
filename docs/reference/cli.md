@@ -1,5 +1,10 @@
 # Command-line API
 
+`eval_lcl` retains value stdout; `-o TREE` selects the actual runtime tree.
+`parse_lcl` renders static inspection, and `-o EVAL` captures the actual runtime
+tree including ordinary failures. See [text diagnostics](text-display.md) for
+cache leaves, inline error reasons and `logger.traceback_style`.
+
 A console stream supplied through `CliConfig.log_config` is borrowed from the
 application. Invocation cleanup does not close that stream, so accepted log
 records can drain before the logger scope ends. File or override definitions
@@ -54,8 +59,10 @@ Overlapping CLI entry invocations are rejected because root logging is global.
 All diagnostic console records use stderr; successful command results retain
 stdout. The shared format uses local time with microseconds and a numeric offset
 by default; `-o logger.timezone utc` selects UTC with a `Z` suffix. The timezone
-setting also applies under `--verbose`. Other fields include level, process, thread, source
-name, file/line, function, prefix and message. Each permanent file segment begins
+setting also applies under `--verbose`. Verbose records display `VERBOSE` while
+remaining DEBUG records. Their default prefix contains time, pid and thread;
+other records retain source name, file/line and function. Explicit formats remain
+effective. Each permanent file segment begins
 with its absolute path. Execution audit records contain the banner, exact
 redacted argv and lazy winning configuration without fixed initial positions.
 
@@ -72,8 +79,9 @@ failures reference the same failure identifier. The final exception diagnostic
 shows that identifier and retains complete source and value snapshots.
 
 Command execution and resource cleanup produce one final exception report on
-stderr. File reports retain the Python stacks and native causes; the traceback
-portion uses concise references for LCL exceptions whose full diagnostic was
+stderr. File reports retain application and external-library Python stacks and
+native causes by default; `-o logger.traceback_style full` includes lclang frames.
+The traceback portion uses concise references for LCL exceptions whose full diagnostic was
 already shown. A later output failure is reported separately and references an
 earlier command failure when present. Successful command output remains stdout.
 

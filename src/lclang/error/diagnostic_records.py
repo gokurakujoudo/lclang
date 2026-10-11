@@ -29,6 +29,7 @@ class DiagnosticValue:
     :param type_name: Concrete type label at failure time.
     :param value: Protected, bounded value representation, never the host object.
     :param masked: Whether the value was redacted before representation.
+    :param source: Actual lookup source, or unknown when provenance was unavailable.
     :raises LclValidationError: If a field has an unsupported type.
     :raises LclValidationError: If the name or type label is empty.
     """
@@ -38,6 +39,7 @@ class DiagnosticValue:
     type_name: str
     value: str
     masked: bool = False
+    source: str = "unknown"
 
     def __post_init__(self) -> None:
         """Validate a detached read snapshot.
@@ -47,7 +49,9 @@ class DiagnosticValue:
         """
         from lclang.lang.common.source_location import SourceSpan
 
-        if not all(isinstance(item, str) for item in (self.name, self.type_name, self.value)):
+        if not all(
+            isinstance(item, str) for item in (self.name, self.type_name, self.value, self.source)
+        ):
             raise LclValidationError(
                 "diagnostic value names, types, and representations must be strings",
                 code=DataModelErrorCode.E31_DIAGNOSTIC_VALUE_NAMES_TYPES_AND_REPRESENTATIONS_MUST_BE_STRINGS,
@@ -57,7 +61,7 @@ class DiagnosticValue:
                 "diagnostic value requires a SourceSpan and Boolean mask",
                 code=DataModelErrorCode.E31_DIAGNOSTIC_VALUE_REQUIRES_A_SOURCESPAN_AND_BOOLEAN_MASK,
             )
-        if not self.name or not self.type_name:
+        if not self.name or not self.type_name or not self.source:
             raise LclValidationError(
                 "diagnostic value name and type cannot be empty",
                 code=DataModelErrorCode.E31_DIAGNOSTIC_VALUE_NAME_AND_TYPE_CANNOT_BE_EMPTY,

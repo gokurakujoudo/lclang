@@ -15,6 +15,7 @@ from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
 from lclang.logger.config_validation import boolean, fields, freeze, level, mapping, names
 from lclang.logger.sink_config import ConsoleConfig, FileConfig, console_config, file_config
+from lclang.logger.traceback_policy import validate_traceback_style
 
 # Unitless format and takeover names follow the logger reference and CLI diagnostic layout.
 DEFAULT_FORMAT = (
@@ -22,6 +23,10 @@ DEFAULT_FORMAT = (
     "%(name)s | %(filename)s:%(lineno)d | %(funcName)s | %(message)s"
 )
 DEFAULT_TAKEOVER = ("uvicorn", "uvicorn.error", "uvicorn.access")
+# Default verbose layout retains event identity while omitting implementation locations.
+VERBOSE_FORMAT = (
+    "%(asctime)s | %(levelname)-8s | pid=%(process)d thread=%(threadName)s | %(message)s"
+)
 CONFIG_FIELDS = {
     "level",
     "format",
@@ -30,6 +35,7 @@ CONFIG_FIELDS = {
     "takeover_loggers",
     "capture_warnings",
     "timezone",
+    "traceback_style",
 }
 
 
@@ -65,6 +71,7 @@ class LoggerHandlerConfig:
     :param takeover_loggers: Logger names whose handlers and levels are temporarily replaced.
     :param capture_warnings: Whether to redirect warnings during the scope.
     :param timezone: Log timestamp policy, local with numeric offset or utc with Z.
+    :param traceback_style: Compact language-frame filtering or full Python stacks.
     """
 
     level: int | str = logging.NOTSET
@@ -74,6 +81,7 @@ class LoggerHandlerConfig:
     takeover_loggers: tuple[str, ...] = DEFAULT_TAKEOVER
     capture_warnings: bool = False
     timezone: Literal["local", "utc"] = "local"
+    traceback_style: Literal["compact", "full"] = "compact"
 
     @guard_failure(LclValidationError, LoggerErrorCode.E11_LOGGER_CONFIGURATION_NATIVE_FAILURE)
     def __post_init__(self) -> None:
@@ -82,6 +90,7 @@ class LoggerHandlerConfig:
         :raises LclValidationError: If a format or declaration has an invalid type.
         :raises LclValidationError: If sink names or policies are invalid.
         """
+        validate_traceback_style(self.traceback_style)
         if not isinstance(self.timezone, str):
             raise LclValidationError(
                 "logger.timezone: expected text",

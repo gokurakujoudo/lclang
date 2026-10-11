@@ -36,7 +36,8 @@ def test_ten_thousand_vertex_cycle_is_structured_not_recursive() -> None:
         topological_order(graph)
     message = str(raised.value)
     assert "circular dependency: n0 -> n1 -> n2" in message
-    assert message.endswith("n9999 -> n0")
+    assert raised.value.message.endswith("n9999 -> n0")
+    assert "n9999 -> n0]" in message
 
 
 def test_thousand_frame_graph_resolves_root_value_without_evaluation() -> None:

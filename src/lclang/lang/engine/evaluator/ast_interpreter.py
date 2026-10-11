@@ -50,6 +50,8 @@ from lclang.lang.engine.evaluator.collection_evaluation import internal_evaluate
 from lclang.lang.engine.evaluator.comprehension_evaluation import internal_evaluate_comprehension
 from lclang.lang.engine.evaluator.context_manager_evaluation import internal_evaluate_with
 from lclang.lang.engine.evaluator.definition_scope import active_definition_stack
+from lclang.lang.engine.evaluator.display_capture import render_display_value
+from lclang.lang.engine.evaluator.display_requests import scope_display_expression
 from lclang.lang.engine.evaluator.error_form_evaluation import (
     internal_evaluate_error_form,
     internal_wrap_failure,
@@ -96,8 +98,13 @@ async def interpret_expression(node: LclAstNode, resolver: ResolverSource = None
         kind: Literal["definition", "function", "target"] = (
             "target" if node is ACTIVE_TARGET_EXPRESSION.get() else "definition"
         )
-        with collect_evaluation_context(name, node, kind=kind):
+        with (
+            scope_display_expression(name, node) as display,
+            collect_evaluation_context(name, node, kind=kind),
+        ):
             result = await internal_evaluate(node, internal_coerce_resolver(resolver))
+            if display is not None:
+                display.result = render_display_value(result, masked=display.masked)
         trace_evaluation_result(node, result)
     return result
 

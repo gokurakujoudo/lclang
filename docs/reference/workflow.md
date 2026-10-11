@@ -1,5 +1,10 @@
 # Tree Workflow API
 
+Static and status trees use the shared [text display](text-display.md)
+connectors while preserving task execution and reverse cleanup order.
+Framework error records use one complete diagnostic and compact Python
+traceback evidence by default.
+
 ## Design model
 
 `lclang.workflow` follows the same separation as Modules and Frames. A workflow

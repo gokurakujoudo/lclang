@@ -37,7 +37,8 @@ def test_group_members_have_independent_identities_and_derived_groups_keep_paren
     first.copy_diagnostic_fields(target)
     assert target.verbose_failure_id == first.verbose_failure_id
     text = output.getvalue()
-    assert text.count("Reason:") == 3 and "Members:" in text
+    assert text.count("Failed during") == 3 and "Members:" in text
+    assert "Reason:" not in text
     assert "Cause:" not in text and "invalid source" in text and "callback failed" in text
     assert identity is not None and f"(failure {identity})" in str(selected)
 
@@ -64,7 +65,7 @@ def test_masked_group_redacts_every_new_member_summary() -> None:
     group.masked = True
     with use_verbose(logger):
         trace_verbose_failure(group, "operation", phase="collecting failures")
-    assert output.getvalue().count("Reason: *masked*") == 2
+    assert output.getvalue().count(": *masked*]") == 2
     assert "private" not in output.getvalue()
 
 
@@ -94,9 +95,9 @@ def test_parse_text_has_one_expression_unless_adaptation_changes_it() -> None:
         node = parse_expression("1+2")
         trace_parse_result("original adaptation input", node)
     text = output.getvalue()
-    assert text.count("Expression: 1\n") == 1
-    assert "Expression: 1+2\n  Parsed expression: 1 + 2" in text
-    assert "Expression: original adaptation input" in text
+    assert text.count("<expr>: 1 (") == 1
+    assert "Input: 1+2\n<expr>: 1 + 2 (" in text
+    assert "Input: original adaptation input" in text
     assert "Parsed an expression as LclConstant" in text
 
 

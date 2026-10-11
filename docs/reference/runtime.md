@@ -183,10 +183,11 @@ can deadlock. Parent definitions always run in their defining Frame.
 
 Structured errors raised while evaluating Frame definitions expose
 `variable_stack`, an immutable direct-to-failing owner tuple. Multiline
-diagnostics start with `Error in evaluating <name> [<code>]:`, list the complete
-outer-to-inner route with available source coordinates and excerpts, and end
-with the cause. Lazy child definitions and LCL closure calls add their lexical
-owner; propagation and cached failures retain the first, deepest stack. An unnamed `frame.evaluate`
+diagnostics start with `Error in evaluating <name> [<code>: <reason>]` and show
+the failed dependency path as a tree. Already-read values are leaves; the source
+excerpt appears at the innermost failure. Lazy child definitions and LCL closure
+calls add their lexical owner; propagation and cached failures retain the first,
+deepest stack. An unnamed `frame.evaluate`
 expression uses `"<expr>"` as its owner. Fresh errors include that owner, and
 failures reached through named definitions add their owners; previously cached
 failures retain their original stack.
@@ -196,8 +197,9 @@ keyword-only `config_stack` and `evaluation_context` tuples, empty by default.
 The frozen, validated `ConfigLoadFrame`, `EvaluationContextFrame`, and
 `DiagnosticValue` records expose file introductions, active expressions or
 function calls, and already-read values. Each value has its actual name, source
-occurrence, concrete type label, and protected representation. Repeated reads
-at one occurrence keep their first position and last successful value. Unread
+occurrence, concrete type label, protected representation and actual `source`
+category. Repeated reads at one occurrence keep their first position and last
+successful value. Unread
 short-circuit branches and unresolved values contribute no read evidence.
 
 Snapshots are fixed at failure time. Normal execution does not call `repr` for
@@ -212,8 +214,9 @@ journals. A masked function also protects its invocation arguments and body.
 metadata. It does not affect span comparison, and parsing preserves a supplied
 `SourceOrigin` object. Source-less manual ASTs use canonical expressions without
 invented file coordinates. CLI and logs use the same multiline diagnostic;
-logs retain the original Python traceback. Inspection escapes diagnostics into
-its compact single-line representation.
+logs retain the original Python traceback on the exception. The default formatter
+shows application and external-library frames; `traceback_style="full"` also
+shows lclang frames. Inspection uses a protected single-line failure summary.
 
 All synchronous and asynchronous iterable items pass through the recursive
 auto-await boundary before comprehensions, starred expansion, or reviewed
@@ -234,28 +237,24 @@ Frame, current value or exception, and static dependency children. Missing
 names remain diagnostic leaves and cycles stop only on the repeating branch;
 the same name can still appear independently beneath separate parent branches.
 Inspection never evaluates or awaits anything, joins work, changes caches, or
-publishes traces. `repr(tree)` is a compact
-`name@frame/path: [definition ](Status) typed-payload` line using canonical LCL
-source. External and native values omit definition text, unresolved names use
-`<missing>`, ordinary values use `type: repr`, and errors use
-`ErrorType: message`.
-When a current value is a supported `LclAstNode`, its typed payload uses
-canonical LCL source instead of the Python dataclass repr, for example
-`LclBinary: base + 2`. Evaluated LCL closures similarly render as
-`LclFunctionValue: (...) -> ...`, without exposing their bound parameters,
-resolver, evaluator, source spans, or other implementation state. This applies
-equally to external host values and cached definition results, without
-evaluating the represented value.
-Canonical reviewed values in `LCL_ROOT` and `LCL_BUILTINS` are
-`NativeProvided`; every callable uses `Builtin Function: <binding-name>` and
-every reviewed namespace uses `Builtin Namespace: <namespace-name>`.
-Application, preset, and CLI host values remain `ExternalProvided` and retain
-their ordinary typed reprs.
-`tree.to_lines()` returns a markdown-style nested list of those lines.
-For a masked node, `repr(tree)` replaces definition, value, and failure payloads
-with `*masked*`; `to_lines()` also omits that node's descendants. The detached
-tree still exposes its raw fields to trusted Python callers, so masking is
-diagnostic redaction rather than access control.
+publishes traces. `repr(tree)` is one protected `name: payload (source)` line.
+Unevaluated definitions use canonical expression text, actual source location,
+the AST type and `not evaluated`. Cached, external, native and proxy values
+retain their actual source labels and typed payloads. Cached failures show a
+short exception reference with the code and reason on the same line.
+
+Supported AST values and LCL closures use canonical LCL source without exposing
+resolver or evaluator state. Reviewed builtins use `Builtin Function`,
+`Builtin Namespace` or `Builtin Utility` labels; host values retain typed reprs.
+`tree.to_lines()` uses shared tree connectors and alphabetical dependency order.
+Explicit `depth` and `prefix` still select an indented custom list marker.
+Cached and masked nodes stop expansion, while trusted callers retain the raw
+structured fields and static dependency children. Masking remains diagnostic
+redaction rather than access control.
+
+See [text diagnostics](text-display.md) for runtime trees, failure paths and
+logging interfaces. Ordinary value repr and canonical source printing keep
+their existing meanings.
 
 `frame.mixin(values)` atomically copies a right-biased dictionary into the open
 Frame's host bindings. The existing `frame.values` view remains read-only while

@@ -106,13 +106,13 @@ async def test_nested_failure_reports_direct_to_failing_variable_stack() -> None
     assert first.value is second.value
     assert first.value.variable_stack == ("RESULT", "middle", "failing")
     diagnostic = str(first.value)
-    assert diagnostic.startswith("Error in evaluating RESULT [LCL131421]:")
+    assert diagnostic.startswith("Error in evaluating RESULT [LCL131421:")
     assert (
-        diagnostic.index("  RESULT at")
-        < diagnostic.index("  middle at")
-        < diagnostic.index("  failing at")
+        diagnostic.index("RESULT: middle (")
+        < diagnostic.index("middle: failing (")
+        < diagnostic.index("failing: 1 / 0 (")
     )
-    assert diagnostic.endswith("Cause: ZeroDivisionError: division by zero")
+    assert diagnostic.endswith("ZeroDivisionError: division by zero")
 
 
 @pytest.mark.asyncio

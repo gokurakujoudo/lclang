@@ -22,6 +22,8 @@
 - [Command-line API](cli.md): declaration, routing, configuration, logging and trusted command discovery.
 
 - [Unified process logging](logger.md)
+- [Text diagnostics and dependency trees](text-display.md): shared display rules,
+  runtime and static trees, compact tracebacks, and external formatting.
 
 - [Errors and diagnostic codes](errors.md): six-digit classifications, causes,
   context, exception groups, and executable troubleshooting examples.

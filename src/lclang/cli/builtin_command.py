@@ -12,6 +12,7 @@ from lclang.cli.invocation_context import CliContext
 from lclang.error import CliErrorCode, LclCliError
 from lclang.error.native_wrap import is_ordinary_failure
 from lclang.error.operation_guard import guard_async_failure
+from lclang.lang.engine.evaluator.display_capture import capture_runtime_display
 
 # Shared required output binding documented by both built-in commands.
 # Unitless parameter names, command groups and entrance objects below define the built-in CLI
@@ -39,6 +40,10 @@ FORCE_PARAMETER = ParameterDoc(
     "Require marked RESULT text to contain valid LCL",
     False,
 )
+# Boolean opt-in preserves the eval command's value-oriented stdout contract.
+TREE_PARAMETER = ParameterDoc(
+    "TREE", bool, False, "Render the actual runtime dependency tree", False
+)
 
 
 @cli.command(parameter_docs=(RESULT_PARAMETER, EVAL_PARAMETER, FORCE_PARAMETER))
@@ -53,16 +58,18 @@ async def parse_lcl_command(context: CliContext) -> CliResult:
        Ordinary RESULT failures are retained in the Frame cache and rendered.
     """
     if await context.frame.get("EVAL") is True:
-        try:
-            await context.frame.get("RESULT")
-        except Exception as error:
-            if not is_ordinary_failure(error):
-                raise
+        with capture_runtime_display() as capture:
+            try:
+                await context.frame.get("RESULT")
+            except Exception as error:
+                if not is_ordinary_failure(error):
+                    raise
+        return CliResult.success("\n".join(capture.to_lines()))
     tree = context.frame.inspect_variable("RESULT")
     return CliResult.success("\n".join(tree.to_lines()))
 
 
-@cli.command(parameter_docs=(RESULT_PARAMETER, FORCE_PARAMETER))
+@cli.command(parameter_docs=(RESULT_PARAMETER, FORCE_PARAMETER, TREE_PARAMETER))
 @guard_async_failure(LclCliError, CliErrorCode.E16_CLI_APPLICATION_POLICY_NATIVE_FAILURE)
 async def eval_lcl_command(context: CliContext) -> CliResult:
     """Evaluate RESULT and render its string representation.
@@ -71,6 +78,10 @@ async def eval_lcl_command(context: CliContext) -> CliResult:
     :returns: Successful evaluated result.
     :raises Exception: If lazy ``RESULT`` evaluation fails.
     """
+    if await context.frame.get("TREE") is True:
+        with capture_runtime_display() as capture:
+            await context.frame.get("RESULT")
+        return CliResult.success("\n".join(capture.to_lines()))
     value = await context.frame.get("RESULT")
     return CliResult.success(str(value))
 

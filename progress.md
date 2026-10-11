@@ -82,6 +82,12 @@ live in `lang.common`. Package metadata reads the sole `__version__.py` definiti
 - Application-controlled verbose logger scopes with Boolean switches, structured
   DEBUG records and readable execution context. Stable failure identifiers link
   first-scene summaries, cached returns and complete exception diagnostics.
+- Shared text-tree layout for verbose, errors, inspection, CLI and workflow;
+  actual runtime dependencies, sorted static inspection and cached value leaves.
+- Display-only VERBOSE labels and compact prefixes preserve DEBUG admission and
+  original records. Public `LclExceptionFormatter` supports compact or full stacks;
+  CLI `eval_lcl` keeps value stdout with optional `TREE`, and `parse_lcl EVAL`
+  displays the current runtime tree.
 
 ## Error contracts
 

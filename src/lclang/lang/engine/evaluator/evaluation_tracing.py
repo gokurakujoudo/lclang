@@ -38,14 +38,14 @@ def trace_evaluation_result(node: LclAstNode, result: object) -> None:
         return
     context = ACTIVE_VERBOSE_CONTEXT.get()
     name = context.request_path[-1] if context.request_path else "<expr>"
-    details = [
-        ("Expression", internal_render_value(node, lambda: to_source(node))),
-        ("Result", internal_render_value(result)),
-    ]
-    if str(node.span.origin.name) != "<unknown>":
-        details.insert(0, ("Source", render_source_location(node.span)))
-    if context.request_path:
-        details.append(("Request", " -> ".join(context.request_path)))
+    heading = f"Evaluated {name}: {internal_render_value(result)}"
     if context.evaluation_id is not None:
-        details.append(("Evaluation", context.evaluation_id))
-    emit_verbose_record("evaluate", f"Evaluated {name}", details=tuple(details))
+        heading += f" (evaluation {context.evaluation_id})"
+    emit_verbose_record(
+        "evaluate",
+        heading,
+        context_details=(
+            ("Expression", internal_render_value(node, lambda: to_source(node))),
+            ("Source", render_source_location(node.span)),
+        ),
+    )

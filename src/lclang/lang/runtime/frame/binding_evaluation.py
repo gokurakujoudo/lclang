@@ -24,7 +24,7 @@ from typing import Any, cast
 
 from lclang.error import LclNameError
 from lclang.error.awaitable_failure import resolve_operation_value
-from lclang.error.verbose_context import scope_verbose_request
+from lclang.error.verbose_context import is_verbose_enabled, scope_verbose_request
 from lclang.error.verbose_diagnostic import (
     internal_masked_scope,
 )
@@ -32,6 +32,10 @@ from lclang.lang.common.identifiers import VarName
 from lclang.lang.common.source_location import SourceSpan
 from lclang.lang.engine.evaluator.ast_interpreter import interpret_expression
 from lclang.lang.engine.evaluator.definition_scope import definition_scope
+from lclang.lang.engine.evaluator.display_capture import (
+    ACTIVE_DISPLAY_CAPTURE,
+)
+from lclang.lang.engine.evaluator.display_requests import scope_display_request
 from lclang.lang.engine.evaluator.evaluation_journal import record_value_read
 from lclang.lang.engine.evaluator.name_resolver import Resolver
 from lclang.lang.engine.parser import parse_expression
@@ -43,6 +47,7 @@ from lclang.lang.runtime.frame.binding_lookup import (
 )
 from lclang.lang.runtime.frame.binding_tracing import (
     describe_binding_execution,
+    render_binding_payload,
     trace_binding_failure,
     trace_binding_value,
     trace_cached_failure_publication,
@@ -56,6 +61,7 @@ from lclang.lang.runtime.frame.evaluation_flight import (
 from lclang.lang.runtime.frame.evaluation_limit import internal_budget_scope
 from lclang.lang.runtime.frame.fallback_marker import NO_FALLBACK
 from lclang.lang.runtime.frame.scoped_proxy import FrameProxy
+from lclang.utils.binding_mask import MASKED_VALUE
 
 
 @guard_async_failure(LclEvaluationError, RuntimeErrorCode.E33_BINDING_EVALUATION_NATIVE_FAILURE)
@@ -175,14 +181,49 @@ async def read_selected_binding(
     :raises Exception: If evaluation or lifecycle validation fails.
     """
     owner = selected.owner
-    with scope_verbose_request(
-        name,
-        str(requester.frame_id),
-        None if owner is None else str(owner.frame_id),
-        tuple(str(item) for item in selected.path),
-        describe_binding_execution(owner, name, selected.kind),
+    execution = describe_binding_execution(owner, name, selected.kind)
+    display_enabled = is_verbose_enabled() or ACTIVE_DISPLAY_CAPTURE.get() is not None
+    node = (
+        owner.module.definitions.get(name)
+        if display_enabled and owner is not None and selected.kind != "host"
+        else None
+    )
+    masked = is_name_masked(requester, name) if display_enabled else False
+    with (
+        scope_verbose_request(
+            name,
+            str(requester.frame_id),
+            None if owner is None else str(owner.frame_id),
+            tuple(str(item) for item in selected.path),
+            execution,
+        ),
+        scope_display_request(name, node, execution, masked=masked) as display,
     ):
-        return await read_binding_result(requester, name, span, selected)
+        result = await read_binding_result(requester, name, span, selected)
+        if display is not None:
+            display.result = (
+                MASKED_VALUE
+                if display.masked
+                else render_binding_payload(owner or requester, name, result)
+            )
+            if node is None or execution != "new evaluation":
+                source = {
+                    "cached value": "cached",
+                    "shared evaluation": "shared",
+                    "native input": "native",
+                    "external input": "external",
+                }.get(execution, "unknown")
+                display.label = f"{name}: {display.result} ({source})"
+    if span is not None:
+        source = {
+            "new evaluation": "evaluated",
+            "shared evaluation": "shared",
+            "cached value": "cached",
+            "native input": "native",
+            "external input": "external",
+        }.get(execution, "unknown")
+        record_value_read(name, result, span, masked=is_name_masked(requester, name), source=source)
+    return result
 
 
 async def read_binding_result(

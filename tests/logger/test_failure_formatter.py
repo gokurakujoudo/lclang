@@ -15,7 +15,8 @@ def test_framework_formatting_does_not_mutate_shared_exception_record() -> None:
     )
     text = RecordFormatter("%(message)s").format(record)
     assert text.count("diagnostic payload") == 1
-    assert "Python traceback:" in text and "LclError: [APP/FORMAT] (failure F-format)" in text
+    assert "Python traceback:" not in text
+    assert "[APP/FORMAT: diagnostic payload] (failure F-format)" in text
     assert record.exc_info is not None and record.exc_text is None
     # Standard logging can supply an empty exception tuple outside an except block.
     record.exc_info = (None, None, None)

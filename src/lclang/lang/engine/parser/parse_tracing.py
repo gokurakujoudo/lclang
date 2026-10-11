@@ -23,9 +23,12 @@ def trace_parse_result(text: str, node: LclAstNode) -> None:
     masked = ACTIVE_MASKED_VALUE.get()
     original = safe_repr(text.strip(), renderer=str, masked=masked)
     canonical = safe_repr(node, renderer=lambda value: to_source(node), masked=masked)
-    details = [("Source", render_source_location(node.span)), ("Expression", original)]
+    details: list[tuple[str, str]] = []
     if original.strip() != canonical:
-        details.append(("Parsed expression", canonical))
+        details.append(("Input", original))
     emit_verbose_record(
-        "parse", f"Parsed an expression as {type(node).__name__}", details=tuple(details)
+        "parse",
+        f"Parsed an expression as {type(node).__name__}",
+        details=tuple(details),
+        tree=(f"<expr>: {canonical} ({render_source_location(node.span)})", ()),
     )

@@ -1,6 +1,6 @@
 """Source excerpts rendered from immutable snapshots without file access.
 
-Defines ``render_source_location``, ``render_source_excerpt``.
+Defines ``render_source_location``, ``render_source_excerpt``, ``render_definition_location``.
 """
 
 from __future__ import annotations
@@ -23,6 +23,20 @@ def render_source_location(span: SourceSpan) -> str:
     :returns: Quoted source name followed by line and column.
     """
     return f'"{span.origin.name}":{span.start.line}:{span.start.column}'
+
+
+@guard_failure(LclValidationError, DataModelErrorCode.E41_BINDING_NAME_VALIDATION_NATIVE_FAILURE)
+def render_definition_location(span: SourceSpan) -> str:
+    """Describe known definition positions without inventing unknown coordinates.
+
+    :param span: Actual definition or function-body source range.
+    :returns: Real source position, or an explicit unavailable-source label.
+    """
+    return (
+        "source unavailable"
+        if str(span.origin.name) == "<unknown>"
+        else render_source_location(span)
+    )
 
 
 @guard_failure(LclValidationError, DataModelErrorCode.E41_BINDING_NAME_VALIDATION_NATIVE_FAILURE)

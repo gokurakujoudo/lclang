@@ -13,6 +13,7 @@ from lclang.error import LclWorkflowError, WorkflowErrorCode
 from lclang.error.operation_guard import guard_async_failure, guard_failure
 from lclang.lang.runtime import Frame
 from lclang.logger import Logger
+from lclang.utils.text_tree import TextTree, build_text_tree, render_text_tree
 from lclang.workflow.execution_status import ExecutionStatus, ExecutionStatusTree
 from lclang.workflow.task_logging import status_level
 
@@ -24,26 +25,20 @@ def status_lines(tree: ExecutionStatusTree) -> list[str]:
     :param tree: Root status node.
     :returns: Deterministic tree-shaped status lines.
     """
-    detail = f": {tree.task_description}" if tree.task_description else ""
-    lines = [f"[{tree.status.value}] {tree.task_name}{detail}"]
 
-    def visit(node: ExecutionStatusTree, prefix: str, last: bool) -> None:
-        """Append one status node recursively.
+    def visit(node: ExecutionStatusTree) -> TextTree:
+        """Detach one status node while preserving recorded execution order.
 
         :param node: Current status node.
-        :param prefix: Existing ancestor indentation.
-        :param last: Whether this node is the final sibling.
+        :returns: Text node with its ordered child snapshots.
         """
-        connector = "└─ " if last else "├─ "
         description = f": {node.task_description}" if node.task_description else ""
-        lines.append(f"{prefix}{connector}[{node.status.value}] {node.task_name}{description}")
-        child_prefix = prefix + ("   " if last else "│  ")
-        for index, child in enumerate(node.sub_tasks):
-            visit(child, child_prefix, index == len(node.sub_tasks) - 1)
+        return build_text_tree(
+            f"[{node.status.value}] {node.task_name}{description}",
+            tuple(visit(child) for child in node.sub_tasks),
+        )
 
-    for index, child in enumerate(tree.sub_tasks):
-        visit(child, "", index == len(tree.sub_tasks) - 1)
-    return lines
+    return render_text_tree(visit(tree))
 
 
 @guard_failure(LclWorkflowError, WorkflowErrorCode.E31_TASK_EXECUTION_NATIVE_FAILURE)

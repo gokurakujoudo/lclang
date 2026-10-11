@@ -80,6 +80,7 @@ def verbose_config(config: LoggerHandlerConfig) -> LoggerHandlerConfig:
         takeover_loggers=config.takeover_loggers,
         capture_warnings=config.capture_warnings,
         timezone=config.timezone,
+        traceback_style=config.traceback_style,
     )
 
 

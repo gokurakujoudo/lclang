@@ -1,146 +1,163 @@
-"""Uniform human-readable diagnostics built from detached failure records.
+"""Uniform failure trees built only from detached diagnostic evidence.
 
-Defines ``render_error``, ``render_failure``, ``select_error_action``.
+Defines ``render_error``, ``render_failure``, ``build_failure_tree``, ``select_error_action``.
 """
 
-from typing import cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, cast
 
 from lclang.error.exception_base import LclError
+from lclang.error.failure_summary import describe_failure_reason, render_failure_summary
+
+if TYPE_CHECKING:
+    from lclang.utils.text_tree import TextTree
 
 
 def render_error(error: LclError) -> str:
-    """Render complete loading and evaluation paths with a final failure reason.
+    """Render the complete failure path and inline reason from frozen records.
 
-    :param error: Structured failure whose records already contain value snapshots.
-    :returns: English multiline diagnostic without a terminal newline.
+    :param error: Structured failure with detached source and value evidence.
+    :returns: English diagnostic tree without a terminal newline.
     """
-    from lclang.error import LclError
-    from lclang.error.source_excerpt import render_source_excerpt, render_source_location
-    from lclang.utils.binding_mask import MASKED_VALUE
-
-    frames = tuple(frame for frame in error.evaluation_context if frame.kind != "target")
-    generated = {frame.name for frame in error.evaluation_context if frame.kind == "target"}
-    variable_stack = tuple(name for name in error.variable_stack if name not in generated)
-    if error.config_stack:
-        lines = [
-            f'Error in loading config file "{error.config_stack[0].origin.name}" [{error.code}]:'
-        ]
-        for loading_frame in error.config_stack:
-            if loading_frame.declaration_span is None:
-                continue
-            lines.append("  at " + render_source_location(loading_frame.declaration_span))
-            lines.extend(
-                "    " + line
-                for line in render_source_excerpt(loading_frame.declaration_span, underline=False)
-            )
-    elif frames or variable_stack:
-        name = frames[0].name if frames else variable_stack[0]
-        lines = [f"Error in evaluating {name} [{error.code}]:"]
-    else:
-        action = select_error_action(error.default_code) or select_error_action(error.code)
-        lines = [f"Error{action} [{error.code}]:"]
-    for frame in frames:
-        location = (
-            ""
-            if str(frame.span.origin.name) == "<unknown>"
-            else " at " + render_source_location(frame.span)
-        )
-        lines.append(f"  {frame.name}{location}")
-        if frame.masked:
-            lines.append("    " + MASKED_VALUE)
-        else:
-            span = error.span if frame is frames[-1] and error.span is not None else frame.span
-            excerpt = render_source_excerpt(span, underline=frame is frames[-1])
-            lines.extend("    " + line for line in (excerpt or [frame.expression]))
-        for value in frame.used_values:
-            payload = MASKED_VALUE if value.masked else f"({value.type_name}) {value.value}"
-            lines.append(f"    {value.name} = {payload}")
-    if not frames:
-        lines.extend("  " + name for name in variable_stack)
-        if error.span is not None and not any(
-            frame.declaration_span == error.span for frame in error.config_stack
-        ):
-            lines.append("  at " + render_source_location(error.span))
-            excerpt = [MASKED_VALUE] if error.masked else render_source_excerpt(error.span)
-            lines.extend("    " + line for line in excerpt)
-    for note in getattr(error, "__notes__", ()):
-        lines.append("Context: " + (MASKED_VALUE if error.masked else note))
-    cause = error.__cause__
-    if isinstance(cause, LclError):
-        if not (cause.evaluation_context or cause.config_stack):
-            lines.append("Cause: " + (MASKED_VALUE if error.masked else error.message))
-        lines.extend("  " + line for line in render_error(cause).splitlines())
-    else:
-        reason = error.message
-        if cause is not None and not isinstance(cause, LclError):
-            if error.native_cause is None:
-                error.freeze_native_cause(cause)
-            native = error.native_cause or type(cause).__name__
-            reason = native if native == reason else f"{reason}: {native}"
-        if error.masked or any(frame.masked for frame in frames):
-            reason = MASKED_VALUE
-        lines.append("Cause: " + reason)
-    if isinstance(error, ExceptionGroup):
-        for index, member in enumerate(cast(ExceptionGroup[Exception], error).exceptions, 1):
-            lines.append(f"  Failure {index}:")
-            lines.extend(
-                "    " + line
-                for line in render_failure(member, action="handling failure").splitlines()
-            )
-    if error.verbose_failure_id is not None:
-        lines[0] = lines[0].removesuffix(":") + f" (failure {error.verbose_failure_id}):"
-    return "\n".join(lines)
+    return render_failure(error, action="")
 
 
 def render_failure(error: BaseException, *, action: str) -> str:
-    """Render a structured or native failure at an application boundary.
+    """Render one application report with native chains and every group member.
 
-    :param error: Original exception, without replacing its cause or traceback.
-    :param action: English operation used when no LCL action is available.
-    :returns: Shared multiline diagnostic retaining external failure wording.
+    :param error: Original exception, whose propagation state remains unchanged.
+    :param action: Operation label for failures without language evidence.
+    :returns: Shared multiline diagnostic with inline code reasons.
     """
-    from lclang.error import LclError
+    from lclang.utils.text_tree import render_text_tree
+
+    return "\n".join(render_text_tree(build_failure_tree(error, action, set())))
+
+
+def build_failure_tree(
+    error: BaseException,
+    action: str,
+    seen: set[int | str],
+    *,
+    masked: bool = False,
+    frozen_reason: str | None = None,
+) -> TextTree:
+    """Build a report-local tree without expanding the same LCL failure twice.
+
+    :param error: Original exception on this branch.
+    :param action: Operation label for an evidence-free error.
+    :param seen: Report-local identities already expanded, including sibling members.
+    :param masked: Redaction inherited from the parent diagnostic.
+    :param frozen_reason: Owner-captured native cause text, avoiding another native str call.
+    :returns: Detached protected text and ordered child trees.
+    """
+    from lclang.error.codes.e0_general_error_code import GeneralErrorCode
+    from lclang.error.diagnostic_tree import build_evaluation_tree, build_loading_tree
+    from lclang.error.native_wrap import is_ordinary_failure
+    from lclang.error.source_excerpt import render_source_excerpt, render_source_location
+    from lclang.utils.binding_mask import MASKED_VALUE
     from lclang.utils.value_representation import safe_repr
 
+    key = error.verbose_failure_id if isinstance(error, LclError) else None
+    identity: int | str = key or id(error)
+    if identity in seen:
+        return render_failure_summary(error, masked=masked) + " (already shown)", ()
+    seen.add(identity)
+    children: list[TextTree] = []
     if isinstance(error, LclError):
-        diagnostic = render_error(error)
-        if not (error.evaluation_context or error.config_stack or error.variable_stack):
-            lines = diagnostic.splitlines()
-            identity = (
-                "" if error.verbose_failure_id is None else f" (failure {error.verbose_failure_id})"
+        masked = masked or error.masked or any(frame.masked for frame in error.evaluation_context)
+        if (
+            error.native_cause is None
+            and error.__cause__ is not None
+            and not isinstance(error.__cause__, LclError)
+        ):
+            error.freeze_native_cause(error.__cause__)
+        reason = describe_failure_reason(error, masked=masked, max_length=None)
+        loading = build_loading_tree(error)
+        evaluation = build_evaluation_tree(error, masked=masked)
+        if loading is not None:
+            action = f'loading config file "{error.config_stack[0].origin.name}"'
+            children.append(("Loading route", (loading,)))
+        elif evaluation is not None:
+            action = "evaluating " + evaluation[0].split(":", 1)[0]
+        else:
+            selected = select_error_action(error.default_code) or select_error_action(error.code)
+            action = action or selected.removeprefix(" in ")
+        if evaluation is not None:
+            children.append(evaluation)
+        elif error.span is not None:
+            excerpt = [MASKED_VALUE] if masked else render_source_excerpt(error.span)
+            children.append(
+                ("Source: " + render_source_location(error.span) + "\n" + "\n".join(excerpt), ())
             )
-            lines[0] = f"Error in {action} [{error.code}]{identity}:"
-            diagnostic = "\n".join(lines)
-        return diagnostic
-    from lclang.error.codes.e0_general_error_code import GeneralErrorCode
-    from lclang.error.native_wrap import is_ordinary_failure
-
-    reason = safe_repr(error, renderer=str, max_length=None)
-    label = (
-        f" [{GeneralErrorCode.E22_NATIVE_EXCEPTION_DIAGNOSTIC}]"
-        if is_ordinary_failure(error)
-        else ""
-    )
-    diagnostic = f"Error in {action}{label}:\nCause: {type(error).__name__}: {reason}"
-    cause: BaseException | None = error.__cause__
-    if isinstance(cause, (LclError, BaseExceptionGroup)):
-        cause_diagnostic = (
-            render_error(cause)
-            if isinstance(cause, LclError)
-            else render_failure(
-                cast(BaseExceptionGroup[BaseException], cause), action="handling cause"
+        identity_text = "" if key is None else f" (failure {key})"
+        operation = " in " + action if action else ""
+        heading = f"Error{operation} [{error.code}: {reason}]{identity_text}"
+        if (
+            error.native_cause is not None
+            and error.message not in {reason, error.native_cause}
+            and not masked
+        ):
+            children.append(
+                ("Operation: " + safe_repr(error.message, renderer=str, max_length=None), ())
+            )
+    else:
+        reason = (
+            describe_failure_reason(error, masked=masked, max_length=None)
+            if frozen_reason is None
+            else safe_repr(frozen_reason, renderer=str, max_length=None, masked=masked)
+        )
+        code = (
+            f" [{GeneralErrorCode.E22_NATIVE_EXCEPTION_DIAGNOSTIC}: {reason}]"
+            if is_ordinary_failure(error)
+            else ""
+        )
+        heading = (
+            f"Error in {action}{code}: {type(error).__name__}: {reason}"
+            if frozen_reason is None
+            else reason
+        )
+    for note in getattr(error, "__notes__", ()):
+        children.append(
+            ("Context: " + safe_repr(note, renderer=str, max_length=None, masked=masked), ())
+        )
+    cause = error.__cause__
+    context = error.__context__
+    if cause is not None:
+        captured = (
+            error.native_cause
+            if isinstance(error, LclError) and not isinstance(cause, LclError)
+            else None
+        )
+        children.append(
+            (
+                "Cause",
+                (
+                    build_failure_tree(
+                        cause, "handling cause", seen, masked=masked, frozen_reason=captured
+                    ),
+                ),
             )
         )
-        diagnostic += "\n" + "\n".join("  " + line for line in cause_diagnostic.splitlines())
+    elif context is not None and not error.__suppress_context__:
+        children.append(
+            (
+                "During handling",
+                (build_failure_tree(context, "handling context", seen, masked=masked),),
+            )
+        )
     if isinstance(error, BaseExceptionGroup):
         for index, member in enumerate(
             cast(BaseExceptionGroup[BaseException], error).exceptions, 1
         ):
-            diagnostic += f"\n  Failure {index}:\n" + "\n".join(
-                "    " + line
-                for line in render_failure(member, action="handling failure").splitlines()
+            children.append(
+                (
+                    f"Failure {index}",
+                    (build_failure_tree(member, "handling failure", seen, masked=masked),),
+                )
             )
-    return diagnostic
+    return heading, tuple(children)
 
 
 def select_error_action(code: str) -> str:

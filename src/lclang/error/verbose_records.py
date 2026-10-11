@@ -6,6 +6,7 @@ Defines ``describe_verbose_context``, ``emit_verbose_record``.
 import asyncio
 
 from lclang.error.verbose_context import ACTIVE_VERBOSE_CONTEXT, ACTIVE_VERBOSE_LOGGER
+from lclang.utils.text_tree import TextTree, render_text_tree
 from lclang.utils.value_representation import safe_repr
 
 
@@ -44,6 +45,9 @@ def emit_verbose_record(
     *,
     details: tuple[tuple[str, str], ...] = (),
     failure_id: str | None = None,
+    tree: TextTree | None = None,
+    evaluation_id: str | None = None,
+    context_details: tuple[tuple[str, str], ...] = (),
 ) -> None:
     """Send a readable diagnostic through the borrowed logger.
 
@@ -51,11 +55,14 @@ def emit_verbose_record(
     :param heading: Short English description of the actual operation.
     :param details: Already-protected text details shown in fixed order.
     :param failure_id: Original failure identifier when the event refers to an error.
+    :param tree: Optional already-protected detached tree for display consumers.
+    :param evaluation_id: Explicit root correlation when its evaluation scope has ended.
+    :param context_details: Additional protected operation evidence retained as record metadata.
     """
     logger = ACTIVE_VERBOSE_LOGGER.get()
     if logger is None or not logger.isEnabledFor(10):
         return
-    context = describe_verbose_context()
+    context = describe_verbose_context() + context_details
     message = "\n".join(
         (
             safe_repr(heading, renderer=str, max_length=None),
@@ -65,6 +72,8 @@ def emit_verbose_record(
             ),
         )
     )
+    if tree is not None:
+        message += "\n" + "\n".join(render_text_tree(tree))
     logger.debug(
         "%s",
         message,
@@ -72,8 +81,9 @@ def emit_verbose_record(
         extra={
             "lclang_verbose": True,
             "lclang_stage": stage,
-            "lclang_evaluation_id": ACTIVE_VERBOSE_CONTEXT.get().evaluation_id,
+            "lclang_evaluation_id": evaluation_id or ACTIVE_VERBOSE_CONTEXT.get().evaluation_id,
             "lclang_failure_id": failure_id,
             "lclang_context": context,
+            "lclang_tree": tree,
         },
     )
