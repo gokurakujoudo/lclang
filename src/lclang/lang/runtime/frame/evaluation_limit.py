@@ -5,19 +5,13 @@ Defines ``EvaluationLimits``, ``InternalEvaluationBudget``, ``internal_budget_sc
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from lclang.error import LclEvaluationError, RuntimeErrorCode
-from lclang.error.exception_base import LclValidationError
-from lclang.error.operation_guard import guard_constructor, guard_failure
-
-if TYPE_CHECKING:
-    pass
-
 from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 
+from lclang.error import LclEvaluationError, RuntimeErrorCode
+from lclang.error.exception_base import LclValidationError
+from lclang.error.operation_guard import guard_constructor, guard_failure
 from lclang.lang.common.source_location import SourceSpan
 from lclang.lang.engine.evaluator.evaluation_budget import (
     internal_has_guard,

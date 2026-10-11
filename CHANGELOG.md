@@ -28,6 +28,9 @@
 
 ### Diagnostics and documentation
 
+- Test the numeric scanner error for a missing prefix and remove redundant
+  coverage and typing suppressions. Rename mutable logger state and remove
+  empty or duplicate imports used only for type checking.
 - Export awaiting, binding masks, default declarations and scoped proxy markers
   from `lclang.utils`, with executable utility examples. Remove `lclang.common`
   and utility dependencies on language implementations; Frame environment

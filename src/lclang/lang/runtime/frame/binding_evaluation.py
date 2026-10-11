@@ -195,7 +195,7 @@ async def read_selected_binding(
         )
     binding_kind = selected.kind
     if binding_kind == "proxy":
-        return FrameProxy(cast(object, requester), tuple(name.split(".")))  # type: ignore[arg-type]
+        return FrameProxy(requester, tuple(name.split(".")))
     if binding_kind == "factory":
         factory = find_scoped_factory(owner, name)
         from lclang.lang.runtime.frame.environment_proxy import BoundEnvironment

@@ -13,8 +13,6 @@ from lclang.error.operation_guard import guard_failure
 if TYPE_CHECKING:
     from lclang.lang.runtime.frame.frame import Frame
 
-from typing import TYPE_CHECKING
-
 from lclang.lang.ast import LclAstNode
 from lclang.lang.common.identifiers import VarName
 from lclang.lang.runtime.dependency.ast_dependency_analysis import analyze_dependencies
@@ -28,9 +26,6 @@ from lclang.lang.runtime.dependency.frame.frame_dependency_graph import (
     FrameDependencyEdge,
     FrameDependencyGraph,
 )
-
-if TYPE_CHECKING:
-    from lclang.lang.runtime.frame import Frame
 
 
 @guard_failure(LclEvaluationError, RuntimeErrorCode.E44_DEPENDENCY_RESOLUTION_NATIVE_FAILURE)

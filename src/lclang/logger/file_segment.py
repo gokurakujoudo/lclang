@@ -5,8 +5,6 @@ Defines ``next_sequence``, ``path_line``, ``create_segment``.
 
 from __future__ import annotations
 
-# Existing uppercase names denote mutable process state, not constants.
-# pyright: reportConstantRedefinition=false
 import json
 import multiprocessing
 import os
@@ -21,8 +19,8 @@ from lclang.logger.sink_config import FileConfig, leaf_filename
 
 # Unitless process-local sequence state survives sequential scopes; PID resets detect fork copies.
 SEQUENCE_LOCK = Lock()
-SEQUENCE_PID = os.getpid()
-SEQUENCE = 0
+sequence_pid = os.getpid()
+sequence = 0
 
 
 @guard_failure(LclLoggerError, LoggerErrorCode.E11_LOGGER_CONFIGURATION_NATIVE_FAILURE)
@@ -31,13 +29,13 @@ def next_sequence() -> int:
 
     :returns: Positive unitless sequence number.
     """
-    global SEQUENCE, SEQUENCE_PID
+    global sequence, sequence_pid
     with SEQUENCE_LOCK:
         pid = os.getpid()
-        if pid != SEQUENCE_PID:
-            SEQUENCE_PID, SEQUENCE = pid, 0
-        SEQUENCE += 1
-        return SEQUENCE
+        if pid != sequence_pid:
+            sequence_pid, sequence = pid, 0
+        sequence += 1
+        return sequence
 
 
 @guard_failure(LclLoggerError, LoggerErrorCode.E11_LOGGER_CONFIGURATION_NATIVE_FAILURE)

@@ -8,16 +8,9 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING
-
-from lclang.error import RuntimeErrorCode
-
-if TYPE_CHECKING:
-    pass
-
 from contextvars import ContextVar, Token
 
-from lclang.error import LclCircularDependencyError
+from lclang.error import LclCircularDependencyError, RuntimeErrorCode
 from lclang.lang.common.source_location import SourceSpan
 
 type FlightKey = tuple[int, str]
