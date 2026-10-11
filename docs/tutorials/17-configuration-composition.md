@@ -733,7 +733,7 @@ Configuration remains trusted code with the ordinary capabilities of supplied
 Python objects. Import isolation controls name composition; it provides no
 hostile-code sandbox.
 
-[Previous: Python utilities for downstream applications](16-python-utilities.md) | [Return to the series introduction](README.md)
+[Previous: Python utilities for downstream applications](16-python-utilities.md) | [Next: Application logging](18-application-logging.md) | [Return to the series introduction](README.md)
 
 The [error reference](../reference/errors.md) lists each builtin code and shows
 how to inspect its cause, source scene, and retained context.

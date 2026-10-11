@@ -69,12 +69,14 @@ example directly from its Markdown source.
     standalone logging, reviewed data helpers, and calendars without adopting LCL evaluation or the CLI.
 17. **[Configuration composition](17-configuration-composition.md)** -- choose shared expansion or isolated
     imports, supply required and runtime values, compose Modules, and trace loading and evaluation failures.
+18. **[Application logging](18-application-logging.md)**: own process logging, borrow existing loggers,
+    trace selected operations, and report final failures with compact or full Python stacks.
 
 The sequence is deliberate: lessons 1-4 establish everyday use, lessons 5-8
 make behavior predictable in real applications, and lessons 9-15 apply the same
 model to larger systems. Lesson 16 shows which supporting Python APIs can
-stand alone, and lesson 17 brings configuration composition and diagnostics
-together. Read the lessons in order or jump to one topic after
+stand alone, lesson 17 brings configuration composition and diagnostics
+together, and lesson 18 explains downstream application logging. Read the lessons in order or jump to one topic after
 finishing this introduction.
 
 ## Is lclang a good fit?

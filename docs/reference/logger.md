@@ -6,6 +6,11 @@ enqueue records; one writer formats and writes console and named file sinks.
 Nested/concurrent scopes are rejected. Logger wrappers select the current
 process scope, and reject use outside a scope. Initialize after worker creation.
 
+For downstream application patterns and executable examples, read the
+[application logging tutorial](../tutorials/18-application-logging.md). It covers
+scope ownership, levels, verbose filtering, final failure boundaries, borrowed
+stdlib loggers and explicit uncaught-error hooks.
+
 ## Configuration
 
 See [text diagnostics](text-display.md) for shared tree layout, VERBOSE labels,
