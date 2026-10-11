@@ -7,11 +7,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from lclang.common.identifiers import VarName
-from lclang.common.source_location import SourceSpan
 from lclang.error import LclEvaluationError, RuntimeErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
+from lclang.lang.common.identifiers import VarName
+from lclang.lang.common.source_location import SourceSpan
 from lclang.lang.runtime.dependency.dependency_types import DependencyEdge, DependencyKind
 
 type _Occurrence = tuple[VarName, VarName, SourceSpan]

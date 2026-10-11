@@ -7,13 +7,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from lclang.common.identifiers import VarName
-from lclang.common.source_location import SourceOrigin, SourceSpan
 from lclang.error import ConfigurationErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
 from lclang.lang.ast import LclAstNode, LclJoinedString
 from lclang.lang.common.binding_names import validate_qualified_name
+from lclang.lang.common.identifiers import VarName
+from lclang.lang.common.source_location import SourceOrigin, SourceSpan
 
 
 @guard_constructor(

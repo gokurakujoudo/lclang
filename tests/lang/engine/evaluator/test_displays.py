@@ -6,11 +6,11 @@ from typing import cast
 
 import pytest
 
-from lclang.common.identifiers import VarName
-from lclang.common.source_location import SourceSpan
 from lclang.error import LclAttributeError, LclEvaluationError
 from lclang.lang import LclRecord
 from lclang.lang.ast import LclConstant, LclDict
+from lclang.lang.common.identifiers import VarName
+from lclang.lang.common.source_location import SourceSpan
 from lclang.lang.engine.evaluator.ast_interpreter import interpret_expression
 from lclang.lang.engine.parser import parse_expression
 

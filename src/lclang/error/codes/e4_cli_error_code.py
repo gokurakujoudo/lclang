@@ -11,6 +11,8 @@ class CliErrorCode(StrEnum):
 
     Values follow domain, subsystem, operation, category, cause and refinement.
     Exx names retain the subsystem and operation digits within this domain.
+    Members ending in NATIVE_FAILURE wrap a Python exception from the named
+    operation; its original type is retained in ``__cause__``.
     """
 
     # Unitless identifiers follow the error reference and identify detected failure reasons.
@@ -26,18 +28,15 @@ class CliErrorCode(StrEnum):
     E11_DUPLICATE_COMMAND_GROUP_CHILD_NAME = "LCL411232"
     E11_COMMAND_PARAMETER_NAME_IS_RESERVED = "LCL411291"
     E11_COMMAND_PRESET_NAME_IS_RESERVED = "LCL411292"
-    # Unexpected ordinary native Exception at this operation; __cause__ retains its type.
     E11_COMMAND_DECLARATION_NATIVE_FAILURE = "LCL411890"
     E12_CLI_ENTRANCE_VERSION_MUST_BE_TEXT = "LCL412111"
     E12_CLI_ENTRANCE_COMMAND_GROUP_MUST_BE_COMMANDGROUP = "LCL412191"
     E12_CLI_ENTRANCE_CONFIG_MUST_BE_CLICONFIG = "LCL412192"
     E12_CLI_ENTRANCE_VERSION_CANNOT_BE_EMPTY = "LCL412211"
-    # Unexpected ordinary native Exception at this operation; __cause__ retains its type.
     E12_COMMAND_PARAMETER_DECLARATION_NATIVE_FAILURE = "LCL412890"
     E13_ARGUMENT_MUST_BE_TEXT = "LCL413111"
     E13_ARGUMENT_MUST_BE_A_MAPPING = "LCL413121"
     E13_ARGUMENT_MUST_BE_LOWERCASE_ASCII_SNAKE_CASE = "LCL413271"
-    # Unexpected ordinary native Exception at this operation; __cause__ retains its type.
     E13_CLI_DECLARATION_VALIDATION_NATIVE_FAILURE = "LCL413890"
     E14_EXECUTABLE_PATH_MUST_BE_TEXT = "LCL414111"
     E14_PARAMETER_REQUIRED_MUST_BE_BOOLEAN = "LCL414141"
@@ -47,16 +46,13 @@ class CliErrorCode(StrEnum):
     E14_EXECUTABLE_PATH_CANNOT_BE_EMPTY = "LCL414211"
     E14_RAW_ARGV_TOKENS_MUST_BE_NON_EMPTY_TEXT = "LCL414213"
     E14_COMMAND_PATH_MUST_CONTAIN_NON_EMPTY_TEXT_SEGMENTS = "LCL414214"
-    # Unexpected ordinary native Exception at this operation; __cause__ retains its type.
     E14_CLI_MODEL_CONSTRUCTION_NATIVE_FAILURE = "LCL414890"
     E15_CONTEXT_AS_OF_DATE_MUST_BE_A_DATE = "LCL415111"
     E15_CONTEXT_DRYRUN_MUST_BE_BOOLEAN = "LCL415112"
     E15_CONTEXT_FRAME_MUST_BE_A_FRAME = "LCL415113"
     E15_CONTEXT_LOGGER_MUST_BE_A_LOGGER = "LCL415114"
     E15_CONTEXT_RAW_PARAMS_MUST_BE_CLIPARAMS = "LCL415115"
-    # Unexpected ordinary native Exception at this operation; __cause__ retains its type.
     E15_CLI_CONTEXT_NATIVE_FAILURE = "LCL415890"
-    # Unexpected ordinary native Exception at this operation; __cause__ retains its type.
     E16_CLI_APPLICATION_POLICY_NATIVE_FAILURE = "LCL416890"
     E17_CANONICAL_BUILTIN_NAMES_MUST_BE_UNIQUE = "LCL417271"
     E17_BUILTIN_DESCRIPTIONS_MUST_BE_NON_BLANK_AND_TRIMMED = "LCL417272"
@@ -64,18 +60,14 @@ class CliErrorCode(StrEnum):
     E17_NAMESPACE_DESCRIPTIONS_DO_NOT_MATCH_CANONICAL_VALUES = "LCL417291"
     E17_BUILTIN_DESCRIPTIONS_DO_NOT_MATCH_CANONICAL_VALUES = "LCL417292"
     E17_CALENDAR_DESCRIPTIONS_DO_NOT_MATCH_CANONICAL_VALUES = "LCL417293"
-    # Unexpected ordinary native Exception at this operation; __cause__ retains its type.
     E17_BUILTIN_DOCUMENTATION_NATIVE_FAILURE = "LCL417890"
-    # Unexpected ordinary native Exception at this operation; __cause__ retains its type.
     E18_COMMAND_PARAMETER_DESCRIPTION_NATIVE_FAILURE = "LCL418890"
-    # Unexpected ordinary native Exception at this operation; __cause__ retains its type.
     E21_COMMAND_ROUTING_NATIVE_FAILURE = "LCL421890"
     E21_MISSING_COMMAND = "LCL421911"
     E21_HELP_DOES_NOT_ACCEPT_ARGUMENTS = "LCL421991"
     E21_VERSION_DOES_NOT_ACCEPT_ARGUMENTS = "LCL421992"
     E21_ROUTE_COMMAND_FAILURE = "LCL421993"
     E30_USAGE = "LCL430000"
-    # Unexpected ordinary native Exception at this operation; __cause__ retains its type.
     E31_OPTION_PARSING_NATIVE_FAILURE = "LCL431890"
     E31_UNKNOWN_OPTION_OR_ARGUMENT = "LCL431911"
     E31_MISSING_OPTION = "LCL431912"
@@ -85,36 +77,29 @@ class CliErrorCode(StrEnum):
     E31_RESERVED_OVERRIDE_KEY = "LCL431995"
     E31_DUPLICATE_CONFIG_OPTION = "LCL431996"
     E31_DUPLICATE_AS_OF_OPTION = "LCL431997"
-    # Unexpected ordinary native Exception at this operation; __cause__ retains its type.
     E32_ARGV_ADAPTATION_NATIVE_FAILURE = "LCL432890"
     E32_FULL_ARGV_REQUIRES_EXECUTABLE_AND_PY_SCRIPT = "LCL432991"
     E32_ARGV_TOKENS_MUST_BE_NON_EMPTY_TEXT = "LCL432992"
     E32_SCRIPT_PATH_MUST_END_IN_PY = "LCL432993"
-    # Unexpected ordinary native Exception at this operation; __cause__ retains its type.
     E33_CLI_OVERRIDE_NATIVE_FAILURE = "LCL433890"
     E33_FORCED_RESULT_PARSE_FAILED = "LCL433991"
     E41_FRAME_CLOSE_FAILURE = "LCL441811"
-    # Unexpected ordinary native Exception at this operation; __cause__ retains its type.
     E41_CLI_BINDING_NATIVE_FAILURE = "LCL441890"
     E41_MISSING_REQUIRED_PARAMETER_JOIN_MISSING = "LCL441911"
     E41_MULTIPLE_CLEANUP_FAILURES = "LCL441971"
     E41_BINDING_CLEANUP_FAILURE = "LCL441972"
-    # Unexpected ordinary native Exception at this operation; __cause__ retains its type.
     E43_CLI_LOGGER_RESOLUTION_NATIVE_FAILURE = "LCL443890"
     E51_PARAMETER_TYPE = "LCL451171"
     E51_CLI_COMMAND_HANDLER_MUST_RETURN_CLIRESULT = "LCL451191"
     E51_HANDLER_FAILURE = "LCL451811"
     E51_CLEANUP_FAILURE = "LCL451812"
     E51_OUTPUT_FAILURE = "LCL451813"
-    # Unexpected ordinary native Exception at this operation; __cause__ retains its type.
     E51_COMMAND_EXECUTION_NATIVE_FAILURE = "LCL451890"
     E51_EXECUTION_CLEANUP_FAILURE = "LCL451911"
     E52_COMMAND_ROUTE_DID_NOT_SELECT_A_COMMAND = "LCL452691"
-    # Unexpected ordinary native Exception at this operation; __cause__ retains its type.
     E52_COMMAND_RUNNER_NATIVE_FAILURE = "LCL452890"
     E61_COMMAND_SCAN_ROOT_MUST_BE_A_MODULE = "LCL461191"
     E61_DUPLICATE_SCANNED_COMMAND_NAME = "LCL461231"
-    # Unexpected ordinary native Exception at this operation; __cause__ retains its type.
     E61_COMMAND_DISCOVERY_NATIVE_FAILURE = "LCL461890"
 
 

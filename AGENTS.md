@@ -29,8 +29,9 @@ reference documentation before changing the project.
 - Group public APIs under `lclang.lang`, `config`, `cli`, `workflow`, `utils`,
   `logger`, and `error`; the package root exports no APIs. Keep only
   `__init__.py` and the sole version definition `__version__.py` at the root.
-  Cross-package primitives belong to `lclang.common`; language-only shared
-  values belong to `lclang.lang.common`. Language engine, AST, runtime and
+  Language-independent utilities belong to `lclang.utils`, which never imports
+  `lclang.lang`. Language identifiers, source locations and shared values belong
+  to `lclang.lang.common`; language adapters depend on utilities. Language engine, AST, runtime and
   standard-library implementations belong under `lclang.lang`.
 - Name source files for their concrete contents. Use class names such as
   `lcl_record.py`, and plural families such as `atom_nodes.py`; avoid generic

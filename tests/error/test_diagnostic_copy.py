@@ -7,7 +7,6 @@ from typing import Any, Self, cast
 import pytest
 
 from lclang.cli import CommandGroup
-from lclang.common.source_location import UNKNOWN_SPAN
 from lclang.error import (
     CalendarCannotLoadException,
     CalendarLogicException,
@@ -21,6 +20,7 @@ from lclang.error import (
     LclValidationError,
     RouteFailure,
 )
+from lclang.lang.common.source_location import UNKNOWN_SPAN
 from lclang.utils.calendar import ALL_DAYS, CalendarID
 
 
@@ -82,6 +82,18 @@ def test_validation_has_an_explicit_empty_conflict_field() -> None:
     """Ordinary validation diagnostics expose an empty typed conflict tuple."""
     failure = LclValidationError("invalid field", code="APP/VALIDATION")
     assert failure.binding_names == ()
+
+
+def test_copy_hook_updates_native_arguments_and_read_only_message() -> None:
+    """Direct hook callers receive one consistent description and argument tuple."""
+    source = LclError("original description", code="APP/ORIGINAL")
+    target = LclError("placeholder", code="APP/PLACEHOLDER")
+    source.copy_diagnostic_fields(target)
+    assert target.message == "original description" and target.args == source.args
+    assert target.code == "APP/ORIGINAL"
+    with pytest.raises(AttributeError):
+        object.__setattr__(target, "message", "changed")
+    assert target.message == "original description"
 
 
 @pytest.mark.parametrize(

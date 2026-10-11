@@ -4,9 +4,9 @@ from typing import Any, cast
 
 import pytest
 
-from lclang.common.identifiers import ModuleName
 from lclang.error import LclEvaluationError, LclValidationError
 from lclang.lang import NEED_OVERRIDE, RUNTIME_OVERRIDE, define_frame, define_module
+from lclang.lang.common.identifiers import ModuleName
 from lclang.lang.runtime import Module, VariableInspectionStatus
 
 

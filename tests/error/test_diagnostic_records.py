@@ -5,12 +5,6 @@ from typing import Any, cast
 
 import pytest
 
-from lclang.common.source_location import (
-    UNKNOWN_SPAN,
-    SourcePosition,
-    SourceSpan,
-    merge_source_spans,
-)
 from lclang.error import (
     ConfigLoadFrame,
     DiagnosticValue,
@@ -20,6 +14,12 @@ from lclang.error import (
     LclValidationError,
 )
 from lclang.lang import SourceSnapshot
+from lclang.lang.common.source_location import (
+    UNKNOWN_SPAN,
+    SourcePosition,
+    SourceSpan,
+    merge_source_spans,
+)
 
 
 @pytest.mark.parametrize(

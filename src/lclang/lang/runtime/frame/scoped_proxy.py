@@ -16,9 +16,9 @@ from lclang.error.operation_guard import guard_async_failure, guard_constructor,
 if TYPE_CHECKING:
     from lclang.lang.runtime.frame.frame import Frame
 
-from lclang.common.scoped_proxy import ScopedProxyValue
-from lclang.common.source_location import SourceSpan
 from lclang.error import LclNameError
+from lclang.lang.common.source_location import SourceSpan
+from lclang.utils.scoped_proxy import ScopedProxyValue
 
 
 class ProxyFrame(Protocol):

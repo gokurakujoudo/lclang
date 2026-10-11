@@ -10,8 +10,6 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from lclang.common.identifiers import SourceName
-from lclang.common.source_location import SourceOrigin
 from lclang.config.config_document import ConfigDefinition, ConfigImport, ConfigUsing
 from lclang.config.config_source import (
     LoadedConfigSource,
@@ -37,6 +35,8 @@ from lclang.error.exception_base import LclValidationError
 from lclang.error.loading_context import derive_loading_error
 from lclang.error.native_wrap import wrap_failure
 from lclang.error.operation_guard import guard_async_failure, guard_constructor, guard_failure
+from lclang.lang.common.identifiers import SourceName
+from lclang.lang.common.source_location import SourceOrigin
 
 
 @guard_constructor(LclValidationError, ConfigurationErrorCode.E23_CONFIG_LOADING_NATIVE_FAILURE)

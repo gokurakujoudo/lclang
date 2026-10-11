@@ -9,11 +9,11 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from lclang.common.identifiers import FrameId, VarName
 from lclang.error import LclEvaluationError, RuntimeErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
 from lclang.lang.ast import LclAstNode
+from lclang.lang.common.identifiers import FrameId, VarName
 
 if TYPE_CHECKING:
     from lclang.lang.runtime.frame.frame import Frame

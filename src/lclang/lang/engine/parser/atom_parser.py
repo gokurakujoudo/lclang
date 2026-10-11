@@ -8,13 +8,13 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, cast
 
-from lclang.common.identifiers import VarName
-from lclang.common.source_location import merge_source_spans
 from lclang.error import LanguageErrorCode, LclSyntaxError
 from lclang.error.operation_guard import guard_failure
 from lclang.lang.ast import LclAstNode, LclConstant, LclName
 from lclang.lang.common.frame_proxy_marker import FRAME_PROXY
+from lclang.lang.common.identifiers import VarName
 from lclang.lang.common.override_marker import OverrideMarker
+from lclang.lang.common.source_location import merge_source_spans
 from lclang.lang.engine.lexer import TokenKind
 from lclang.lang.engine.parser.collection_parser import parse_display
 from lclang.lang.engine.parser.fstring_parser import internal_parse_fstring

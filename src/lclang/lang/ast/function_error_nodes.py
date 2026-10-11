@@ -8,11 +8,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from lclang.common.identifiers import VarName
 from lclang.error import DataModelErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
 from lclang.lang.ast.ast_base_node import LclAstNode
+from lclang.lang.common.identifiers import VarName
 
 
 class ParameterKind(StrEnum):

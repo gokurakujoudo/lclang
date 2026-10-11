@@ -2,10 +2,10 @@
 
 import pytest
 
-from lclang.common.identifiers import VarName
 from lclang.error import LclValidationError
 from lclang.lang.ast import LclConstant
 from lclang.lang.ast.control_form_nodes import LclExceptHandler, LclTry, LclWith, LclWithItem
+from lclang.lang.common.identifiers import VarName
 
 
 def test_control_form_children_preserve_source_order() -> None:

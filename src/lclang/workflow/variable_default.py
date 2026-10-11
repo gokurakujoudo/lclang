@@ -6,11 +6,11 @@ Defines ``workflow_defaults``, ``execution_defaults``.
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from lclang.common.default_binding import NO_DEFAULT, DefaultBinding
 from lclang.error import LclWorkflowError, WorkflowErrorCode
 from lclang.error.operation_guard import guard_failure
 from lclang.lang.runtime import Frame
 from lclang.lang.runtime.frame.default_frame_scope import create_default_frame, default_scope
+from lclang.utils.default_binding import NO_DEFAULT, DefaultBinding
 from lclang.workflow.mappings import mapping_variables
 from lclang.workflow.workflow_definition import ContextTask, TaskNode, Workflow
 

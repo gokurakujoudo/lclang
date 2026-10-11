@@ -8,11 +8,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from lclang.common.identifiers import VarName
-from lclang.common.source_location import SourceSpan
 from lclang.error import RuntimeErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
+from lclang.lang.common.identifiers import VarName
+from lclang.lang.common.source_location import SourceSpan
 
 
 class DependencyKind(StrEnum):

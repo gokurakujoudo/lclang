@@ -10,15 +10,15 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Literal, cast
 
-from lclang.common.scoped_proxy import ScopedProxyValue
-from lclang.common.source_location import SourceSpan
 from lclang.error import LanguageErrorCode, LclEvaluationError
 from lclang.error.diagnostic_records import DiagnosticValue, EvaluationContextFrame
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
 from lclang.error.verbose_diagnostic import ACTIVE_MASKED_VALUE
 from lclang.lang.ast import LclAstNode
+from lclang.lang.common.source_location import SourceSpan
 from lclang.lang.engine.printer import to_source
+from lclang.utils.scoped_proxy import ScopedProxyValue
 from lclang.utils.value_representation import safe_repr
 
 

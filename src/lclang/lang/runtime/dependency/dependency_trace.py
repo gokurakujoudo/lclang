@@ -8,14 +8,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, cast
 
-from lclang.common.identifiers import VarName
-from lclang.common.scoped_proxy import ScopedProxyValue
-from lclang.common.source_location import SourceSpan
 from lclang.error import LclEvaluationError, RuntimeErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_async_failure, guard_constructor, guard_failure
+from lclang.lang.common.identifiers import VarName
+from lclang.lang.common.source_location import SourceSpan
 from lclang.lang.engine.evaluator.name_resolver import Resolver
 from lclang.lang.runtime.dependency.dependency_types import DependencyEdge, DependencyKind
+from lclang.utils.scoped_proxy import ScopedProxyValue
 
 
 @guard_constructor(LclValidationError, RuntimeErrorCode.E41_DEPENDENCY_TRACE_NATIVE_FAILURE)

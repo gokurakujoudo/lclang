@@ -13,8 +13,9 @@
   `lclang.lang` and diagnostic types and code enums from `lclang.error`.
   Move the AST, runtime and standard library under `lclang.lang`, with the
   lexer, parser, printer and evaluator under `lclang.lang.engine`.
-- Use concrete source filenames and module overviews. Shared primitives live in
-  `lclang.common`; language records and markers live in `lclang.lang.common`.
+- Use concrete source filenames and module overviews. Language-independent
+  helpers live in `lclang.utils`; language records, identifiers, source locations
+  and markers live in `lclang.lang.common`.
 - Sort domain error enums by code and use descriptive `Exx_REASON` members,
   including native operation failures. Existing six-digit code strings are unchanged.
 - Add `import` and `import?` with required static aliases, independent loading
@@ -27,6 +28,13 @@
 
 ### Diagnostics and documentation
 
+- Export awaiting, binding masks, default declarations and scoped proxy markers
+  from `lclang.utils`, with executable utility examples. Remove `lclang.common`
+  and utility dependencies on language implementations; Frame environment
+  scoping remains a language adapter and date conversion is a Python utility.
+- Make the LCL error message read-only to match native exception groups. Remove
+  group typing suppressions, preserve native derivation member types and replace
+  repeated native-failure comments with the enum's documented naming contract.
 - Align behavioral tests with the functional package layout after production
   validation. Enforce obsolete-path removal, static package exports, module
   overviews, shared-layer dependencies and declared-field state copying.

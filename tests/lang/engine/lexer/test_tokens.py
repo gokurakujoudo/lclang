@@ -4,7 +4,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from lclang.common.source_location import UNKNOWN_SPAN
+from lclang.lang.common.source_location import UNKNOWN_SPAN
 from lclang.lang.engine.lexer import Token, TokenKind
 
 

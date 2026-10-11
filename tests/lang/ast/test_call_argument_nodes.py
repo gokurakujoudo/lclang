@@ -2,7 +2,6 @@
 
 import pytest
 
-from lclang.common.identifiers import VarName
 from lclang.error import LclValidationError
 from lclang.lang.ast import LclConstant, LclName
 from lclang.lang.ast.call_argument_nodes import (
@@ -12,6 +11,7 @@ from lclang.lang.ast.call_argument_nodes import (
     LclStarArgument,
 )
 from lclang.lang.ast.primary_nodes import LclCall
+from lclang.lang.common.identifiers import VarName
 
 
 def test_call_children_preserve_receiver_then_arguments() -> None:

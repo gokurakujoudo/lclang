@@ -5,8 +5,8 @@ from typing import cast
 
 import pytest
 
-from lclang.common.identifiers import VarName
 from lclang.error import LclNameError, LclValidationError
+from lclang.lang.common.identifiers import VarName
 from lclang.lang.engine.evaluator.ast_interpreter import interpret_expression
 from lclang.lang.engine.evaluator.name_resolver import MappingResolver
 from lclang.lang.engine.parser import parse_expression

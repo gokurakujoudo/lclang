@@ -2,7 +2,6 @@
 
 import pytest
 
-from lclang.common.identifiers import VarName
 from lclang.error import LclValidationError
 from lclang.lang.ast import LclConstant, LclName
 from lclang.lang.ast.expression_nodes import (
@@ -19,6 +18,7 @@ from lclang.lang.ast.operator_nodes import (
     ComparisonOperator,
     UnaryOperator,
 )
+from lclang.lang.common.identifiers import VarName
 
 
 def test_expression_children_preserve_structural_source_order() -> None:

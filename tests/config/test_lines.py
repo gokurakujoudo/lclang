@@ -2,8 +2,6 @@
 
 import pytest
 
-from lclang.common.identifiers import SourceName
-from lclang.common.source_location import SourceOrigin, SourcePosition
 from lclang.config.logical_line import (
     comment_offset,
     mask_physical_line,
@@ -12,6 +10,8 @@ from lclang.config.logical_line import (
 )
 from lclang.config.source_coordinate import advance_position, end_position
 from lclang.error import LclConfigSyntaxError
+from lclang.lang.common.identifiers import SourceName
+from lclang.lang.common.source_location import SourceOrigin, SourcePosition
 
 
 def test_physical_helpers_cover_newlines_quotes_comments_and_markers() -> None:

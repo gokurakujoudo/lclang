@@ -7,12 +7,12 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from lclang.common.scoped_proxy import scoped_proxy_factory
 from lclang.error import DataModelErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_failure
 from lclang.lang.common.frame_proxy_marker import FRAME_PROXY
 from lclang.lang.common.override_marker import OverrideMarker
+from lclang.utils.scoped_proxy import scoped_proxy_factory
 
 
 @guard_failure(LclValidationError, DataModelErrorCode.E41_BINDING_NAME_VALIDATION_NATIVE_FAILURE)

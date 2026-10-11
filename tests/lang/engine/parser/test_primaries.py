@@ -2,7 +2,6 @@
 
 import pytest
 
-from lclang.common.identifiers import VarName
 from lclang.error import LclSyntaxError
 from lclang.lang.ast import (
     LclAttribute,
@@ -16,6 +15,7 @@ from lclang.lang.ast import (
     LclSubscript,
     LclTuple,
 )
+from lclang.lang.common.identifiers import VarName
 from lclang.lang.engine.parser import parse_expression
 
 

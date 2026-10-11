@@ -1,34 +1,17 @@
-"""Nested awaitable resolution shared by language and Python utilities.
+"""Classify awaited failures at an owning library operation.
 
-Defines ``resolve_awaitable``, ``resolve_operation_value``.
+Defines ``resolve_operation_value``.
 """
 
 from __future__ import annotations
 
-from collections.abc import Awaitable
-from inspect import isawaitable
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
+
+from lclang.error.exception_base import LclError
+from lclang.utils.awaitable_resolution import resolve_awaitable
 
 if TYPE_CHECKING:
-    from lclang.common.source_location import SourceSpan
-    from lclang.error.exception_base import LclError
-
-
-async def resolve_awaitable(value: object) -> object:
-    """Resolve nested awaitables to their final immediate value.
-
-    :param value: Immediate value or awaitable produced by evaluation.
-    :returns: First recursively non-awaitable result.
-    :raises BaseException: If an awaited operation raises or is cancelled.
-
-    .. note::
-       Immediate values are returned without creating a task or future.
-       Failures propagate to the owning operation, which selects its error family and code.
-    """
-    result = value
-    while isawaitable(result):
-        result = await cast(Awaitable[object], result)
-    return result
+    from lclang.lang.common.source_location import SourceSpan
 
 
 async def resolve_operation_value(

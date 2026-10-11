@@ -7,10 +7,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from lclang.common.identifiers import VarName
 from lclang.error import RuntimeErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
+from lclang.lang.common.identifiers import VarName
 from lclang.lang.runtime.dependency.dependency_reconciliation import (
     DependencyReconciliation,
     reconcile_dependency_edges,

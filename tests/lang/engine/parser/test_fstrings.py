@@ -2,8 +2,6 @@
 
 import pytest
 
-from lclang.common.identifiers import SourceName, VarName
-from lclang.common.source_location import SourceOrigin
 from lclang.error import LclSyntaxError
 from lclang.lang.ast import (
     LclFormattedValue,
@@ -11,6 +9,8 @@ from lclang.lang.ast import (
     LclName,
     LclStringText,
 )
+from lclang.lang.common.identifiers import SourceName, VarName
+from lclang.lang.common.source_location import SourceOrigin
 from lclang.lang.engine.parser import parse_expression
 from lclang.lang.engine.printer import to_source
 

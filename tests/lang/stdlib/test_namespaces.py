@@ -4,8 +4,8 @@ from collections.abc import Iterator
 
 import pytest
 
-from lclang.common.identifiers import FrameId, ModuleName
 from lclang.error import LclAttributeError, LclValidationError
+from lclang.lang.common.identifiers import FrameId, ModuleName
 from lclang.lang.engine.parser import parse_expression
 from lclang.lang.runtime import FrameFactory, Module
 from lclang.lang.stdlib import (

@@ -7,12 +7,12 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from lclang.common.identifiers import ModuleName, VarName
 from lclang.config import load_config
 from lclang.error import LclAttributeError, LclError, LclEvaluationError, LclValidationError
 from lclang.lang import define_frame, define_module
 from lclang.lang.ast import LclBinary, LclConstant, LclName
 from lclang.lang.ast.operator_nodes import BinaryOperator
+from lclang.lang.common.identifiers import ModuleName, VarName
 from lclang.lang.runtime import Module
 
 

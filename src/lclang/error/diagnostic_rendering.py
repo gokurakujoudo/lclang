@@ -14,9 +14,9 @@ def render_error(error: LclError) -> str:
     :param error: Structured failure whose records already contain value snapshots.
     :returns: English multiline diagnostic without a terminal newline.
     """
-    from lclang.common.binding_mask import MASKED_VALUE
     from lclang.error import LclError
     from lclang.error.source_excerpt import render_source_excerpt, render_source_location
+    from lclang.utils.binding_mask import MASKED_VALUE
 
     frames = tuple(frame for frame in error.evaluation_context if frame.kind != "target")
     generated = {frame.name for frame in error.evaluation_context if frame.kind == "target"}

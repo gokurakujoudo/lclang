@@ -3,12 +3,12 @@
 Defines ``derive_loading_error``.
 """
 
-from lclang.common.source_location import SourceSpan
 from lclang.error.codes.e3_configuration_error_code import ConfigurationErrorCode
 from lclang.error.diagnostic_records import ConfigLoadFrame
 from lclang.error.exception_base import LclError
 from lclang.error.exception_family import LclConfigError
 from lclang.error.native_wrap import wrap_failure
+from lclang.lang.common.source_location import SourceSpan
 
 
 def derive_loading_error(error: Exception, frame: ConfigLoadFrame) -> LclError:

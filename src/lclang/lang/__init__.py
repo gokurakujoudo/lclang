@@ -11,13 +11,18 @@ Exports ``LCL_BUILTINS``, ``LCL_IMPORTS``, ``LCL_ROOT``, ``LCL_RUNTIME``, ``defi
 ``SourceSpan``.
 """
 
-from lclang.common.identifiers import FrameId, ModuleName, SourceName, VarName
-from lclang.common.source_location import SourceOrigin, SourcePosition, SourceSnapshot, SourceSpan
 from lclang.lang.ast import LclAstNode, LclConstant, LclName, LclTuple, LclVisitor
 from lclang.lang.common.frame_proxy_marker import FRAME_PROXY, FrameProxyMarker
+from lclang.lang.common.identifiers import FrameId, ModuleName, SourceName, VarName
 from lclang.lang.common.language_version import LCL_V1, LanguageVersion
 from lclang.lang.common.lcl_record import LclRecord
 from lclang.lang.common.override_marker import NEED_OVERRIDE, RUNTIME_OVERRIDE, OverrideMarker
+from lclang.lang.common.source_location import (
+    SourceOrigin,
+    SourcePosition,
+    SourceSnapshot,
+    SourceSpan,
+)
 from lclang.lang.engine import Token, TokenKind, parse_expression, scan_tokens, to_source
 from lclang.lang.runtime import (
     NO_FALLBACK,

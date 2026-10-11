@@ -5,10 +5,9 @@ from dataclasses import dataclass
 
 import pytest
 
-from lclang.common.identifiers import FrameId, ModuleName, VarName
-from lclang.common.scoped_proxy import ScopedProxyFactory
 from lclang.error import LclClosedFrameError, LclEvaluationError, LclNameError, LclValidationError
 from lclang.lang.ast import LclAstNode
+from lclang.lang.common.identifiers import FrameId, ModuleName, VarName
 from lclang.lang.engine.parser import parse_expression
 from lclang.lang.runtime import (
     Frame,
@@ -23,6 +22,7 @@ from lclang.lang.runtime.module_frame_factory import (
     LCL_RUNTIME,
 )
 from lclang.lang.stdlib import StdlibNamespace
+from lclang.utils.scoped_proxy import ScopedProxyFactory
 
 
 def module(name: str, definitions: dict[str, str]) -> Module:

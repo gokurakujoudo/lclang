@@ -8,7 +8,6 @@ from dataclasses import fields, replace
 from pathlib import Path
 from typing import cast
 
-from lclang.common.source_location import SourceOrigin, SourcePosition, SourceSnapshot
 from lclang.error import ConfigurationErrorCode, LclConfigError, LclSyntaxError
 from lclang.error.configuration_exception import LclConfigSyntaxError
 from lclang.error.operation_guard import guard_failure
@@ -18,6 +17,7 @@ from lclang.error.verbose_diagnostic import (
     internal_verbose_enabled,
 )
 from lclang.lang.ast import LclAstNode, LclConstant, LclName
+from lclang.lang.common.source_location import SourceOrigin, SourcePosition, SourceSnapshot
 from lclang.lang.engine.lexer import Token, TokenKind, scan_tokens
 from lclang.lang.engine.parser.pratt_parser import parse_tokens
 from lclang.lang.engine.printer import to_source

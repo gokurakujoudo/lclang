@@ -54,6 +54,11 @@ Failure-covering workflow contexts receive this record through `__exception__`.
 
 ## Causes, snapshots and copies
 
+`message` is a read-only string on both ordinary LCL errors and error groups.
+It follows the native `BaseExceptionGroup.message` contract. Construct a new
+failure when changing its description; context attachment and detached copies
+retain the original description.
+
 `__cause__` retains the original native exception at a wrapping boundary. The
 code is selected where the operation fails, without matching message text.
 Captured source, loading paths, evaluation frames and already-read values explain

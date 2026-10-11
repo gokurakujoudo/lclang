@@ -34,7 +34,7 @@ def read_calendar_json(path: Path, calendar_id: CalendarID) -> HardcodedBDCalend
     :raises OSError: If the file cannot be read.
     :raises LclValidationError: If JSON content violates the strict schema.
     """
-    from lclang.lang.stdlib.date_conversion import parse_ymd
+    from lclang.utils.date_conversion import parse_ymd
 
     raw = json.loads(path.read_bytes().decode("utf-8-sig"))
     if not isinstance(raw, dict) or set(cast(dict[object, object], raw)) != {

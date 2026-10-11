@@ -9,7 +9,6 @@ from typing import cast
 
 import pytest
 
-from lclang.common.source_location import UNKNOWN_SPAN, SourcePosition, SourceSpan
 from lclang.error import (
     CalendarCannotLoadException,
     DateOperationOutOfScopeException,
@@ -24,6 +23,7 @@ from lclang.error.failure_aggregation import combine_failures
 from lclang.error.native_wrap import wrap_failure
 from lclang.error.operation_guard import guard_async_failure, guard_failure
 from lclang.lang import LclRecord, define_module
+from lclang.lang.common.source_location import UNKNOWN_SPAN, SourcePosition, SourceSpan
 from lclang.utils.calendar.business_calendar import BDCalendar
 from lclang.utils.calendar.calendar_type import CalendarID
 

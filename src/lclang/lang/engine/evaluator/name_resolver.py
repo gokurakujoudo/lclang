@@ -9,11 +9,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
-from lclang.common.awaitable_resolution import resolve_operation_value
-from lclang.common.binding_mask import normalize_masked_mapping
-from lclang.common.identifiers import VarName
-from lclang.common.source_location import SourceSpan
 from lclang.error import LanguageErrorCode, LclEvaluationError, LclNameError
+from lclang.error.awaitable_failure import resolve_operation_value
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_async_failure, guard_constructor, guard_failure
 from lclang.error.verbose_diagnostic import (
@@ -21,7 +18,10 @@ from lclang.error.verbose_diagnostic import (
     internal_trace,
     internal_verbose_enabled,
 )
+from lclang.lang.common.identifiers import VarName
+from lclang.lang.common.source_location import SourceSpan
 from lclang.lang.engine.evaluator.evaluation_journal import record_value_read
+from lclang.utils.binding_mask import normalize_masked_mapping
 
 
 @runtime_checkable

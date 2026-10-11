@@ -9,12 +9,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
 
-from lclang.common.binding_mask import normalize_masked_mapping
 from lclang.error import LclEvaluationError, RuntimeErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
 from lclang.lang.common.binding_declaration import real_binding_names
 from lclang.lang.common.binding_names import validate_binding_names, validate_real_conflicts
+from lclang.utils.binding_mask import normalize_masked_mapping
 
 
 @guard_constructor(LclValidationError, RuntimeErrorCode.E21_PRESET_CONSTRUCTION_NATIVE_FAILURE)

@@ -10,8 +10,6 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import cast
 
-from lclang.common.binding_mask import normalize_masked_mapping
-from lclang.common.identifiers import ModuleName
 from lclang.config.config_document import ConfigDefinition, ConfigImport, ConfigUsing
 from lclang.error import ConfigurationErrorCode, LclConfigError, LclError
 from lclang.error.configuration_exception import LclConfigUsingError
@@ -24,8 +22,10 @@ from lclang.error.operation_guard import guard_async_failure, guard_failure
 # targets in diagnostic Frames. Fixed labels come from the loader implementation and avoid
 # collisions with ordinary configuration names.
 from lclang.lang.ast import LclAstNode
+from lclang.lang.common.identifiers import ModuleName
 from lclang.lang.engine.evaluator.evaluation_journal import ACTIVE_TARGET_EXPRESSION
 from lclang.lang.runtime import Module
+from lclang.utils.binding_mask import normalize_masked_mapping
 
 # Unitless module label identifies chronological definitions used to evaluate a file target.
 USING_CONTEXT_MODULE = ModuleName("using_context")

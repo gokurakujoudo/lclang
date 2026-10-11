@@ -9,18 +9,18 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
 
-from lclang.common.identifiers import ModuleName
-from lclang.common.source_location import SourceOrigin
 from lclang.config.config_document import ConfigDefinition
 from lclang.error import ConfigurationErrorCode, LclConfigError
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
 from lclang.lang.common.binding_declaration import real_binding_names
 from lclang.lang.common.binding_names import validate_real_conflicts
+from lclang.lang.common.identifiers import ModuleName
 from lclang.lang.common.namespace_names import (
     validate_namespace_conflicts,
     validate_namespace_names,
 )
+from lclang.lang.common.source_location import SourceOrigin
 from lclang.lang.runtime import EvaluationLimits, Frame, FrameFactory, Module, Preset
 
 

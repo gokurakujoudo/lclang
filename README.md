@@ -494,6 +494,8 @@ clearer as a normal function than as configuration policy.
 - Pure Python for Python 3.14 and newer.
 - Fully typed and ships a `py.typed` marker.
 - No third-party runtime dependencies.
+- Python utilities for awaiting, masks, defaults, scoped proxy markers and dates
+  are available from `lclang.utils` without loading the language engine.
 - Custom lexer, parser, immutable AST, and async interpreter.
 - No Python `eval`, `exec`, AST compilation, Java, or generated parser runtime.
 - 100% branch coverage enforced by the project quality gate.

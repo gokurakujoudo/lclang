@@ -2,8 +2,8 @@
 
 import pytest
 
-from lclang.common.identifiers import ModuleName
 from lclang.error import LclValidationError
+from lclang.lang.common.identifiers import ModuleName
 from lclang.lang.engine.parser import parse_expression
 
 

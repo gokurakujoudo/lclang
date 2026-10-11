@@ -6,7 +6,6 @@ Defines ``parse_version``, ``parse_using``, ``validate_definition_name``,
 
 from pathlib import Path
 
-from lclang.common.source_location import SourceOrigin
 from lclang.config.config_document import ConfigUsing
 from lclang.config.expression_adapter import parse_config_expression
 from lclang.config.logical_line import LogicalLine
@@ -17,6 +16,7 @@ from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_failure
 from lclang.lang.ast import LclConstant, LclJoinedString
 from lclang.lang.common.binding_names import validate_qualified_name
+from lclang.lang.common.source_location import SourceOrigin
 from lclang.lang.engine.lexer import Token, TokenKind, scan_tokens
 
 

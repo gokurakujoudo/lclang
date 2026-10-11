@@ -2,7 +2,6 @@
 
 import pytest
 
-from lclang.common.identifiers import VarName
 from lclang.error import LclValidationError
 from lclang.lang.ast import LclConstant
 from lclang.lang.ast.display_nodes import (
@@ -15,6 +14,7 @@ from lclang.lang.ast.display_nodes import (
     LclSet,
     LclStarred,
 )
+from lclang.lang.common.identifiers import VarName
 
 
 def test_sequence_displays_and_unpacking_preserve_source_order() -> None:

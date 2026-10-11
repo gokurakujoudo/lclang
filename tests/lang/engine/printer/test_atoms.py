@@ -2,7 +2,6 @@
 
 import pytest
 
-from lclang.common.identifiers import VarName
 from lclang.error import LclValidationError
 from lclang.lang.ast import (
     LclConstant,
@@ -11,6 +10,7 @@ from lclang.lang.ast import (
     LclName,
     LclStringText,
 )
+from lclang.lang.common.identifiers import VarName
 from lclang.lang.engine.parser import parse_expression
 from lclang.lang.engine.printer import to_source
 

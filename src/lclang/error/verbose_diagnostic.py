@@ -11,8 +11,8 @@ from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from contextvars import ContextVar
 
-from lclang.common.binding_mask import MASKED_VALUE
 from lclang.error.mask_scope import ACTIVE_MASKED_VALUE
+from lclang.utils.binding_mask import MASKED_VALUE
 from lclang.utils.value_representation import safe_repr
 
 type ValueRenderer = Callable[[], str]

@@ -14,6 +14,7 @@ SOURCE = ROOT / "src/lclang"
     "name",
     [
         "api",
+        "common",
         "types",
         "sources",
         "errors",
@@ -124,7 +125,7 @@ def test_owned_state_uses_declared_fields_instead_of_instance_dictionaries() -> 
     assert failures == []
 
 
-@pytest.mark.parametrize("package", ["common", "lang/common", "lang/ast"])
+@pytest.mark.parametrize("package", ["utils", "lang/common", "lang/ast"])
 def test_shared_packages_do_not_depend_on_language_execution_or_application_adapters(
     package: str,
 ) -> None:
@@ -133,26 +134,31 @@ def test_shared_packages_do_not_depend_on_language_execution_or_application_adap
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom):
-                module = node.module or ""
+                modules = [node.module or ""]
+            elif isinstance(node, ast.Import):
+                modules = [alias.name for alias in node.names]
+            else:
+                continue
+            for module in modules:
                 assert not module.startswith(
                     (
                         "lclang.cli",
                         "lclang.config",
                         "lclang.workflow",
                         "lclang.logger",
-                        "lclang.utils",
                         "lclang.lang.engine",
                         "lclang.lang.runtime",
                         "lclang.lang.stdlib",
                     )
                 ), (path, module)
-                if package == "common":
+                if package == "utils":
                     assert not module.startswith("lclang.lang"), (path, module)
 
 
 def test_behavioral_packages_follow_the_production_subsystems() -> None:
     """No active tests retain the superseded AST/runtime/stdlib or engine paths."""
     for obsolete in [
+        "common",
         "ast",
         "runtime",
         "stdlib",
@@ -163,7 +169,7 @@ def test_behavioral_packages_follow_the_production_subsystems() -> None:
     ]:
         assert list((ROOT / "tests" / obsolete).rglob("*.py")) == [], obsolete
     for current in [
-        "common",
+        "utils",
         "lang/common",
         "lang/ast",
         "lang/engine",

@@ -21,16 +21,16 @@ if TYPE_CHECKING:
 import asyncio
 from typing import Any, cast
 
-from lclang.common.awaitable_resolution import resolve_operation_value
-from lclang.common.identifiers import VarName
-from lclang.common.source_location import SourceSpan
 from lclang.error import LclNameError
+from lclang.error.awaitable_failure import resolve_operation_value
 from lclang.error.verbose_diagnostic import (
     internal_masked_scope,
     internal_render_value,
     internal_trace,
     internal_verbose_enabled,
 )
+from lclang.lang.common.identifiers import VarName
+from lclang.lang.common.source_location import SourceSpan
 from lclang.lang.engine.evaluator.ast_interpreter import interpret_expression
 from lclang.lang.engine.evaluator.definition_scope import definition_scope
 from lclang.lang.engine.evaluator.evaluation_journal import record_value_read
@@ -198,6 +198,11 @@ async def read_selected_binding(
         return FrameProxy(cast(object, requester), tuple(name.split(".")))  # type: ignore[arg-type]
     if binding_kind == "factory":
         factory = find_scoped_factory(owner, name)
+        from lclang.lang.runtime.frame.environment_proxy import BoundEnvironment
+        from lclang.utils.process_environment import Environment
+
+        if isinstance(factory, Environment):
+            return BoundEnvironment(requester, tuple(name.split(".")), factory)
         return cast(Any, factory).bind(requester, tuple(name.split(".")))
     frame = owner
     frame._lifecycle.ensure_open(span)

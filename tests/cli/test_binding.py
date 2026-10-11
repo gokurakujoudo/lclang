@@ -25,8 +25,8 @@ from lclang.cli.frame_binding import FrameStack, build_binding, default_definiti
 from lclang.error import LclCliError, LclCliUsageError, LclErrorGroup
 from lclang.lang import FrameProxy
 from lclang.lang.runtime import Frame, VariableInspectionStatus
+from lclang.lang.runtime.frame.environment_proxy import BoundEnvironment
 from lclang.logger import use_logger, use_logger_handler
-from lclang.utils.process_environment import BoundEnvironment
 
 
 @pytest.mark.asyncio

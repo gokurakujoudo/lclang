@@ -17,11 +17,11 @@ from lclang.cli.command_execution import execute_command
 from lclang.cli.command_routing import RouteAction, route_command
 from lclang.cli.help_rendering import render_command_help, render_group_help, render_usage_error
 from lclang.cli.option_parser import help_requested, parse_cli_params
-from lclang.common.binding_mask import normalize_masked_mapping
 from lclang.error import CliErrorCode, LclCliError, RouteFailure
 from lclang.error.exception_base import LclStateError
 from lclang.error.native_wrap import is_ordinary_failure, wrap_failure
 from lclang.error.operation_guard import guard_async_failure, guard_failure
+from lclang.utils.binding_mask import normalize_masked_mapping
 
 
 @guard_failure(LclCliError, CliErrorCode.E52_COMMAND_RUNNER_NATIVE_FAILURE)

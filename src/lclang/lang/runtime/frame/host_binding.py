@@ -19,9 +19,9 @@ if TYPE_CHECKING:
 
 from typing import cast
 
-from lclang.common.binding_mask import normalize_masked_mapping
 from lclang.lang.common.binding_names import validate_binding_names
 from lclang.lang.runtime.frame.binding_lookup import validate_mixin_tree
+from lclang.utils.binding_mask import normalize_masked_mapping
 
 
 @guard_failure(LclEvaluationError, RuntimeErrorCode.E38_HOST_BINDING_PUBLICATION_NATIVE_FAILURE)

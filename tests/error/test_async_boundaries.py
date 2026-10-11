@@ -2,8 +2,8 @@
 
 import pytest
 
-from lclang.common.awaitable_resolution import resolve_operation_value
 from lclang.error import LclEvaluationError, LclUtilityError, LclValidationError
+from lclang.error.awaitable_failure import resolve_operation_value
 from lclang.lang import define_frame, define_module
 from lclang.utils import invoke
 

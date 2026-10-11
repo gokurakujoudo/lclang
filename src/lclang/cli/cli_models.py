@@ -16,11 +16,11 @@ from lclang.cli.declaration_validation import (
     normalize_text,
     require_lcl_qualified_name,
 )
-from lclang.common.binding_mask import normalize_masked_mapping, split_masked_name
 from lclang.error import CliErrorCode, LclCliError
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
 from lclang.logger import LoggerHandlerConfig
+from lclang.utils.binding_mask import normalize_masked_mapping, split_masked_name
 
 
 @guard_constructor(LclValidationError, CliErrorCode.E14_CLI_MODEL_CONSTRUCTION_NATIVE_FAILURE)

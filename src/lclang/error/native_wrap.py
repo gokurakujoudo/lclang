@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, TypeGuard, cast
 from lclang.error.exception_base import LclError
 
 if TYPE_CHECKING:
-    from lclang.common.source_location import SourceSpan
+    from lclang.lang.common.source_location import SourceSpan
 
 
 def is_ordinary_failure(error: BaseException) -> TypeGuard[Exception]:
@@ -62,8 +62,7 @@ def wrap_failure(
         return grouped
     result = error_type(type(error).__name__ if message is None else message, span=span, code=code)
     result.freeze_native_cause(error)
-    result.message = (result.native_cause or type(error).__name__) if message is None else message
-    result.args = (result.message,)
+    result.args = ((result.native_cause or type(error).__name__) if message is None else message,)
     result.__cause__ = error
     result.__traceback__ = error.__traceback__
     return result

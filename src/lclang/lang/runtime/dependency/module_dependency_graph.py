@@ -10,10 +10,10 @@ from collections.abc import Collection, Set
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, overload
 
-from lclang.common.identifiers import VarName
 from lclang.error import LclEvaluationError, LclNameError, RuntimeErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
+from lclang.lang.common.identifiers import VarName
 from lclang.lang.runtime.dependency.ast_dependency_analysis import analyze_dependencies
 from lclang.lang.runtime.dependency.dependency_types import DependencyEdge, DependencyKind
 from lclang.lang.runtime.module import Module

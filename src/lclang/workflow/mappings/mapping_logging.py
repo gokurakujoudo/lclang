@@ -7,11 +7,11 @@ from dataclasses import MISSING, fields, is_dataclass
 from inspect import formatannotation
 from typing import Any, cast, get_origin
 
-from lclang.common.binding_mask import MASKED_VALUE
 from lclang.error import LclWorkflowError, WorkflowErrorCode
 from lclang.error.operation_guard import guard_failure
 from lclang.error.verbose_diagnostic import internal_render_value
 from lclang.lang.runtime import Frame
+from lclang.utils.binding_mask import MASKED_VALUE
 from lclang.workflow.field_projection import reference_name
 from lclang.workflow.mappings.record_annotation import record_annotations
 from lclang.workflow.task_variable import TaskVar

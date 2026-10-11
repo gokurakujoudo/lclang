@@ -6,9 +6,9 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from lclang.common.identifiers import VarName
 from lclang.error import LclValidationError
 from lclang.lang.ast import LclAstNode, LclConstant, LclName, LclTuple, LclVisitor
+from lclang.lang.common.identifiers import VarName
 
 
 class TypeNameVisitor(LclVisitor[str]):

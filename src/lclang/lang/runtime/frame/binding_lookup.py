@@ -15,20 +15,20 @@ from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
-from lclang.common.identifiers import FrameId
 from lclang.error import LclEvaluationError, RuntimeErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
 from lclang.lang.common.binding_declaration import get_override_marker
+from lclang.lang.common.identifiers import FrameId
 from lclang.lang.common.namespace_names import validate_namespace_conflicts
 from lclang.lang.common.override_marker import RUNTIME_OVERRIDE
 
 if TYPE_CHECKING:
     from lclang.lang.runtime.frame.frame import Frame
 
-from lclang.common.scoped_proxy import ScopedProxyFactory, scoped_proxy_factory
 from lclang.lang.common.binding_declaration import is_frame_proxy, real_binding_names
 from lclang.lang.common.binding_names import validate_real_conflicts
+from lclang.utils.scoped_proxy import ScopedProxyFactory, scoped_proxy_factory
 
 
 @guard_failure(LclEvaluationError, RuntimeErrorCode.E32_BINDING_LOOKUP_NATIVE_FAILURE)

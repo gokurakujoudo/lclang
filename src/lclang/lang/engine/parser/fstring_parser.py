@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from typing import cast
 
-from lclang.common.source_location import SourceSpan, advance_source_position
 from lclang.error import LanguageErrorCode, LclSyntaxError
 from lclang.lang.ast import (
     LclAstNode,
@@ -16,6 +15,7 @@ from lclang.lang.ast import (
     LclJoinedString,
     LclStringText,
 )
+from lclang.lang.common.source_location import SourceSpan, advance_source_position
 from lclang.lang.engine.lexer import Token, scan_tokens
 from lclang.lang.engine.lexer.fstring_parts import FStringField, FStringText, FStringValue
 

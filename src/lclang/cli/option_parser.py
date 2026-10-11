@@ -15,13 +15,13 @@ from lclang.cli.argv_adapter import ArgvParts, split_argv
 from lclang.cli.cli_models import CliParams
 from lclang.cli.declaration_validation import require_lcl_qualified_name
 from lclang.cli.invocation_key import CLI_RUNTIME_KEYS
-from lclang.common.binding_mask import split_masked_name
 from lclang.error import CliErrorCode, LclCliError, LclCliUsageError, LclSyntaxError
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
 from lclang.lang import parse_expression
 from lclang.lang.ast import LclAstNode, LclConstant
-from lclang.lang.stdlib.date_conversion import parse_ymd
+from lclang.utils.binding_mask import split_masked_name
+from lclang.utils.date_conversion import parse_ymd
 
 # Common options consuming one following token.
 # Unitless option spellings below are the public CLI grammar. Explicit aliases preserve existing

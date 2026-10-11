@@ -15,8 +15,8 @@ if TYPE_CHECKING:
 
 from typing import TYPE_CHECKING
 
-from lclang.common.identifiers import VarName
 from lclang.lang.ast import LclAstNode
+from lclang.lang.common.identifiers import VarName
 from lclang.lang.runtime.dependency.ast_dependency_analysis import analyze_dependencies
 from lclang.lang.runtime.dependency.frame.frame_binding_resolution import (
     collect_frames,

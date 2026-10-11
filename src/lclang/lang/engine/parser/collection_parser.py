@@ -8,7 +8,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import replace
 
-from lclang.common.source_location import SourceSpan, merge_source_spans
 from lclang.error import LanguageErrorCode, LclSyntaxError
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
@@ -23,6 +22,7 @@ from lclang.lang.ast import (
     LclTuple,
 )
 from lclang.lang.ast.display_nodes import LclDictEntry
+from lclang.lang.common.source_location import SourceSpan, merge_source_spans
 from lclang.lang.engine.lexer import TokenKind
 from lclang.lang.engine.parser.comprehension_parser import ComprehensionKind, parse_comprehension
 from lclang.lang.engine.parser.record_parser import parse_record

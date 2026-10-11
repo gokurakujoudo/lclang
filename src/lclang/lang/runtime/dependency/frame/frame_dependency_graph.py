@@ -10,11 +10,11 @@ from collections.abc import Set
 from dataclasses import dataclass
 from enum import StrEnum
 
-from lclang.common.identifiers import FrameId, VarName
-from lclang.common.source_location import SourceSpan
 from lclang.error import LclEvaluationError, LclNameError, RuntimeErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
+from lclang.lang.common.identifiers import FrameId, VarName
+from lclang.lang.common.source_location import SourceSpan
 from lclang.lang.runtime.dependency.dependency_types import DependencyKind
 
 

@@ -11,15 +11,14 @@ from types import MappingProxyType, TracebackType
 from typing import Self
 from weakref import WeakSet
 
-from lclang.common.binding_mask import normalize_masked_mapping, normalize_masked_names
-from lclang.common.identifiers import FrameId, VarName
-from lclang.common.source_location import SourceSpan
 from lclang.error import LclEvaluationError, LclNameError, RuntimeErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.failure_aggregation import combine_failures
 from lclang.error.operation_guard import guard_async_failure, guard_constructor, guard_failure
 from lclang.lang.ast import LclAstNode
 from lclang.lang.common.binding_names import validate_binding_names
+from lclang.lang.common.identifiers import FrameId, VarName
+from lclang.lang.common.source_location import SourceSpan
 from lclang.lang.runtime.dependency.dependency_snapshot import DependencySnapshot
 from lclang.lang.runtime.frame.binding_evaluation import (
     evaluate_definition,
@@ -49,6 +48,7 @@ from lclang.lang.runtime.frame.variable_inspection import (
     VariableInspectionTree,
 )
 from lclang.lang.runtime.module import Module
+from lclang.utils.binding_mask import normalize_masked_mapping, normalize_masked_names
 
 
 @guard_constructor(LclValidationError, RuntimeErrorCode.E31_FRAME_CONSTRUCTION_NATIVE_FAILURE)

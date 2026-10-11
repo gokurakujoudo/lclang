@@ -8,7 +8,6 @@ from __future__ import annotations
 import operator
 from typing import Any, cast
 
-from lclang.common.scoped_proxy import ScopedProxyValue
 from lclang.lang.ast import (
     LclAttribute,
     LclSafeAttribute,
@@ -18,6 +17,7 @@ from lclang.lang.ast import (
 from lclang.lang.engine.evaluator.evaluation_callback import EvaluateNode
 from lclang.lang.engine.evaluator.name_resolver import Resolver
 from lclang.lang.runtime.frame.scoped_proxy import FrameProxy
+from lclang.utils.scoped_proxy import ScopedProxyValue
 
 type PrimaryNode = LclAttribute | LclSafeAttribute | LclSubscript | LclSlice
 

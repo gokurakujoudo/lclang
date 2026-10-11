@@ -7,11 +7,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 
-from lclang.common.identifiers import SourceName
-from lclang.common.source_location import SourceOrigin, SourcePosition, SourceSnapshot, SourceSpan
 from lclang.error import InternalLiteralScanError, LanguageErrorCode, LclSyntaxError
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
+from lclang.lang.common.identifiers import SourceName
+from lclang.lang.common.source_location import (
+    SourceOrigin,
+    SourcePosition,
+    SourceSnapshot,
+    SourceSpan,
+)
 from lclang.lang.engine.lexer.literal_scanner import scan_literal
 from lclang.lang.engine.lexer.source_character import ASCII_DIGITS
 from lclang.lang.engine.lexer.token import Token, TokenKind
