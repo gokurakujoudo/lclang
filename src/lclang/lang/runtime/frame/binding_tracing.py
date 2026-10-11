@@ -4,15 +4,22 @@
 """Frame lookup sources and cache publication diagnostics.
 
 Defines ``describe_binding_execution``, ``trace_binding_value``, ``trace_binding_failure``,
-``trace_cached_failure_publication``, ``trace_missing_binding``.
+``trace_cached_failure_publication``, ``trace_missing_binding``, ``render_binding_payload``.
 """
 
 from typing import TYPE_CHECKING
 
-from lclang.error.verbose_diagnostic import internal_render_value, internal_verbose_enabled
+from lclang.error.mask_scope import ACTIVE_MASKED_VALUE
+from lclang.error.verbose_context import ACTIVE_VERBOSE_CONTEXT
+from lclang.error.verbose_diagnostic import internal_verbose_enabled
 from lclang.error.verbose_failure import trace_verbose_failure
 from lclang.error.verbose_records import emit_verbose_record
+from lclang.lang.engine.evaluator.display_capture import (
+    ACTIVE_DISPLAY_CAPTURE,
+    render_display_value,
+)
 from lclang.lang.runtime.frame.binding_lookup import is_name_masked
+from lclang.utils.value_representation import safe_repr
 
 if TYPE_CHECKING:
     from lclang.lang.runtime.frame.frame import Frame
@@ -56,11 +63,34 @@ def trace_binding_value(frame: Frame, name: str, source: str, value: object) -> 
     :param value: Already-resolved result, never an additional evaluation.
     """
     if internal_verbose_enabled():
-        rendered = internal_render_value(value, masked=is_name_masked(frame, name))
+        rendered = render_binding_payload(frame, name, value)
+        evaluation_id = ACTIVE_VERBOSE_CONTEXT.get().evaluation_id
+        identity = "" if evaluation_id is None else f" (evaluation {evaluation_id})"
         emit_verbose_record(
             "lookup",
-            f'Read {name} from {SOURCE_LABELS[source]} in Frame "{frame.frame_id}": {rendered}',
+            f'Read {name} from {SOURCE_LABELS[source]} in Frame "{frame.frame_id}": '
+            f"{rendered}{identity}",
         )
+
+
+def render_binding_payload(frame: Frame, name: str, value: object) -> str:
+    """Use the same native-value adapter for verbose, runtime and static trees.
+
+    :param frame: Already-selected owner providing native and mask classifications.
+    :param name: Selected semantic name, without another lookup.
+    :param value: Already-resolved binding result.
+    :returns: Protected bounded payload, or empty text when no consumer is enabled.
+    """
+    masked = is_name_masked(frame, name) or ACTIVE_MASKED_VALUE.get()
+    if (
+        frame.native_values
+        and not masked
+        and (internal_verbose_enabled() or ACTIVE_DISPLAY_CAPTURE.get() is not None)
+    ):
+        from lclang.lang.runtime.frame.inspection_rendering import native_value_payload
+
+        return safe_repr(value, renderer=lambda item: native_value_payload(name, item))
+    return render_display_value(value, masked=masked)
 
 
 def trace_binding_failure(

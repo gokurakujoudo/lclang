@@ -323,6 +323,13 @@ standard-library or lclang logger. Failure identifiers connect the first observe
 failure, later cached returns and the complete exception diagnostic. See the
 [logging reference](docs/reference/logger.md#verbose-execution-diagnostics).
 
+Text diagnostics share dependency-tree connectors and inline error reasons.
+Verbose records display `VERBOSE` with a compact prefix while retaining DEBUG
+severity. CLI `eval_lcl -o TREE` shows actual dependencies; `parse_lcl` shows
+static inspection unless `-o EVAL` is selected. `LclExceptionFormatter` provides
+the same exception trees to application loggers, with compact or full Python
+tracebacks. See [text diagnostics](docs/reference/text-display.md).
+
 ### Async-first evaluation
 
 Frame inputs, host callables, call results, iterators, and context-manager

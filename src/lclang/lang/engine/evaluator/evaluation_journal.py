@@ -38,8 +38,8 @@ class EvaluationReadJournal:
     node: LclAstNode
     kind: Literal["definition", "function", "target"]
     masked: bool
-    reads: dict[tuple[str, SourceSpan], tuple[object, bool]] = field(
-        default_factory=dict[tuple[str, SourceSpan], tuple[object, bool]]
+    reads: dict[tuple[str, SourceSpan], tuple[object, bool, str]] = field(
+        default_factory=dict[tuple[str, SourceSpan], tuple[object, bool, str]]
     )
 
 
@@ -77,13 +77,16 @@ def collect_evaluation_context(
 
 
 @guard_failure(LclEvaluationError, LanguageErrorCode.E31_OPERATOR_EVALUATION_NATIVE_FAILURE)
-def record_value_read(name: str, value: object, span: SourceSpan, *, masked: bool = False) -> None:
+def record_value_read(
+    name: str, value: object, span: SourceSpan, *, masked: bool = False, source: str | None = None
+) -> None:
     """Record an already resolved value without invoking its representation.
 
     :param name: Actual runtime or lexical binding name.
     :param value: Successfully resolved value; proxies are omitted until leaf lookup.
     :param span: Source occurrence used for stable deduplication.
     :param masked: Exact-name mask selected by the supplying resolver.
+    :param source: Actual supplying boundary provenance; None retains prior evidence.
     """
     context = ACTIVE_EVALUATION_CONTEXT.get()
     if not context or isinstance(value, ScopedProxyValue):
@@ -92,7 +95,11 @@ def record_value_read(name: str, value: object, span: SourceSpan, *, masked: boo
     key = (name, span)
     previous = journal.reads.get(key)
     sticky_mask = masked or journal.masked or (previous is not None and previous[1])
-    journal.reads[key] = (value, sticky_mask)
+    provenance = source or (previous[2] if previous is not None else "unknown")
+    journal.reads[key] = (value, sticky_mask, provenance)
+    from lclang.lang.engine.evaluator.display_requests import record_display_value
+
+    record_display_value(name, value, provenance, masked=sticky_mask)
 
 
 @guard_failure(LclEvaluationError, LanguageErrorCode.E31_OPERATOR_EVALUATION_NATIVE_FAILURE)
@@ -105,9 +112,9 @@ def capture_evaluation_context() -> tuple[EvaluationContextFrame, ...]:
     for journal in ACTIVE_EVALUATION_CONTEXT.get():
         used = tuple(
             DiagnosticValue(
-                name, span, type(value).__name__, safe_repr(value, masked=masked), masked
+                name, span, type(value).__name__, safe_repr(value, masked=masked), masked, source
             )
-            for (name, span), (value, masked) in journal.reads.items()
+            for (name, span), (value, masked, source) in journal.reads.items()
         )
         expression = safe_repr(
             journal.node, renderer=render_ast_source, max_length=None, masked=journal.masked

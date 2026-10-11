@@ -67,7 +67,11 @@ class Dispatcher:
     @guard_failure(LclLoggerError, LoggerErrorCode.E35_SINK_DISPATCH_NATIVE_FAILURE)
     def initialize(self) -> None:
         """Create all enabled sinks before producer admission begins."""
-        formatter = RecordFormatter(self.config.format, timezone=self.config.timezone)
+        formatter = RecordFormatter(
+            self.config.format,
+            timezone=self.config.timezone,
+            traceback_style=self.config.traceback_style,
+        )
         console = self.config.resolved_console()
         if console.enabled:
             self.sinks.append(ConsoleSink(console, formatter))

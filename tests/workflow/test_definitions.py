@@ -97,6 +97,12 @@ def test_workflow_to_lines_renders_context_scope_and_field_flows() -> None:
         children=[child],
     )
     workflow = wf.define_workflow("Example workflow", root_task=root)
+    from lclang.workflow.definition_rendering import render_context
+
+    context_lines: list[str] = []
+    render_context(root, 0, "  ", "└─ ", context_lines)
+    assert context_lines[0].startswith("  └─ enter context resource_context")
+    assert context_lines[-1].startswith("     └─ exit context resource_context")
 
     assert workflow.to_lines() == [
         'Workflow "Example workflow"',

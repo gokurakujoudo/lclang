@@ -123,4 +123,4 @@ async def test_dynamic_missing_name_hides_generated_target_but_keeps_user_owner(
         path.write_text(source, encoding="utf-8")
         with pytest.raises(Exception) as user_failure:
             await load_config(path)
-        assert "Error in evaluating using_target [LCL139991]" in str(user_failure.value)
+        assert "Error in evaluating using_target [LCL139991:" in str(user_failure.value)

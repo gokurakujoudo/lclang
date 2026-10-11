@@ -493,16 +493,20 @@ requirement. There is no `m.profile` yet:
 
 <!-- lclang-doc-output: stdout -->
 ```text
-Error in loading config file "main.lclcfg" [LCL139991]:
-  at "main.lclcfg":1:1
-    import f"{__dir__}/service.lclcfg" as m
-  at "service.lclcfg":2:1
-    using f"{__dir__}/profiles/{profile}.lclcfg"
-  Error in evaluating profile [LCL139991]:
-    profile at "service.lclcfg":1:10
-      profile: NEED_OVERRIDE
-               ^^^^^^^^^^^^^
-  Cause: profile needs a value
+Error in loading config file "main.lclcfg" [LCL139991: cannot evaluate file target]
+├─ Loading route
+│  └─ main.lclcfg
+│     └─ main.lclcfg ("main.lclcfg":1:1): import f"{__dir__}/service.lclcfg" as m -> service.lclcfg
+│        └─ service.lclcfg ("service.lclcfg":2:1): using f"{__dir__}/profiles/{profile}.lclcfg"
+├─ Source: "service.lclcfg":2:1
+│  using f"{__dir__}/profiles/{profile}.lclcfg"
+│  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+└─ Cause
+   └─ Error in evaluating profile [LCL139991: profile needs a value]
+      └─ profile: NEED_OVERRIDE ("service.lclcfg":1:10)
+         └─ Source: "service.lclcfg":1:10
+            profile: NEED_OVERRIDE
+                     ^^^^^^^^^^^^^
 ```
 <!-- /lclang-doc-case -->
 
@@ -565,15 +569,16 @@ output includes the physical child source and those qualified read values:
 
 <!-- lclang-doc-output: stdout -->
 ```text
-Error in evaluating result [LCL131421]:
-  result at "main.lclcfg":2:9
-    result: m.ratio * 100
-  m.ratio at "metrics.lclcfg":3:8
-    ratio: total / count
-           ^^^^^^^^^^^^^
-    m.total = (int) 5
-    m.count = (int) 0
-Cause: ZeroDivisionError: division by zero
+Error in evaluating result [LCL131421: division by zero]
+├─ result: m.ratio * 100 ("main.lclcfg":2:9)
+│  └─ m.ratio: m.total / m.count ("metrics.lclcfg":3:8)
+│     ├─ m.count: (int) 0 (evaluated)
+│     ├─ m.total: (int) 5 (evaluated)
+│     └─ Source: "metrics.lclcfg":3:8
+│        ratio: total / count
+│               ^^^^^^^^^^^^^
+└─ Cause
+   └─ ZeroDivisionError: division by zero
 ```
 <!-- /lclang-doc-case -->
 

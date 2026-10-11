@@ -151,7 +151,7 @@ async def test_function_arguments_have_separate_protected_context(masked: bool) 
         )
         if masked:
             assert "total / count" not in str(failure.value)
-            assert "Cause: *masked*" in str(failure.value)
+            assert "[LCL131421: *masked*]" in str(failure.value)
 
 
 @pytest.mark.asyncio
@@ -180,7 +180,7 @@ async def test_short_circuit_and_recalculation_create_correct_snapshots() -> Non
         with pytest.raises(LclEvaluationError) as second:
             await frame.recalculate("bad")
         assert second.value is not first.value
-        assert "used = (int) 9" in str(second.value)
+        assert "used: (int) 9 (external)" in str(second.value)
         assert str(first.value) == original
 
 
@@ -227,7 +227,7 @@ async def test_file_changed_and_frame_closed_do_not_change_error_source() -> Non
         path.unlink()
         assert str(failure.value) == original
         assert "result: price / 0" in original
-        assert "price = (int) 5" in original
+        assert "price: (int) 5 (evaluated)" in original
 
 
 @pytest.mark.asyncio
@@ -247,5 +247,5 @@ async def test_unicode_continuation_retains_physical_crlf_source() -> None:
             diagnostic = str(failure.value)
             assert "结果: (数量 + \\" in diagnostic
             assert "1) / 零" in diagnostic
-            assert "数量 = (int) 5" in diagnostic
-            assert "零 = (int) 0" in diagnostic
+            assert "数量: (int) 5 (evaluated)" in diagnostic
+            assert "零: (int) 0 (evaluated)" in diagnostic

@@ -239,5 +239,5 @@ def test_config_expression_tracing_covers_success_and_both_error_families() -> N
             parse_config("value: __file__\n")
     trace = output.getvalue()
     assert "Parsed an expression as LclBinary" in trace
-    assert "Expression: 1 + 2" in trace and "Parsed expression:" not in trace
+    assert "<expr>: 1 + 2 (" in trace and "Input:" not in trace
     assert trace.count("Failed to parse configuration expression") == 2

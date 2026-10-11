@@ -112,7 +112,7 @@ class MappingResolver:
                 error, str(name), phase="awaiting external input", stage="lookup", masked=masked
             )
             raise
-        record_value_read(str(name), result, span, masked=masked)
+        record_value_read(str(name), result, span, masked=masked, source="external")
         trace_resolver_value(str(name), result, masked=masked)
         return result
 
@@ -145,6 +145,7 @@ class ScopedResolver:
         """
         if str(name) in self.values:
             selected = self.values[str(name)]
+            record_value_read(str(name), selected, span, source="argument")
             trace_resolver_value(str(name), selected, local=True)
             return selected
         return await self.parent.resolve(name, span=span)

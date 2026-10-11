@@ -13,6 +13,11 @@ retain theirs. This field does not replace the error code or change the retained
 source, value, cause or traceback snapshots. See [verbose diagnostics](logger.md#verbose-execution-diagnostics)
 for application-controlled logging scopes.
 
+Human-readable codes include their protected reason on the same line. Exception
+`str` expands the failed dependency and loading paths as trees; `repr` returns a
+single-line reference. Source excerpts appear only at the innermost failure.
+See [text diagnostics](text-display.md) for shared rendering and traceback controls.
+
 See [Exceptions and grouped failures](exceptions.md) for the exception hierarchy,
 multiple-failure scenarios, diagnostic output and application handling examples.
 
@@ -165,11 +170,10 @@ else:
 
 <!-- lclang-doc-output: stdout -->
 ```text
-Error in parsing source [LCL121491]:
-  at "<string>":1:4
-    1 +
-       ^
-Cause: expected an expression atom
+Error in parsing source [LCL121491: expected an expression atom]
+└─ Source: "<string>":1:4
+   1 +
+      ^
 ```
 <!-- /lclang-doc-case -->
 
@@ -208,15 +212,16 @@ asyncio.run(main())
 
 <!-- lclang-doc-output: stdout -->
 ```text
-Error in evaluating result [LCL131421]:
-  result at "<string>":1:1
-    ratio * 100
-  ratio at "<string>":1:1
-    total / count
-    ^^^^^^^^^^^^^
-    total = (int) 5
-    count = (int) 0
-Cause: ZeroDivisionError: division by zero
+Error in evaluating result [LCL131421: division by zero]
+├─ result: ratio * 100 ("<string>":1:1)
+│  └─ ratio: total / count ("<string>":1:1)
+│     ├─ count: (int) 0 (external)
+│     ├─ total: (int) 5 (external)
+│     └─ Source: "<string>":1:1
+│        total / count
+│        ^^^^^^^^^^^^^
+└─ Cause
+   └─ ZeroDivisionError: division by zero
 ```
 <!-- /lclang-doc-case -->
 
@@ -255,11 +260,11 @@ asyncio.run(main())
 
 <!-- lclang-doc-output: stdout -->
 ```text
-Error in evaluating answer [LCL233311]:
-  answer at "<string>":1:1
-    lost + 1
-    ^^^^
-Cause: unknown variable: lost
+Error in evaluating answer [LCL233311: unknown variable: lost]
+└─ answer: lost + 1 ("<string>":1:1)
+   └─ Source: "<string>":1:1
+      lost + 1
+      ^^^^
 ```
 <!-- /lclang-doc-case -->
 
@@ -303,8 +308,11 @@ asyncio.run(main())
 
 <!-- lclang-doc-output: stdout -->
 ```text
-Error in loading config file "settings.lclcfg" [LCL321794]:
-Cause: OSError: disk unavailable
+Error in loading config file "settings.lclcfg" [LCL321794: disk unavailable]
+├─ Loading route
+│  └─ settings.lclcfg
+└─ Cause
+   └─ OSError: disk unavailable
 ```
 <!-- /lclang-doc-case -->
 
@@ -343,11 +351,11 @@ asyncio.run(main())
 
 <!-- lclang-doc-output: stdout -->
 ```text
-Error in evaluating answer [LCL237511]:
-  answer at "<string>":1:1
-    1 + 2
-    ^
-Cause: evaluation depth limit exceeded
+Error in evaluating answer [LCL237511: evaluation depth limit exceeded]
+└─ answer: 1 + 2 ("<string>":1:1)
+   └─ Source: "<string>":1:1
+      1 + 2
+      ^
 ```
 <!-- /lclang-doc-case -->
 
@@ -401,9 +409,10 @@ asyncio.run(main())
 
 <!-- lclang-doc-output: stdout -->
 ```text
-Error in executing a workflow [LCL531811]:
-Context: workflow task root
-Cause: OSError: backend unavailable
+Error in executing a workflow [LCL531811: backend unavailable]
+├─ Context: workflow task root
+└─ Cause
+   └─ OSError: backend unavailable
 ```
 <!-- /lclang-doc-case -->
 
@@ -467,16 +476,19 @@ asyncio.run(main())
 
 <!-- lclang-doc-output: stdout -->
 ```text
-Error in executing a workflow [LCL535911]:
-Context: workflow task root.resource
-Cause: execution and cleanup failed
-  Failure 1:
-    Error in handling failure [LCL531811]:
-    Context: workflow task root
-    Cause: OSError: backend unavailable
-  Failure 2:
-    Error in handling failure [LCL532812]:
-    Cause: RuntimeError: cleanup failed
+Error in executing a workflow [LCL535911: execution and cleanup failed]
+├─ Context: workflow task root.resource
+├─ Failure 1
+│  └─ Error in handling failure [LCL531811: backend unavailable]
+│     ├─ Context: workflow task root
+│     └─ Cause
+│        └─ OSError: backend unavailable
+└─ Failure 2
+   └─ Error in handling failure [LCL532812: cleanup failed]
+      └─ Cause
+         └─ RuntimeError: cleanup failed
+            └─ During handling
+               └─ LclWorkflowError [LCL531811: backend unavailable] (already shown)
 ```
 <!-- /lclang-doc-case -->
 
@@ -1013,9 +1025,11 @@ inspect common failures.
 | `LCL600000` | Logging → Unspecified subsystem → Unspecified operation → Unspecified failure category → Unspecified cause → No further refinement | Default code for application-created failures of this family. | Construct `LclLoggerError("application failure")` without a code override. | Choose a specific application code when the application knows the reason. | LclLoggerError |
 | `LCL611111` | Logging → Configuration → Config → Input type → Text type → logger timezone expected text | Logger.timezone: expected text. | Call `LoggerHandlerConfig` with `self.timezone=None` for the required logger.timezone: expected text. | Supply the declared input type. | LclValidationError |
 | `LCL611112` | Logging → Configuration → Config → Input type → Text type → logger format expected text | Logger.format: expected text. | Call `LoggerHandlerConfig` with `self.format=None` for the required logger.format: expected text. | Supply the declared input type. | LclValidationError |
+| `LCL611113` | Logging → Configuration → Config → Input type → Text type → logger traceback style expected text | Logger.traceback_style must be text. | Pass traceback_style=None to LoggerHandlerConfig or LclExceptionFormatter. | Supply compact or full before initializing logging. | LclValidationError |
 | `LCL611251` | Logging → Configuration → Config → Input value → Invalid spelling or format → logger format | Logger.format: the supplied value. | In `LoggerHandlerConfig`, trigger: logger.format: the supplied value. | Correct the invalid value or declaration. | LclValidationError |
 | `LCL611291` | Logging → Configuration → Config → Input value → Other invalid value → logger timezone expected local or utc | Logger.timezone: expected local or utc. | Call `LoggerHandlerConfig` when `self.timezone not in ('local', 'utc')` is true. | Correct the invalid value or declaration. | LclValidationError |
 | `LCL611292` | Logging → Configuration → Config → Input value → Other invalid value → logger file sink identifier type | Logger.file.the supplied value: expected sink identifier. | Call `LoggerHandlerConfig.resolved_files` when `not name.isidentifier()` is true. | Correct the invalid value or declaration. | LclValidationError |
+| `LCL611293` | Logging → Configuration → Config → Input value → Other invalid value → logger traceback style expected compact or full | Logger.traceback_style must be compact or full. | Pass traceback_style='other' to LoggerHandlerConfig or LclExceptionFormatter. | Supply compact or full before initializing logging. | LclValidationError |
 | `LCL611890` | Logging → Configuration → Config → External operation → Native boundary failure → No further refinement | A native operation failed after entering this boundary. | A supplied value or implementation raises during `merge_fields`. | Inspect the native cause and the operation note. | LclErrorGroup (grouped failures) / LclLoggerError / LclValidationError |
 | `LCL612111` | Logging → Configuration → Validation → Input type → Text type → logger configuration requires string keys | The supplied value: expected a string-keyed mapping. | Call `mapping` with `value=None` for the required the supplied value: expected a string-keyed mapping. | Supply the declared input type. | LclValidationError |
 | `LCL612131` | Logging → Configuration → Validation → Input type → Sequence type → logger names require nonempty text sequence | The supplied value: expected nonempty logger names in a list or tuple. | Call `names` with `value=None` for the required the supplied value: expected nonempty logger names in a list or tuple. | Supply the declared input type. | LclValidationError |

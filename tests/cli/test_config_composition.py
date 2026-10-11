@@ -59,7 +59,7 @@ async def test_plain_cli_override_keeps_text_type_in_dependencies() -> None:
             with pytest.raises(LclEvaluationError) as failure:
                 await binding.frame.get("result")
             assert isinstance(failure.value.__cause__, TypeError)
-            assert "base = (str) '10'" in str(failure.value)
+            assert "base: (str) '10' (external)" in str(failure.value)
             assert binding.frame.get_definition("base") is None
         finally:
             await binding.stack.close()

@@ -500,14 +500,14 @@ async def main() -> None:
     )
     assert rainy_status == 2
     assert "[SKIPPED] calculate_subtotal" in rainy_stderr
-    assert "Error in running workflow task 'settlement.calculate_usage' [LCL531811]:" in rainy_stderr
+    assert "Error in running workflow task 'settlement.calculate_usage' [LCL531811:" in rainy_stderr
     assert "ValueError: end reading 900.0" in rainy_stderr
     assert "[ERROR] Energy settlement workflow" in rainy_stderr
     assert "lunch option: no lunch!" in rainy_stderr
     assert not (result_dir / "rainy.txt").exists()
     rainy_log = sorted(root.glob("settlement.*.log"))[-1].read_text(encoding="utf-8")
     assert "end reading 900.0 must exceed start reading 1000.0" in rainy_log
-    assert "Error in running workflow task 'settlement.calculate_usage' [LCL531811]:" in rainy_log
+    assert "Error in running workflow task 'settlement.calculate_usage' [LCL531811:" in rainy_log
     assert "task complete: [settlement.calculate_usage] ERROR" in rainy_log
     assert "[ERROR] Energy settlement workflow" in rainy_log
     assert "[SKIPPED] calculate_subtotal" in rainy_log
@@ -555,7 +555,10 @@ async def main() -> None:
         "Evaluated tariff.tax_rate",
         "Evaluated secrets.account_token",
     )
-    positions = [verbose_lines.index(message) for message in exact_verbose_messages]
+    positions = [
+        next(index for index, line in enumerate(verbose_lines) if line.startswith(message))
+        for message in exact_verbose_messages
+    ]
     assert positions == sorted(positions)
     final_log = sorted(root.glob("settlement.*.log"))[-1].read_text(encoding="utf-8")
     assert "[lclang.parse]" not in final_log

@@ -1,12 +1,14 @@
 """Process-scoped asynchronous standard-library logging.
 
 Exports ``ConsoleConfig``, ``FileConfig``, ``Logger``, ``LoggerHandlerConfig``,
+``LclExceptionFormatter``,
 ``LoggerRuntime``, ``RotationConfig``, ``RuntimeMetrics``, ``SinkMetrics``,
 ``resolve_logger_config``, ``use_logger``, ``use_logger_handler``, ``use_verbose``.
 """
 
 from lclang.logger.frame_logger_config import resolve_logger_config
 from lclang.logger.handler_config import LoggerHandlerConfig
+from lclang.logger.lcl_exception_formatter import LclExceptionFormatter
 from lclang.logger.logger import Logger
 from lclang.logger.logger_scope import use_logger, use_logger_handler
 from lclang.logger.logging_metrics import RuntimeMetrics, SinkMetrics
@@ -20,6 +22,7 @@ __all__ = [
     "ConsoleConfig",
     "FileConfig",
     "Logger",
+    "LclExceptionFormatter",
     "LoggerHandlerConfig",
     "LoggerRuntime",
     "RotationConfig",

@@ -27,11 +27,12 @@ async def test_recursive_builtin_evaluates_factorial_in_default_frame() -> None:
             "Recursive Function: (again) -> (n) -> " "1 if n <= 1 else n * again(n - 1)"
         )
         rendered = repr(frame.inspect_variable("factorial"))
-        assert "(Cached) Recursive Function: (again) -> (n) ->" in rendered
+        assert "factorial: Recursive Function: (again) -> (n) ->" in rendered
+        assert rendered.endswith("(cached)")
         assert "0x" not in rendered
         assert LCL_BUILTINS.values["recursive"] is recursive
         assert repr(LCL_BUILTINS.inspect_variable("recursive")).endswith(
-            "(NativeProvided) Builtin Function: recursive"
+            "Builtin Function: recursive (native)"
         )
     finally:
         await frame.close()

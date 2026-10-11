@@ -84,17 +84,18 @@ class VariableInspectionTree:
         return render_inspection(self)
 
     @guard_failure(LclEvaluationError, RuntimeErrorCode.E51_VARIABLE_INSPECTION_NATIVE_FAILURE)
-    def to_lines(self, depth: int = 0, prefix: str = "- ") -> list[str]:
-        """Render this tree as a markdown-style nested list.
+    def to_lines(self, depth: int = 0, prefix: str | None = None) -> list[str]:
+        """Render a dependency tree or an explicitly selected nested-list marker.
 
         :param depth: Non-negative initial indentation level.
-        :param prefix: Marker inserted after each level's indentation.
+        :param prefix: Explicit list marker, or None for shared tree connectors.
         :returns: Detached depth-first list containing one line per tree node.
         :raises LclValidationError: If *depth* is not an integer or *prefix* is not a string.
         :raises LclValidationError: If *depth* is negative.
 
         .. note::
-           Every recursive level adds two spaces and reuses the same prefix.
+           Explicit list markers add two spaces per level. Cached and masked
+           nodes remain leaves; dependencies sort alphabetically.
         """
         if not isinstance(depth, int):
             raise LclValidationError(
@@ -106,14 +107,20 @@ class VariableInspectionTree:
                 "inspection depth cannot be negative",
                 code=RuntimeErrorCode.E51_INSPECTION_DEPTH_CANNOT_BE_NEGATIVE,
             )
-        if not isinstance(prefix, str):
+        if prefix is not None and not isinstance(prefix, str):
             raise LclValidationError(
                 "inspection prefix must be a string",
                 code=RuntimeErrorCode.E51_VARIABLE_NAME_MUST_BE_A_STRING,
             )
+        from lclang.lang.runtime.frame.inspection_rendering import build_inspection_display
+        from lclang.utils.text_tree import render_text_tree, sort_display_name
+
+        if prefix is None:
+            return render_text_tree(build_inspection_display(self), prefix="  " * depth)
         lines = [f"{'  ' * depth}{prefix}{self!r}"]
-        if self.masked:
-            return lines
-        for dependency in self.dependencies:
-            lines.extend(dependency.to_lines(depth + 1, prefix))
+        if not self.masked and self.status is not VariableInspectionStatus.CACHED:
+            for dependency in sorted(
+                self.dependencies, key=lambda child: sort_display_name(str(child.var_name))
+            ):
+                lines.extend(dependency.to_lines(depth + 1, prefix))
         return lines

@@ -103,8 +103,9 @@ def extract_file_cases(text: str, filename: str) -> list[DocumentCase]:
 def normalize_workspace(text: str, root: Path, names: set[str]) -> str:
     """Replace only known temporary fixture paths with their displayed filenames."""
     for name in sorted(names, key=len, reverse=True):
-        physical = str(root / name)
-        text = text.replace(physical.replace("\\", "\\\\"), name).replace(physical, name)
+        paths = {str(root / name), str(root) + "/" + name, root.as_posix() + "/" + name}
+        for physical in paths:
+            text = text.replace(physical.replace("\\", "\\\\"), name).replace(physical, name)
     return text
 
 

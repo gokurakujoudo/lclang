@@ -102,7 +102,7 @@ async def test_failure_identity_survives_cache_scopes_copy_and_group_derivation(
         member = derived.exceptions[0]
         assert isinstance(member, LclError) and member.verbose_failure_id == identity
         assert "Failed while evaluating total" in before
-        assert before.count("Reason:") == 1
+        assert before.count("Failed while evaluating") == 1
         assert "Stored the failed evaluation" in before
         assert "cache" in output.getvalue()[len(before) :]
         assert identity in output.getvalue()[len(before) :]

@@ -77,6 +77,7 @@ def log_task_error(
         render_failure(error, action=f"running workflow task {branch_text(branch)!r}"),
         status.value,
         exc_info=(type(error), error, error.__traceback__),
+        extra={"lclang_failure_diagnostic": True},
     )
 
 

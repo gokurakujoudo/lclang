@@ -12,14 +12,14 @@ def test_native_context_cause_suppression_and_cycles_are_preserved() -> None:
     error.__context__ = native
     text = render_failure_traceback(error, None)
     assert "ValueError: native operation" in text and "During handling" in text
-    assert "LclError: [APP/FAILED] (failure F-test)" in text
-    assert "complete LCL diagnostic" not in text
+    assert "LclError [APP/FAILED: complete LCL diagnostic] (failure F-test)" in text
+    assert "Error in" not in text
     error.__suppress_context__ = True
     assert "native operation" not in render_failure_traceback(error, None)
     error.__cause__ = native
     native.__cause__ = error
     text = render_failure_traceback(error, None)
-    assert "exception-chain cycle" in text and "direct cause" in text
+    assert "exception-chain cycle" in text and "Direct cause" in text
 
 
 def test_group_stacks_retain_every_native_member_and_optional_ids() -> None:
@@ -30,6 +30,7 @@ def test_group_stacks_retain_every_native_member_and_optional_ids() -> None:
     grouped.__cause__ = ExceptionGroup("native originals", [ValueError("one"), OSError("two")])
     text = render_failure_traceback(grouped, None)
     assert "ValueError: one" in text and "OSError: two" in text
-    assert "Failure 1:" in text and "Failure 2:" in text
-    assert "LclError: [APP/FIRST]" in text and "LclError: [APP/SECOND]" in text
-    assert "first detail" not in text and "second detail" not in text
+    assert "Failure 1" in text and "Failure 2" in text
+    assert "LclError [APP/FIRST: first detail]" in text
+    assert "LclError [APP/SECOND: second detail]" in text
+    assert "Error in" not in text

@@ -35,23 +35,19 @@ def test_parse_lcl_renders_a_non_evaluating_static_result_tree(
         LCLANG_CLI_ENTRANCE.run([*MODULE_ARGV, "parse_lcl", "-o", "RESULT", "100"])
     )
     assert literal_status == 0
-    assert capsys.readouterr().out == (
-        "- RESULT@cli_runtime/empty_config: (ExternalProvided) str: '100'\n"
-    )
+    assert capsys.readouterr().out == ("RESULT: (str) '100' (external)\n")
 
     malformed_status = asyncio.run(
         LCLANG_CLI_ENTRANCE.run([*MODULE_ARGV, "parse_lcl", "-o", "RESULT", "LCL[bad +]"])
     )
     assert malformed_status == 0
-    assert capsys.readouterr().out == (
-        "- RESULT@cli_runtime/empty_config: (ExternalProvided) str: 'LCL[bad +]'\n"
-    )
+    assert capsys.readouterr().out == ("RESULT: (str) 'LCL[bad +]' (external)\n")
 
     lazy_constant_status = asyncio.run(
         LCLANG_CLI_ENTRANCE.run([*MODULE_ARGV, "parse_lcl", "-o", "RESULT", "LCL['100']"])
     )
     assert lazy_constant_status == 0
-    assert "'100' (NotEvaluated) NoneType: None" in capsys.readouterr().out
+    assert "RESULT: '100' (" in capsys.readouterr().out
 
     status = asyncio.run(
         LCLANG_CLI_ENTRANCE.run(
@@ -72,18 +68,17 @@ def test_parse_lcl_renders_a_non_evaluating_static_result_tree(
     )
     assert status == 0
     lines = capsys.readouterr().out.splitlines()
-    assert "RESULT@" in lines[0]
-    assert "a + b (NotEvaluated)" in lines[0]
-    assert "a@empty_config: (ExternalProvided) str: '100'" in lines[1]
-    assert "b@empty_config: (ExternalProvided) str: '200'" in lines[2]
+    assert lines[0].startswith("RESULT: a + b (") and "not evaluated" in lines[0]
+    assert lines[1] == "├─ a: (str) '100' (external)"
+    assert lines[2] == "└─ b: (str) '200' (external)"
 
     unsafe_status = asyncio.run(
         LCLANG_CLI_ENTRANCE.run([*MODULE_ARGV, "parse_lcl", "-o", "RESULT", "LCL[1 / 0 + missing]"])
     )
     assert unsafe_status == 0
     unsafe_output = capsys.readouterr().out
-    assert "1 / 0 + missing (NotEvaluated)" in unsafe_output
-    assert "missing@" in unsafe_output
+    assert "1 / 0 + missing (" in unsafe_output and "not evaluated" in unsafe_output
+    assert "missing:" in unsafe_output
     assert "LclNameError" in unsafe_output
 
     native_status = asyncio.run(
@@ -102,11 +97,11 @@ def test_parse_lcl_renders_a_non_evaluating_static_result_tree(
     )
     assert native_status == 0
     native_output = capsys.readouterr().out
-    assert "len@" in native_output and "(NativeProvided)" in native_output
-    assert "iter@" in native_output
+    assert "len:" in native_output and "(native)" in native_output
+    assert "iter:" in native_output
     assert "Builtin Function: len" in native_output
     assert "Builtin Namespace: iter" in native_output
-    assert "a@empty_config: (ExternalProvided) str: 'items'" in native_output
+    assert "a: (str) 'items' (external)" in native_output
     assert "mappingproxy" not in native_output
     assert "0x" not in native_output
 
@@ -184,7 +179,7 @@ def test_force_strictly_parses_only_marked_result_overrides(
     malformed[5] = "LCL[1 +]"
     assert asyncio.run(LCLANG_CLI_ENTRANCE.run(malformed)) == 2
     error = capsys.readouterr().err
-    assert "[LCL121491]" in error
+    assert "[LCL121491:" in error
     assert "RESULT=LCL[1 +]" in error
     assert "^" in error
 
@@ -265,9 +260,9 @@ def test_parse_lcl_eval_flag_renders_success_and_failure_cache_trees(
     )
     assert success_status == 0
     success_lines = capsys.readouterr().out.splitlines()
-    assert "RESULT@" in success_lines[0]
-    assert "(Cached) int: 3" in success_lines[0]
-    assert "base@empty_config: 1 + 1 (Cached) int: 2" in success_lines[1]
+    assert success_lines[0].startswith("RESULT: base + 1 (")
+    assert success_lines[1].startswith("└─ base: 1 + 1 (")
+    assert success_lines[-1] == "Result: (int) 3"
 
     failure_status = asyncio.run(
         LCLANG_CLI_ENTRANCE.run(
@@ -284,10 +279,9 @@ def test_parse_lcl_eval_flag_renders_success_and_failure_cache_trees(
     )
     assert failure_status == 0
     failure_output = capsys.readouterr().out
-    assert "RESULT@" in failure_output
-    assert "(Cached) LclEvaluationError:" in failure_output
+    assert "RESULT: 1 / 0 (" in failure_output
     assert "division by zero" in failure_output
-    assert "Error in evaluating RESULT [LCL131421]:" in failure_output
+    assert "Error in evaluating RESULT [LCL131421:" in failure_output
 
     eval_status = asyncio.run(
         LCLANG_CLI_ENTRANCE.run([*MODULE_ARGV, "eval_lcl", "-o", "RESULT", "100", "-o", "EVAL"])
@@ -316,13 +310,13 @@ def test_eval_lcl_reports_malformed_override_and_lexical_variable_stacks(
     assert asyncio.run(LCLANG_CLI_ENTRANCE.run(malformed_args)) == 2
     malformed_error = capsys.readouterr().err
     assert "TypeError: 'str' object is not callable" in malformed_error
-    assert "Error in evaluating RESULT [LCL132811]:" in malformed_error
+    assert "Error in evaluating RESULT [LCL132811:" in malformed_error
 
     parse_args = [*malformed_args]
     parse_args[2] = "parse_lcl"
     assert asyncio.run(LCLANG_CLI_ENTRANCE.run(parse_args)) == 0
     parse_output = capsys.readouterr().out
-    assert "quicksort@empty_config: (ExternalProvided) str:" in parse_output
+    assert "quicksort: (str)" in parse_output and "(external)" in parse_output
 
     valid_failure_args = [
         *MODULE_ARGV,
@@ -337,7 +331,7 @@ def test_eval_lcl_reports_malformed_override_and_lexical_variable_stacks(
     assert asyncio.run(LCLANG_CLI_ENTRANCE.run(valid_failure_args)) == 2
     valid_error = capsys.readouterr().err
     assert "division by zero" in valid_error
-    assert valid_error.index("  RESULT at") < valid_error.index("  quicksort at")
+    assert valid_error.index("RESULT: quicksort(") < valid_error.index("quicksort: 1 / 0 (")
 
 
 def test_module_help_version_and_real_subprocess_are_deterministic(

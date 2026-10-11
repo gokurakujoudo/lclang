@@ -28,6 +28,19 @@
 
 ### Diagnostics and documentation
 
+- Unify verbose, error, inspection, CLI and workflow text with shared tree
+  connectors and inline error-code reasons. Runtime trees show actual dependencies;
+  cached and shared values remain leaves. Failed trees expand the failure path
+  and show the innermost source excerpt once.
+- Display DEBUG verbose records as VERBOSE with a shorter default prefix, while
+  preserving producer records and explicit formats. Successful root requests
+  publish detached dependency trees for external formatters.
+- Add public `LclExceptionFormatter` and `LoggerHandlerConfig.traceback_style`.
+  Compact mode keeps application and external-library Python frames; full mode
+  includes lclang frames. Both retain causes and groups without repeating full
+  LCL diagnostics in tracebacks.
+- Add CLI `eval_lcl -o TREE`, preserve its default value output, and render
+  `parse_lcl -o EVAL` from the actual execution snapshot.
 - Add `lclang.logger.use_verbose(logger, enabled=...)` for task-local tracing
   through application loggers, with explicit nested suppression and structured
   DEBUG records. Disabled tracing skips trace-only value rendering.

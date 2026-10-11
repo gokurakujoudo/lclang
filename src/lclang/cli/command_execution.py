@@ -138,7 +138,9 @@ async def run_bound_command(
             output_failure, "command output", phase="writing command output", stage="command"
         )
         if pending is not None:
-            reference = pending.verbose_failure_id or f"[{pending.code}]"
+            from lclang.error.failure_summary import render_failure_summary
+
+            reference = pending.verbose_failure_id or render_failure_summary(pending)
             output_failure.add_note(f"Earlier command failure: {reference}")
             trace_verbose_failure(
                 failure,

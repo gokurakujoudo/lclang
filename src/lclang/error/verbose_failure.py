@@ -6,6 +6,7 @@ Defines ``identify_verbose_failure``, ``trace_verbose_failure``.
 from typing import cast
 
 from lclang.error.exception_base import LclError
+from lclang.error.failure_summary import describe_failure_reason
 from lclang.error.mask_scope import ACTIVE_MASKED_VALUE
 from lclang.error.native_wrap import is_ordinary_failure
 from lclang.error.verbose_context import (
@@ -14,7 +15,6 @@ from lclang.error.verbose_context import (
     is_verbose_enabled,
 )
 from lclang.error.verbose_records import describe_verbose_context, emit_verbose_record
-from lclang.utils.value_representation import safe_repr
 
 
 def identify_verbose_failure(error: LclError) -> str:
@@ -79,7 +79,7 @@ def trace_verbose_failure(
                 )
     identity = identify_verbose_failure(error)
     if first:
-        reason = safe_repr(error.native_cause or error.message, renderer=str, masked=masked)
+        reason = describe_failure_reason(error, masked=masked)
         if cached:
             heading = f"Observed a cached failure of {subject}"
         elif stage == "parse":
@@ -90,7 +90,7 @@ def trace_verbose_failure(
             heading = f"Failed during {subject}"
         else:
             heading = f"Failed while evaluating {subject}"
-        details = [("Type", type(error).__name__), ("Reason", reason)]
+        details = [("Type", type(error).__name__)]
         if error.span is not None and str(error.span.origin.name) != "<unknown>":
             from lclang.error.source_excerpt import render_source_location
 
@@ -109,7 +109,7 @@ def trace_verbose_failure(
             details.append(("Members", ", ".join(value for value in members if value is not None)))
         emit_verbose_record(
             stage,
-            f"{heading} [{error.code}] (failure {identity})",
+            f"{heading} [{error.code}: {reason}] (failure {identity})",
             details=tuple(details),
             failure_id=identity,
         )
@@ -119,6 +119,16 @@ def trace_verbose_failure(
         elif ACTIVE_VERBOSE_CONTEXT.get().execution == "shared evaluation":
             heading = f"Returned the failed shared evaluation of {subject}"
         else:
-            heading = f"Could not complete {subject} because an evaluation failed"
+            frames = error.evaluation_context
+            dependency = frames[-1].name if frames else "an evaluation"
+            for index in range(len(frames) - 2, -1, -1):
+                if frames[index].name == subject:
+                    dependency = frames[index + 1].name
+                    break
+            heading = (
+                f"Returned the failed evaluation of {subject}"
+                if dependency == subject
+                else f"Could not complete {subject} because {dependency} failed"
+            )
         emit_verbose_record(stage, f"{heading} (failure {identity})", failure_id=identity)
     return identity

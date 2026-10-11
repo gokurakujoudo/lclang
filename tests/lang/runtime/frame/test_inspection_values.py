@@ -86,12 +86,12 @@ def test_inspection_deduplicates_direct_names_and_preserves_lexical_owners() -> 
     assert inherited.dependencies[0].var_name == VarName("base")
     assert inherited.dependencies[0].definition_path == [FrameId("parent")]
     assert inherited.dependencies[0].defined_at is parent
-    assert repr(inherited) == ("inherited@child/parent: base + 2 (NotEvaluated) NoneType: None")
+    assert repr(inherited) == 'inherited: base + 2 ("<string>":1:1; not evaluated; LclBinary)'
     host = tree.dependencies[1]
     assert host.status is VariableInspectionStatus.EXTERNAL_PROVIDED
     assert host.current_value == 1
     assert host.dependencies == []
-    assert repr(host) == "host@child: (ExternalProvided) int: 1"
+    assert repr(host) == "host: (int) 1 (external)"
 
 
 def test_canonical_values_use_uniform_builtin_representations() -> None:
@@ -107,13 +107,13 @@ def test_canonical_values_use_uniform_builtin_representations() -> None:
     tree = frame.inspect_variable("root")
     children = {str(item.var_name): item for item in tree.dependencies}
     assert children["len"].status is VariableInspectionStatus.NATIVE_PROVIDED
-    assert repr(children["len"]).endswith("(NativeProvided) Builtin Function: len")
+    assert repr(children["len"]) == "len: Builtin Function: len (native)"
     assert children["iter"].status is VariableInspectionStatus.NATIVE_PROVIDED
-    assert repr(children["iter"]).endswith("(NativeProvided) Builtin Namespace: iter")
+    assert repr(children["iter"]) == "iter: Builtin Namespace: iter (native)"
     assert children["parse_ymd"].status is VariableInspectionStatus.NATIVE_PROVIDED
-    assert repr(children["parse_ymd"]).endswith("(NativeProvided) Builtin Function: parse_ymd")
+    assert repr(children["parse_ymd"]) == "parse_ymd: Builtin Function: parse_ymd (native)"
     assert children["str"].status is VariableInspectionStatus.NATIVE_PROVIDED
-    assert repr(children["str"]).endswith("(NativeProvided) Builtin Function: str")
+    assert repr(children["str"]) == "str: Builtin Function: str (native)"
     assert children["items"].status is VariableInspectionStatus.EXTERNAL_PROVIDED
     rendered = "\n".join(tree.to_lines())
     assert "mappingproxy" not in rendered
@@ -127,23 +127,20 @@ def test_canonical_values_use_uniform_builtin_representations() -> None:
         else:
             kind = "Function"
         assert repr(LCL_BUILTINS.inspect_variable(name)).endswith(
-            f"(NativeProvided) Builtin {kind}: {name}"
+            f"Builtin {kind}: {name} (native)"
         )
-    assert repr(LCL_ROOT.inspect_variable("lhs")).endswith("(NativeProvided) Builtin Function: lhs")
+    assert repr(LCL_ROOT.inspect_variable("lhs")) == "lhs: Builtin Function: lhs (native)"
     native_scalar = Frame(
         module("native-scalar", {}),
         values={"answer": 42},
         native_values=True,
     )
-    assert repr(native_scalar.inspect_variable("answer")).endswith("(NativeProvided) int: 42")
+    assert repr(native_scalar.inspect_variable("answer")) == "answer: (int) 42 (native)"
 
     lookalike = Frame(module("lookalike", {}), "LCL_BUILTINS", values={"len": len})
     spoofed = lookalike.inspect_variable("len")
     assert spoofed.status is VariableInspectionStatus.EXTERNAL_PROVIDED
-    assert repr(spoofed) == (
-        "len@LCL_BUILTINS: (ExternalProvided) "
-        "builtin_function_or_method: <built-in function len>"
-    )
+    assert repr(spoofed) == ("len: (builtin_function_or_method) <built-in function len> (external)")
     descendant = LCL_RUNTIME.derive(module("descendant", {}), {"local": 1})
     assert descendant.inspect_variable("local").status is VariableInspectionStatus.EXTERNAL_PROVIDED
 
@@ -188,9 +185,7 @@ def test_inspection_is_read_only_and_reports_missing_and_cycles_as_leaves() -> N
     assert missing.definition_path == [FrameId("frame-app")]
     assert isinstance(missing.current_exception, LclNameError)
     assert repr(missing) == (
-        "missing@frame-app: <missing> (NotEvaluated) "
-        "LclNameError: Error in resolving a variable [LCL251311]:\\n"
-        "Cause: unknown variable: missing"
+        "missing: LclNameError [LCL251311: unknown variable: missing] (not evaluated)"
     )
     produced = tree.dependencies[2]
     assert produced.status is VariableInspectionStatus.NOT_EVALUATED
@@ -265,8 +260,9 @@ async def test_inspection_reports_success_and_failure_cache_snapshots() -> None:
     assert bad.status is VariableInspectionStatus.CACHED
     assert bad.current_value is None
     assert bad.current_exception is caught.value
-    assert repr(good) == "good@frame-cache: 40 + 2 (Cached) int: 42"
-    assert repr(bad).startswith("bad@frame-cache: fail() (Cached) LclEvaluationError:")
+    assert repr(good) == "good: (int) 42 (cached)"
+    assert repr(bad) == "bad: LclEvaluationError [LCL132811: broken] (cached)"
+    assert bad.to_lines() == [repr(bad)]
     assert calls == 1
 
 
@@ -283,8 +279,8 @@ async def test_masked_inspection_keeps_raw_state_but_redacts_rendering() -> None
     assert tree.masked is True
     assert tree.current_value == "secret"
     assert tree.dependencies[0].var_name == VarName("source")
-    assert repr(tree) == "token@frame-masked: (Cached) *masked*"
-    assert tree.to_lines() == ["- token@frame-masked: (Cached) *masked*"]
+    assert repr(tree) == "token: *masked* (cached)"
+    assert tree.to_lines() == ["token: *masked* (cached)"]
 
 
 def test_inspection_repr_and_markdown_lines_are_compact_and_detached() -> None:
@@ -296,9 +292,9 @@ def test_inspection_repr_and_markdown_lines_are_compact_and_detached() -> None:
     lines = tree.to_lines()
     indented = tree.to_lines(depth=1, prefix="* ")
     assert "\n" not in rendered
-    assert rendered == ("answer@frame-render: base + base (NotEvaluated) NoneType: None")
-    assert lines[0] == f"- {rendered}"
-    assert lines[1] == "  - base@frame-render: 40 (NotEvaluated) NoneType: None"
+    assert rendered == 'answer: base + base ("<string>":1:1; not evaluated; LclBinary)'
+    assert lines[0] == rendered
+    assert lines[1] == '└─ base: 40 ("<string>":1:1; not evaluated; LclConstant)'
     assert len(lines) == 2
     assert indented[0] == f"  * {rendered}"
     lines.append("changed")
@@ -309,7 +305,7 @@ def test_inspection_repr_escapes_multiline_host_values() -> None:
     """Opaque value representations cannot break the one-line grammar."""
     frame = Frame(module("render", {}), values={"host": MultilineValue()})
     rendered = repr(frame.inspect_variable("host"))
-    assert rendered == ("host@frame-render: (ExternalProvided) MultilineValue: first\\nsecond")
+    assert rendered == "host: (MultilineValue) first\\nsecond (external)"
     assert "\n" not in rendered
 
 
@@ -330,30 +326,25 @@ async def test_inspection_renders_ast_values_as_typed_canonical_lcl_source() -> 
 
     external = frame.inspect_variable("expression")
     assert external.current_value is expression
-    assert repr(external) == ("expression@frame-ast-values: (ExternalProvided) LclBinary: base + 2")
+    assert repr(external) == "expression: (LclBinary) base + 2 (external)"
     assert "LclBinary(" not in repr(external)
     assert repr(frame.inspect_variable("function")) == (
-        "function@frame-ast-values: (ExternalProvided) "
-        "LclFunction: (items) -> [item * 2 for item in items if item]"
+        "function: (LclFunction) (items) -> [item * 2 for item in items if item] (external)"
     )
-    assert repr(frame.inspect_variable("text")) == (
-        "text@frame-ast-values: (ExternalProvided) str: 'base+2'"
-    )
+    assert repr(frame.inspect_variable("text")) == ("text: (str) 'base+2' (external)")
     assert repr(frame.inspect_variable("unknown")).startswith(
-        "unknown@frame-ast-values: (ExternalProvided) UnknownAstValue: UnknownAstValue("
+        "unknown: (UnknownAstValue) UnknownAstValue("
     )
 
     assert await frame.get("result") is expression
-    assert repr(frame.inspect_variable("result")) == (
-        "result@frame-ast-values: expression (Cached) LclBinary: base + 2"
-    )
+    assert repr(frame.inspect_variable("result")) == ("result: (LclBinary) base + 2 (cached)")
     native = Frame(
         module("native-ast", {}),
         values={"expression": expression},
         native_values=True,
     )
     assert repr(native.inspect_variable("expression")) == (
-        "expression@frame-native-ast: (NativeProvided) LclBinary: base + 2"
+        "expression: (LclBinary) base + 2 (native)"
     )
 
 
@@ -370,12 +361,9 @@ async def test_cached_lcl_function_uses_typed_canonical_source_repr() -> None:
         "(items) -> [] if not items else " "[item for item in items if item >= items[0]]"
     )
     assert rendered == (
-        "quicksort@frame-function-value: "
+        "quicksort: (LclFunctionValue) "
         "(items) -> [] if not items else "
-        "[item for item in items if item >= items[0]] "
-        "(Cached) LclFunctionValue: "
-        "(items) -> [] if not items else "
-        "[item for item in items if item >= items[0]]"
+        "[item for item in items if item >= items[0]] (cached)"
     )
     for leaked in ("BoundParameter", "SourceSpan", "ScopedResolver", "_evaluate"):
         assert leaked not in rendered
@@ -395,7 +383,7 @@ def test_inspection_repr_escapes_multiline_error_messages() -> None:
         [],
     )
     rendered = repr(tree)
-    assert rendered == "value@frame-render: 1 (Cached) MultilineError: broken\\nmessage"
+    assert rendered == "value: MultilineError: broken\\nmessage (cached)"
     assert "int: 42" not in rendered
 
 
@@ -404,7 +392,7 @@ def test_inspection_repr_escapes_multiline_error_messages() -> None:
     [
         (-1, "- ", LclValidationError),
         (1.5, "- ", LclValidationError),
-        (0, None, LclValidationError),
+        (0, 42, LclValidationError),
     ],
 )
 def test_inspection_rendering_rejects_invalid_arguments(

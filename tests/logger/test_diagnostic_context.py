@@ -59,6 +59,9 @@ async def test_logger_leaf_failure_keeps_original_diagnostic_as_cause() -> None:
         assert isinstance(cause.__cause__, ZeroDivisionError)
         assert cause.evaluation_context[-1].name == "logger.console.level"
         diagnostic = render_failure(failure.value, action="configuring logging")
-        assert diagnostic.startswith("Error in configuring logging [LCL131421]:")
-        assert "  Error in evaluating logger.console.level [LCL131421]:" in diagnostic
-        assert diagnostic.count("division by zero") == 1
+        assert diagnostic.startswith("Error in configuring logging [LCL131421:")
+        assert (
+            "Error in evaluating logger.console.level [LCL131421: division by zero]" in diagnostic
+        )
+        assert diagnostic.count("logger.console.level: 1 / 0 (") == 1
+        assert "ZeroDivisionError: division by zero" in diagnostic

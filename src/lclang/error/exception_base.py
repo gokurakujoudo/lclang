@@ -265,6 +265,15 @@ class LclError(Exception, metaclass=ErrorType):
 
         return render_error(self)
 
+    def __repr__(self) -> str:
+        """Render a protected one-line diagnostic reference.
+
+        :returns: Type, inline code and reason, and optional verbose identity.
+        """
+        from lclang.error.failure_summary import render_failure_summary
+
+        return render_failure_summary(self)
+
 
 class LclValidationError(LclError):
     """Report invalid arguments or inconsistent public values.

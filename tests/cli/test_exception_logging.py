@@ -35,11 +35,14 @@ def test_exception_console_and_file_do_not_repeat_complete_diagnostic(
         content = next(Path(directory).glob("*.log")).read_text(encoding="utf-8")
     assert console.out == ""
     assert console.err.count("Error in evaluating RESULT") == 1
-    assert console.err.count("Cause:") == 1
+    assert console.err.count("ZeroDivisionError: division by zero") == 1
     assert "Python traceback:" not in console.err
     assert content.count("Error in evaluating RESULT") == 1
-    assert "Python traceback:" in content and "Traceback (most recent call last):" in content
-    assert "operator_evaluation.py" in content and "ZeroDivisionError: division by zero" in content
+    assert "Python traceback:" in content and "Traceback (most recent call last)" in content
+    assert (
+        "operator_evaluation.py" not in content and "ZeroDivisionError: division by zero" in content
+    )
+    assert "test_exception_logging.py" in content
     match = re.search(r"Failed while evaluating RESULT.*\(failure (F\d+)\)", console.err)
     assert match is not None
     assert f"(failure {match.group(1)})" in content
@@ -79,8 +82,9 @@ def test_execution_cleanup_and_later_output_are_reported_without_repeating_membe
         console = capsys.readouterr()
         content = next(Path(directory).glob("*.log")).read_text(encoding="utf-8")
     assert len(closed) == 3 and all(frame.closed for frame in closed)
-    assert content.count("Cause: ValueError: business failed") == 1
-    assert content.count("Cause: OSError: cleanup member") == 3
+    complete_report = content.split("Python traceback:", 1)[0]
+    assert complete_report.count("ValueError: business failed") == 1
+    assert complete_report.count("OSError: cleanup member") == 3
     assert content.count("Error in cleaning up command") == 1
     if output_fails:
         assert content.count("Error in writing command output") == 1
@@ -88,7 +92,7 @@ def test_execution_cleanup_and_later_output_are_reported_without_repeating_membe
         assert console.err.count("Error in writing command output") == 1
     else:
         assert console.err.count("Error in cleaning up command") == 1
-        assert console.err.count("Cause: ValueError: business failed") == 1
+        assert console.err.count("ValueError: business failed") == 1
         assert "Python traceback:" not in console.err
 
 

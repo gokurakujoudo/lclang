@@ -8,7 +8,10 @@ process scope, and reject use outside a scope. Initialize after worker creation.
 
 ## Configuration
 
-Python objects and mappings share the `level`, `format`, `timezone`, `console`, `file`,
+See [text diagnostics](text-display.md) for shared tree layout, VERBOSE labels,
+inline code reasons, compact/full tracebacks and external `LclExceptionFormatter`.
+
+Python objects and mappings share the `level`, `format`, `timezone`, `traceback_style`, `console`, `file`,
 `takeover_loggers`, and `capture_warnings` fields. No configuration files are
 read by this package. Applications load `.lclcfg` files with `lclang.config`,
 then call `await resolve_logger_config(frame, verbose=False)` to materialize
@@ -64,6 +67,7 @@ All of the following can be imported directly from `lclang.logger`:
 | `Logger` | Wrapper returned by `await use_logger(...)`; use it to annotate application logging arguments. |
 | `LoggerHandlerConfig` | Immutable declaration accepted by `use_logger_handler`. |
 | `LoggerRuntime` | Runtime yielded by the handler scope; read `metrics` for diagnostics. |
+| `LclExceptionFormatter` | Opt-in standard formatter with protected LCL trees and compact or full Python tracebacks. |
 | `ConsoleConfig`, `FileConfig`, `RotationConfig` | Resolved output policies returned by `resolved_console()` and `resolved_files()`. |
 | `RuntimeMetrics`, `SinkMetrics` | Detached aggregate and per-sink diagnostic snapshots. |
 
@@ -165,9 +169,14 @@ selected logger's levels and filters. Disabled tracing skips trace-only value
 rendering.
 
 Messages describe actual parsing, evaluation and lookup operations. Complex
-events use indented details; cache and fallback reads use short lines. Record
-extras include `lclang_verbose`, `lclang_stage`, `lclang_evaluation_id`,
-`lclang_failure_id` and an immutable `lclang_context` of text field pairs.
+events use indented details; cache and fallback reads use short lines. Each new
+successful root request adds its actual dependency tree once. Cached and shared
+results remain leaves. Record extras include `lclang_verbose`, `lclang_stage`,
+`lclang_evaluation_id`,
+`lclang_failure_id`, an immutable `lclang_context` of text field pairs and
+`lclang_tree` for detached tree snapshots. Completed-expression metadata retains
+the expression type, canonical text and source location without repeating them
+in each event line.
 Stages are `parse`, `evaluate`, `lookup` and `command`. Evaluation and failure
 identifiers are None when that event has no corresponding evaluation or failure.
 Handlers can filter these fields without parsing the message. Values are bounded
@@ -221,7 +230,8 @@ async def main() -> None:
                         assert error.verbose_failure_id == identity
                         assert f"(failure {identity})" in str(error)
         text = output.getvalue()
-        assert text.count("Reason:") == 1
+        assert "Reason:" not in text
+        assert "[LCL131421: division by zero]" in text
         assert "cached failure" in text and "Cause:" not in text
         assert identity is not None and identity in text
     finally:

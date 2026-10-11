@@ -20,7 +20,7 @@ def test_error_without_span_has_stable_code_and_rendering() -> None:
     error = LclNameError("missing variable")
     assert error.code == "LCL230000"
     assert error.message == "missing variable"
-    assert str(error) == "Error in resolving a variable [LCL230000]:\nCause: missing variable"
+    assert str(error) == "Error in resolving a variable [LCL230000: missing variable]"
     assert isinstance(error, LclError)
 
 
@@ -35,7 +35,7 @@ def test_error_with_span_renders_source_start() -> None:
     error = LclSyntaxError("unexpected token", span=span, code="CUSTOM")
     assert (
         str(error)
-        == 'Error in parsing source [CUSTOM]:\n  at "config.lcl":3:7\nCause: unexpected token'
+        == 'Error in parsing source [CUSTOM: unexpected token]\n└─ Source: "config.lcl":3:7'
     )
 
 
@@ -47,8 +47,10 @@ def test_evaluation_error_renders_an_immutable_variable_stack() -> None:
     )
     assert error.variable_stack == ("RESULT", "middle", "failing")
     assert str(error) == (
-        "Error in evaluating RESULT [LCL130000]:\n  RESULT\n  middle\n  failing\n"
-        "Cause: division by zero"
+        "Error in evaluating RESULT [LCL130000: division by zero]\n"
+        "└─ RESULT: <expression unavailable>\n"
+        "   └─ middle: <expression unavailable>\n"
+        "      └─ failing: <expression unavailable>"
     )
     error.attach_variable_stack(("replacement",))
     assert error.variable_stack == ("RESULT", "middle", "failing")

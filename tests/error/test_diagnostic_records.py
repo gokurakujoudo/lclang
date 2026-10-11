@@ -131,7 +131,7 @@ def test_native_loading_copy_keeps_cause_notes_and_missing_source_metadata() -> 
     assert isinstance(derived, LclError)
     assert derived.code == "LCL323891"
     assert derived.__cause__ is original
-    assert "Cause: ValueError: invalid namespace" in str(derived)
+    assert "ValueError: invalid namespace" in str(derived)
     derived.add_note("caller note")
     assert original.__notes__ == ["original note"]
 
@@ -140,7 +140,7 @@ def test_native_and_unspecified_actions_have_consistent_headers() -> None:
     """Host boundaries and the generic public error retain original reason wording."""
     from lclang.error import render_failure
 
-    assert str(LclError("user text")) == "Error [LCL000000]:\nCause: user text"
+    assert str(LclError("user text")) == "Error [LCL000000: user text]"
     assert render_failure(ValueError("user text"), action="loading calendar") == (
-        "Error in loading calendar [LCL022890]:\nCause: ValueError: user text"
+        "Error in loading calendar [LCL022890: user text]: ValueError: user text"
     )
