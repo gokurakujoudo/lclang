@@ -188,6 +188,10 @@ sequence. Closed segments keep that path permanently. Console output can run
 alongside any number of files. The [logger reference](../reference/logger.md)
 explains templates, rotation, filtering, cancellation, and worker initialization.
 
+Continue with [application logging](18-application-logging.md) for downstream
+ownership, request-scoped verbose diagnostics, exception reporting, existing
+stdlib loggers and uncaught-error hooks.
+
 ## Reuse the reviewed standard helpers
 
 The functions behind LCL's `iter`, `text`, `data`, and `json` namespaces are

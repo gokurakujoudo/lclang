@@ -39,6 +39,9 @@
 
 ### Diagnostics and documentation
 
+- Add an executable application-logging tutorial for downstream developers,
+  covering scope ownership, levels, verbose, failure reporting, existing stdlib
+  loggers, uncaught-error hooks, masking and shutdown.
 - Summarize verbose failure propagation and committed caches once per root
   request. Retain propagation relations and cache owners in record metadata;
   keep first failure scenes, cache hits and shared returns explicit.
