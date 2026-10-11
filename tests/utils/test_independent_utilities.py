@@ -1,5 +1,6 @@
 """Python utilities work without loading any LCL language implementation."""
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -59,8 +60,17 @@ assert not any(name == "lclang.lang" or name.startswith("lclang.lang.") for name
 print("independent utilities passed")
 """
     root = Path(__file__).resolve().parents[2]
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = str(root / "src")
+    environment.pop("LCLANG_DOES_NOT_EXIST_IN_THIS_TEST", None)
     result = subprocess.run(
-        [sys.executable, "-c", source], cwd=root, capture_output=True, text=True, check=False
+        [sys.executable, "-S", "-c", source],
+        cwd=root,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout == "independent utilities passed\n"

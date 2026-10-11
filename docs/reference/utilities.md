@@ -5,9 +5,11 @@
 `await lclang.utils.invoke(callback, *args, **kwargs)` calls a synchronous or
 asynchronous callable exactly once, then resolves any returned awaitables using
 the shared utility resolver. Its type signature retains the
-callback's parameters and final return type. Ordinary values retain identity;
-exceptions and cancellation propagate unchanged. The helper creates no thread,
-background task, or synchronous event-loop boundary.
+callback's parameters and final return type. Ordinary values retain identity.
+Native failures become `LclUtilityError` with the original exception in
+`__cause__`; native groups become `LclErrorGroup` with their members retained.
+Existing LCL errors and control signals propagate unchanged. The helper creates
+no thread, background task, or synchronous event-loop boundary.
 
 ## Builtin values
 
