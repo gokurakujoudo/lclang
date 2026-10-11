@@ -2,123 +2,81 @@
 
 ## Unreleased
 
-### Diagnostics
+## 1.1.0 - 2026-10-11
 
-- Emit one completion event per new evaluation and concise using target results.
-  Share identical error-group prefixes while retaining distinct member evidence.
-- Preserve using target expressions, read values and failure IDs through loading
-  wrappers. Keep causes before the failed dependency tree.
-- Show Python callable implementation locations and actual nested invocations.
-- Add explicit `install_exception_hooks` for uncaught LCL failures in the main
-  thread, worker threads and a selected asyncio loop. Preserve original stacks
-  and prior handlers while sharing compact/full reporting with logger formatters.
+This milestone adds configuration composition, dependency-tree diagnostics and
+application-controlled logging. It also changes public import paths and error contracts.
 
-### Packaging
+### New features
 
-- Define the package version once in `lclang.__version__`. Hatchling metadata,
-  release-note validation, documentation and CLI output read that source.
+- Compose configuration with isolated, aliased `import` / `import?`, lazy
+  `NEED_OVERRIDE` / `RUNTIME_OVERRIDE` declarations and immutable `Module.mixin()`.
+  CLI defaults, configuration and overrides compose before evaluation so derived
+  values use the effective definitions.
+- Read verbose, exceptions, inspection, CLI and workflow output as consistent
+  trees. Runtime trees show executed dependencies; failures show their path,
+  causes first and the innermost source excerpt once. Evaluation and failure IDs
+  connect events, cached failures and exception reports.
+- Route task-local verbose records through lclang or standard-library loggers
+  with `use_verbose(logger, *, enabled=True)`, nested suppression, masking and
+  detached record context for filtering and formatting.
+- Use `LclExceptionFormatter` and opt-in `install_exception_hooks` to retain
+  application and external-library Python frames around LCL diagnostic trees.
+  Compact mode omits lclang frames; `traceback_style="full"` restores them.
+  Hooks support the main thread, worker threads and an explicitly supplied loop.
+- Request the executed tree with CLI `eval_lcl -o TREE`; `parse_lcl -o EVAL`
+  also uses runtime evidence. Default evaluation output remains the result value.
+- Learn configuration composition and downstream logging through executable
+  tutorials, including captured log output and grouped-failure examples.
 
-### Configuration and runtime
+### Changes
 
-- Group public APIs by function; import language construction and parsing from
-  `lclang.lang` and diagnostic types and code enums from `lclang.error`.
-  Move the AST, runtime and standard library under `lclang.lang`, with the
-  lexer, parser, printer and evaluator under `lclang.lang.engine`.
-- Use concrete source filenames and module overviews. Language-independent
-  helpers live in `lclang.utils`; language records, identifiers, source locations
-  and markers live in `lclang.lang.common`.
-- Sort domain error enums by code and use descriptive `Exx_REASON` members,
-  including native operation failures. Existing six-digit code strings are unchanged.
-- Add `import` and `import?` with required static aliases, independent loading
-  contexts, scope-aware name qualification, repeated-alias field merging, and
-  empty namespace reservations. Optional imports skip only directly missing files.
-- Add lazy `NEED_OVERRIDE` and `RUNTIME_OVERRIDE` declarations and immutable
-  `Module.mixin()` composition. CLI defaults, configuration, and overrides now
-  compose before evaluation so dependant expressions read effective overrides.
-- Keep configuration version 1 and existing relative-target compatibility.
+- Import public APIs from `lclang.lang`, `config`, `cli`, `workflow`, `utils`,
+  `logger` and `error`; the package root no longer exports APIs. AST, runtime and
+  standard-library implementations move under `lclang.lang`. Old root modules
+  are removed; Python helpers live in `lclang.utils` and shared language types
+  in `lclang.lang.common`.
+- Builtin failures use six-digit codes and descriptive `Exx_REASON` enum members
+  in `lclang.error`. Validation raises LCL exceptions; ordinary combined failures
+  use `LclErrorGroup`. Diagnostic copies retain subclass fields and independent
+  notes. `LclError.message` is read-only.
+- Verbose displays `VERBOSE` while retaining DEBUG level and original records.
+  Shorter default prefixes and per-request propagation/cache summaries reduce
+  repetition. CLI stderr reports the final failure once after cleanup; file
+  reports keep Python stacks without repeating the full LCL diagnostic.
+- Python call nodes show the actual implementation's definition location when
+  available. Deep `using` failures retain target expressions, read values,
+  loading routes, original causes and failure IDs through wrappers.
+- Cancellation, exit and iterator controls retain native propagation. Execution
+  and cleanup failures retain all ordinary members; borrowed console streams
+  stay open even when invocation setup or cleanup fails.
+- JSON decoding rejects nonstandard nonfinite constants; conversion distinguishes
+  unsupported values or keys, nonfinite numbers, cycles and malformed text.
+- Build metadata, runtime version reporting and release validation read the
+  single `lclang.__version__` source. Stable minor releases use `1.x.y`.
 
-### Diagnostics and documentation
+### Upgrade from 1.0.16
 
-- Show captured log output in the downstream application-logging tutorial,
-  verifying event records, filtering and uncaught reports without machine paths.
-- Add an executable application-logging tutorial for downstream developers,
-  covering scope ownership, levels, verbose, failure reporting, existing stdlib
-  loggers, uncaught-error hooks, masking and shutdown.
-- Summarize verbose failure propagation and committed caches once per root
-  request. Retain propagation relations and cache owners in record metadata;
-  keep first failure scenes, cache hits and shared returns explicit.
-- Show causes and unsuppressed handling contexts before expanding diagnostic
-  and Python stack trees, retaining source evidence, notes and group members.
-- Unify verbose, error, inspection, CLI and workflow text with shared tree
-  connectors and inline error-code reasons. Runtime trees show actual dependencies;
-  cached and shared values remain leaves. Failed trees expand the failure path
-  and show the innermost source excerpt once.
-- Display DEBUG verbose records as VERBOSE with a shorter default prefix, while
-  preserving producer records and explicit formats. Successful root requests
-  publish detached dependency trees for external formatters.
-- Add public `LclExceptionFormatter` and `LoggerHandlerConfig.traceback_style`.
-  Compact mode keeps application and external-library Python frames; full mode
-  includes lclang frames. Both retain causes and groups without repeating full
-  LCL diagnostics in tracebacks.
-- Add CLI `eval_lcl -o TREE`, preserve its default value output, and render
-  `parse_lcl -o EVAL` from the actual execution snapshot.
-- Add `lclang.logger.use_verbose(logger, enabled=...)` for task-local tracing
-  through application loggers, with explicit nested suppression and structured
-  DEBUG records. Disabled tracing skips trace-only value rendering.
-- Render compact execution diagnostics with input sources, Frame lookup context
-  and stable failure identifiers. Cached and propagated failures reference their
-  first scene. CLI exception reports appear once on stderr; file reports retain
-  Python stacks without repeating full LCL diagnostics in the traceback.
+1. Upgrade in your Python 3.14-or-newer environment:
 
-- Test the numeric scanner error for a missing prefix and remove redundant
-  coverage and typing suppressions. Rename mutable logger state and remove
-  empty or duplicate imports used only for type checking.
-- Export awaiting, binding masks, default declarations and scoped proxy markers
-  from `lclang.utils`, with executable utility examples. Remove `lclang.common`
-  and utility dependencies on language implementations; Frame environment
-  scoping remains a language adapter and date conversion is a Python utility.
-- Make the LCL error message read-only to match native exception groups. Remove
-  group typing suppressions, preserve native derivation member types and replace
-  repeated native-failure comments with the enum's documented naming contract.
-- Align behavioral tests with the functional package layout after production
-  validation. Enforce obsolete-path removal, static package exports, module
-  overviews, shared-layer dependencies and declared-field state copying.
-- Preserve iterator controls through workflow recovery, dynamic calls, CLI
-  routing and evaluated inspection. Settle owned resources and keep prior
-  ordinary failures in the original control's cause chain.
-- Retain invocation Frame cleanup failures when CLI logger setup fails, and
-  display native control groups without ordinary error-code labels.
-- Add a dedicated exception guide with executable group, workflow, CLI, logger
-  and control-signal examples and their actual diagnostic output.
-- Copy declared diagnostic fields through a public hook, preserving subclass
-  metadata, causes and independent notes without instance dictionary access.
-- Classify awaited native failures at their owning operation. Retain business,
-  failure-handling and release errors together without duplicating a failure
-  already present in a nested group. Render native group members and group causes.
-- Keep console streams supplied in typed CLI configuration borrowed through
-  invocation cleanup, preserving configuration and override precedence.
-- Align site Copy buttons with the first code line and remove the empty button
-  row. Show buttons on hover or keyboard focus, keep them visible on devices
-  without hover, and hide them when printing.
-- Replace builtin codes with six-digit classifications and centralize error
-  types, context, rendering, and domain code tables in `lclang.error`.
-- Add structured validation and subsystem failures, original native causes,
-  operation/task context, and `LclErrorGroup` for ordinary combined failures.
-  Validation now uses LCL exception types; attribute fallback and native control
-  signals retain Python behavior. Cleanup attempts all owned resources.
-- Add the complete error-code reference with causes, triggers, handling, types,
-  and executable diagnostic examples; audit production sources for uncoded failures.
-- Distinguish unsupported JSON values/keys, nonfinite numbers, container cycles,
-  and malformed text. Strict decoding rejects nonstandard float constants.
+   ```console
+   python -m pip install --upgrade "lclang==1.1.0"
+   ```
 
-- Unify production diagnostic presentation in English with complete loading
-  and evaluation stacks, retained source, and masked snapshots of already-read
-  values. Preserve concrete exceptions, codes, causes, and Python tracebacks.
-- Add the configuration composition tutorial. Markdown declares configuration
-  fixtures directly in `lclcfg` blocks and executable examples verify their exact
-  source and displayed outputs in independent temporary directories.
-- Start documented file introductions with `f"{__dir__}/..."`, and adopt
-  Humanizer for English documentation prose while preserving technical contracts.
+2. Replace root and removed-module imports. For example, import `define_module`,
+   `define_frame` and `Frame` from `lclang.lang`, and `LclError` from
+   `lclang.error`. Read the package version from `lclang.__version__`.
+3. Update exception handlers and code filters for the LCL validation types,
+   six-digit codes and renamed enum members. Inspect `.code` and `__cause__`;
+   handle `LclErrorGroup` where execution and cleanup can both fail.
+4. Update diagnostic text expectations. Verbose remains DEBUG for filtering;
+   use `LoggerHandlerConfig(traceback_style="full")` if you need all Python frames.
+   Install exception hooks explicitly when your application needs uncaught reports.
+
+Existing `.lclcfg` files keep `__LCL_VERSION__: 1` and relative-target compatibility.
+Ordinary value `repr`, parseable `to_source` and default CLI result output retain
+their semantics. Recheck derived CLI values that depend on overrides: they now
+read the composed definitions before evaluation.
 
 ## 1.0.16 - 2026-10-10
 
