@@ -9,8 +9,8 @@ from collections.abc import Mapping
 from types import TracebackType
 from typing import Literal
 
-from lclang.error import LclError, LclLoggerError, LclValidationError, LoggerErrorCode
-from lclang.error.diagnostic_rendering import render_error, render_failure
+from lclang.error import LclLoggerError, LclValidationError, LoggerErrorCode
+from lclang.error.exception_report import render_exception_report
 from lclang.error.failure_traceback import render_failure_traceback
 from lclang.error.operation_guard import guard_constructor, guard_failure
 from lclang.logger.traceback_policy import validate_traceback_style
@@ -61,15 +61,7 @@ class LclExceptionFormatter(logging.Formatter):
         error = ei[1]
         if error is None:
             return ""
-        diagnostic = (
-            render_error(error)
-            if isinstance(error, LclError)
-            else render_failure(error, action="handling failure")
-        )
-        trace = render_failure_traceback(
-            error, ei[2], style=self.traceback_style, require_frames=True
-        )
-        return diagnostic + ("\nPython traceback:\n" + trace if trace else "")
+        return render_exception_report(error, ei[2], traceback_style=self.traceback_style)
 
     @guard_failure(LclLoggerError, LoggerErrorCode.E41_LOG_FORMATTING_NATIVE_FAILURE)
     def format(self, record: logging.LogRecord) -> str:

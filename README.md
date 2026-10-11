@@ -330,6 +330,10 @@ static inspection unless `-o EVAL` is selected. `LclExceptionFormatter` provides
 the same exception trees to application loggers, with compact or full Python
 tracebacks. See [text diagnostics](docs/reference/text-display.md).
 
+Python callables show their implementation location when available. Applications
+can install explicit uncaught-error hooks through `lclang.logger` to retain user
+Python frames alongside the LCL diagnostic tree.
+
 ### Async-first evaluation
 
 Frame inputs, host callables, call results, iterators, and context-manager

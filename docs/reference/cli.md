@@ -79,6 +79,12 @@ and committed failure caches once. Cached failures reference the same failure
 identifier. The final exception diagnostic
 shows that identifier and retains complete source and value snapshots.
 
+Each new evaluation has one completion event; its returned value is not logged
+again as another new-evaluation read. Successful roots add one dependency tree.
+Dynamic using targets emit one resolution event with the target path, declaration
+position and evaluation ID. Group reports share identical call prefixes and keep
+member order. Python callables include their implementation location when known.
+
 Command execution and resource cleanup produce one final exception report on
 stderr. File reports retain application and external-library Python stacks and
 native causes by default; `-o logger.traceback_style full` includes lclang frames.

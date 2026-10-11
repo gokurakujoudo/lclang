@@ -28,6 +28,7 @@ def parse_config_expression(
     origin: SourceOrigin,
     start: SourcePosition,
     snapshot: SourceSnapshot | None = None,
+    trace_result: bool = True,
 ) -> LclAstNode:
     """Parse an expression with eager file-magic substitution.
 
@@ -35,6 +36,7 @@ def parse_config_expression(
     :param origin: Physical or synthetic source origin.
     :param start: Position of the expression text's first character.
     :param snapshot: Optional original physical source owning the expression.
+    :param trace_result: Whether to print the ordinary parse event for this expression.
     :returns: Immutable semantic AST containing no file-magic references.
     :raises LclConfigSyntaxError: If syntax is invalid or magic lacks a path.
 
@@ -61,7 +63,8 @@ def parse_config_expression(
             stage="parse",
         )
         raise converted from error
-    trace_parse_result(text, result)
+    if trace_result:
+        trace_parse_result(text, result)
     return result
 
 

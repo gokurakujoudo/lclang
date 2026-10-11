@@ -1,7 +1,7 @@
 """Detached immutable records for loading and evaluation diagnostics.
 
 Defines ``DiagnosticValue``, ``EvaluationContextFrame``, ``ConfigLoadFrame``,
-``validate_record_tuple``.
+``validate_record_tuple``, ``validate_callable_definition``.
 """
 
 from __future__ import annotations
@@ -15,6 +15,22 @@ from lclang.error.operation_guard import guard_constructor
 
 if TYPE_CHECKING:
     from lclang.lang.common.source_location import SourceOrigin, SourceSpan
+    from lclang.utils.python_callable_definition import PythonCallableDefinition
+
+
+def validate_callable_definition(value: PythonCallableDefinition | None) -> None:
+    """Validate optional detached host implementation metadata.
+
+    :param value: Code metadata supplied to a diagnostic record.
+    :raises LclValidationError: If value is not a callable definition or None.
+    """
+    from lclang.utils.python_callable_definition import PythonCallableDefinition
+
+    if value is not None and not isinstance(value, PythonCallableDefinition):
+        raise LclValidationError(
+            "callable definition must be PythonCallableDefinition or None",
+            code=DataModelErrorCode.E31_CALLABLE_DEFINITION_TYPE,
+        )
 
 
 @guard_constructor(
@@ -30,6 +46,7 @@ class DiagnosticValue:
     :param value: Protected, bounded value representation, never the host object.
     :param masked: Whether the value was redacted before representation.
     :param source: Actual lookup source, or unknown when provenance was unavailable.
+    :param callable_definition: Optional detached Python implementation location.
     :raises LclValidationError: If a field has an unsupported type.
     :raises LclValidationError: If the name or type label is empty.
     """
@@ -40,6 +57,7 @@ class DiagnosticValue:
     value: str
     masked: bool = False
     source: str = "unknown"
+    callable_definition: PythonCallableDefinition | None = None
 
     def __post_init__(self) -> None:
         """Validate a detached read snapshot.
@@ -48,6 +66,8 @@ class DiagnosticValue:
         :raises LclValidationError: If the name or type label is empty.
         """
         from lclang.lang.common.source_location import SourceSpan
+
+        validate_callable_definition(self.callable_definition)
 
         if not all(
             isinstance(item, str) for item in (self.name, self.type_name, self.value, self.source)
@@ -81,6 +101,7 @@ class EvaluationContextFrame:
     :param used_values: Immutable protected read snapshots in occurrence order.
     :param kind: Unitless frame category selected by the evaluation boundary.
     :param masked: Whether the owner expression and failure must be redacted.
+    :param callable_definition: Optional implementation location for a Python call.
     :raises LclValidationError: If a frame field has an unsupported type.
     :raises LclValidationError: If the name is empty or kind is unsupported.
     """
@@ -89,8 +110,9 @@ class EvaluationContextFrame:
     span: SourceSpan
     expression: str
     used_values: tuple[DiagnosticValue, ...] = ()
-    kind: Literal["definition", "function", "target"] = "definition"
+    kind: Literal["definition", "function", "target", "python-call"] = "definition"
     masked: bool = False
+    callable_definition: PythonCallableDefinition | None = None
 
     def __post_init__(self) -> None:
         """Validate the immutable failure context.
@@ -99,6 +121,8 @@ class EvaluationContextFrame:
         :raises LclValidationError: If the name or category is invalid.
         """
         from lclang.lang.common.source_location import SourceSpan
+
+        validate_callable_definition(self.callable_definition)
 
         if not isinstance(self.name, str) or not isinstance(self.expression, str):
             raise LclValidationError(
@@ -111,7 +135,7 @@ class EvaluationContextFrame:
                 code=DataModelErrorCode.E31_EVALUATION_CONTEXT_REQUIRES_A_SOURCESPAN_AND_BOOLEAN_MASK,
             )
         validate_record_tuple(self.used_values, DiagnosticValue, "used values")
-        if not self.name or self.kind not in {"definition", "function", "target"}:
+        if not self.name or self.kind not in {"definition", "function", "target", "python-call"}:
             raise LclValidationError(
                 "evaluation context name or kind is invalid",
                 code=DataModelErrorCode.E31_EVALUATION_CONTEXT_NAME_OR_KIND_IS_INVALID,

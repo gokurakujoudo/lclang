@@ -9,6 +9,7 @@ from lclang.error.exception_base import LclError
 from lclang.error.failure_summary import describe_failure_reason
 from lclang.error.mask_scope import ACTIVE_MASKED_VALUE
 from lclang.error.native_wrap import is_ordinary_failure
+from lclang.error.using_diagnostics import describe_using_subject
 from lclang.error.verbose_context import (
     ACTIVE_VERBOSE_CONTEXT,
     allocate_verbose_id,
@@ -90,13 +91,13 @@ def trace_verbose_failure(
         elif stage == "command":
             heading = f"Failed during {subject}"
         else:
-            heading = f"Failed while evaluating {subject}"
+            heading = f"Failed while evaluating {describe_using_subject(subject)}"
         details = [("Type", type(error).__name__)]
         if error.span is not None and str(error.span.origin.name) != "<unknown>":
             from lclang.error.source_excerpt import render_source_location
 
             details.append(("Source", render_source_location(error.span)))
-        details.extend(describe_verbose_context())
+        details.extend(describe_verbose_context(human=True))
         details.append(("Phase", phase))
         if cached:
             details.append(("History", "original evaluation was not traced; no new evaluation"))

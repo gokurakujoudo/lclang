@@ -82,6 +82,7 @@ OPERATIONS = {
     "128": "Records",
     "141": "Print expressions",
     "622": "Initialize logger scope",
+    "623": "Install exception hooks",
     "611": "Config",
     "621": "Context",
     "613": "Frame config",

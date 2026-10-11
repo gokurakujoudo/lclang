@@ -22,7 +22,16 @@ def describe_failure_reason(
         masked = masked or error.masked or any(frame.masked for frame in error.evaluation_context)
         reason = error.native_cause or error.message
         if error.native_cause is not None and error.__cause__ is not None:
-            reason = reason.removeprefix(type(error.__cause__).__name__ + ": ")
+            cause = error.__cause__
+            seen: set[int] = set()
+            while (
+                isinstance(cause, LclError)
+                and cause.__cause__ is not None
+                and id(cause) not in seen
+            ):
+                seen.add(id(cause))
+                cause = cause.__cause__
+            reason = reason.removeprefix(type(cause).__name__ + ": ")
         return safe_repr(reason, renderer=str, masked=masked, max_length=max_length)
     return safe_repr(error, renderer=str, masked=masked, max_length=max_length)
 

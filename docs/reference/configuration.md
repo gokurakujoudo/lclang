@@ -232,6 +232,13 @@ original names; evaluation after import uses the qualified runtime names.
 See [configuration composition](../tutorials/17-configuration-composition.md)
 for complete examples and expected diagnostics.
 
+Dynamic-target exceptions retain the target expression and values already read.
+The `LclConfigUsingError` wrapper keeps the original failure ID when verbose
+observed the failure, and adds its loading route without repeating the source
+body. First verbose failures show the route already visited. Successful targets
+emit one resolution event; expression and dependency details remain available in
+the detached log-record context.
+
 Config-created Frames use the canonical lclang hierarchy by default. Definitions
 therefore have the root `lhs()` function (the current definition name), builtin
 `parse_ymd`/`to_ymd` date conversion, the `recursive` fixed-point helper, safe

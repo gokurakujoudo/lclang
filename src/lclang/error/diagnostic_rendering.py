@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from lclang.error.diagnostic_evidence import DiagnosticEvidence, find_shared_evaluation_prefix
 from lclang.error.exception_base import LclError
 from lclang.error.failure_summary import describe_failure_reason, render_failure_summary
 
@@ -42,6 +43,8 @@ def build_failure_tree(
     *,
     masked: bool = False,
     frozen_reason: str | None = None,
+    evidence: DiagnosticEvidence | None = None,
+    skip_prefix: int = 0,
 ) -> TextTree:
     """Build a report-local tree without expanding the same LCL failure twice.
 
@@ -50,6 +53,8 @@ def build_failure_tree(
     :param seen: Report-local identities already expanded, including sibling members.
     :param masked: Redaction inherited from the parent diagnostic.
     :param frozen_reason: Owner-captured native cause text, avoiding another native str call.
+    :param evidence: Shared report-local snapshot ownership.
+    :param skip_prefix: Member frames already displayed by its containing group.
     :returns: Detached protected text and ordered child trees.
     """
     from lclang.error.codes.e0_general_error_code import GeneralErrorCode
@@ -60,11 +65,14 @@ def build_failure_tree(
     from lclang.utils.value_representation import safe_repr
 
     key = error.verbose_failure_id if isinstance(error, LclError) else None
-    identity: int | str = key or id(error)
+    identity = id(error)
     if identity in seen:
         return render_failure_summary(error, masked=masked) + " (already shown)", ()
     seen.add(identity)
+    evidence = DiagnosticEvidence() if evidence is None else evidence
     children: list[TextTree] = []
+    evaluation: TextTree | None = None
+    shared = find_shared_evaluation_prefix(error)
     if isinstance(error, LclError):
         masked = masked or error.masked or any(frame.masked for frame in error.evaluation_context)
         if (
@@ -75,18 +83,24 @@ def build_failure_tree(
             error.freeze_native_cause(error.__cause__)
         reason = describe_failure_reason(error, masked=masked, max_length=None)
         loading = build_loading_tree(error)
-        evaluation = build_evaluation_tree(error, masked=masked)
+        full_evaluation = build_evaluation_tree(error, masked=masked, include_excerpt=False)
         if loading is not None:
             action = f'loading config file "{error.config_stack[0].origin.name}"'
             children.append(("Loading route", (loading,)))
-        elif evaluation is not None:
-            action = "evaluating " + evaluation[0].split(":", 1)[0]
+        elif full_evaluation is not None:
+            owner = next(
+                (frame.name for frame in error.evaluation_context if frame.kind != "target"),
+                full_evaluation[0].split(":", 1)[0],
+            )
+            action = "evaluating " + owner
         else:
             selected = select_error_action(error.default_code) or select_error_action(error.code)
             action = action or selected.removeprefix(" in ")
-        if evaluation is not None:
-            children.append(evaluation)
-        elif error.span is not None:
+        if (
+            full_evaluation is None
+            and error.span is not None
+            and not isinstance(error, BaseExceptionGroup)
+        ):
             excerpt = [MASKED_VALUE] if masked else render_source_excerpt(error.span)
             children.append(
                 ("Source: " + render_source_location(error.span) + "\n" + "\n".join(excerpt), ())
@@ -136,7 +150,12 @@ def build_failure_tree(
                 "Cause",
                 (
                     build_failure_tree(
-                        cause, "handling cause", seen, masked=masked, frozen_reason=captured
+                        cause,
+                        "handling cause",
+                        seen,
+                        masked=masked,
+                        frozen_reason=captured,
+                        evidence=evidence,
                     ),
                 ),
             ),
@@ -146,19 +165,67 @@ def build_failure_tree(
             0,
             (
                 "During handling",
-                (build_failure_tree(context, "handling context", seen, masked=masked),),
+                (
+                    build_failure_tree(
+                        context, "handling context", seen, masked=masked, evidence=evidence
+                    ),
+                ),
             ),
         )
+    member_trees: list[TextTree] = []
     if isinstance(error, BaseExceptionGroup):
         for index, member in enumerate(
             cast(BaseExceptionGroup[BaseException], error).exceptions, 1
         ):
-            children.append(
+            member_trees.append(
                 (
                     f"Failure {index}",
-                    (build_failure_tree(member, "handling failure", seen, masked=masked),),
+                    (
+                        build_failure_tree(
+                            member,
+                            "handling failure",
+                            seen,
+                            masked=masked,
+                            evidence=evidence,
+                            skip_prefix=len(shared) if isinstance(error, LclError) else 0,
+                        ),
+                    ),
                 )
             )
+    if isinstance(error, LclError):
+        selected_frames = shared or error.evaluation_context[skip_prefix:]
+        if selected_frames and evidence.claim_evaluation(selected_frames, masked):
+            evaluation = build_evaluation_tree(
+                error,
+                masked=masked,
+                frames=selected_frames,
+                tail=tuple(member_trees) if shared else (),
+                include_excerpt=not bool(shared) and evidence.claim_source(error),
+            )
+        elif not error.evaluation_context:
+            evaluation = build_evaluation_tree(error, masked=masked)
+        if evaluation is not None:
+            children.append(evaluation)
+        elif skip_prefix and error.span is not None:
+            excerpt = (
+                [MASKED_VALUE]
+                if masked
+                else (
+                    render_source_excerpt(error.span)
+                    if evidence.claim_source(error)
+                    else ["(source already shown)"]
+                )
+            )
+            children.append(
+                (
+                    "Source: " + render_source_location(error.span) + "\n" + "\n".join(excerpt),
+                    (),
+                )
+            )
+        if not shared:
+            children.extend(member_trees)
+    else:
+        children.extend(member_trees)
     return heading, tuple(children)
 
 

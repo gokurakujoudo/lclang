@@ -140,7 +140,7 @@ def test_canonical_values_use_uniform_builtin_representations() -> None:
     lookalike = Frame(module("lookalike", {}), "LCL_BUILTINS", values={"len": len})
     spoofed = lookalike.inspect_variable("len")
     assert spoofed.status is VariableInspectionStatus.EXTERNAL_PROVIDED
-    assert repr(spoofed) == ("len: (builtin_function_or_method) <built-in function len> (external)")
+    assert repr(spoofed) == ("len: (builtin_function_or_method) Python callable len (external)")
     descendant = LCL_RUNTIME.derive(module("descendant", {}), {"local": 1})
     assert descendant.inspect_variable("local").status is VariableInspectionStatus.EXTERNAL_PROVIDED
 
@@ -361,9 +361,7 @@ async def test_cached_lcl_function_uses_typed_canonical_source_repr() -> None:
         "(items) -> [] if not items else " "[item for item in items if item >= items[0]]"
     )
     assert rendered == (
-        "quicksort: (LclFunctionValue) "
-        "(items) -> [] if not items else "
-        "[item for item in items if item >= items[0]] (cached)"
+        'quicksort: (LclFunctionValue) LCL function quicksort ("<string>":1:1) (cached)'
     )
     for leaked in ("BoundParameter", "SourceSpan", "ScopedResolver", "_evaluate"):
         assert leaked not in rendered

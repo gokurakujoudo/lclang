@@ -133,6 +133,18 @@ def render_canonical_value(value: object) -> str:
     :param value: Already-supplied host or computed value.
     :returns: Canonical supported AST source or the value's ordinary representation.
     """
+    from lclang.error.source_excerpt import render_definition_location
+    from lclang.lang.engine.evaluator.lcl_function import LclFunctionValue
+    from lclang.lang.stdlib.recursive_function import RecursiveFunction
+    from lclang.utils.python_callable_definition import render_python_callable
+
+    if isinstance(value, LclFunctionValue):
+        name = value.definition_name or "<function>"
+        return f"LCL function {name} ({render_definition_location(value.span)})"
+    if isinstance(value, RecursiveFunction):
+        return repr(value)
+    if (summary := render_python_callable(value)) is not None:
+        return summary
     if isinstance(value, LclAstNode):
         try:
             return to_source(value)
