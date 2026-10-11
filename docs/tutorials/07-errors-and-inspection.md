@@ -113,15 +113,15 @@ The result is a division failure with both definition frames and the values
 <!-- lclang-doc-output: stdout -->
 ```text
 Error in evaluating result [LCL131421: division by zero]
-├─ result: ratio * 100 ("metrics.lclcfg":4:9)
-│  └─ ratio: total / count ("metrics.lclcfg":3:8)
-│     ├─ count: (int) 0 (evaluated)
-│     ├─ total: (int) 5 (evaluated)
-│     └─ Source: "metrics.lclcfg":3:8
-│        ratio: total / count
-│               ^^^^^^^^^^^^^
-└─ Cause
-   └─ ZeroDivisionError: division by zero
+├─ Cause
+│  └─ ZeroDivisionError: division by zero
+└─ result: ratio * 100 ("metrics.lclcfg":4:9)
+   └─ ratio: total / count ("metrics.lclcfg":3:8)
+      ├─ count: (int) 0 (evaluated)
+      ├─ total: (int) 5 (evaluated)
+      └─ Source: "metrics.lclcfg":3:8
+         ratio: total / count
+                ^^^^^^^^^^^^^
 ```
 <!-- /lclang-doc-case -->
 

@@ -18,6 +18,11 @@ failure identifier and execution context; exception output expands the failing
 path and its already-read value leaves. Source excerpts appear only at the
 innermost failure. Logging never evaluates extra branches or reloads sources.
 
+Exception trees show the explicit Cause before expanding the diagnostic stack.
+An unsuppressed handling context takes that position when there is no explicit
+cause. Python traceback trees follow the same order. Stack frames, notes and
+exception-group members retain their original evidence and ordering.
+
 Every human diagnostic error code has its short reason on the same line. Failure
 identifiers correlate verbose summaries, cache returns and exception output.
 `repr(error)` is a protected single-line summary; `str(error)` is the full tree.

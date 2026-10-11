@@ -105,18 +105,20 @@ def build_traceback_tree(
         )
     cause, context = error.__cause__, error.__context__
     if cause is not None:
-        children.append(
+        children.insert(
+            0,
             (
                 "Direct cause",
                 (build_traceback_tree(cause, cause.__traceback__, style, seen, masked=masked),),
-            )
+            ),
         )
     elif context is not None and not error.__suppress_context__:
-        children.append(
+        children.insert(
+            0,
             (
                 "During handling",
                 (build_traceback_tree(context, context.__traceback__, style, seen, masked=masked),),
-            )
+            ),
         )
     for note in getattr(error, "__notes__", ()):
         children.append(

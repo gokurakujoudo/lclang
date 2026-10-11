@@ -130,7 +130,8 @@ def build_failure_tree(
             if isinstance(error, LclError) and not isinstance(cause, LclError)
             else None
         )
-        children.append(
+        children.insert(
+            0,
             (
                 "Cause",
                 (
@@ -138,14 +139,15 @@ def build_failure_tree(
                         cause, "handling cause", seen, masked=masked, frozen_reason=captured
                     ),
                 ),
-            )
+            ),
         )
     elif context is not None and not error.__suppress_context__:
-        children.append(
+        children.insert(
+            0,
             (
                 "During handling",
                 (build_failure_tree(context, "handling context", seen, masked=masked),),
-            )
+            ),
         )
     if isinstance(error, BaseExceptionGroup):
         for index, member in enumerate(

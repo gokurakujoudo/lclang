@@ -112,7 +112,10 @@ async def test_nested_failure_reports_direct_to_failing_variable_stack() -> None
         < diagnostic.index("middle: failing (")
         < diagnostic.index("failing: 1 / 0 (")
     )
-    assert diagnostic.endswith("ZeroDivisionError: division by zero")
+    assert diagnostic.splitlines()[1:3] == ["├─ Cause", "│  └─ ZeroDivisionError: division by zero"]
+    assert diagnostic.index("ZeroDivisionError: division by zero") < diagnostic.index(
+        "RESULT: middle ("
+    )
 
 
 @pytest.mark.asyncio

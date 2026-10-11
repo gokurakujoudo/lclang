@@ -2,6 +2,8 @@
 
 from copy import copy
 
+import pytest
+
 from lclang.error import LclError, LclErrorGroup
 from lclang.error.diagnostic_records import DiagnosticValue, EvaluationContextFrame
 from lclang.lang.common.source_location import UNKNOWN_SPAN
@@ -50,3 +52,30 @@ def test_manual_read_snapshot_does_not_guess_its_source() -> None:
     error = LclError("division by zero", evaluation_context=(context,))
     assert "input: (int) 3 (unknown)" in str(error)
     assert value.source == "unknown"
+
+
+@pytest.mark.parametrize("relation", ["cause", "context"])
+def test_exception_relationship_precedes_the_failed_dependency_stack(relation: str) -> None:
+    """Readers see the cause first while failure snapshots and identity stay intact."""
+    frames = (
+        EvaluationContextFrame("RESULT", UNKNOWN_SPAN, "total + 1", ()),
+        EvaluationContextFrame("total", UNKNOWN_SPAN, "amount / divisor", ()),
+    )
+    native = ZeroDivisionError("division by zero")
+    error = LclError("calculation failed", code="APP/FAILED", evaluation_context=frames)
+    error.verbose_failure_id = "F-order"
+    if relation == "cause":
+        error.__cause__ = native
+    else:
+        error.__context__ = native
+    error.add_note("retained request context")
+    text = str(error)
+    label = "Cause" if relation == "cause" else "During handling"
+    assert text.splitlines()[1] == "├─ " + label
+    assert (
+        text.index(label) < text.index("RESULT: total + 1") < text.index("total: amount / divisor")
+    )
+    assert text.count("RESULT: total + 1") == 1 and "failure F-order" in text
+    assert "retained request context" in text
+    assert error.evaluation_context is frames
+    assert (error.__cause__ if relation == "cause" else error.__context__) is native
