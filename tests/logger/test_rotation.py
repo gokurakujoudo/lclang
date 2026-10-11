@@ -114,7 +114,7 @@ def test_name_collision_preserves_existing_file_and_sequence_survives_scopes() -
             asyncio.run(exercise())
         assert collided[0].read_text() == "historical"
         assert len(list(Path(directory).glob("*.log"))) == 3
-    with patch("lclang.logger.file_segment.SEQUENCE_PID", -1):
+    with patch("lclang.logger.file_segment.sequence_pid", -1):
         assert next_sequence() == 1
 
 

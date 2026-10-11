@@ -1,6 +1,3 @@
-# Shared implementation modules intentionally access owner state.
-# pyright: reportPrivateUsage=false
-
 """Context acquisition and unwinding for workflow execution.
 
 Defines ``execute_context_scope``.

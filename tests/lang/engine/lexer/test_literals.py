@@ -2,9 +2,13 @@
 
 import pytest
 
-from lclang.error import LclSyntaxError
+from lclang.error import LanguageErrorCode, LclError, LclSyntaxError
 from lclang.lang.engine.lexer import TokenKind, scan_tokens
-from lclang.lang.engine.lexer.literal_scanner import LiteralMatch, scan_literal
+from lclang.lang.engine.lexer.literal_scanner import (
+    LiteralMatch,
+    internal_scan_number,
+    scan_literal,
+)
 
 
 @pytest.mark.parametrize(
@@ -23,6 +27,18 @@ def test_scans_numeric_values(source: str, kind: TokenKind, value: object) -> No
     """Numeric matches carry converted values and exact boundaries."""
     match = scan_literal(source + " ", 0)
     assert match == LiteralMatch(kind, source, value, len(source))
+
+
+@pytest.mark.parametrize(("source", "start"), [("name", 0), ("", 0), ("12", 2)])
+def test_numeric_scanner_rejects_calls_without_numeric_prefix(source: str, start: int) -> None:
+    """Direct numeric scanning rejects calls without a numeric prefix."""
+    with pytest.raises(LclError) as caught:
+        internal_scan_number(source, start)
+    assert type(caught.value) is LclError
+    assert (
+        caught.value.code == LanguageErrorCode.E12_NUMERIC_SCANNER_CALLED_WITHOUT_A_NUMERIC_PREFIX
+    )
+    assert caught.value.message == "numeric scanner called without a numeric prefix"
 
 
 @pytest.mark.parametrize(

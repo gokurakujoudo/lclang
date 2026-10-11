@@ -5,8 +5,6 @@ Defines ``LoggerRuntime``, ``reserve``, ``release``, ``current_runtime``.
 
 from __future__ import annotations
 
-# Existing uppercase names denote mutable process state, not constants.
-# pyright: reportConstantRedefinition=false
 import os
 from threading import Lock, Thread
 
@@ -48,7 +46,7 @@ class LoggerRuntime:
 
 # Unitless exclusive runtime slot and lock protect scope ownership, not task-local logging state.
 RUNTIME_LOCK = Lock()
-ACTIVE_RUNTIME: LoggerRuntime | None = None
+active_runtime: LoggerRuntime | None = None
 
 
 @guard_failure(LclLoggerError, LoggerErrorCode.E21_LOGGER_RUNTIME_NATIVE_FAILURE)
@@ -58,22 +56,22 @@ def reserve(runtime: LoggerRuntime) -> None:
     :param runtime: Proposed process-local runtime.
     :raises LclStateError: If an active or inherited runtime already exists.
     """
-    global ACTIVE_RUNTIME
+    global active_runtime
     with RUNTIME_LOCK:
-        if ACTIVE_RUNTIME is not None:
+        if active_runtime is not None:
             raise LclStateError(
                 "only one logger handler scope is allowed per process; initialize after fork",
                 code=LoggerErrorCode.E21_ONLY_ONE_LOGGER_HANDLER_SCOPE_IS_ALLOWED_PER_PROCESS_INITIALIZE_A,
             )
-        ACTIVE_RUNTIME = runtime
+        active_runtime = runtime
 
 
 @guard_failure(LclLoggerError, LoggerErrorCode.E21_LOGGER_RUNTIME_NATIVE_FAILURE)
 def release() -> None:
     """Release the slot only after complete writer cleanup and state restoration."""
-    global ACTIVE_RUNTIME
+    global active_runtime
     with RUNTIME_LOCK:
-        ACTIVE_RUNTIME = None
+        active_runtime = None
 
 
 @guard_failure(LclLoggerError, LoggerErrorCode.E21_LOGGER_RUNTIME_NATIVE_FAILURE)
@@ -83,7 +81,7 @@ def current_runtime() -> LoggerRuntime:
     :returns: Current process runtime, possibly draining.
     :raises LclStateError: If no initialized scope exists or fork inherited it.
     """
-    runtime = ACTIVE_RUNTIME
+    runtime = active_runtime
     if runtime is None or runtime.pid != os.getpid() or not runtime.started:
         raise LclStateError(
             "use_logger requires an active use_logger_handler scope",

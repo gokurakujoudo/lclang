@@ -62,8 +62,8 @@ runs through Pyright in CI. See the [Pylance configuration guide](https://github
 Strict mode retains runtime `isinstance` validation for untyped callers by disabling
 only `reportUnnecessaryIsInstance` in the shared configuration. Implementation modules
 that share private owner state declare a local `reportPrivateUsage` exception.
-Existing mutable uppercase logger state and incomplete third-party/operator stubs
-have narrowly documented exceptions; unknown types elsewhere still fail the gate.
+Incomplete dependency and standard-library stubs have narrowly documented exceptions;
+unknown types elsewhere still fail the gate.
 The runner passes its own interpreter to Pyright so dependency resolution matches
 the environment used by tests.
 

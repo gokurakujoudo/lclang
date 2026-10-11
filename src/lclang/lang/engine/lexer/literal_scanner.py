@@ -116,7 +116,7 @@ def internal_scan_number(text: str, start: int) -> LiteralMatch:
        retained in the returned match.
     """
     candidate_match = _NUMBER_CANDIDATE.match(text, start)
-    if candidate_match is None:  # pragma: no cover - guarded by scan_literal
+    if candidate_match is None:
         raise LclError(
             "numeric scanner called without a numeric prefix",
             code=LanguageErrorCode.E12_NUMERIC_SCANNER_CALLED_WITHOUT_A_NUMERIC_PREFIX,
