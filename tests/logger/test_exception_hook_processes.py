@@ -1,5 +1,6 @@
 """Python itself invokes installed hooks for uncaught application failures."""
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -52,6 +53,7 @@ def test_actual_uncaught_failures_use_selected_python_frame_policy(mode: str, st
         source.write_text(SCRIPT, encoding="utf-8")
         result = subprocess.run(
             [sys.executable, "-B", str(source), mode, style],
+            env={**os.environ, "PYTHONPATH": str(Path("src").resolve())},
             text=True,
             capture_output=True,
             check=False,
