@@ -79,6 +79,9 @@ live in `lang.common`. Package metadata reads the sole `__version__.py` definiti
 - Multiline English diagnostics with complete file and evaluation routes,
   immutable source excerpts, and protected snapshots of already-read values.
   Failure caches preserve their first scene; rendering never evaluates or reads files.
+- Application-controlled verbose logger scopes with Boolean switches, structured
+  DEBUG records and readable execution context. Stable failure identifiers link
+  first-scene summaries, cached returns and complete exception diagnostics.
 
 ## Error contracts
 

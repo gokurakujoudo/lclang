@@ -8,11 +8,7 @@ from __future__ import annotations
 from lclang.error import LanguageErrorCode, LclSyntaxError
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
-from lclang.error.verbose_diagnostic import (
-    internal_render_value,
-    internal_trace,
-    internal_verbose_enabled,
-)
+from lclang.error.verbose_failure import trace_verbose_failure
 from lclang.lang.ast import LclAstNode, LclBinary, LclTuple, LclUnary
 from lclang.lang.ast.operator_nodes import BinaryOperator, UnaryOperator
 from lclang.lang.common.binding_declaration import get_override_marker, is_frame_proxy
@@ -23,6 +19,7 @@ from lclang.lang.engine.parser.atom_parser import parse_atom
 from lclang.lang.engine.parser.control_form_parser import parse_control_form
 from lclang.lang.engine.parser.function_error_parser import parse_form
 from lclang.lang.engine.parser.logical_parser import parse_logical
+from lclang.lang.engine.parser.parse_tracing import trace_parse_result
 from lclang.lang.engine.parser.primary_parser import parse_primaries
 from lclang.lang.engine.parser.token_stream import TokenStream
 from lclang.lang.engine.printer import to_source
@@ -209,20 +206,9 @@ def parse_expression(
     try:
         node = parse_tokens(scan_tokens(text, origin=origin), version=version)
     except BaseException as error:
-        if internal_verbose_enabled():
-            origin_name = "<string>" if origin is None else str(origin.name)
-            internal_trace(
-                "parse",
-                f"origin={origin_name!r} expression={internal_render_value(text)} "
-                f"error={internal_render_value(error)}",
-            )
+        trace_verbose_failure(error, "expression", phase="parsing expression source", stage="parse")
         raise
-    if internal_verbose_enabled():
-        internal_trace(
-            "parse",
-            f"origin={str(node.span.origin.name)!r} expression={internal_render_value(text)} "
-            f"ast={internal_render_value(node, lambda: to_source(node))}",
-        )
+    trace_parse_result(text, node)
     return node
 
 

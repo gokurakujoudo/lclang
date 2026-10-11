@@ -10,6 +10,7 @@ import sys
 
 from lclang.cli.cli_models import CliConfig, CliParams, CliResult, CliResultStatus
 from lclang.cli.command_definition import Command
+from lclang.cli.exception_logging import report_command_failure
 from lclang.cli.frame_binding import CliBinding, build_binding
 from lclang.cli.invocation_audit import emit_execution_start
 from lclang.cli.invocation_context import CliContext
@@ -19,8 +20,8 @@ from lclang.error.exception_base import LclValidationError
 from lclang.error.failure_aggregation import combine_failures
 from lclang.error.native_wrap import is_ordinary_failure, wrap_failure
 from lclang.error.operation_guard import guard_async_failure, guard_failure
-from lclang.error.verbose_diagnostic import internal_verbose_scope
-from lclang.logger import Logger, resolve_logger_config, use_logger, use_logger_handler
+from lclang.error.verbose_failure import trace_verbose_failure
+from lclang.logger import Logger, resolve_logger_config, use_logger, use_logger_handler, use_verbose
 from lclang.logger.record_formatter import FILE_ONLY_ATTRIBUTE
 
 
@@ -62,6 +63,7 @@ async def run_bound_command(
     emit_execution_start(logger, params, binding.frame, binding.execution_config_names)
     logged = False
     pending: LclError | None = None
+    action = "executing command"
     try:
         result = await command.handler(context)
         if not isinstance(result, CliResult):
@@ -81,19 +83,24 @@ async def run_bound_command(
             raise
         failure = wrap_failure(error, LclCliError, CliErrorCode.E51_HANDLER_FAILURE)
         pending = failure
-        diagnostic = render_failure(failure, action="executing command")
-        logger.exception("%s", diagnostic)
-        result = CliResult(CliResultStatus.EXCEPTION, diagnostic)
-        logged = True
+        trace_verbose_failure(
+            failure, "command execution", phase="executing command handler", stage="command"
+        )
+        result = CliResult(CliResultStatus.EXCEPTION, "")
     try:
         await binding.stack.close()
     except BaseException as error:
         if not is_ordinary_failure(error):
+            if pending is not None:
+                report_command_failure(logger, pending, action=action)
             combined = combine_failures(
                 pending, error, code=CliErrorCode.E51_EXECUTION_CLEANUP_FAILURE
             )
             raise combined from combined.__cause__
         cleanup = wrap_failure(error, LclCliError, CliErrorCode.E51_CLEANUP_FAILURE)
+        trace_verbose_failure(
+            cleanup, "command cleanup", phase="closing command resources", stage="command"
+        )
         cleanup_failure: LclError = (
             cleanup
             if pending is None
@@ -104,8 +111,9 @@ async def run_bound_command(
             )
         )
         pending = cleanup_failure
-        diagnostic = render_failure(cleanup_failure, action="cleaning up command")
-        logger.exception("%s", diagnostic)
+        action = "cleaning up command"
+    if pending is not None:
+        diagnostic = report_command_failure(logger, pending, action=action)
         result = CliResult(CliResultStatus.EXCEPTION, diagnostic)
         logged = True
     try:
@@ -126,8 +134,23 @@ async def run_bound_command(
                 code=CliErrorCode.E51_EXECUTION_CLEANUP_FAILURE,
             )
         )
+        trace_verbose_failure(
+            output_failure, "command output", phase="writing command output", stage="command"
+        )
+        if pending is not None:
+            reference = pending.verbose_failure_id or f"[{pending.code}]"
+            output_failure.add_note(f"Earlier command failure: {reference}")
+            trace_verbose_failure(
+                failure,
+                "combined command failures",
+                phase="writing command output",
+                stage="command",
+            )
+        output_diagnostic = report_command_failure(
+            logger, output_failure, action="writing command output"
+        )
+        print(output_diagnostic, file=sys.stderr)
         diagnostic = render_failure(failure, action="writing command output")
-        logger.exception("%s", diagnostic)
         result = CliResult(CliResultStatus.EXCEPTION, diagnostic)
     return int(result.result_status)
 
@@ -155,7 +178,7 @@ async def execute_command(command: Command, params: object, cli_config: CliConfi
         config = await resolve_logger_config(binding.frame, params.verbose)
         async with use_logger_handler(config):
             logger = await use_logger(name=__name__)
-            with internal_verbose_scope(logging.getLogger(__name__) if params.verbose else None):
+            with use_verbose(logger, enabled=params.verbose):
                 status = await run_bound_command(command, params, binding, logger)
     except BaseException as error:
         pending = error

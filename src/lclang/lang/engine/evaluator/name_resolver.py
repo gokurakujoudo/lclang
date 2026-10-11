@@ -14,13 +14,14 @@ from lclang.error.awaitable_failure import resolve_operation_value
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_async_failure, guard_constructor, guard_failure
 from lclang.error.verbose_diagnostic import (
-    internal_render_value,
     internal_trace,
     internal_verbose_enabled,
 )
+from lclang.error.verbose_failure import trace_verbose_failure
 from lclang.lang.common.identifiers import VarName
 from lclang.lang.common.source_location import SourceSpan
 from lclang.lang.engine.evaluator.evaluation_journal import record_value_read
+from lclang.lang.engine.evaluator.lookup_tracing import trace_resolver_value
 from lclang.utils.binding_mask import normalize_masked_mapping
 
 
@@ -93,21 +94,12 @@ class MappingResolver:
             selected = self.values[marked if masked else plain]
         except KeyError:
             if internal_verbose_enabled():
-                internal_trace("lookup", f"name={str(name)!r} source=missing")
+                internal_trace("lookup", f"No binding for {name} was found in external input")
             raise LclNameError(
                 f"unknown variable: {name}",
                 span=span,
                 code=LanguageErrorCode.E33_UNKNOWN_VARIABLE,
             ) from None
-        if not internal_verbose_enabled():
-            result = await resolve_operation_value(
-                selected,
-                LclEvaluationError,
-                LanguageErrorCode.E33_NAME_RESOLUTION_NATIVE_FAILURE,
-                span=span,
-            )
-            record_value_read(str(name), result, span, masked=masked)
-            return result
         try:
             result = await resolve_operation_value(
                 selected,
@@ -116,17 +108,12 @@ class MappingResolver:
                 span=span,
             )
         except BaseException as error:
-            internal_trace(
-                "lookup",
-                f"name={str(name)!r} source=external-provided "
-                f"error={internal_render_value(error, masked=masked)}",
+            trace_verbose_failure(
+                error, str(name), phase="awaiting external input", stage="lookup", masked=masked
             )
             raise
-        internal_trace(
-            "lookup",
-            f"name={str(name)!r} source=external-provided "
-            f"value={internal_render_value(result, masked=masked)}",
-        )
+        record_value_read(str(name), result, span, masked=masked)
+        trace_resolver_value(str(name), result, masked=masked)
         return result
 
 
@@ -158,26 +145,6 @@ class ScopedResolver:
         """
         if str(name) in self.values:
             selected = self.values[str(name)]
-            if not internal_verbose_enabled():
-                return selected
-            try:
-                result = await resolve_operation_value(
-                    selected,
-                    LclEvaluationError,
-                    LanguageErrorCode.E33_NAME_RESOLUTION_NATIVE_FAILURE,
-                    span=span,
-                )
-            except BaseException as error:
-                internal_trace(
-                    "lookup",
-                    f"name={str(name)!r} source=local-provided "
-                    f"error={internal_render_value(error)}",
-                )
-                raise
-            internal_trace(
-                "lookup",
-                f"name={str(name)!r} source=local-provided "
-                f"value={internal_render_value(result)}",
-            )
-            return result
+            trace_resolver_value(str(name), selected, local=True)
+            return selected
         return await self.parent.resolve(name, span=span)

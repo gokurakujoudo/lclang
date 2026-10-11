@@ -541,19 +541,19 @@ async def main() -> None:
     assert verbose_status == 0
     assert "validated usage=250.00 kWh" in verbose_stderr
     assert (result_dir / "verbose.txt").is_file()
-    assert "[lclang.parse]" not in verbose_stderr
-    assert "[lclang.evaluate]" in verbose_stderr
+    assert "Parsed expression" not in verbose_stderr
+    assert "Evaluated meter.start" in verbose_stderr
     assert "*masked*" in verbose_stderr
     assert "warehouse-writer-token" not in verbose_stderr
     verbose_lines = [line.rsplit(" | ", 1)[-1] for line in verbose_stderr.splitlines()]
     exact_verbose_messages = (
-        "[lclang.evaluate] definition='meter.start' expression=(LclConstant) 1000.0 result=(float) 1000.0",
-        "[lclang.evaluate] definition='meter.end' expression=(LclConstant) 1250.0 result=(float) 1250.0",
-        "[lclang.lookup] name='usage' owner='cli_runtime' source=external-provided value=(float) 250.0",
-        "[lclang.evaluate] definition='tariff.unit_rate' expression=(LclConstant) 0.18 result=(float) 0.18",
-        "[lclang.lookup] name='subtotal' owner='cli_runtime' source=external-provided value=(float) 45.0",
-        "[lclang.evaluate] definition='tariff.tax_rate' expression=(LclConstant) 0.08 result=(float) 0.08",
-        "[lclang.evaluate] definition='secrets.account_token' expression=*masked* result=*masked*",
+        "Evaluated meter.start",
+        "Evaluated meter.end",
+        'Read usage from external input in Frame "cli_runtime": (float) 250.0',
+        "Evaluated tariff.unit_rate",
+        'Read subtotal from external input in Frame "cli_runtime": (float) 45.0',
+        "Evaluated tariff.tax_rate",
+        "Evaluated secrets.account_token",
     )
     positions = [verbose_lines.index(message) for message in exact_verbose_messages]
     assert positions == sorted(positions)

@@ -28,6 +28,14 @@
 
 ### Diagnostics and documentation
 
+- Add `lclang.logger.use_verbose(logger, enabled=...)` for task-local tracing
+  through application loggers, with explicit nested suppression and structured
+  DEBUG records. Disabled tracing skips trace-only value rendering.
+- Render compact execution diagnostics with input sources, Frame lookup context
+  and stable failure identifiers. Cached and propagated failures reference their
+  first scene. CLI exception reports appear once on stderr; file reports retain
+  Python stacks without repeating full LCL diagnostics in the traceback.
+
 - Test the numeric scanner error for a missing prefix and remove redundant
   coverage and typing suppressions. Rename mutable logger state and remove
   empty or duplicate imports used only for type checking.

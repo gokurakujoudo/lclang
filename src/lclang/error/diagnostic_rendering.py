@@ -87,6 +87,8 @@ def render_error(error: LclError) -> str:
                 "    " + line
                 for line in render_failure(member, action="handling failure").splitlines()
             )
+    if error.verbose_failure_id is not None:
+        lines[0] = lines[0].removesuffix(":") + f" (failure {error.verbose_failure_id}):"
     return "\n".join(lines)
 
 
@@ -104,7 +106,10 @@ def render_failure(error: BaseException, *, action: str) -> str:
         diagnostic = render_error(error)
         if not (error.evaluation_context or error.config_stack or error.variable_stack):
             lines = diagnostic.splitlines()
-            lines[0] = f"Error in {action} [{error.code}]:"
+            identity = (
+                "" if error.verbose_failure_id is None else f" (failure {error.verbose_failure_id})"
+            )
+            lines[0] = f"Error in {action} [{error.code}]{identity}:"
             diagnostic = "\n".join(lines)
         return diagnostic
     from lclang.error.codes.e0_general_error_code import GeneralErrorCode

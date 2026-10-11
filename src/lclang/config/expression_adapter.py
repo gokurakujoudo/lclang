@@ -11,16 +11,12 @@ from typing import cast
 from lclang.error import ConfigurationErrorCode, LclConfigError, LclSyntaxError
 from lclang.error.configuration_exception import LclConfigSyntaxError
 from lclang.error.operation_guard import guard_failure
-from lclang.error.verbose_diagnostic import (
-    internal_render_value,
-    internal_trace,
-    internal_verbose_enabled,
-)
+from lclang.error.verbose_failure import trace_verbose_failure
 from lclang.lang.ast import LclAstNode, LclConstant, LclName
 from lclang.lang.common.source_location import SourceOrigin, SourcePosition, SourceSnapshot
 from lclang.lang.engine.lexer import Token, TokenKind, scan_tokens
+from lclang.lang.engine.parser.parse_tracing import trace_parse_result
 from lclang.lang.engine.parser.pratt_parser import parse_tokens
-from lclang.lang.engine.printer import to_source
 
 
 @guard_failure(
@@ -51,28 +47,21 @@ def parse_config_expression(
         parsed = parse_tokens(adapted)
         result = replace_magic_nodes(parsed, origin.path)
     except LclConfigSyntaxError as error:
-        if internal_verbose_enabled():
-            internal_trace(
-                "parse",
-                f"origin={str(origin.name)!r} expression={internal_render_value(text)} "
-                f"error={internal_render_value(error)}",
-            )
+        trace_verbose_failure(
+            error, "configuration expression", phase="parsing configuration source", stage="parse"
+        )
         raise
     except LclSyntaxError as error:
         converted = LclConfigSyntaxError(error.message, span=error.span, code=error.code)
-        if internal_verbose_enabled():
-            internal_trace(
-                "parse",
-                f"origin={str(origin.name)!r} expression={internal_render_value(text)} "
-                f"error={internal_render_value(converted)}",
-            )
-        raise converted from error
-    if internal_verbose_enabled():
-        internal_trace(
-            "parse",
-            f"origin={str(origin.name)!r} expression={internal_render_value(text)} "
-            f"ast={internal_render_value(result, lambda: to_source(result))}",
+        converted.verbose_failure_id = error.verbose_failure_id
+        trace_verbose_failure(
+            converted,
+            "configuration expression",
+            phase="parsing configuration source",
+            stage="parse",
         )
+        raise converted from error
+    trace_parse_result(text, result)
     return result
 
 

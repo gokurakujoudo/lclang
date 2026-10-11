@@ -139,18 +139,17 @@ def test_verbose_reports_parse_lookup_evaluation_and_safe_values(
     captured = capsys.readouterr()
     assert captured.out == "value!\n"
     trace = captured.err
-    assert "[lclang.evaluate]" in trace
-    assert "[lclang.evaluate]" in trace
-    assert "source=external-provided value=(str) 'value'" in trace
-    assert "source=lcl-evaluated value=(str) 'value!'" in trace
-    assert "source=shared-lcl-evaluation value=(str) 'value!'" in trace
-    assert "source=cached value=(str) 'value!'" in trace
-    assert "source=native-provided" in trace
-    assert "source=local-provided value=(str) 'local'" in trace
-    assert "source=fallback value=(str) 'fallback'" in trace
-    assert "value=(BrokenRepresentation) <repr failed: RuntimeError>" in trace
-    assert "source=external-provided error=(LclEvaluationError)" in trace
-    assert "source=missing" in trace
+    assert "Evaluated RESULT" in trace and "Result: (str) 'value!'" in trace
+    assert "Read external from external input" in trace and ": (str) 'value'" in trace
+    assert "Read RESULT from a new LCL evaluation" in trace
+    assert "Read RESULT from a shared LCL evaluation" in trace
+    assert "Read RESULT from cache" in trace
+    assert "Read len from native input" in trace
+    assert "Read item from local input: (str) 'local'" in trace
+    assert "Read missing from the fallback" in trace and ": (str) 'fallback'" in trace
+    assert "(BrokenRepresentation) <repr failed: RuntimeError>" in trace
+    assert "Failed to read failing_awaitable" in trace and "Type: LclEvaluationError" in trace
+    assert "No binding for absent" in trace
     assert "\\n" in trace
     assert "<truncated>" in trace
 
@@ -164,9 +163,9 @@ def test_verbose_writes_runtime_records_to_the_configured_file(
         assert asyncio.run(entrance.run(trace_args("--verbose"))) == 0
         stderr = capsys.readouterr().err
         contents = next(Path(directory).glob("*.log")).read_text(encoding="utf-8")
-    assert "[lclang.evaluate]" in stderr
-    assert "[lclang.evaluate]" in contents
-    assert "source=fallback" in contents
+    assert "Evaluated RESULT" in stderr
+    assert "Evaluated RESULT" in contents
+    assert "Read missing from the fallback" in contents
 
 
 def test_verbose_redacts_masked_config_and_override_payloads(
@@ -230,10 +229,10 @@ def test_verbose_reports_evaluation_failures(
     ]
     assert asyncio.run(entrance.run(args)) == 0
     trace = capsys.readouterr().err
-    assert "[lclang.evaluate]" in trace
-    assert "source=lcl-evaluated error=(LclEvaluationError)" in trace
-    assert "source=cached-failure error=(LclEvaluationError)" in trace
-    assert "name='missing_name'" in trace and "source=missing" in trace
+    assert "Failed while evaluating RESULT" in trace
+    assert "Type: LclEvaluationError" in trace
+    assert "Returned the cached failure of RESULT; no new evaluation" in trace
+    assert "No binding for missing_name" in trace
     assert "division by zero" in trace
 
 
@@ -281,5 +280,6 @@ def test_builtin_cli_verbose_keeps_result_on_stdout(
     assert asyncio.run(LCLANG_CLI_ENTRANCE.run(args)) == 0
     captured = capsys.readouterr()
     assert captured.out == "42\n"
-    assert "[lclang.evaluate]" in captured.err
-    assert "source=lcl-evaluated value=(int) 42" in captured.err
+    assert "Evaluated RESULT" in captured.err
+    assert "Read RESULT from a new LCL evaluation" in captured.err
+    assert "Result: (int) 42" in captured.err

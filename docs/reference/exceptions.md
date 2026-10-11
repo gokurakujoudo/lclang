@@ -783,7 +783,7 @@ LCL441972 combines the configuration syntax error and the partial Frame close er
 
 ## Handler, Frame cleanup and result output
 
-The handler fails, each of the three invocation Frames closes and reports a failure, and result output fails too. A standard logging filter removes raw Python tracebacks; the structured diagnostic messages are emitted through the real console sink.
+The handler fails, all three invocation Frames close with errors, and result output fails too. Execution and cleanup produce one final diagnostic after resources close. The later output error is reported separately and refers to that earlier failure. A standard logging filter captures the framework file-report messages for this example.
 
 <!-- lclang-doc-case: exceptions-cli-execution -->
 
@@ -800,9 +800,13 @@ from lclang.lang import Frame
 from lclang.logger import LoggerHandlerConfig
 
 class DiagnosticOnly(logging.Filter):
+    def __init__(self, output):
+        super().__init__()
+        self.output = output
+
     def filter(self, record):
-        record.exc_info = None
-        record.exc_text = None
+        if getattr(record, "lclang_failure_diagnostic", False):
+            self.output.write(record.getMessage() + "\n")
         return True
 
 closed = []
@@ -826,7 +830,7 @@ async def main():
     config = CliConfig(LoggerHandlerConfig(format="%(message)s", console={"stream": logs}))
     entrance = CliEntrance(CommandGroup("root", "Root", [Command("run", "Run", [], {}, handler)]), cli_config=config)
     target = logging.getLogger("lclang.cli.command_execution")
-    filter = DiagnosticOnly()
+    filter = DiagnosticOnly(logs)
     target.addFilter(filter)
     try:
         with patch.object(Frame, "close", close_then_fail), patch("lclang.cli.command_execution.write_result", fail_output), redirect_stderr(stderr):
@@ -837,7 +841,8 @@ async def main():
     assert len(closed) == 3
     text = logs.getvalue()
     assert "LCL451811" in text and "LCL441971" in text and "LCL451813" in text
-    assert "command output failed after another failure" in text
+    assert text.count("handler failed") == 1
+    assert "Earlier command failure: [LCL451911]" in text
     print(text, end="")
     print("Exit status:", status)
     print("Invocation Frames closed:", len(closed))
@@ -847,8 +852,6 @@ asyncio.run(main())
 
 <!-- lclang-doc-output: stdout -->
 ```text
-Error in executing command [LCL451811]:
-Cause: ValueError: handler failed
 Error in cleaning up command [LCL451911]:
 Cause: command execution and cleanup failed
   Failure 1:
@@ -869,38 +872,15 @@ Cause: command execution and cleanup failed
       Failure 2:
         Error in handling failure [LCL441811]:
         Cause: OSError: invocation Frame close
-Error in writing command output [LCL451911]:
-Cause: command output failed after another failure
-  Failure 1:
-    Error in handling failure [LCL451911]:
-    Cause: command execution and cleanup failed
-      Failure 1:
-        Error in handling failure [LCL451811]:
-        Cause: ValueError: handler failed
-      Failure 2:
-        Error in handling failure [LCL441971]:
-        Cause: execution and cleanup failed
-          Failure 1:
-            Error in handling failure [LCL441971]:
-            Cause: execution and cleanup failed
-              Failure 1:
-                Error in handling failure [LCL441811]:
-                Cause: OSError: invocation Frame close
-              Failure 2:
-                Error in handling failure [LCL441811]:
-                Cause: OSError: invocation Frame close
-          Failure 2:
-            Error in handling failure [LCL441811]:
-            Cause: OSError: invocation Frame close
-  Failure 2:
-    Error in handling failure [LCL451813]:
-    Cause: OSError: result output
+Error in writing command output [LCL451813]:
+Context: Earlier command failure: [LCL451911]
+Cause: OSError: result output
 Exit status: 2
 Invocation Frames closed: 3
 ```
 <!-- /lclang-doc-case -->
 
-The log contains the handler failure, the execution/cleanup combination and the later output combination. LCL451911 keeps the earlier groups rather than replacing them with LCL451813. The runner returns status 2 and all owned Frames are closed. Use that returned status at the process boundary. The DiagnosticOnly filter is optional; remove it to include native traceback frames, which can contain application data. Avoid retrying the whole command without knowing which side effects completed.
+The first report retains the handler and every cleanup member under LCL451911. The second reports LCL451813 and references the already reported group instead of expanding it again. The runner returns status 2 and all owned Frames are closed. Framework file records also retain Python stacks and native causes; their LCL traceback leaves use concise type and code references. Use the returned status at the process boundary, and check which side effects completed before retrying the command.
 
 ## Logger startup and handler cleanup
 

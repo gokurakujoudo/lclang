@@ -238,5 +238,6 @@ def test_config_expression_tracing_covers_success_and_both_error_families() -> N
         with pytest.raises(LclConfigSyntaxError):
             parse_config("value: __file__\n")
     trace = output.getvalue()
-    assert "ast=(LclBinary) 1 + 2" in trace
-    assert trace.count("[lclang.parse]") == 3
+    assert "Parsed an expression as LclBinary" in trace
+    assert "Expression: 1 + 2" in trace and "Parsed expression:" not in trace
+    assert trace.count("Failed to parse configuration expression") == 2

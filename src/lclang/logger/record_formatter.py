@@ -17,6 +17,7 @@ from lclang.error.operation_guard import guard_constructor, guard_failure
 # Unitless LogRecord extras shared with wrappers and the CLI result/audit adapter.
 PREFIX_ATTRIBUTE = "lclang_prefix"
 FILE_ONLY_ATTRIBUTE = "lclang_file_only"
+DIAGNOSTIC_ATTRIBUTE = "lclang_failure_diagnostic"
 
 
 @guard_constructor(LclValidationError, LoggerErrorCode.E41_LOG_FORMATTING_NATIVE_FAILURE)
@@ -58,4 +59,15 @@ class RecordFormatter(logging.Formatter):
         detached.msg = (prefix + " " if prefix else "") + record.getMessage()
         detached.args = ()
         detached.exc_text = None
+        if getattr(record, DIAGNOSTIC_ATTRIBUTE, False) and record.exc_info is not None:
+            from lclang.error.failure_traceback import render_failure_traceback
+
+            detached.exc_info = None
+            formatted = super().format(detached)
+            error = record.exc_info[1]
+            if error is not None:
+                formatted += "\nPython traceback:\n" + render_failure_traceback(
+                    error, record.exc_info[2]
+                )
+            return formatted
         return super().format(detached)
