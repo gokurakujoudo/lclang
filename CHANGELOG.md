@@ -39,6 +39,8 @@
 
 ### Diagnostics and documentation
 
+- Show captured log output in the downstream application-logging tutorial,
+  verifying event records, filtering and uncaught reports without machine paths.
 - Add an executable application-logging tutorial for downstream developers,
   covering scope ownership, levels, verbose, failure reporting, existing stdlib
   loggers, uncaught-error hooks, masking and shutdown.

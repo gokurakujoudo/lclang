@@ -7,6 +7,13 @@ and where to report failures so users receive one complete explanation.
 `lclang.logger` also works without LCL evaluation. Its handler scope owns a queue
 writer and output sinks; business code uses named loggers inside that scope.
 
+The output blocks below are captured from the exact examples in isolated
+processes. File examples print their event records after shutdown and omit the
+segment header containing the generated path. Displayed fixture paths use the
+filename alone. `<string>` identifies source supplied inline; saving the Python
+program in a file gives its traceback that file's location. Evaluation/failure
+identifiers and task names can differ in a longer-running application.
+
 ## Choose the integration at the application boundary
 
 | Application | Recommended entry point |
@@ -38,6 +45,8 @@ process registry.
 
 This example runs two operations concurrently under one writer. The temporary
 directory isolates its file output and closes after the writer has drained.
+
+<!-- lclang-doc-case: application-log-records -->
 
 <!-- lclang-doc-exec -->
 ```python
@@ -74,10 +83,21 @@ async def main() -> None:
         assert "[order=A] Processed order: quantity=2 total=12" in text
         assert "[order=B] Processed order: quantity=3 total=18" in text
         assert runtime.metrics.records_written == 2
+        print("\n".join(text.splitlines()[1:]))
 
 
 asyncio.run(main())
 ```
+
+The program prints the file's event records after shutdown. The segment header
+contains its generated path and is not included in this display:
+
+<!-- lclang-doc-output: stdout -->
+```text
+INFO | example.billing | [order=A] Processed order: quantity=2 total=12
+INFO | example.billing | [order=B] Processed order: quantity=3 total=18
+```
+<!-- /lclang-doc-case -->
 
 `process_order` receives a logger and owns no handler. Both operations use the
 same source name with different prefixes. `gather` finishes both producers
@@ -137,6 +157,8 @@ members. Logging before cleanup can miss the final failure set.
 This boundary handles a failed calculation and records it once. The Boolean
 `verbose` argument enables the same business code to run with or without tracing.
 
+<!-- lclang-doc-case: final-calculation-report -->
+
 <!-- lclang-doc-exec -->
 ```python
 import asyncio
@@ -187,10 +209,54 @@ async def main() -> None:
         assert text.count("Error in evaluating RESULT") == 1
         assert "[LCL131421: division by zero]" in text
         assert "Python traceback:" in text
+        print("\n".join(text.splitlines()[1:]))
 
 
 asyncio.run(main())
 ```
+
+The program prints the diagnostic file's event records, including one complete
+exception report:
+
+<!-- lclang-doc-output: stdout -->
+```text
+VERBOSE | Read amount from external input in Frame "LCL_IMPORTS": (int) 39 (evaluation E2)
+VERBOSE | Read divisor from external input in Frame "LCL_IMPORTS": (int) 0 (evaluation E2)
+VERBOSE | Failed while evaluating total [LCL131421: division by zero] (failure F3)
+  Type: LclEvaluationError
+  Source: "<string>":1:1
+  Evaluation: E2
+  Request: RESULT -> total
+  Frames: requested from "pricing"; defined in "pricing"
+  Lookup path: pricing
+  Execution: new evaluation
+  Task: Task-3
+  Phase: arithmetic operation
+VERBOSE | Could not evaluate RESULT (failure F3)
+  Cached failures: total, RESULT
+ERROR | Order calculation failed
+Error in evaluating RESULT [LCL131421: division by zero] (failure F3)
+├─ Cause
+│  └─ ZeroDivisionError: division by zero
+└─ RESULT: total + 1 ("<string>":1:1)
+   └─ total: amount / divisor ("<string>":1:1)
+      ├─ amount: (int) 39 (external)
+      ├─ divisor: (int) 0 (external)
+      └─ Source: "<string>":1:1
+         amount / divisor
+         ^^^^^^^^^^^^^^^^
+Python traceback:
+LclEvaluationError [LCL131421: division by zero] (failure F3)
+├─ Direct cause
+│  └─ ZeroDivisionError: division by zero
+└─ Traceback (most recent call last)
+   ├─ File "<string>", line 33, in main
+   │      await calculate(logger, verbose=True)
+   └─ File "<string>", line 18, in calculate
+          return await frame.get("RESULT")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+```
+<!-- /lclang-doc-case -->
 
 `calculate` closes its Frame before `main` records the exception. The first
 verbose failure explains the arithmetic stage and request context; propagation
@@ -231,6 +297,8 @@ This example filters verbose records at the handler while keeping an application
 event. Removing that filter admits execution diagnostics. Disabling `use_verbose`
 also keeps the business event, and avoids constructing trace-only messages.
 
+<!-- lclang-doc-case: external-verbose-filter -->
+
 <!-- lclang-doc-exec -->
 ```python
 import asyncio
@@ -268,16 +336,22 @@ async def main() -> None:
     try:
         await calculate(logger, verbose=True)
         assert output.getvalue() == "INFO | Calculated total=6\n"
+        print("With the handler filter:")
+        print(output.getvalue(), end="")
         handler.removeFilter(selected)
         output.seek(0)
         output.truncate(0)
         await calculate(logger, verbose=True)
         assert "VERBOSE | Evaluated RESULT" in output.getvalue()
         assert "RESULT: amount * 2 (" in output.getvalue()
+        print("With verbose enabled:")
+        print(output.getvalue(), end="")
         output.seek(0)
         output.truncate(0)
         await calculate(logger, verbose=False)
         assert output.getvalue() == "INFO | Calculated total=6\n"
+        print("With verbose disabled:")
+        print(output.getvalue(), end="")
     finally:
         logger.removeHandler(handler)
         handler.close()
@@ -285,6 +359,26 @@ async def main() -> None:
 
 asyncio.run(main())
 ```
+
+The captured output shows that filtering and disabling verbose both retain the
+business message:
+
+<!-- lclang-doc-output: stdout -->
+```text
+With the handler filter:
+INFO | Calculated total=6
+With verbose enabled:
+VERBOSE | Read amount from external input in Frame "LCL_IMPORTS": (int) 3 (evaluation E2)
+VERBOSE | Evaluated RESULT: (int) 6 (evaluation E2)
+VERBOSE | Evaluation tree for RESULT (evaluation E2)
+  Result: (int) 6
+RESULT: amount * 2 ("<string>":1:1)
+└─ amount: (int) 3 (external)
+INFO | Calculated total=6
+With verbose disabled:
+INFO | Calculated total=6
+```
+<!-- /lclang-doc-case -->
 
 `use_verbose` borrows the logger and restores only its tracing context. The
 application installs and removes this example's handler. In a real application,
@@ -310,10 +404,14 @@ also handles worker-thread failures; `include_threads=False` leaves worker-threa
 hooks unchanged. Pass `loop=your_loop` to cover that particular asyncio loop's
 unhandled task failures, installing and restoring on its owning thread.
 
-The following program restores the previous hook after a normal return. If the
-calculation raises, Python reaches the installed hook before restoration.
+Save the following program as `application.py`. Run `python application.py` for
+a normal result or `python application.py 0` for an uncaught division failure.
+The program restores the previous hook after a normal return. If the calculation
+raises, Python reaches the installed hook before restoration.
 
-<!-- lclang-doc-exec -->
+<!-- lclang-doc-case: uncaught-application-report -->
+
+<!-- lclang-doc-file: application.py -->
 ```python
 import asyncio
 import sys
@@ -322,10 +420,10 @@ from lclang.lang import define_frame, define_module
 from lclang.logger import install_exception_hooks
 
 
-async def business() -> object:
+async def business(divisor: int) -> object:
     async def callback(amount: int) -> object:
         module = define_module("inner", {"value": "amount / divisor"})
-        async with define_frame(module, preset={"amount": amount, "divisor": 3}) as inner:
+        async with define_frame(module, preset={"amount": amount, "divisor": divisor}) as inner:
             return await inner.get("value")
 
     module = define_module("outer", {"RESULT": "callback(39)"})
@@ -334,7 +432,10 @@ async def business() -> object:
 
 
 async def main() -> None:
-    assert await business() == 13
+    divisor = int(sys.argv[1]) if len(sys.argv) > 1 else 3
+    result = await business(divisor)
+    assert result == 13
+    print(f"Result: {result}")
 
 
 previous = sys.excepthook
@@ -344,11 +445,65 @@ installation.restore()
 assert sys.excepthook is previous
 ```
 
-The unchanged example succeeds without logging. Changing the divisor to zero
-produces an uncaught LCL report with the Python callback's definition location and
-the application frames around both LCL calls. Full mode restores the intervening
-lclang Python frames. A failure ID appears when verbose has observed that failure;
-hooks do not manufacture a verbose execution history.
+This launcher runs both commands and prints their captured output. For the
+failed command it prints the LCL diagnostic at the beginning of stderr; the
+complete stderr also contains the Python traceback. Its assertions check the
+application frames and compact filtering without publishing installation paths.
+
+<!-- lclang-doc-exec -->
+```python
+import os
+import subprocess
+import sys
+
+
+environment = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+success = subprocess.run(
+    [sys.executable, "application.py"], env=environment,
+    capture_output=True, encoding="utf-8", check=True,
+)
+assert success.stdout == "Result: 13.0\n" and success.stderr == ""
+print(success.stdout, end="")
+failure = subprocess.run(
+    [sys.executable, "application.py", "0"], env=environment,
+    capture_output=True, encoding="utf-8", check=False,
+)
+assert failure.returncode == 1 and failure.stdout == ""
+assert "in business" in failure.stderr and "in callback" in failure.stderr
+frames = [line for line in failure.stderr.splitlines() if 'File "' in line]
+assert not any("/src/lclang/" in line.replace("\\", "/") for line in frames)
+diagnostic, separator, traceback = failure.stderr.partition("\nPython traceback:\n")
+assert separator and traceback
+print("Uncaught stderr diagnostic:")
+print(diagnostic)
+```
+
+The normal result and the failed run's stderr diagnostic are:
+
+<!-- lclang-doc-output: stdout -->
+```text
+Result: 13.0
+Uncaught stderr diagnostic:
+Error in evaluating RESULT [LCL131421: division by zero]
+├─ Cause
+│  └─ ZeroDivisionError: division by zero
+└─ RESULT: callback(39) ("<string>":1:1)
+   └─ callback: Python function business.<locals>.callback ("application.py":9)
+      ├─ arg[0]: (int) 39 (argument)
+      └─ value: amount / divisor ("<string>":1:1)
+         ├─ amount: (int) 39 (external)
+         ├─ divisor: (int) 0 (external)
+         └─ Source: "<string>":1:1
+            amount / divisor
+            ^^^^^^^^^^^^^^^^
+```
+<!-- /lclang-doc-case -->
+
+The failed run includes the Python callback's definition location and the LCL
+requests nested inside it. Compact mode retains application frames around both
+LCL calls; full mode restores the intervening lclang Python frames. No failure ID
+appears here because verbose is disabled. Hooks do not manufacture a verbose
+execution history.
 
 Keep hooks active until the actual uncaught-report boundary. Restoring them in
 a `finally` around `asyncio.run` disables their report before Python invokes
