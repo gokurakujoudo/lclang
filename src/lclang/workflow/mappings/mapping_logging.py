@@ -29,7 +29,7 @@ def mapping_rows(
     inherited_mask: bool = False,
     annotation: Any = None,
 ) -> list[tuple[str, str, str]]:
-    """Build field rows after checking masks at every selected location.
+    """Build declared record field rows, checking masks before value access.
 
     :param mapping: Dataclass template, whole reference, or absent output mapping.
     :param value: Materialized record whose unmasked fields may be read.
@@ -81,7 +81,11 @@ def mapping_rows(
             rendered = f"({formatannotation(expected)}) {MASKED_VALUE}"
         else:
             current = getattr(value, item.name)
-            if is_dataclass(current) and not isinstance(current, type):
+            if (
+                is_dataclass(current)
+                and not isinstance(current, type)
+                and is_dataclass(get_origin(expected) or expected)
+            ):
                 rows.extend(
                     mapping_rows(
                         reference or declared,

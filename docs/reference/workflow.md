@@ -72,6 +72,11 @@ Projections may be chained, remain read-only, and retain the original variable's
 dependency and masking metadata. Missing fields, incompatible declared types,
 and null intermediate values report their mapping and variable paths. CLI
 inference, static trees and verbose logs follow the same recursive structure.
+Verbose mapping logs expand a field when its declared annotation is a dataclass
+and its value is a dataclass instance. Other fields are rendered as single typed
+values. This includes LCL functions declared through callback `Protocol` or
+`Callable` annotations. Generic dataclass annotations retain nested field paths;
+masked fields are checked before their values are read.
 Runtime validation checks record structure and reference contracts, not every
 ordinary value or container element. `FrameProxy.as_record()` remains shallow;
 recursive conversion is specific to workflow mappings.

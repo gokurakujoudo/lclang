@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Fixes
+
+- Keep LCL callbacks and other fields with non-dataclass annotations as single
+  values in verbose workflow mapping logs. Dataclass-backed callbacks no longer
+  prevent task or context actions from running; declared nested records still
+  expand, and masked fields remain protected.
+
 ## 1.1.0 - 2026-10-11
 
 This milestone adds configuration composition, dependency-tree diagnostics and
