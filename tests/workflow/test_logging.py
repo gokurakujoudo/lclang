@@ -10,7 +10,9 @@ from typing import cast
 import pytest
 
 import lclang.workflow as wf
-from lclang.lang import Frame, define_frame
+from lclang.error import LclEvaluationError, WorkflowException
+from lclang.lang import Frame, define_frame, define_module
+from tests.workflow.logging_support import CallbackArgs, CallbackOutputs, Transform
 
 
 @dataclass
@@ -39,6 +41,106 @@ def execution_context(
 ) -> wf.WorkflowExecutionContext:
     """Build one deterministic logging execution context."""
     return wf.WorkflowExecutionContext(dryrun, date(2026, 8, 29), verbose, logger, frame)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("verbose", [False, True])
+@pytest.mark.parametrize("context_task", [False, True])
+@pytest.mark.parametrize("masked", [False, True])
+@pytest.mark.parametrize("callback_failure", [False, True])
+async def test_lcl_callback_logging_preserves_execution_and_cleanup(
+    caplog: pytest.LogCaptureFixture,
+    verbose: bool,
+    context_task: bool,
+    masked: bool,
+    callback_failure: bool,
+) -> None:
+    """Callback records log as leaves in actions and contexts, including failures."""
+    settings = wf.define_variable[CallbackArgs]("settings")
+    outputs = wf.define_variable[CallbackOutputs]("outputs", is_masked=masked)
+    events: list[str] = []
+    callbacks: list[Transform] = []
+
+    async def action(
+        context: wf.TaskContext,
+        args: CallbackArgs,
+        status_mgr: wf.ExecutionStatusManager,
+    ) -> CallbackOutputs:
+        del context, status_mgr
+        events.append("call")
+        callbacks.append(args.transform)
+        value = await args.transform("hello")
+        events.append(value)
+        return CallbackOutputs(transform=args.transform, value=value)
+
+    @asynccontextmanager
+    async def scope(
+        context: wf.TaskContext,
+        args: CallbackArgs,
+        status_mgr: wf.ExecutionStatusManager,
+    ) -> AsyncGenerator[CallbackOutputs]:
+        try:
+            yield await action(context, args, status_mgr)
+        finally:
+            events.append("cleanup")
+
+    if context_task:
+        task = wf.define_task(
+            "root",
+            "Root",
+            context_tasks=[
+                wf.define_context_task(
+                    "callback", "Call LCL callback", scope, settings.quote, outputs.quote
+                )
+            ],
+        )
+    else:
+        task = wf.define_task(
+            "root",
+            "Call LCL callback",
+            task_action=action,
+            args_mapping=settings.quote,
+            outputs_mapping=outputs.quote,
+        )
+    expression = "(value) -> 1 / 0" if callback_failure else "(value) -> value.upper()"
+    name = "settings.transform!" if masked else "settings.transform"
+    logger = logging.getLogger("workflow-callback-logging")
+    async with define_frame(define_module("callback", {name: expression})) as frame:
+        original = await frame.get("settings.transform")
+        with caplog.at_level(logging.DEBUG, logger=logger.name):
+            result = await wf.define_workflow("Callback", task).execute(
+                execution_context(frame, logger, verbose=verbose)
+            )
+        assert callbacks == [original]
+        if callback_failure:
+            assert result.execution_status.status is wf.ExecutionStatus.ERROR
+            failure = cast(WorkflowException, await frame.get("__exception__"))
+            assert isinstance(failure.exception, LclEvaluationError)
+            assert failure.exception.code == "LCL131421"
+            assert isinstance(failure.exception.__cause__, ZeroDivisionError)
+        else:
+            assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
+            if not context_task:
+                published = cast(CallbackOutputs, await frame.get("outputs"))
+                assert published.transform is original and published.value == "HELLO"
+    expected_events = ["call"] if callback_failure else ["call", "HELLO"]
+    assert events == expected_events + (["cleanup"] if context_task else [])
+    assert "LCL525151" not in caplog.text
+    mapping_logs = [
+        record.getMessage() for record in caplog.records if " mapping: " in record.getMessage()
+    ]
+    assert bool(mapping_logs) is verbose
+    if verbose:
+        argument_log = next(message for message in mapping_logs if message.startswith("args "))
+        assert "transform" in argument_log
+        assert ("*masked*" if masked else "(LclFunctionValue)") in argument_log
+        assert len(argument_log.splitlines()) == 2
+        if not callback_failure:
+            output_log = next(message for message in mapping_logs if message.startswith("outputs "))
+            assert "transform" in output_log and "value" in output_log
+            assert ("*masked*" if masked else "HELLO") in output_log
+        if masked:
+            assert all("LclFunctionValue" not in message for message in mapping_logs)
 
 
 @pytest.mark.asyncio
