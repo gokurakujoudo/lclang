@@ -12,7 +12,7 @@ from itertools import count
 from threading import Lock
 from typing import Protocol
 
-from lclang.error.native_wrap import is_ordinary_failure
+from lclang.error.verbose_guard import ignore_verbose_failure
 
 
 class VerboseLogger(Protocol):
@@ -92,15 +92,10 @@ def is_verbose_enabled() -> bool:
 
     :returns: Whether DEBUG is accepted by the borrowed logger.
     """
-    logger = ACTIVE_VERBOSE_LOGGER.get()
-    if logger is None:
-        return False
-    try:
-        return logger.isEnabledFor(10)
-    except Exception as error:
-        if not is_ordinary_failure(error):
-            raise
-        return False
+    with ignore_verbose_failure():
+        logger = ACTIVE_VERBOSE_LOGGER.get()
+        return logger is not None and logger.isEnabledFor(10)
+    return False
 
 
 @contextmanager

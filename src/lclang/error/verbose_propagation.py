@@ -17,7 +17,7 @@ from lclang.error.verbose_context import (
     VerboseLogger,
     is_verbose_enabled,
 )
-from lclang.error.verbose_guard import guard_verbose_operation, ignore_verbose_failure
+from lclang.error.verbose_guard import ignore_verbose_failure
 from lclang.error.verbose_records import emit_verbose_record
 
 
@@ -102,7 +102,6 @@ def collect_verbose_failure_event(identity: str, category: str, text: str) -> bo
     return True
 
 
-@guard_verbose_operation
 def emit_verbose_failure_batch(batch: VerboseFailureBatch, failed_id: str | None) -> None:
     """Emit one compact record per observed failure after actual cache commits.
 

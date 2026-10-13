@@ -4,8 +4,8 @@ Defines ``VerboseFailureScope``, ``guard_verbose_operation``, ``ignore_verbose_f
 """
 
 from collections.abc import Callable
+from contextlib import ContextDecorator
 from dataclasses import dataclass
-from functools import wraps
 from types import TracebackType
 
 from lclang.error.native_wrap import is_ordinary_failure
@@ -19,28 +19,11 @@ def guard_verbose_operation[**Params, Result](
     :param operation: Diagnostic-only function, never business execution.
     :returns: Signature-preserving producer returning None after an ordinary failure.
     """
-
-    @wraps(operation)
-    def call_verbose_operation(*args: Params.args, **kwargs: Params.kwargs) -> Result | None:
-        """Run diagnostic work without replacing an execution result or error.
-
-        :param args: Original diagnostic arguments.
-        :param kwargs: Original diagnostic keyword arguments.
-        :returns: Original diagnostic result, or None after an ordinary failure.
-        :raises BaseException: If the producer raises a native control signal.
-        """
-        try:
-            return operation(*args, **kwargs)
-        except Exception as error:
-            if not is_ordinary_failure(error):
-                raise
-            return None
-
-    return call_verbose_operation
+    return ignore_verbose_failure()(operation)
 
 
 @dataclass(frozen=True, slots=True)
-class VerboseFailureScope:
+class VerboseFailureScope(ContextDecorator):
     """Discard optional diagnostic errors while retaining required output failures.
 
     :param required: Whether diagnostic output was explicitly requested.

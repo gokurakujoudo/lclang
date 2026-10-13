@@ -55,6 +55,11 @@ types, errors, and workflow status never import runtime, config, or CLI.
 Logger Frame configuration depends on runtime and never imports CLI; CLI adds
 parameter recognition and entry-point defaults around the shared resolver.
 
+Optional verbose diagnostics share one failure scope in `error/verbose_guard.py`.
+The scope also supplies producer decorators through the standard-library
+`ContextDecorator`. Explicit display work uses the scope's `required` flag;
+the surrounding execution owns business exceptions and resource cleanup.
+
 ## Test packages
 
 Tests mirror subsystem ownership:
