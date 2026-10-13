@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.1.1 - 2026-10-13
+
 ### Improvements
 
 - Shorten default workflow lifecycle and business event layouts while retaining
