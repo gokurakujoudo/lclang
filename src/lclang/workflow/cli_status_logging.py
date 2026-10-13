@@ -15,6 +15,7 @@ from lclang.lang.runtime import Frame
 from lclang.logger import Logger
 from lclang.utils.text_tree import TextTree, build_text_tree, render_text_tree
 from lclang.workflow.execution_status import ExecutionStatus, ExecutionStatusTree
+from lclang.workflow.log_identity import make_lifecycle_metadata
 from lclang.workflow.task_logging import status_level
 
 
@@ -46,17 +47,22 @@ def log_status_tree(
     logger: logging.Logger | Logger,
     tree: ExecutionStatusTree,
     workflow_id: str,
+    *,
+    dryrun: bool = False,
 ) -> None:
     """Log a finalized tree as one severity-aware multi-line record.
 
     :param logger: Command logger receiving the tree at execution end.
     :param tree: Finalized status tree.
     :param workflow_id: Dot-connected routed command path.
+    :param dryrun: Invocation dry-run flag retained in record metadata.
     """
-    message = f"workflow complete: [{workflow_id}] {tree.status.value}:\n" + "\n".join(
+    message = f"Workflow completed: [{workflow_id}] {tree.status.value}:\n" + "\n".join(
         status_lines(tree)
     )
-    logger.log(status_level(tree.status), "%s", message)
+    logger.log(
+        status_level(tree.status), "%s", message, extra=make_lifecycle_metadata(workflow_id, dryrun)
+    )
 
 
 @guard_async_failure(LclWorkflowError, WorkflowErrorCode.E31_TASK_EXECUTION_NATIVE_FAILURE)

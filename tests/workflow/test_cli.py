@@ -129,7 +129,7 @@ async def test_to_cli_infers_external_values_and_logs_tree_last(
     assert result.result_status is CliResultStatus.SUCCESS
     messages = [record.getMessage() for record in caplog.records]
     assert "normal action log" in messages
-    assert messages[-2].startswith("workflow complete: [admin.run] SUCCESS:\n")
+    assert messages[-2].startswith("Workflow completed: [admin.run] SUCCESS:\n")
     assert "   └─ [SUCCESS] child" in messages[-2]
     assert messages[-1] == "lunch option: noodles"
 
@@ -181,7 +181,7 @@ def test_cli_status_rendering_uses_details_connectors_and_severity(
         log_status_tree(logger, tree, "admin.run")
     assert [record.levelno for record in caplog.records] == [logging.ERROR]
     assert caplog.records[0].getMessage() == (
-        "workflow complete: [admin.run] ERROR:\n"
+        "Workflow completed: [admin.run] ERROR:\n"
         "[ERROR] workflow: stopped\n"
         "├─ [FAILURE] expected: rejected\n"
         "└─ [FAILURE_COVERED] covered\n"

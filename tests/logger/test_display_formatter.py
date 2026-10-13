@@ -27,3 +27,24 @@ def test_custom_format_keeps_fields_but_uses_verbose_display_label() -> None:
         "custom VERBOSE read"
     )
     assert logging.getLevelName(logging.DEBUG) == "DEBUG"
+
+
+def test_workflow_default_layouts_keep_business_locations_only() -> None:
+    """Only default marked layouts omit names while explicit layouts remain authoritative."""
+    record = logging.LogRecord(
+        "fixed.framework", logging.INFO, "business.py", 23, "message", (), None
+    )
+    record.funcName = "publish"
+    record.lclang_workflow_lifecycle = True
+    lifecycle = RecordFormatter(DEFAULT_FORMAT).format(record)
+    assert "pid=" in lifecycle and "thread=" in lifecycle
+    assert "fixed.framework" not in lifecycle and "business.py" not in lifecycle
+    record.lclang_workflow_lifecycle = False
+    record.lclang_event = "saved"
+    event = RecordFormatter(DEFAULT_FORMAT).format(record)
+    assert "fixed.framework" not in event
+    assert "business.py:23 | publish | message" in event
+    assert RecordFormatter("%(name)s %(filename)s %(message)s").format(record) == (
+        "fixed.framework business.py message"
+    )
+    assert record.name == "fixed.framework" and record.msg == "message"

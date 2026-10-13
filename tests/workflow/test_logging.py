@@ -204,12 +204,21 @@ async def test_task_context_lifecycle_branch_and_verbose_mappings(
     assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
     assert observed == ["root", "root", "root.child"]
     messages = [record.getMessage() for record in caplog.records]
-    assert "task start: [root] Root (dryrun)" in messages
-    assert "task start: [root.scope] Open scope (dryrun)" in messages
-    assert "task start: [root.child] Child (dryrun)" in messages
-    assert "task complete: [root.scope] SUCCESS" in messages
-    assert "task complete: [root.child] SUCCESS" in messages
-    assert "task complete: [root] SUCCESS" in messages
+    assert "Workflow task started: [root] Root (dryrun)" in messages
+    assert "Workflow task started: [root.scope] Open scope (dryrun)" in messages
+    assert "Workflow task started: [root.child] Child (dryrun)" in messages
+    assert any(
+        message.startswith("Workflow task completed: [root.scope] SUCCESS enter_ms=")
+        for message in messages
+    )
+    assert any(
+        message.startswith("Workflow task completed: [root.child] SUCCESS action_ms=")
+        for message in messages
+    )
+    assert any(
+        message.startswith("Workflow task completed: [root] SUCCESS action_ms=")
+        for message in messages
+    )
     assert any(
         message.startswith("args mapping: [root.scope] LoggedArgs\n")
         and "    count  <- default: (int) 2" in message
@@ -253,13 +262,21 @@ async def test_task_error_keeps_traceback_and_still_completes(
             )
 
     assert result.execution_status.status is wf.ExecutionStatus.ERROR
-    error = next(record for record in caplog.records if record.getMessage().startswith("Error in"))
+    error = next(
+        record
+        for record in caplog.records
+        if record.getMessage().startswith("Workflow task error:")
+    )
     assert error.getMessage() == (
+        "Workflow task error: [root] ERROR\n"
         "Error in running workflow task 'root' [LCL531811: broken]\n"
-        "├─ Cause\n│  └─ ValueError: broken\n└─ Context: workflow task root\n  task status: ERROR"
+        "├─ Context: workflow task root\n└─ Cause\n   └─ ValueError: broken"
     )
     assert error.exc_info is not None
-    assert any(record.getMessage() == "task complete: [root] ERROR" for record in caplog.records)
+    assert any(
+        record.getMessage().startswith("Workflow task completed: [root] ERROR action_ms=")
+        for record in caplog.records
+    )
 
 
 @pytest.mark.asyncio
@@ -293,10 +310,10 @@ async def test_argument_materialization_error_uses_task_lifecycle(
     assert result.execution_status.status is wf.ExecutionStatus.ERROR
     messages = [record.getMessage() for record in caplog.records]
     assert any(
-        "unknown variable: missing" in message and "task status: ERROR" in message
+        "unknown variable: missing" in message and "Workflow task error: [root] ERROR" in message
         for message in messages
     )
-    assert "task complete: [root] ERROR" in messages
+    assert "Workflow task completed: [root] ERROR" in messages
 
 
 @pytest.mark.asyncio
@@ -333,9 +350,11 @@ async def test_context_output_mapping_error_uses_context_lifecycle(
     assert result.execution_status.status is wf.ExecutionStatus.ERROR
     messages = [record.getMessage() for record in caplog.records]
     assert any(
-        message.startswith("Error in running workflow task 'root.scope' [LCL521121:")
-        and "task status: ERROR" in message
+        message.startswith("Workflow task error: [root.scope] ERROR\n") and "[LCL521121:" in message
         for message in messages
     )
-    assert "task complete: [root.scope] ERROR" in messages
-    assert "task complete: [root] ERROR" in messages
+    assert any(
+        message.startswith("Workflow task completed: [root.scope] ERROR enter_ms=")
+        for message in messages
+    )
+    assert "Workflow task completed: [root] ERROR" in messages

@@ -10,7 +10,10 @@ Use ordinary declared children when the task structure is known in advance.
 
 Each call creates a fresh Frame with the standard runtime and explicit `preset`
 bindings. It inherits the parent's dry-run flag, effective date, verbosity and
-logger. It does not inherit parent configuration, variables, cached values or
+logger. Child log paths retain the parent's full task path and the explicit call
+name before the child's local path; local task identifiers remain unchanged.
+Call lifecycle records use `Workflow call started/completed/error: [path]` and
+the default short lifecycle layout. It does not inherit parent configuration, variables, cached values or
 outputs. Bindings are shallow: explicitly passed mutable objects remain shared.
 The workflow's own `lcl_mixin` has the same precedence as direct `execute` and
 overrides an identically named preset binding.

@@ -508,7 +508,7 @@ async def main() -> None:
     rainy_log = sorted(root.glob("settlement.*.log"))[-1].read_text(encoding="utf-8")
     assert "end reading 900.0 must exceed start reading 1000.0" in rainy_log
     assert "Error in running workflow task 'settlement.calculate_usage' [LCL531811:" in rainy_log
-    assert "task complete: [settlement.calculate_usage] ERROR" in rainy_log
+    assert "Workflow task completed: [settlement.calculate_usage] ERROR" in rainy_log
     assert "[ERROR] Energy settlement workflow" in rainy_log
     assert "[SKIPPED] calculate_subtotal" in rainy_log
     assert "lunch option: no lunch!" in rainy_log
@@ -587,18 +587,19 @@ python settlement.py settle --config settlement.lclcfg --verbose
 
 ## Read the sunny log
 
-The default log format adds timestamps and source locations, so those prefixes
-vary. The meaningful message sequence contains lines like:
+The default log format adds timestamps; application logs also retain source
+locations. Task completion lines include measured `action_ms` durations. The
+following excerpts omit those changing values:
 
 ```text
 validated usage=250.00 kWh
-task complete: [settlement.calculate_usage] SUCCESS
+Workflow task completed: [settlement.calculate_usage] SUCCESS
 calculated subtotal=50.00 USD
 calculated tax=4.00 USD total=54.00 USD
 opened settlement report .../results/settlement.txt
 wrote settlement report for North Harbor Cold Storage
 closed settlement report .../results/settlement.txt
-workflow complete: [settle] SUCCESS:
+Workflow completed: [settle] SUCCESS:
 [SUCCESS] Energy settlement workflow
 └─ [SUCCESS] settlement: Settle one meter period
 lunch option: noodles
@@ -618,12 +619,16 @@ logger, returns exit status `2`, prints the error records to stderr, and appends
 the same evidence to the configured file:
 
 ```text
-Error in running workflow task 'settlement.calculate_usage' [LCL531811]:
-Traceback (most recent call last):
+Workflow task error: [settlement.calculate_usage] ERROR
+Error in running workflow task 'settlement.calculate_usage' [LCL531811: end reading 900.0 must exceed start reading 1000.0]
+├─ Context: workflow task settlement.calculate_usage
+└─ Cause
+   └─ ValueError: end reading 900.0 must exceed start reading 1000.0
+Python traceback:
 ...
 ValueError: end reading 900.0 must exceed start reading 1000.0
-task complete: [settlement.calculate_usage] ERROR
-workflow complete: [settle] ERROR:
+Workflow task completed: [settlement.calculate_usage] ERROR
+Workflow completed: [settle] ERROR:
 [ERROR] Energy settlement workflow: ...
    └─ [ERROR] settlement: ...
       ├─ [ERROR] calculate_usage: ...

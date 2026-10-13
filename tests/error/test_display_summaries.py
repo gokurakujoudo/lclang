@@ -56,7 +56,7 @@ def test_manual_read_snapshot_does_not_guess_its_source() -> None:
 
 @pytest.mark.parametrize("relation", ["cause", "context"])
 def test_exception_relationship_precedes_the_failed_dependency_stack(relation: str) -> None:
-    """Readers see the cause first while failure snapshots and identity stay intact."""
+    """Context precedes the cause, which still precedes dependencies and retained snapshots."""
     frames = (
         EvaluationContextFrame("RESULT", UNKNOWN_SPAN, "total + 1", ()),
         EvaluationContextFrame("total", UNKNOWN_SPAN, "amount / divisor", ()),
@@ -71,7 +71,7 @@ def test_exception_relationship_precedes_the_failed_dependency_stack(relation: s
     error.add_note("retained request context")
     text = str(error)
     label = "Cause" if relation == "cause" else "During handling"
-    assert text.splitlines()[1] == "├─ " + label
+    assert text.splitlines()[1] == "├─ Context: retained request context"
     assert (
         text.index(label) < text.index("RESULT: total + 1") < text.index("total: amount / divisor")
     )

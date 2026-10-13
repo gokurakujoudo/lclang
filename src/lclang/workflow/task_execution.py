@@ -10,7 +10,7 @@ Defines ``WorkflowRunState``, ``task_context_for``, ``record_exception``,
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import get_type_hints
 
 from lclang.error import (
@@ -24,6 +24,7 @@ from lclang.error.exception_base import LclStateError, LclValidationError
 from lclang.error.native_wrap import wrap_failure
 from lclang.error.operation_guard import guard_async_failure, guard_constructor, guard_failure
 from lclang.lang.runtime import Frame
+from lclang.workflow.callback_timing import measure_callback
 from lclang.workflow.execution_context import TaskContext, WorkflowExecutionContext
 from lclang.workflow.execution_status import ExecutionStatus
 from lclang.workflow.mappings import mapped_outputs, materialize_args
@@ -49,11 +50,15 @@ class WorkflowRunState:
     :param context: Public execution context.
     :param task_args: Materialized action arguments.
     :param task_outputs: Returned action outputs.
+    :param callback_times: Callback nanoseconds by local task branch, owned by this run.
     """
 
     context: WorkflowExecutionContext
     task_args: dict[TaskID, object]
     task_outputs: dict[TaskID, object]
+    callback_times: dict[tuple[TaskID, ...], dict[str, int]] = field(
+        default_factory=dict[tuple[TaskID, ...], dict[str, int]]
+    )
 
 
 @guard_failure(LclWorkflowError, WorkflowErrorCode.E31_TASK_EXECUTION_NATIVE_FAILURE)
@@ -80,6 +85,7 @@ def task_context_for(
         frame,
         task,
         list(stack),
+        log_task_stack=(*source.log_task_prefix, *stack),
     )
 
 
@@ -106,7 +112,7 @@ def record_exception(
     error = wrap_failure(error, LclWorkflowError, code)
     if not preserve_status:
         manager.update(ExecutionStatus.ERROR, str(error))
-    error.add_note(f"workflow task {'.'.join(branch)}")
+    error.add_note(f"workflow task {'.'.join((*state.context.log_task_prefix, *branch))}")
     log_task_error(state.context, branch, manager.current.status, error)
     state.context.frame.mixin({"__exception__": WorkflowException(error, branch[-1])})
     return error
@@ -206,7 +212,8 @@ async def execute_action_and_children(
         )
         context._child_execution.action_active = True
         try:
-            output = await task.task_action(context, args, manager)
+            with measure_callback(state.callback_times.setdefault(stack, {}), "action"):
+                output = await task.task_action(context, args, manager)
         except Exception as error:
             failure = record_exception(
                 state, manager, stack, error, code=WorkflowErrorCode.E31_ACTION_FAILURE

@@ -421,9 +421,9 @@ asyncio.run(main())
 <!-- lclang-doc-output: stdout -->
 ```text
 Error in executing a workflow [LCL531811: backend unavailable]
-├─ Cause
-│  └─ OSError: backend unavailable
-└─ Context: workflow task root
+├─ Context: workflow task root
+└─ Cause
+   └─ OSError: backend unavailable
 ```
 <!-- /lclang-doc-case -->
 
@@ -491,9 +491,9 @@ Error in executing a workflow [LCL535911: execution and cleanup failed]
 ├─ Context: workflow task root.resource
 ├─ Failure 1
 │  └─ Error in handling failure [LCL531811: backend unavailable]
-│     ├─ Cause
-│     │  └─ OSError: backend unavailable
-│     └─ Context: workflow task root
+│     ├─ Context: workflow task root
+│     └─ Cause
+│        └─ OSError: backend unavailable
 └─ Failure 2
    └─ Error in handling failure [LCL532812: cleanup failed]
       └─ Cause
@@ -1002,6 +1002,8 @@ inspect common failures.
 | `LCL532812` | Workflow → Execution → Runner → External operation → Context or resource lifecycle callback → context exit failure | A workflow context callback failed while exiting. | Raise in the context finalizer after yielding. | Correct cleanup and inspect any accompanying execution failure. | LclErrorGroup (grouped failures) / LclWorkflowError |
 | `LCL532813` | Workflow → Execution → Runner → External operation → Context or resource lifecycle callback → frame close failure | Owned task Frame cleanup failed. | Call `execute_task` when `isinstance(error, Exception)` is true. | Inspect the retained cause and correct the failing operation. | LclErrorGroup (grouped failures) / LclWorkflowError |
 | `LCL532890` | Workflow → Execution → Runner → External operation → Native boundary failure → No further refinement | A native operation failed after entering this boundary. | A supplied value or implementation raises during `execute_context_scope`. | Inspect the native cause and the operation note. | LclErrorGroup (grouped failures) / LclWorkflowError |
+| `LCL533131` | Workflow → Execution → Context → Input type → Sequence type → log path must be a tuple of strings | Workflow log path must be a tuple of strings. | Construct a workflow or task context with a list path or a non-string component. | Supply a tuple of strings. | LclValidationError |
+| `LCL533211` | Workflow → Execution → Context → Input value → Empty value → log path components cannot be empty | Workflow log path components cannot be empty. | Construct a workflow or task context with an empty component in its log path. | Remove empty components; an empty tuple is valid. | LclValidationError |
 | `LCL533691` | Workflow → Execution → Context → State → Operation-specific failure → skip children is only available during the task action | Skip_children is only available during the task action. | Call `TaskContext.skip_children` when `not self._child_execution.action_active` is true. | Use the operation in its supported lifecycle state. | LclStateError |
 | `LCL533692` | Workflow → Execution → Context → State → Operation-specific failure → context handler unimplemented | Context exception handling is not implemented. | In `FailureCoveringContextTask.handle_exception`, trigger: context exception handling is not implemented. | Use the operation in its supported lifecycle state. | LclStateError |
 | `LCL533693` | Workflow → Execution → Context → State → Operation-specific failure → context acquire unimplemented | Context acquire unimplemented. | In `FailureCoveringContextTask.acquire`, trigger: context acquire unimplemented. | Use the operation in its supported lifecycle state. | LclStateError |

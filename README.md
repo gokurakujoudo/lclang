@@ -422,7 +422,8 @@ while mapped action outputs can feed later nodes.
 Variables support fixed defaults or lazy synchronous/asynchronous factories,
 shared once per execution and visible to both mappings and LCL expressions.
 `TaskContext.log_event()` records selected business fields with explicit masking
-as aligned multiline messages through the execution logger. Public
+as aligned multiline messages headed by the complete task log path. Nested
+workflow logs retain parent call names while business task IDs remain local. Public
 `make_repr_lines` and `make_multi_log_lines` helpers offer the same protected
 formatting for application records. `lclang.utils.invoke()` calls sync or async
 callbacks once and resolves their results without background work.
@@ -445,7 +446,10 @@ Execution records nested task and step outcomes, including visible covered
 failures, skipped branches, and error origins. Contexts unwind in reverse order,
 and the result retains the final status tree plus every successful action's
 materialized arguments and outputs. CLI workflows log start, traceback-bearing
-error, and finalized completion records using dot-connected task branches;
+error, and finalized completion records using dot-connected task branches and
+callback-only action/entry/exit durations. Status-driven unwinding produces a
+single-line warning; real context handling and cleanup failures keep their diagnostics.
+Default lifecycle prefixes omit framework locations, while events retain application callers;
 `__task_id_branch__` exposes the owning branch inside task Frames. Verbose runs
 add aligned typed argument/output mappings. The final status tree is one
 severity-aware multi-line record.

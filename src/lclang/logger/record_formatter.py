@@ -1,4 +1,4 @@
-"""Framework timestamps and compact default verbose prefixes.
+"""Framework timestamps and default verbose, lifecycle and business event layouts.
 
 Defines ``RecordFormatter``.
 """
@@ -9,7 +9,7 @@ from typing import Literal
 
 from lclang.error import LclLoggerError, LclValidationError, LoggerErrorCode
 from lclang.error.operation_guard import guard_constructor, guard_failure
-from lclang.logger.handler_config import DEFAULT_FORMAT, VERBOSE_FORMAT
+from lclang.logger.handler_config import DEFAULT_FORMAT, EVENT_FORMAT, VERBOSE_FORMAT
 from lclang.logger.lcl_exception_formatter import LclExceptionFormatter
 
 # Unitless LogRecord extras shared by wrappers and CLI failure reporting.
@@ -43,6 +43,11 @@ class RecordFormatter(LclExceptionFormatter):
             if fmt == DEFAULT_FORMAT
             else None
         )
+        self.event_formatter = (
+            RecordFormatter(EVENT_FORMAT, timezone=timezone, traceback_style=traceback_style)
+            if fmt == DEFAULT_FORMAT
+            else None
+        )
 
     @guard_failure(LclLoggerError, LoggerErrorCode.E41_LOG_FORMATTING_NATIVE_FAILURE)
     def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
@@ -59,11 +64,16 @@ class RecordFormatter(LclExceptionFormatter):
 
     @guard_failure(LclLoggerError, LoggerErrorCode.E41_LOG_FORMATTING_NATIVE_FAILURE)
     def format(self, record: logging.LogRecord) -> str:
-        """Select the compact layout only for marked verbose default records.
+        """Select marked default layouts without overriding application formats.
 
         :param record: Queue-owned producer record, never modified by formatting.
         :returns: Configured log text with protected exception trees when present.
         """
-        if self.verbose_formatter is not None and getattr(record, "lclang_verbose", False):
+        if self.verbose_formatter is not None and (
+            getattr(record, "lclang_verbose", False)
+            or getattr(record, "lclang_workflow_lifecycle", False)
+        ):
             return self.verbose_formatter.format(record)
+        if self.event_formatter is not None and hasattr(record, "lclang_event"):
+            return self.event_formatter.format(record)
         return super().format(record)

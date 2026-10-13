@@ -1,7 +1,7 @@
 """Python exception trees with optional language-frame filtering.
 
 Defines ``render_failure_traceback``, ``build_traceback_tree``, ``select_traceback_frames``,
-``contains_traceback_frames``.
+``contains_traceback_frames``, ``select_traceback_nodes``.
 """
 
 import traceback
@@ -14,6 +14,28 @@ from lclang.utils.text_tree import TextTree, render_text_tree
 from lclang.utils.value_representation import safe_repr
 
 
+def select_traceback_nodes(
+    tb: TracebackType | None, style: Literal["compact", "full"]
+) -> tuple[TracebackType, ...]:
+    """Select original traceback nodes so shared evidence can be compared by identity.
+
+    :param tb: Original traceback, never modified.
+    :param style: Compact omits lclang modules; full retains every node.
+    :returns: Selected original nodes in outer-to-inner order.
+    """
+    selected: list[TracebackType] = []
+    while tb is not None:
+        module = tb.tb_frame.f_globals.get("__name__", "")
+        if not (
+            style == "compact"
+            and isinstance(module, str)
+            and (module == "lclang" or module.startswith("lclang."))
+        ):
+            selected.append(tb)
+        tb = tb.tb_next
+    return tuple(selected)
+
+
 def select_traceback_frames(
     tb: TracebackType | None, style: Literal["compact", "full"]
 ) -> list[str]:
@@ -24,18 +46,8 @@ def select_traceback_frames(
     :returns: Standard Python frame text in original outer-to-inner order.
     """
     selected: list[str] = []
-    if tb is not None:
-        for (frame, _), summary in zip(
-            traceback.walk_tb(tb), traceback.extract_tb(tb), strict=True
-        ):
-            module = frame.f_globals.get("__name__", "")
-            if (
-                style == "compact"
-                and isinstance(module, str)
-                and (module == "lclang" or module.startswith("lclang."))
-            ):
-                continue
-            selected.append("".join(traceback.StackSummary.from_list([summary]).format()).strip())
+    for node in select_traceback_nodes(tb, style):
+        selected.append("".join(traceback.extract_tb(node, limit=1).format()).strip())
     return selected
 
 
@@ -98,12 +110,17 @@ def build_traceback_tree(
         return heading + " (exception-chain cycle or already shown)", ()
     seen.add(id(error))
     children: list[TextTree] = []
-    frames = select_traceback_frames(tb, style)
+    cause, context = error.__cause__, error.__context__
+    shared_stack = (
+        isinstance(error, LclError)
+        and cause is not None
+        and select_traceback_nodes(tb, style) == select_traceback_nodes(cause.__traceback__, style)
+    )
+    frames = [] if shared_stack else select_traceback_frames(tb, style)
     if frames:
         children.append(
             ("Traceback (most recent call last)", tuple((frame, ()) for frame in frames))
         )
-    cause, context = error.__cause__, error.__context__
     if cause is not None:
         children.insert(
             0,
@@ -120,10 +137,12 @@ def build_traceback_tree(
                 (build_traceback_tree(context, context.__traceback__, style, seen, masked=masked),),
             ),
         )
-    for note in getattr(error, "__notes__", ()):
-        children.append(
-            ("Context: " + safe_repr(note, renderer=str, max_length=None, masked=masked), ())
-        )
+    notes: list[TextTree] = [
+        ("Context: " + safe_repr(note, renderer=str, max_length=None, masked=masked), ())
+        for note in getattr(error, "__notes__", ())
+    ]
+    if not isinstance(error, LclError):
+        children.extend(notes)
     if isinstance(error, BaseExceptionGroup):
         for index, member in enumerate(
             cast(BaseExceptionGroup[BaseException], error).exceptions, 1
@@ -138,4 +157,6 @@ def build_traceback_tree(
                     ),
                 )
             )
+    if isinstance(error, LclError):
+        children[:0] = notes
     return heading, tuple(children)

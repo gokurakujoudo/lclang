@@ -56,10 +56,11 @@ async def test_call_results_live_frame_isolation_and_detached_status(
     calls = result.execution_status.sub_tasks[0].sub_tasks
     assert [node.sub_tasks[0].task_name for node in calls] == ["child", "child"]
     assert any(
-        "workflow call start: [parent.call-0] Child workflow (dryrun)" in m for m in caplog.messages
+        "Workflow call started: [parent.call-0] Child workflow (dryrun)" in m
+        for m in caplog.messages
     )
     assert any(
-        "workflow call complete: [parent.call-0] Child workflow SUCCESS" in m
+        "Workflow call completed: [parent.call-0] Child workflow SUCCESS" in m
         for m in caplog.messages
     )
 

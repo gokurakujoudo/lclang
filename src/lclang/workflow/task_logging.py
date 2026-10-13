@@ -7,20 +7,24 @@ Defines ``branch_text``, ``status_level``, ``log_task_start``, ``log_task_error`
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from dataclasses import replace
 
-from lclang.error import LclWorkflowError, WorkflowErrorCode
+from lclang.error import LclWorkflowError, WorkflowErrorCode, WorkflowStatusStop
 from lclang.error.diagnostic_rendering import render_failure
+from lclang.error.failure_summary import describe_failure_reason
 from lclang.error.operation_guard import guard_failure
 from lclang.error.verbose_guard import guard_verbose_operation
 from lclang.lang.runtime import Frame
+from lclang.workflow.callback_timing import format_callback_times
 from lclang.workflow.execution_context import WorkflowExecutionContext
 from lclang.workflow.execution_status import ExecutionStatus
+from lclang.workflow.log_identity import make_lifecycle_metadata
 from lclang.workflow.task_id import TaskID
 
 
 @guard_failure(LclWorkflowError, WorkflowErrorCode.E31_TASK_EXECUTION_NATIVE_FAILURE)
-def branch_text(branch: tuple[TaskID, ...]) -> str:
+def branch_text(branch: tuple[str, ...]) -> str:
     """Join one root-to-current workflow identifier path.
 
     :param branch: Ordered task identifiers.
@@ -56,7 +60,14 @@ def log_task_start(
     :param title: Human-readable task title.
     """
     dryrun = " (dryrun)" if context.is_dryrun else ""
-    context.logger.info("task start: [%s] %s%s", branch_text(branch), title, dryrun)
+    path = branch_text((*context.log_task_prefix, *branch))
+    context.logger.info(
+        "Workflow task started: [%s] %s%s",
+        path,
+        title,
+        dryrun,
+        extra=make_lifecycle_metadata(path, context.is_dryrun),
+    )
 
 
 @guard_failure(LclWorkflowError, WorkflowErrorCode.E31_TASK_EXECUTION_NATIVE_FAILURE)
@@ -66,19 +77,36 @@ def log_task_error(
     status: ExecutionStatus,
     error: Exception,
 ) -> None:
-    """Log one task failure with its original exception traceback.
+    """Warn for isolated status stops or report real failures with their traceback.
 
     :param context: Shared workflow execution context.
     :param branch: Root-to-originating-task path.
     :param status: Current failure status.
     :param error: Original or synthetic ordinary exception.
     """
+    path = branch_text((*context.log_task_prefix, *branch))
+    extra = make_lifecycle_metadata(path, context.is_dryrun)
+    if (
+        isinstance(error, WorkflowStatusStop)
+        and error.__cause__ is None
+        and (error.__context__ is None or error.__suppress_context__)
+    ):
+        context.logger.warning(
+            "Workflow task stopped: [%s] %s; reason: %s; skipped: remaining task traversal",
+            path,
+            status.value,
+            describe_failure_reason(error),
+            extra=extra,
+        )
+        return
+    extra["lclang_failure_diagnostic"] = True
     context.logger.error(
-        "%s\n  task status: %s",
-        render_failure(error, action=f"running workflow task {branch_text(branch)!r}"),
+        "Workflow task error: [%s] %s\n%s",
+        path,
         status.value,
+        render_failure(error, action=f"running workflow task {path!r}"),
         exc_info=(type(error), error, error.__traceback__),
-        extra={"lclang_failure_diagnostic": True},
+        extra=extra,
     )
 
 
@@ -87,18 +115,23 @@ def log_task_complete(
     context: WorkflowExecutionContext,
     branch: tuple[TaskID, ...],
     status: ExecutionStatus,
+    times: Mapping[str, int] | None = None,
 ) -> None:
     """Log one finalized task or context-task status.
 
     :param context: Shared workflow execution context.
     :param branch: Root-to-current task path.
     :param status: Finalized task status.
+    :param times: Callback body durations in nanoseconds, excluding unstarted phases.
     """
+    path = branch_text((*context.log_task_prefix, *branch))
     context.logger.log(
         status_level(status),
-        "task complete: [%s] %s",
-        branch_text(branch),
+        "Workflow task completed: [%s] %s%s",
+        path,
         status.value,
+        format_callback_times(times),
+        extra=make_lifecycle_metadata(path, context.is_dryrun),
     )
 
 
@@ -129,7 +162,8 @@ def mapping_message(
         f"    {path.ljust(width)} {arrow} {target}: {rendered}" for path, target, rendered in items
     ]
     kind = "outputs" if output else "args"
-    header = f"{kind} mapping: [{branch_text(branch)}] {type(value).__name__}"
+    path = branch_text((*context.log_task_prefix, *branch))
+    header = f"{kind} mapping: [{path}] {type(value).__name__}"
     return header + "\n" + "\n".join(rows)
 
 

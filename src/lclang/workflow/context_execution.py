@@ -6,12 +6,14 @@ Defines ``execute_context_scope``.
 from __future__ import annotations
 
 from contextlib import AbstractAsyncContextManager
+from dataclasses import replace
 from typing import cast
 
 from lclang.error import LclWorkflowError, WorkflowErrorCode
 from lclang.error.failure_aggregation import combine_failures
 from lclang.error.native_wrap import is_ordinary_failure, wrap_failure
 from lclang.error.operation_guard import guard_async_failure
+from lclang.workflow.callback_timing import measure_callback
 from lclang.workflow.execution_context import (
     TaskContext,
 )
@@ -61,6 +63,7 @@ async def execute_context_scope(
         definition.task_id, definition.title, ExecutionStatus.RUNNING
     )
     log_task_start(state.context, branch, definition.title)
+    times = state.callback_times.setdefault(branch, {})
     try:
         args = await materialize_args(definition.args_mapping, task_context.frame)
         log_mapping(
@@ -71,11 +74,15 @@ async def execute_context_scope(
             output=False,
             frame=task_context.frame,
         )
-        scope = cast(
-            AbstractAsyncContextManager[object],
-            definition.task_context(task_context, args, context_manager),
+        callback_context = replace(
+            task_context, log_task_stack=(*state.context.log_task_prefix, *branch)
         )
-        resource = await scope.__aenter__()
+        with measure_callback(times, "enter"):
+            scope = cast(
+                AbstractAsyncContextManager[object],
+                definition.task_context(callback_context, args, context_manager),
+            )
+            resource = await scope.__aenter__()
     except BaseException as error:
         if is_ordinary_failure(error):
             error = record_exception(
@@ -86,7 +93,7 @@ async def execute_context_scope(
                 code=WorkflowErrorCode.E32_CONTEXT_ENTER_FAILURE,
             )
         finalize_manager(context_manager)
-        log_task_complete(state.context, branch, context_manager.current.status)
+        log_task_complete(state.context, branch, context_manager.current.status, times)
         raise error
     incoming: BaseException | None = None
     completed = False
@@ -107,11 +114,12 @@ async def execute_context_scope(
     except BaseException as error:
         incoming = error
     try:
-        suppressed = await scope.__aexit__(
-            None if incoming is None else type(incoming),
-            incoming,
-            None if incoming is None else incoming.__traceback__,
-        )
+        with measure_callback(times, "exit"):
+            suppressed = await scope.__aexit__(
+                None if incoming is None else type(incoming),
+                incoming,
+                None if incoming is None else incoming.__traceback__,
+            )
     except BaseException as error:
         cleanup = (
             wrap_failure(error, LclWorkflowError, WorkflowErrorCode.E32_CONTEXT_EXIT_FAILURE)
@@ -129,7 +137,7 @@ async def execute_context_scope(
             )
             record_exception(state, context_manager, branch, recorded)
         finalize_manager(context_manager)
-        log_task_complete(state.context, branch, context_manager.current.status)
+        log_task_complete(state.context, branch, context_manager.current.status, times)
         log_mapping(
             state.context,
             branch,
@@ -140,7 +148,7 @@ async def execute_context_scope(
         )
         raise failure from failure.__cause__
     finalize_manager(context_manager)
-    log_task_complete(state.context, branch, context_manager.current.status)
+    log_task_complete(state.context, branch, context_manager.current.status, times)
     log_mapping(
         state.context,
         branch,

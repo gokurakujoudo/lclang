@@ -500,11 +500,34 @@ do not hide inputs needed outside the owning subtree. Missing descriptions rende
 `NO HELP MESSAGE PROVIDED`. Help groups parameters by scope and shows optional
 defaults without loading configuration; see [parameter help](cli.md#parameter-help).
 
-The generated command logs lifecycle records around every reached task and
-context task. `task start` is INFO and appends ` (dryrun)` in dry-run mode. An
-exception produces one `task error` record with the original traceback, then
-finalization still produces `task complete`. Branches use the injected
-dot-connected path. Completion severity follows the task status.
+Every reached task and context task logs `Workflow task started: [path]` at INFO,
+with its title and ` (dryrun)` when applicable. A real exception produces
+`Workflow task error: [path] STATUS` with its diagnostic and original traceback.
+Finalization still logs `Workflow task completed: [path] STATUS`; its severity
+follows the finalized status. Default lifecycle layouts retain timestamp, level,
+process and thread, without framework logger names or implementation locations.
+Custom `logger.format` layouts remain authoritative.
+
+Log paths include dynamic parent calls. `WorkflowExecutionContext.log_task_prefix`
+and `TaskContext.log_task_stack` are keyword-only tuples of nonempty strings,
+defaulting to empty tuples. An empty task log stack falls back to `task_id_stack`.
+Execution populates each callback's full log stack, including context-task IDs.
+Local `task_id_stack`, `__task_id_branch__`, TaskID values and result dictionary
+keys retain their existing meaning. Separate calls and executions own their paths.
+
+Completion records include `action_ms` for an executed action, or `enter_ms` and
+`exit_ms` for executed context callbacks, in milliseconds with three decimal
+places. A monotonic clock measures only callback invocation and awaiting: mapping,
+publication, declared child traversal and extra Frame cleanup are excluded.
+Context resource holding time is excluded. I/O and dynamic workflow calls awaited
+inside an action count toward that action. Unstarted callbacks have no duration.
+
+An explicit stopping status produces a single-line WARNING headed
+`Workflow task stopped: [path] STATUS`, with the reason and the remaining task
+traversal being skipped. `WorkflowStatusStop` still reaches context exit so the
+context can finish its work. It does not produce an exception tree or traceback
+unless a separate failure is attached. Handling and cleanup failures retain ERROR
+diagnostics and every member of a combined failure.
 
 Verbose mode adds one aligned, sorted `args mapping` DEBUG record after
 materialization and one `outputs mapping` record after completion when an output
@@ -512,7 +535,7 @@ exists. Runtime types remain visible for masked values. Sources and targets are
 labelled as LCL variables, defaults, literals, or unused outputs.
 
 The finalized workflow tree is one severity-aware multi-line record headed
-`workflow complete: [command.path] STATUS:` and includes the existing tree root.
+`Workflow completed: [command.path] STATUS:` and includes the existing tree root.
 Exit codes are success `0`, failure `1`, error `2`, and covered failure `3`.
 
 `lclang.cli.scan_commands(module, name, description)` imports a package and its
@@ -536,8 +559,10 @@ and task Frames.
 
 `TaskContext.log_event(event, *, level=logging.INFO, record=None, fields=(),
 masked_fields=(), **values)` emits an application event through the execution
-logger and its existing configuration. Messages include a bounded event name,
-the task branch, and dry-run status. Record metadata also supplies
+logger and its existing configuration. Messages start with `[task.path] | message`,
+including a bounded, newline-escaped message and dry-run status. The default event
+layout omits the logger name but keeps the application's file, line and function.
+Record metadata also supplies
 `lclang_event`, `lclang_task_branch`, and `lclang_dryrun`.
 
 Each event is one log record: its title is followed by four-space-indented
@@ -566,3 +591,123 @@ retain their original exception in `__cause__`.
 The [exception guide](exceptions.md) describes each failure family, grouped
 execution and cleanup failures, actual diagnostic output, and application
 handling with `except*` and native control signals.
+
+### Logging normal context unwinding
+
+Use a field-free WARNING event when a stopping task causes a context to skip its
+normal success actions. Put the reason and the actual skipped business action in
+the message. Calling `logger.exception` would report this expected exit as a new
+exception. A failed handler or cleanup operation still needs its error diagnostic.
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+import io
+import logging
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from datetime import date
+
+from lclang.error import WorkflowStatusStop
+from lclang.lang import define_frame
+from lclang.logger import LclExceptionFormatter
+from lclang.workflow import (
+    ExecutionStatus, ExecutionStatusManager, TaskContext, WorkflowExecutionContext,
+    define_context_task, define_task, define_workflow,
+)
+
+
+@dataclass
+class Value:
+    count: int
+
+
+notifications: list[str] = []
+cleanup: list[str] = []
+
+
+@asynccontextmanager
+async def run_scope(
+    context: TaskContext, args: Value, status_mgr: ExecutionStatusManager,
+) -> AsyncGenerator[Value]:
+    try:
+        yield args
+    except WorkflowStatusStop as stopped:
+        context.log_event(
+            f"{stopped.message}; skipped: success notification", level=logging.WARNING,
+        )
+        raise
+    else:
+        notifications.append("success")
+    finally:
+        cleanup.append("closed")
+
+
+async def stop(
+    context: TaskContext, args: Value, status_mgr: ExecutionStatusManager,
+) -> Value:
+    status_mgr.update(ExecutionStatus.ERROR, "upstream task failed")
+    return args
+
+
+async def main() -> None:
+    output = io.StringIO()
+    logger = logging.Logger("context-warning", level=logging.WARNING)
+    handler = logging.StreamHandler(output)
+    handler.setFormatter(LclExceptionFormatter("%(levelname)s %(message)s"))
+    logger.addHandler(handler)
+    workflow = define_workflow("Run", define_task(
+        "root", "Run", task_action=stop, args_mapping=Value(1),
+        context_tasks=(define_context_task("scope", "Run scope", run_scope, Value(1)),),
+    ))
+    async with define_frame() as frame:
+        result = await workflow.execute(WorkflowExecutionContext(
+            False, date(2026, 10, 13), False, logger, frame,
+        ))
+    assert result.execution_status.status is ExecutionStatus.ERROR
+    assert notifications == [] and cleanup == ["closed"]
+    lines = output.getvalue().splitlines()
+    assert "WARNING [root.scope] | task 'root' ended with ERROR; skipped: success notification" in lines
+    assert not any("Python traceback:" in line for line in lines)
+
+
+asyncio.run(main())
+```
+
+The action returns its value but leaves an ERROR status. Traversal stops and the
+context logs why it omits the success notification. Its `finally` block still
+runs; re-raising preserves the failed workflow result.
+
+Log path validation uses `LCL533131` for wrong tuple/component types and
+`LCL533211` for empty components. Empty tuples preserve the default path behavior.
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+import logging
+from dataclasses import replace
+from datetime import date
+
+from lclang.error import LclValidationError
+from lclang.lang import define_frame
+from lclang.workflow import WorkflowExecutionContext
+
+
+async def main() -> None:
+    async with define_frame() as frame:
+        context = WorkflowExecutionContext(
+            False, date(2026, 10, 13), False, logging.Logger("paths"), frame,
+        )
+        for value, code in ((["batch"], "LCL533131"), (("",), "LCL533211")):
+            try:
+                replace(context, log_task_prefix=value)
+            except LclValidationError as error:
+                assert error.code == code
+            else:
+                raise AssertionError("invalid log prefix accepted")
+        assert context.log_task_prefix == ()
+
+
+asyncio.run(main())
+```

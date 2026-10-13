@@ -143,6 +143,8 @@ live in `lang.common`. Package metadata reads the sole `__version__.py` definiti
   mappings and optional CLI parameters without changing cached snapshots.
 - Typed async `utils.invoke` and task business events with explicit field selection,
   pre-read masking, bounded representations, and application caller attribution.
+  Workflow logs retain nested call paths, compact lifecycle/event layouts, callback
+  body durations and single-line stopping warnings without changing local task IDs.
 - Per-execution action control to omit child subtrees without status records,
   while preserving action outputs, context cleanup, and failure propagation.
 - Nested task and step status management with covered-failure semantics,

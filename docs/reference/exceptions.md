@@ -54,6 +54,11 @@ Failure-covering workflow contexts receive this record through `__exception__`.
 
 ## Causes, snapshots and copies
 
+LCL trees show Context notes first, preserving their addition order before cause,
+source and traceback branches. Identical wrapper/cause stacks are displayed once;
+distinct application frames remain visible. Workflow examples fix callback timing
+to zero so their captured output is repeatable.
+
 `message` is a read-only string on both ordinary LCL errors and error groups.
 It follows the native `BaseExceptionGroup.message` contract. Construct a new
 failure when changing its description; context attachment and detached copies
@@ -918,9 +923,9 @@ Error in cleaning up command [LCL451911: command execution and cleanup failed]
             └─ Cause
                └─ OSError: invocation Frame close
 Error in writing command output [LCL451813: result output]
-├─ Cause
-│  └─ OSError: result output
-└─ Context: Earlier command failure: LclErrorGroup [LCL451911: command execution and cleanup failed]
+├─ Context: Earlier command failure: LclErrorGroup [LCL451911: command execution and cleanup failed]
+└─ Cause
+   └─ OSError: result output
 Exit status: 2
 Invocation Frames closed: 3
 ```
@@ -1326,13 +1331,19 @@ async def main():
     for mode in ["action", "mapping", "acquire", "frame"]:
         await run_case(mode)
 
-asyncio.run(main())
+from unittest.mock import patch
+
+# Keep displayed callback durations deterministic.
+with patch("time.perf_counter_ns", return_value=0):
+    asyncio.run(main())
 ```
 
 <!-- lclang-doc-output: stdout -->
 ```text
 action:
+Workflow task error: [root] ERROR
 Error in running workflow task 'root' [LCL531811: action (2 sub-exceptions)]
+├─ Context: workflow task root
 ├─ Cause
 │  └─ ExceptionGroup: action (2 sub-exceptions)
 │     ├─ Failure 1
@@ -1340,7 +1351,6 @@ Error in running workflow task 'root' [LCL531811: action (2 sub-exceptions)]
 │     └─ Failure 2
 │        └─ Error in handling failure [LCL022890: remote]: OSError: remote
 ├─ Operation: action
-├─ Context: workflow task root
 ├─ Failure 1
 │  └─ Error in handling failure [LCL531811: business]
 │     └─ Cause
@@ -1349,11 +1359,12 @@ Error in running workflow task 'root' [LCL531811: action (2 sub-exceptions)]
    └─ Error in handling failure [LCL531811: remote]
       └─ Cause
          └─ OSError: remote (already shown)
-  task status: ERROR
+Workflow task error: [root.inner] ERROR
 Error in running workflow task 'root.inner' [LCL535911: execution and cleanup failed]
 ├─ Context: workflow task root.inner
 ├─ Failure 1
 │  └─ Error in handling failure [LCL531811: action (2 sub-exceptions)]
+│     ├─ Context: workflow task root
 │     ├─ Cause
 │     │  └─ ExceptionGroup: action (2 sub-exceptions)
 │     │     ├─ Failure 1
@@ -1361,7 +1372,6 @@ Error in running workflow task 'root.inner' [LCL535911: execution and cleanup fa
 │     │     └─ Failure 2
 │     │        └─ Error in handling failure [LCL022890: remote]: OSError: remote
 │     ├─ Operation: action
-│     ├─ Context: workflow task root
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL531811: business]
 │     │     └─ Cause
@@ -1376,8 +1386,8 @@ Error in running workflow task 'root.inner' [LCL535911: execution and cleanup fa
          └─ OSError: context exit 1
             └─ During handling
                └─ LclErrorGroup [LCL531811: action (2 sub-exceptions)] (already shown)
-  task status: ERROR
-task complete: [root.inner] ERROR
+Workflow task completed: [root.inner] ERROR enter_ms=0.000 exit_ms=0.000
+Workflow task error: [root.outer] ERROR
 Error in running workflow task 'root.outer' [LCL535911: execution and cleanup failed]
 ├─ Context: workflow task root.outer
 ├─ Failure 1
@@ -1385,6 +1395,7 @@ Error in running workflow task 'root.outer' [LCL535911: execution and cleanup fa
 │     ├─ Context: workflow task root.inner
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL531811: action (2 sub-exceptions)]
+│     │     ├─ Context: workflow task root
 │     │     ├─ Cause
 │     │     │  └─ ExceptionGroup: action (2 sub-exceptions)
 │     │     │     ├─ Failure 1
@@ -1392,7 +1403,6 @@ Error in running workflow task 'root.outer' [LCL535911: execution and cleanup fa
 │     │     │     └─ Failure 2
 │     │     │        └─ Error in handling failure [LCL022890: remote]: OSError: remote
 │     │     ├─ Operation: action
-│     │     ├─ Context: workflow task root
 │     │     ├─ Failure 1
 │     │     │  └─ Error in handling failure [LCL531811: business]
 │     │     │     └─ Cause
@@ -1413,14 +1423,16 @@ Error in running workflow task 'root.outer' [LCL535911: execution and cleanup fa
          └─ OSError: context exit 0
             └─ During handling
                └─ LclErrorGroup [LCL535911: execution and cleanup failed] (already shown)
-  task status: ERROR
-task complete: [root.outer] ERROR
-task complete: [root] ERROR
+Workflow task completed: [root.outer] ERROR enter_ms=0.000 exit_ms=0.000
+Workflow task completed: [root] ERROR action_ms=0.000
 Status: ERROR
 Unwind: enter 0, enter 1, action, exit 1, exit 0
 Task Frames closed: True
 mapping:
+Workflow task error: [root] ERROR
 Error in evaluating bad [LCL132811: mapping input (2 sub-exceptions)]
+├─ Context: workflow mapping value <- bad
+├─ Context: workflow task root
 ├─ Cause
 │  └─ ExceptionGroup: mapping input (2 sub-exceptions)
 │     ├─ Failure 1
@@ -1428,8 +1440,6 @@ Error in evaluating bad [LCL132811: mapping input (2 sub-exceptions)]
 │     └─ Failure 2
 │        └─ Error in handling failure [LCL022890: second]: OSError: second
 ├─ Operation: mapping input
-├─ Context: workflow mapping value <- bad
-├─ Context: workflow task root
 ├─ bad: fail() ("<string>":1:1)
 │  └─ fail: *masked* ("<string>":1:1)
 │     └─ Source: "<string>":1:1
@@ -1449,11 +1459,13 @@ Error in evaluating bad [LCL132811: mapping input (2 sub-exceptions)]
       └─ Source: "<string>":1:1
          fail()
          ^^^^^^
-  task status: ERROR
+Workflow task error: [root.inner] ERROR
 Error in running workflow task 'root.inner' [LCL535911: execution and cleanup failed]
 ├─ Context: workflow task root.inner
 ├─ Failure 1
 │  └─ Error in evaluating bad [LCL132811: mapping input (2 sub-exceptions)]
+│     ├─ Context: workflow mapping value <- bad
+│     ├─ Context: workflow task root
 │     ├─ Cause
 │     │  └─ ExceptionGroup: mapping input (2 sub-exceptions)
 │     │     ├─ Failure 1
@@ -1461,8 +1473,6 @@ Error in running workflow task 'root.inner' [LCL535911: execution and cleanup fa
 │     │     └─ Failure 2
 │     │        └─ Error in handling failure [LCL022890: second]: OSError: second
 │     ├─ Operation: mapping input
-│     ├─ Context: workflow mapping value <- bad
-│     ├─ Context: workflow task root
 │     ├─ bad: fail() ("<string>":1:1)
 │     │  └─ fail: *masked* ("<string>":1:1)
 │     │     └─ Source: "<string>":1:1
@@ -1488,8 +1498,8 @@ Error in running workflow task 'root.inner' [LCL535911: execution and cleanup fa
          └─ OSError: context exit 1
             └─ During handling
                └─ LclErrorGroup [LCL132811: mapping input (2 sub-exceptions)] (already shown)
-  task status: ERROR
-task complete: [root.inner] ERROR
+Workflow task completed: [root.inner] ERROR enter_ms=0.000 exit_ms=0.000
+Workflow task error: [root.outer] ERROR
 Error in running workflow task 'root.outer' [LCL535911: execution and cleanup failed]
 ├─ Context: workflow task root.outer
 ├─ Failure 1
@@ -1497,6 +1507,8 @@ Error in running workflow task 'root.outer' [LCL535911: execution and cleanup fa
 │     ├─ Context: workflow task root.inner
 │     ├─ Failure 1
 │     │  └─ Error in evaluating bad [LCL132811: mapping input (2 sub-exceptions)]
+│     │     ├─ Context: workflow mapping value <- bad
+│     │     ├─ Context: workflow task root
 │     │     ├─ Cause
 │     │     │  └─ ExceptionGroup: mapping input (2 sub-exceptions)
 │     │     │     ├─ Failure 1
@@ -1504,8 +1516,6 @@ Error in running workflow task 'root.outer' [LCL535911: execution and cleanup fa
 │     │     │     └─ Failure 2
 │     │     │        └─ Error in handling failure [LCL022890: second]: OSError: second
 │     │     ├─ Operation: mapping input
-│     │     ├─ Context: workflow mapping value <- bad
-│     │     ├─ Context: workflow task root
 │     │     ├─ bad: fail() ("<string>":1:1)
 │     │     │  └─ fail: *masked* ("<string>":1:1)
 │     │     │     └─ Source: "<string>":1:1
@@ -1537,14 +1547,15 @@ Error in running workflow task 'root.outer' [LCL535911: execution and cleanup fa
          └─ OSError: context exit 0
             └─ During handling
                └─ LclErrorGroup [LCL535911: execution and cleanup failed] (already shown)
-  task status: ERROR
-task complete: [root.outer] ERROR
-task complete: [root] ERROR
+Workflow task completed: [root.outer] ERROR enter_ms=0.000 exit_ms=0.000
+Workflow task completed: [root] ERROR
 Status: ERROR
 Unwind: enter 0, enter 1, exit 1, exit 0
 Task Frames closed: True
 acquire:
+Workflow task error: [root.inner] ERROR
 Error in running workflow task 'root.inner' [LCL532811: context acquisition (2 sub-exceptions)]
+├─ Context: workflow task root.inner
 ├─ Cause
 │  └─ ExceptionGroup: context acquisition (2 sub-exceptions)
 │     ├─ Failure 1
@@ -1552,7 +1563,6 @@ Error in running workflow task 'root.inner' [LCL532811: context acquisition (2 s
 │     └─ Failure 2
 │        └─ Error in handling failure [LCL022890: validate]: ValueError: validate
 ├─ Operation: context acquisition
-├─ Context: workflow task root.inner
 ├─ Failure 1
 │  └─ Error in handling failure [LCL532811: open]
 │     └─ Cause
@@ -1561,12 +1571,13 @@ Error in running workflow task 'root.inner' [LCL532811: context acquisition (2 s
    └─ Error in handling failure [LCL532811: validate]
       └─ Cause
          └─ ValueError: validate (already shown)
-  task status: ERROR
-task complete: [root.inner] ERROR
+Workflow task completed: [root.inner] ERROR enter_ms=0.000
+Workflow task error: [root.outer] ERROR
 Error in running workflow task 'root.outer' [LCL535911: execution and cleanup failed]
 ├─ Context: workflow task root.outer
 ├─ Failure 1
 │  └─ Error in handling failure [LCL532811: context acquisition (2 sub-exceptions)]
+│     ├─ Context: workflow task root.inner
 │     ├─ Cause
 │     │  └─ ExceptionGroup: context acquisition (2 sub-exceptions)
 │     │     ├─ Failure 1
@@ -1574,7 +1585,6 @@ Error in running workflow task 'root.outer' [LCL535911: execution and cleanup fa
 │     │     └─ Failure 2
 │     │        └─ Error in handling failure [LCL022890: validate]: ValueError: validate
 │     ├─ Operation: context acquisition
-│     ├─ Context: workflow task root.inner
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL532811: open]
 │     │     └─ Cause
@@ -1589,14 +1599,15 @@ Error in running workflow task 'root.outer' [LCL535911: execution and cleanup fa
          └─ OSError: context exit 0
             └─ During handling
                └─ LclErrorGroup [LCL532811: context acquisition (2 sub-exceptions)] (already shown)
-  task status: ERROR
-task complete: [root.outer] ERROR
-task complete: [root] ERROR
+Workflow task completed: [root.outer] ERROR enter_ms=0.000 exit_ms=0.000
+Workflow task completed: [root] ERROR
 Status: ERROR
 Unwind: enter 0, exit 0
 Task Frames closed: True
 frame:
+Workflow task error: [root] ERROR
 Error in running workflow task 'root' [LCL531811: action (2 sub-exceptions)]
+├─ Context: workflow task root
 ├─ Cause
 │  └─ ExceptionGroup: action (2 sub-exceptions)
 │     ├─ Failure 1
@@ -1604,7 +1615,6 @@ Error in running workflow task 'root' [LCL531811: action (2 sub-exceptions)]
 │     └─ Failure 2
 │        └─ Error in handling failure [LCL022890: remote]: OSError: remote
 ├─ Operation: action
-├─ Context: workflow task root
 ├─ Failure 1
 │  └─ Error in handling failure [LCL531811: business]
 │     └─ Cause
@@ -1613,11 +1623,12 @@ Error in running workflow task 'root' [LCL531811: action (2 sub-exceptions)]
    └─ Error in handling failure [LCL531811: remote]
       └─ Cause
          └─ OSError: remote (already shown)
-  task status: ERROR
+Workflow task error: [root.inner] ERROR
 Error in running workflow task 'root.inner' [LCL535911: execution and cleanup failed]
 ├─ Context: workflow task root.inner
 ├─ Failure 1
 │  └─ Error in handling failure [LCL531811: action (2 sub-exceptions)]
+│     ├─ Context: workflow task root
 │     ├─ Cause
 │     │  └─ ExceptionGroup: action (2 sub-exceptions)
 │     │     ├─ Failure 1
@@ -1625,7 +1636,6 @@ Error in running workflow task 'root.inner' [LCL535911: execution and cleanup fa
 │     │     └─ Failure 2
 │     │        └─ Error in handling failure [LCL022890: remote]: OSError: remote
 │     ├─ Operation: action
-│     ├─ Context: workflow task root
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL531811: business]
 │     │     └─ Cause
@@ -1640,8 +1650,8 @@ Error in running workflow task 'root.inner' [LCL535911: execution and cleanup fa
          └─ OSError: context exit 1
             └─ During handling
                └─ LclErrorGroup [LCL531811: action (2 sub-exceptions)] (already shown)
-  task status: ERROR
-task complete: [root.inner] ERROR
+Workflow task completed: [root.inner] ERROR enter_ms=0.000 exit_ms=0.000
+Workflow task error: [root.outer] ERROR
 Error in running workflow task 'root.outer' [LCL535911: execution and cleanup failed]
 ├─ Context: workflow task root.outer
 ├─ Failure 1
@@ -1649,6 +1659,7 @@ Error in running workflow task 'root.outer' [LCL535911: execution and cleanup fa
 │     ├─ Context: workflow task root.inner
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL531811: action (2 sub-exceptions)]
+│     │     ├─ Context: workflow task root
 │     │     ├─ Cause
 │     │     │  └─ ExceptionGroup: action (2 sub-exceptions)
 │     │     │     ├─ Failure 1
@@ -1656,7 +1667,6 @@ Error in running workflow task 'root.outer' [LCL535911: execution and cleanup fa
 │     │     │     └─ Failure 2
 │     │     │        └─ Error in handling failure [LCL022890: remote]: OSError: remote
 │     │     ├─ Operation: action
-│     │     ├─ Context: workflow task root
 │     │     ├─ Failure 1
 │     │     │  └─ Error in handling failure [LCL531811: business]
 │     │     │     └─ Cause
@@ -1677,8 +1687,8 @@ Error in running workflow task 'root.outer' [LCL535911: execution and cleanup fa
          └─ OSError: context exit 0
             └─ During handling
                └─ LclErrorGroup [LCL535911: execution and cleanup failed] (already shown)
-  task status: ERROR
-task complete: [root.outer] ERROR
+Workflow task completed: [root.outer] ERROR enter_ms=0.000 exit_ms=0.000
+Workflow task error: [root] ERROR
 Error in running workflow task 'root' [LCL535911: execution and cleanup failed]
 ├─ Context: workflow task root
 ├─ Failure 1
@@ -1689,6 +1699,7 @@ Error in running workflow task 'root' [LCL535911: execution and cleanup failed]
 │     │     ├─ Context: workflow task root.inner
 │     │     ├─ Failure 1
 │     │     │  └─ Error in handling failure [LCL531811: action (2 sub-exceptions)]
+│     │     │     ├─ Context: workflow task root
 │     │     │     ├─ Cause
 │     │     │     │  └─ ExceptionGroup: action (2 sub-exceptions)
 │     │     │     │     ├─ Failure 1
@@ -1696,7 +1707,6 @@ Error in running workflow task 'root' [LCL535911: execution and cleanup failed]
 │     │     │     │     └─ Failure 2
 │     │     │     │        └─ Error in handling failure [LCL022890: remote]: OSError: remote
 │     │     │     ├─ Operation: action
-│     │     │     ├─ Context: workflow task root
 │     │     │     ├─ Failure 1
 │     │     │     │  └─ Error in handling failure [LCL531811: business]
 │     │     │     │     └─ Cause
@@ -1721,8 +1731,7 @@ Error in running workflow task 'root' [LCL535911: execution and cleanup failed]
    └─ Error in handling failure [LCL532813: task Frame close]
       └─ Cause
          └─ OSError: task Frame close
-  task status: ERROR
-task complete: [root] ERROR
+Workflow task completed: [root] ERROR action_ms=0.000
 Status: ERROR
 Unwind: enter 0, enter 1, action, exit 1, exit 0
 Task Frames closed: True
@@ -1826,11 +1835,16 @@ async def main():
         logger.removeHandler(handler)
         handler.close()
 
-asyncio.run(main())
+from unittest.mock import patch
+
+# Keep displayed callback durations deterministic.
+with patch("time.perf_counter_ns", return_value=0):
+    asyncio.run(main())
 ```
 
 <!-- lclang-doc-output: stdout -->
 ```text
+Workflow call error: [root.nested]
 Error in calling workflow 'root.nested' [LCL535911: execution and cleanup failed]
 ├─ Failure 1
 │  └─ Error in handling failure [LCL541812: result processing]
@@ -1840,11 +1854,12 @@ Error in calling workflow 'root.nested' [LCL535911: execution and cleanup failed
    └─ Error in handling failure [LCL541813: call Frame close]
       └─ Cause
          └─ OSError: call Frame close
-workflow call complete: [root.nested] Child ERROR
+Workflow call completed: [root.nested] Child ERROR
+Workflow task error: [root] ERROR
 Error in running workflow task 'root' [LCL535911: execution and cleanup failed]
+├─ Context: workflow task root
 ├─ During handling
 │  └─ Error in handling context [LCL022890: result processing]: ValueError: result processing
-├─ Context: workflow task root
 ├─ Failure 1
 │  └─ Error in handling failure [LCL541812: result processing]
 │     └─ Cause
@@ -1853,8 +1868,7 @@ Error in running workflow task 'root' [LCL535911: execution and cleanup failed]
    └─ Error in handling failure [LCL541813: call Frame close]
       └─ Cause
          └─ OSError: call Frame close
-  task status: ERROR
-task complete: [root] ERROR
+Workflow task completed: [root] ERROR action_ms=0.000
 Parent status: ERROR
 Call Frame closed: True
 Borrowed parent open: True
@@ -1943,12 +1957,18 @@ async def main():
         logger.removeHandler(handler)
         handler.close()
 
-asyncio.run(main())
+from unittest.mock import patch
+
+# Keep displayed callback durations deterministic.
+with patch("time.perf_counter_ns", return_value=0):
+    asyncio.run(main())
 ```
 
 <!-- lclang-doc-output: stdout -->
 ```text
+Workflow task error: [root] ERROR
 Error in running workflow task 'root' [LCL531811: business (2 sub-exceptions)]
+├─ Context: workflow task root
 ├─ Cause
 │  └─ ExceptionGroup: business (2 sub-exceptions)
 │     ├─ Failure 1
@@ -1956,7 +1976,6 @@ Error in running workflow task 'root' [LCL531811: business (2 sub-exceptions)]
 │     └─ Failure 2
 │        └─ Error in handling failure [LCL022890: second]: OSError: second
 ├─ Operation: business
-├─ Context: workflow task root
 ├─ Failure 1
 │  └─ Error in handling failure [LCL531811: first]
 │     └─ Cause
@@ -1965,13 +1984,14 @@ Error in running workflow task 'root' [LCL531811: business (2 sub-exceptions)]
    └─ Error in handling failure [LCL531811: second]
       └─ Cause
          └─ OSError: second (already shown)
-  task status: ERROR
+Workflow task error: [root.recover] ERROR
 Error in running workflow task 'root.recover' [LCL535911: execution and cleanup failed]
 ├─ Context: workflow task root.recover
 ├─ Failure 1
 │  └─ Error in handling failure [LCL535911: execution and cleanup failed]
 │     ├─ Failure 1
 │     │  └─ Error in handling failure [LCL531811: business (2 sub-exceptions)]
+│     │     ├─ Context: workflow task root
 │     │     ├─ Cause
 │     │     │  └─ ExceptionGroup: business (2 sub-exceptions)
 │     │     │     ├─ Failure 1
@@ -1979,7 +1999,6 @@ Error in running workflow task 'root.recover' [LCL535911: execution and cleanup 
 │     │     │     └─ Failure 2
 │     │     │        └─ Error in handling failure [LCL022890: second]: OSError: second
 │     │     ├─ Operation: business
-│     │     ├─ Context: workflow task root
 │     │     ├─ Failure 1
 │     │     │  └─ Error in handling failure [LCL531811: first]
 │     │     │     └─ Cause
@@ -1998,9 +2017,8 @@ Error in running workflow task 'root.recover' [LCL535911: execution and cleanup 
    └─ Error in handling failure [LCL532812: recovery release]
       └─ Cause
          └─ OSError: recovery release
-  task status: ERROR
-task complete: [root.recover] ERROR
-task complete: [root] ERROR
+Workflow task completed: [root.recover] ERROR enter_ms=0.000 exit_ms=0.000
+Workflow task completed: [root] ERROR action_ms=0.000
 Status: ERROR
 ```
 <!-- /lclang-doc-case -->
@@ -2115,11 +2133,11 @@ print("Original notes:", error.__notes__)
 <!-- lclang-doc-output: stdout -->
 ```text
 Error [APP/JOB: storage]
+├─ Context: attempt 1
+├─ Context: inspected copy
 ├─ Cause
 │  └─ OSError: storage
-├─ Operation: job failed
-├─ Context: attempt 1
-└─ Context: inspected copy
+└─ Operation: job failed
 Original notes: ['attempt 1']
 ```
 <!-- /lclang-doc-case -->
@@ -2209,6 +2227,7 @@ Error in loading config file "settings.lclcfg" [LCL323931: host operations (2 su
       └─ Cause
          └─ ValueError: second (already shown)
 Error in a standard-library operation [LCL961890: host operations (2 sub-exceptions)]
+├─ Context: lclang operation lines
 ├─ Cause
 │  └─ ExceptionGroup: host operations (2 sub-exceptions)
 │     ├─ Failure 1
@@ -2216,7 +2235,6 @@ Error in a standard-library operation [LCL961890: host operations (2 sub-excepti
 │     └─ Failure 2
 │        └─ Error in handling failure [LCL022890: second]: ValueError: second
 ├─ Operation: host operations
-├─ Context: lclang operation lines
 ├─ Failure 1
 │  └─ Error in handling failure [LCL961890: first]
 │     └─ Cause
@@ -2226,6 +2244,7 @@ Error in a standard-library operation [LCL961890: host operations (2 sub-excepti
       └─ Cause
          └─ ValueError: second (already shown)
 Error in a utility operation [LCL771811: host operations (2 sub-exceptions)]
+├─ Context: lclang operation invoke
 ├─ Cause
 │  └─ ExceptionGroup: host operations (2 sub-exceptions)
 │     ├─ Failure 1
@@ -2233,7 +2252,6 @@ Error in a utility operation [LCL771811: host operations (2 sub-exceptions)]
 │     └─ Failure 2
 │        └─ Error in handling failure [LCL022890: second]: ValueError: second
 ├─ Operation: host operations
-├─ Context: lclang operation invoke
 ├─ Failure 1
 │  └─ Error in handling failure [LCL771811: first]
 │     └─ Cause
@@ -2421,7 +2439,11 @@ async def main():
         logger.removeHandler(handler)
         handler.close()
 
-asyncio.run(main())
+from unittest.mock import patch
+
+# Keep displayed callback durations deterministic.
+with patch("time.perf_counter_ns", return_value=0):
+    asyncio.run(main())
 ```
 
 <!-- lclang-doc-output: stdout -->
