@@ -12,6 +12,7 @@ from dataclasses import replace
 from lclang.error import LclWorkflowError, WorkflowErrorCode
 from lclang.error.diagnostic_rendering import render_failure
 from lclang.error.operation_guard import guard_failure
+from lclang.error.verbose_guard import guard_verbose_operation
 from lclang.lang.runtime import Frame
 from lclang.workflow.execution_context import WorkflowExecutionContext
 from lclang.workflow.execution_status import ExecutionStatus
@@ -132,7 +133,7 @@ def mapping_message(
     return header + "\n" + "\n".join(rows)
 
 
-@guard_failure(LclWorkflowError, WorkflowErrorCode.E31_TASK_EXECUTION_NATIVE_FAILURE)
+@guard_verbose_operation
 def log_mapping(
     context: WorkflowExecutionContext,
     branch: tuple[TaskID, ...],

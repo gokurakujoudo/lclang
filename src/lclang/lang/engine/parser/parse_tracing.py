@@ -6,12 +6,14 @@ Defines ``trace_parse_result``.
 from lclang.error.mask_scope import ACTIVE_MASKED_VALUE
 from lclang.error.source_excerpt import render_source_location
 from lclang.error.verbose_diagnostic import internal_verbose_enabled
+from lclang.error.verbose_guard import guard_verbose_operation
 from lclang.error.verbose_records import emit_verbose_record
 from lclang.lang.ast import LclAstNode
 from lclang.lang.engine.printer import to_source
 from lclang.utils.value_representation import safe_repr
 
 
+@guard_verbose_operation
 def trace_parse_result(text: str, node: LclAstNode) -> None:
     """Show original source once and adapted source only when it differs.
 

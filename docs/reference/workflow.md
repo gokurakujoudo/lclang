@@ -77,6 +77,10 @@ and its value is a dataclass instance. Other fields are rendered as single typed
 values. This includes LCL functions declared through callback `Protocol` or
 `Callable` annotations. Generic dataclass annotations retain nested field paths;
 masked fields are checked before their values are read.
+Ordinary failures in verbose mapping rendering or DEBUG emission discard that
+record. They do not prevent actions or contexts from running, change publication
+or status, or replace execution and cleanup failures. Contexts still unwind in
+their declared order. Native control signals continue to propagate.
 Runtime validation checks record structure and reference contracts, not every
 ordinary value or container element. `FrameProxy.as_record()` remains shallow;
 recursive conversion is specific to workflow mappings.

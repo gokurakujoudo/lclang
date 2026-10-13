@@ -18,6 +18,7 @@ from lclang.error.verbose_context import (
     allocate_verbose_id,
     is_verbose_enabled,
 )
+from lclang.error.verbose_guard import ignore_verbose_failure
 from lclang.error.verbose_propagation import scope_verbose_failure_batch
 from lclang.error.verbose_records import emit_verbose_record
 from lclang.lang.ast import LclAstNode
@@ -49,40 +50,51 @@ def scope_display_request(
         yield None
         return
     masked = masked or ACTIVE_MASKED_VALUE.get() or (parent is not None and parent.masked)
-    request = DisplayRequest(name, name + ": <pending>", execution, masked=masked)
-    if node is not None and node is ACTIVE_TARGET_EXPRESSION.get():
-        request.kind = "target"
-    if node is not None and execution == "new evaluation":
-        expression = safe_repr(
-            node, renderer=lambda value: to_source(node), max_length=None, masked=masked
-        )
-        label = "using target" if request.kind == "target" else name
-        request.label = f"{label}: {expression} ({render_definition_location(node.span)})"
-    if parent is not None:
-        parent.children.append(request)
-    elif (capture := ACTIVE_DISPLAY_CAPTURE.get()) is not None:
-        capture.tree = capture.result = None
+    required = ACTIVE_DISPLAY_CAPTURE.get() is not None
+    request = None
+    with ignore_verbose_failure(required=required):
+        prepared = DisplayRequest(name, name + ": <pending>", execution, masked=masked)
+        if node is not None and node is ACTIVE_TARGET_EXPRESSION.get():
+            prepared.kind = "target"
+        if node is not None and execution == "new evaluation":
+            expression = safe_repr(
+                node, renderer=lambda value: to_source(node), max_length=None, masked=masked
+            )
+            label = "using target" if prepared.kind == "target" else name
+            prepared.label = f"{label}: {expression} ({render_definition_location(node.span)})"
+        if parent is not None:
+            parent.children.append(prepared)
+        elif (capture := ACTIVE_DISPLAY_CAPTURE.get()) is not None:
+            capture.tree = capture.result = None
+        request = prepared
+    if request is None:
+        yield None
+        return
     token = ACTIVE_DISPLAY_REQUEST.set(request)
     try:
         with scope_verbose_failure_batch(name):
             yield request
     except BaseException as error:
-        if is_ordinary_failure(error) and (
-            is_verbose_enabled() or ACTIVE_DISPLAY_CAPTURE.get() is not None
-        ):
-            request.label = f"{name}: {render_failure_summary(error, masked=masked)} ({execution})"
-            capture = ACTIVE_DISPLAY_CAPTURE.get()
-            if parent is None and capture is not None:
-                capture.result = None
-                capture.tree = (
-                    build_failure_tree(error, "evaluating " + name, set(), masked=masked)
-                    if execution == "new evaluation"
-                    else request.freeze()
+        with ignore_verbose_failure(required=required):
+            if is_ordinary_failure(error) and (
+                is_verbose_enabled() or ACTIVE_DISPLAY_CAPTURE.get() is not None
+            ):
+                request.label = (
+                    f"{name}: {render_failure_summary(error, masked=masked)} ({execution})"
                 )
+                capture = ACTIVE_DISPLAY_CAPTURE.get()
+                if parent is None and capture is not None:
+                    capture.result = None
+                    capture.tree = (
+                        build_failure_tree(error, "evaluating " + name, set(), masked=masked)
+                        if execution == "new evaluation"
+                        else request.freeze()
+                    )
         raise
     else:
-        if parent is None:
-            finish_display_request(request)
+        with ignore_verbose_failure(required=required):
+            if parent is None:
+                finish_display_request(request)
     finally:
         ACTIVE_DISPLAY_REQUEST.reset(token)
 
@@ -146,17 +158,20 @@ def record_display_value(name: str, value: object, source: str, *, masked: bool 
     :param source: Accurate argument, external or unknown provenance.
     :param masked: Sticky diagnostic redaction before representation.
     """
-    parent = ACTIVE_DISPLAY_REQUEST.get()
-    if (is_verbose_enabled() or ACTIVE_DISPLAY_CAPTURE.get() is not None) and parent is not None:
-        previous = next((child for child in parent.children if child.name == name), None)
-        if previous is not None and previous.kind != "value":
-            return
-        payload = render_display_value(value, masked=masked or parent.masked)
-        label = f"{name}: {payload} ({source})"
-        if previous is None:
-            parent.children.append(DisplayRequest(name, label, source, kind="value"))
-        else:
-            previous.label = label
+    with ignore_verbose_failure(required=ACTIVE_DISPLAY_CAPTURE.get() is not None):
+        parent = ACTIVE_DISPLAY_REQUEST.get()
+        if (
+            is_verbose_enabled() or ACTIVE_DISPLAY_CAPTURE.get() is not None
+        ) and parent is not None:
+            previous = next((child for child in parent.children if child.name == name), None)
+            if previous is not None and previous.kind != "value":
+                return
+            payload = render_display_value(value, masked=masked or parent.masked)
+            label = f"{name}: {payload} ({source})"
+            if previous is None:
+                parent.children.append(DisplayRequest(name, label, source, kind="value"))
+            else:
+                previous.label = label
 
 
 def finish_display_request(request: DisplayRequest) -> None:

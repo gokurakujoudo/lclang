@@ -15,6 +15,7 @@ from lclang.error.verbose_context import (
     allocate_verbose_id,
     is_verbose_enabled,
 )
+from lclang.error.verbose_guard import guard_verbose_operation
 from lclang.error.verbose_propagation import collect_verbose_failure_event
 from lclang.error.verbose_records import describe_verbose_context, emit_verbose_record
 
@@ -35,6 +36,7 @@ def identify_verbose_failure(error: LclError) -> str:
     return error.verbose_failure_id
 
 
+@guard_verbose_operation
 def trace_verbose_failure(
     error: BaseException,
     subject: str,

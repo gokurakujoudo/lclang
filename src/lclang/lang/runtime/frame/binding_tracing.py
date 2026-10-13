@@ -13,6 +13,7 @@ from lclang.error.mask_scope import ACTIVE_MASKED_VALUE
 from lclang.error.verbose_context import ACTIVE_VERBOSE_CONTEXT
 from lclang.error.verbose_diagnostic import internal_verbose_enabled
 from lclang.error.verbose_failure import trace_verbose_failure
+from lclang.error.verbose_guard import guard_verbose_operation
 from lclang.error.verbose_propagation import collect_verbose_failure_event
 from lclang.error.verbose_records import emit_verbose_record
 from lclang.lang.engine.evaluator.display_capture import (
@@ -55,6 +56,7 @@ def describe_binding_execution(owner: Frame | None, name: str, kind: str | None)
     return "native input" if owner.native_values else "external input"
 
 
+@guard_verbose_operation
 def trace_binding_value(frame: Frame, name: str, source: str, value: object) -> None:
     """Log an already-resolved Frame value with its observed source.
 
@@ -94,6 +96,7 @@ def render_binding_payload(frame: Frame, name: str, value: object) -> str:
     return render_display_value(value, masked=masked)
 
 
+@guard_verbose_operation
 def trace_binding_failure(
     error: BaseException,
     name: str,
@@ -121,6 +124,7 @@ def trace_binding_failure(
         )
 
 
+@guard_verbose_operation
 def trace_cached_failure_publication(
     name: str, error: Exception, *, owner: str = "unknown"
 ) -> None:
@@ -145,6 +149,7 @@ def trace_cached_failure_publication(
             )
 
 
+@guard_verbose_operation
 def trace_missing_binding(frame: Frame, name: str) -> None:
     """Describe an actual missing selection without rendering an exception.
 

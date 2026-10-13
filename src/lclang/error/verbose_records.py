@@ -7,6 +7,7 @@ import asyncio
 
 from lclang.error.using_diagnostics import ACTIVE_USING_DIAGNOSTICS, describe_using_subject
 from lclang.error.verbose_context import ACTIVE_VERBOSE_CONTEXT, ACTIVE_VERBOSE_LOGGER
+from lclang.error.verbose_guard import guard_verbose_operation
 from lclang.error.verbose_loading import ACTIVE_LOADING_ROUTE
 from lclang.utils.text_tree import TextTree, render_text_tree
 from lclang.utils.value_representation import safe_repr
@@ -85,6 +86,7 @@ def describe_verbose_context(*, human: bool = False) -> tuple[tuple[str, str], .
     return tuple((name, safe_repr(value, renderer=str, max_length=None)) for name, value in fields)
 
 
+@guard_verbose_operation
 def emit_verbose_record(
     stage: str,
     heading: str,
