@@ -14,6 +14,11 @@
   prevent task or context actions from running; declared nested records still
   expand, and masked fields remain protected.
 
+### Maintenance
+
+- Consolidate verbose failure guards around one shared policy and standard-library
+  decorator, preserving execution results, cached errors and explicit display behavior.
+
 ## 1.1.0 - 2026-10-11
 
 This milestone adds configuration composition, dependency-tree diagnostics and
