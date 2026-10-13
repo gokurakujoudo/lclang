@@ -4,6 +4,11 @@
 
 ### Fixes
 
+- Discard ordinary failures from verbose diagnostics and DEBUG destinations so
+  parsing, evaluation, cached errors and workflow execution keep their original
+  results. Workflow mapping logs cannot prevent actions or replace execution and
+  cleanup errors. Native control signals and explicit display contracts remain intact.
+
 - Keep LCL callbacks and other fields with non-dataclass annotations as single
   values in verbose workflow mapping logs. Dataclass-backed callbacks no longer
   prevent task or context actions from running; declared nested records still

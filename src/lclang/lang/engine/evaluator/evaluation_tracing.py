@@ -6,6 +6,7 @@ Defines ``describe_evaluation_phase``, ``trace_evaluation_result``.
 from lclang.error.source_excerpt import render_source_location
 from lclang.error.verbose_context import ACTIVE_VERBOSE_CONTEXT
 from lclang.error.verbose_diagnostic import internal_render_value, internal_verbose_enabled
+from lclang.error.verbose_guard import guard_verbose_operation
 from lclang.error.verbose_records import emit_verbose_record
 from lclang.lang.ast import LclAstNode, LclBinary, LclCall, LclCompare, LclName
 from lclang.lang.engine.evaluator.display_capture import render_display_value
@@ -30,6 +31,7 @@ def describe_evaluation_phase(node: LclAstNode) -> str:
     return "evaluating an expression"
 
 
+@guard_verbose_operation
 def trace_evaluation_result(node: LclAstNode, result: object) -> None:
     """Describe a completed expression without repeating its AST payload.
 

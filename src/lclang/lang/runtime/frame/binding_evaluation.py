@@ -28,6 +28,7 @@ from lclang.error.verbose_context import is_verbose_enabled, scope_verbose_reque
 from lclang.error.verbose_diagnostic import (
     internal_masked_scope,
 )
+from lclang.error.verbose_guard import ignore_verbose_failure
 from lclang.lang.common.identifiers import VarName
 from lclang.lang.common.source_location import SourceSpan
 from lclang.lang.engine.evaluator.ast_interpreter import interpret_expression
@@ -200,20 +201,21 @@ async def read_selected_binding(
         scope_display_request(name, node, execution, masked=masked) as display,
     ):
         result = await read_binding_result(requester, name, span, selected)
-        if display is not None:
-            display.result = (
-                MASKED_VALUE
-                if display.masked
-                else render_binding_payload(owner or requester, name, result)
-            )
-            if node is None or execution != "new evaluation":
-                source = {
-                    "cached value": "cached",
-                    "shared evaluation": "shared",
-                    "native input": "native",
-                    "external input": "external",
-                }.get(execution, "unknown")
-                display.label = f"{name}: {display.result} ({source})"
+        with ignore_verbose_failure(required=ACTIVE_DISPLAY_CAPTURE.get() is not None):
+            if display is not None:
+                display.result = (
+                    MASKED_VALUE
+                    if display.masked
+                    else render_binding_payload(owner or requester, name, result)
+                )
+                if node is None or execution != "new evaluation":
+                    source = {
+                        "cached value": "cached",
+                        "shared evaluation": "shared",
+                        "native input": "native",
+                        "external input": "external",
+                    }.get(execution, "unknown")
+                    display.label = f"{name}: {display.result} ({source})"
     if span is not None:
         source = {
             "new evaluation": "evaluated",

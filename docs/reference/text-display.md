@@ -104,6 +104,14 @@ without repeating complete LCL diagnostics or changing original exceptions.
 External logging callers can install `LclExceptionFormatter` on their own handler.
 It accepts standard formatter arguments and keyword `traceback_style`. Borrowing
 a logger through `use_verbose` never installs a formatter or changes handlers.
+Ordinary failures while checking a verbose destination, constructing a diagnostic,
+or emitting its record are discarded. Verbose reporting preserves successful
+results, cached values and failures, and the original execution exception. It
+does not retry reporting through a failing logger. Cancellation, exit,
+interruption and iterator-control signals retain their native behavior. Public
+logger and switch validation still applies; explicit display requests and normal
+lifecycle/error logging retain their own contracts.
+
 `LogRecord.levelno` and the original `levelname` remain DEBUG. The stable verbose,
 stage, evaluation, failure and context extras support external filtering; tree
 records include detached tree data for external formatting.
