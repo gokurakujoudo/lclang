@@ -148,7 +148,7 @@ def workflow_command(
             )
         )
         workflow_id = ".".join(context.raw_params.command)
-        log_status_tree(context.logger, result.execution_status, workflow_id)
+        log_status_tree(context.logger, result.execution_status, workflow_id, dryrun=context.dryrun)
         await log_lunch_option(
             context.logger,
             context.frame,

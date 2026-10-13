@@ -1,12 +1,13 @@
 """Uniform failure trees built only from detached diagnostic evidence.
 
-Defines ``render_error``, ``render_failure``, ``build_failure_tree``, ``select_error_action``.
+Defines ``render_error``, ``render_failure``, ``build_failure_tree``.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from lclang.error.diagnostic_action import select_error_action
 from lclang.error.diagnostic_evidence import DiagnosticEvidence, find_shared_evaluation_prefix
 from lclang.error.exception_base import LclError
 from lclang.error.failure_summary import describe_failure_reason, render_failure_summary
@@ -132,10 +133,12 @@ def build_failure_tree(
             if frozen_reason is None
             else reason
         )
-    for note in getattr(error, "__notes__", ()):
-        children.append(
-            ("Context: " + safe_repr(note, renderer=str, max_length=None, masked=masked), ())
-        )
+    notes: list[TextTree] = [
+        ("Context: " + safe_repr(note, renderer=str, max_length=None, masked=masked), ())
+        for note in getattr(error, "__notes__", ())
+    ]
+    if not isinstance(error, LclError):
+        children.extend(notes)
     cause = error.__cause__
     context = error.__context__
     if cause is not None:
@@ -226,31 +229,6 @@ def build_failure_tree(
             children.extend(member_trees)
     else:
         children.extend(member_trees)
+    if isinstance(error, LclError):
+        children[:0] = notes
     return heading, tuple(children)
-
-
-def select_error_action(code: str) -> str:
-    """Choose the default stage for errors lacking active operation records.
-
-    :param code: Stable structured error code.
-    :returns: Optional English action phrase, including its leading separator.
-    """
-    if code.startswith(("LCL11", "LCL12", "LCL31")) or code == "LCL100000":
-        return " in parsing source"
-    if code == "LCL230000":
-        return " in resolving a variable"
-    if code.startswith(("LCL13", "LCL2")):
-        return " in evaluating an expression"
-    if code.startswith("LCL3"):
-        return " in loading configuration"
-    if code.startswith("LCL4"):
-        return " in command-line usage"
-    if code.startswith("LCL5"):
-        return " in executing a workflow"
-    if code.startswith("LCL6"):
-        return " in logging"
-    if code.startswith("LCL7"):
-        return " in a utility operation"
-    if code.startswith("LCL9"):
-        return " in a standard-library operation"
-    return ""

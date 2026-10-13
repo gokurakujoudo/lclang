@@ -66,9 +66,9 @@ def emit_event(
     rendered.extend(
         (name, safe_repr(value, masked=name in masked)) for name, value in values.items()
     )
-    branch = ".".join(context.task_id_stack)
+    branch = ".".join(context.log_task_stack or tuple(context.task_id_stack))
     dryrun = " (dryrun)" if context.is_dryrun else ""
-    message = f"event {safe_repr(event)}: [{branch}]{dryrun}"
+    message = f"[{branch}] | {safe_repr(event, renderer=str)}{dryrun}"
     message = make_multi_log_lines(message, align_repr_fields(rendered))
     context.logger.log(
         level,

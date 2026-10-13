@@ -24,12 +24,14 @@ def test_system_hook_formats_lcl_and_delegates_native_and_control() -> None:
             try:
                 raise LclError("application failure", code="APP/FAILED") from ValueError("cause")
             except LclError as error:
+                error.add_note("request context")
                 trace, cause = error.__traceback__, error.__cause__
                 output = io.StringIO()
                 with redirect_stderr(output):
                     sys.excepthook(type(error), error, trace)
                 assert "[APP/FAILED: cause]" in output.getvalue()
                 assert "Operation: application failure" in output.getvalue()
+                assert output.getvalue().splitlines()[1] == "├─ Context: request context"
                 assert "test_exception_hooks.py" in output.getvalue()
                 assert error.__traceback__ is trace and error.__cause__ is cause
             for native in (

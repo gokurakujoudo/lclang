@@ -23,7 +23,11 @@ with the names of bindings whose failure caches were actually committed. Individ
 propagation relations and cache owners remain in detached record context. A root
 that recovers is not described as failed. Cache hits and shared returns stay explicit.
 
-Exception trees show the explicit Cause before expanding the diagnostic stack.
+Each LCL node shows its Context notes first, in their original addition order,
+before Cause, source, operation, dependency and traceback branches. Nodes without
+notes have no Context placeholder. This ordering also applies to nested LCL
+causes and exception-group members. Exception trees then show the explicit Cause
+before expanding the diagnostic stack.
 An unsuppressed handling context takes that position when there is no explicit
 cause. Python traceback trees follow the same order. Stack frames, notes and
 exception-group members retain their original evidence and ordering.
@@ -100,6 +104,9 @@ The same field is available in mappings, `logger.traceback_style` in LCL and CLI
 module identity and retain application and external-library frames. Full mode
 retains all Python frames. Both modes retain native chains and group members,
 without repeating complete LCL diagnostics or changing original exceptions.
+When a wrapper and its Direct cause select exactly the same traceback nodes,
+only the cause's stack is displayed. Distinct wrapper frames remain visible in
+both policies; matching rendered text alone never establishes duplication.
 
 External logging callers can install `LclExceptionFormatter` on their own handler.
 It accepts standard formatter arguments and keyword `traceback_style`. Borrowing

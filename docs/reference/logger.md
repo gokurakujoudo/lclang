@@ -13,6 +13,12 @@ stdlib loggers and explicit uncaught-error hooks.
 
 ## Configuration
 
+Default workflow lifecycle lines retain timestamp, level, process and thread.
+Business events also retain the application file, line and function, with
+`[task.path] | message` headings. Both omit the fixed framework logger name.
+Explicit `format` layouts apply to these records unchanged. See the
+[workflow log contract](workflow.md#business-event-logs) for paths and fields.
+
 See [text diagnostics](text-display.md) for shared tree layout, VERBOSE labels,
 inline code reasons, compact/full tracebacks and external `LclExceptionFormatter`.
 

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Improvements
+
+- Shorten default workflow lifecycle and business event layouts while retaining
+  application caller locations and explicit logger formats. Nested workflow logs
+  retain parent call paths without changing local task IDs or result keys.
+- Include callback-only action, context entry and context exit durations in task
+  completion logs. Status-driven context unwinding uses single-line WARNING
+  records; real handling and cleanup failures retain full error diagnostics.
+- Show LCL Context notes before other diagnostic branches and display identical
+  wrapper/cause Python stacks once, preserving distinct frames and original exceptions.
+
 ### Fixes
 
 - Discard ordinary failures from verbose diagnostics and DEBUG destinations so

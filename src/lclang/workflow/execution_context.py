@@ -21,6 +21,7 @@ from lclang.error.operation_guard import guard_async_failure, guard_constructor,
 from lclang.lang.runtime import Frame
 from lclang.logger import Logger
 from lclang.workflow.execution_status import ExecutionStatus, ExecutionStatusTree
+from lclang.workflow.log_identity import validate_log_stack
 from lclang.workflow.status_manager import ExecutionStatusManager
 from lclang.workflow.task_id import TaskID
 
@@ -38,6 +39,7 @@ class WorkflowExecutionContext:
     :param verbose_mode: Whether verbose diagnostics are active.
     :param logger: Standard-library execution logger.
     :param frame: Borrowed shared execution Frame.
+    :param log_task_prefix: Keyword-only log path preceding this workflow's local task IDs.
     """
 
     is_dryrun: bool
@@ -45,6 +47,14 @@ class WorkflowExecutionContext:
     verbose_mode: bool
     logger: logging.Logger | Logger
     frame: Frame
+    log_task_prefix: tuple[str, ...] = field(default=(), kw_only=True)
+
+    def __post_init__(self) -> None:
+        """Validate the optional log prefix without changing local task identity.
+
+        :raises LclValidationError: If the prefix is not a tuple of nonempty strings.
+        """
+        validate_log_stack(self.log_task_prefix)
 
 
 @guard_constructor(LclValidationError, WorkflowErrorCode.E33_WORKFLOW_CONTEXT_NATIVE_FAILURE)
@@ -72,6 +82,7 @@ class TaskContext:
     :param frame: Current task-local Frame.
     :param task_node: Current immutable task definition.
     :param task_id_stack: Root-to-current task identifier path.
+    :param log_task_stack: Keyword-only complete log path, or empty to use local task IDs.
     """
 
     is_dryrun: bool
@@ -81,12 +92,20 @@ class TaskContext:
     frame: Frame
     task_node: TaskNode
     task_id_stack: list[TaskID]
+    log_task_stack: tuple[str, ...] = field(default=(), kw_only=True)
     _child_execution: TaskChildExecution = field(
         default_factory=TaskChildExecution,
         init=False,
         repr=False,
         compare=False,
     )
+
+    def __post_init__(self) -> None:
+        """Validate the optional callback log path while keeping business IDs local.
+
+        :raises LclValidationError: If the log stack is not a tuple of nonempty strings.
+        """
+        validate_log_stack(self.log_task_stack)
 
     @guard_failure(LclWorkflowError, WorkflowErrorCode.E33_WORKFLOW_CONTEXT_NATIVE_FAILURE)
     def log_event(

@@ -51,7 +51,7 @@ async def test_business_event_fields_metadata_and_caller(caplog: pytest.LogCaptu
     assert event.__dict__["lclang_task_branch"] == "root.child"
     assert event.__dict__["lclang_dryrun"] is True
     assert event.getMessage() == (
-        "event 'copied': [root.child] (dryrun)\n    visible: 'shown'\n    count  : 3"
+        "[root.child] | copied (dryrun)\n    visible: 'shown'\n    count  : 3"
     )
     assert "hidden" not in event.getMessage() and "dryrun" in event.getMessage()
     assert "...<truncated>" in caplog.records[1].getMessage()
@@ -104,7 +104,7 @@ async def test_disabled_and_masked_events_do_not_read_or_format(
         assert touches == []
         assert "\n    secret: *masked*\n    value : *masked*" in caplog.records[0].getMessage()
         assert "same-object" in caplog.records[1].getMessage()
-        assert caplog.records[2].getMessage() == "event 'empty': [root]"
+        assert caplog.records[2].getMessage() == "[root] | empty"
 
 
 @pytest.mark.asyncio
@@ -166,7 +166,7 @@ async def test_lclang_logger_keeps_business_caller_and_configuration() -> None:
         expected = line.f_lineno + 1
         context.log_event("warning", level=logging.WARNING, value=3)
     assert stream.getvalue().strip() == (
-        f"test_events.py:{expected} WARNING [APP] event 'warning': [root]\n    value: 3"
+        f"test_events.py:{expected} WARNING [APP] [root] | warning\n    value: 3"
     )
 
 
@@ -197,7 +197,7 @@ async def test_multiline_events_reach_console_and_files(standard: bool) -> None:
                 [wf.TaskID("root")],
             )
             context.log_event("saved", first=1, longer=2)
-        expected = "event 'saved': [root]\n    first : 1\n    longer: 2"
+        expected = "[root] | saved\n    first : 1\n    longer: 2"
         assert stream.getvalue().count(expected) == 1
         files = await asyncio.to_thread(lambda: list(Path(directory).rglob("*.log")))
         assert files

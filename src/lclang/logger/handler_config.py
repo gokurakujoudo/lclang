@@ -27,6 +27,12 @@ DEFAULT_TAKEOVER = ("uvicorn", "uvicorn.error", "uvicorn.access")
 VERBOSE_FORMAT = (
     "%(asctime)s | %(levelname)-8s | pid=%(process)d thread=%(threadName)s | %(message)s"
 )
+# Business event layout follows the workflow reference: application locations
+# identify the producer while task metadata supplies the execution identity.
+EVENT_FORMAT = (
+    "%(asctime)s | %(levelname)-8s | pid=%(process)d thread=%(threadName)s | "
+    "%(filename)s:%(lineno)d | %(funcName)s | %(message)s"
+)
 CONFIG_FIELDS = {
     "level",
     "format",

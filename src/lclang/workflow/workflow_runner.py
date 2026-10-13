@@ -123,7 +123,7 @@ async def execute_task(
             )
             record_exception(state, manager, stack, recorded)
     finalize_manager(manager)
-    log_task_complete(state.context, stack, manager.current.status)
+    log_task_complete(state.context, stack, manager.current.status, state.callback_times.get(stack))
     output = state.task_outputs.get(task.task_id)
     if output is not None:
         log_mapping(
