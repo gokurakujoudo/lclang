@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.1.2 - 2026-10-16
+
 ### Improvements
 
 - Compact default log records with a five-character level column,
