@@ -280,7 +280,8 @@ or a bounded typed representation for a direct Python or CLI value. Masked
 definitions show only `*masked*`; masked direct values retain their type. This
 inspection is lazy, so it neither evaluates expressions nor populates Frame
 caches. The default file format is a stable pipe-delimited record containing
-timestamp, severity, logger, source location, function, and rendered message.
+timestamp, severity, `thread_name(pid)`, logger,
+`qualified_module_name.py:lineno:func_name`, and rendered message.
 
 `--verbose` has no short spelling because `-v/--version` remains the root
 version operation. Like other common options, verbose belongs after the selected

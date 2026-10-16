@@ -11,7 +11,8 @@ from typing import Any
 from lclang.error import LclLoggerError, LoggerErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
-from lclang.logger.record_formatter import PREFIX_ATTRIBUTE
+from lclang.logger.config_validation import boolean
+from lclang.logger.record_formatter import COMPACT_ATTRIBUTE, PREFIX_ATTRIBUTE
 from lclang.logger.runtime_registry import current_runtime
 
 
@@ -48,80 +49,140 @@ class Logger:
         return not current_runtime().handler.closing and self.backend.isEnabledFor(level)
 
     @guard_failure(LclLoggerError, LoggerErrorCode.E11_LOGGER_CONFIGURATION_NATIVE_FAILURE)
-    def log(self, level: int, msg: object, *args: object, **kwargs: Any) -> None:
+    def log(
+        self, level: int, msg: object, *args: object, compact: bool = False, **kwargs: Any
+    ) -> None:
         """Forward a record with prefix metadata and adjusted stacklevel.
 
         :param level: Numeric severity.
         :param msg: Stdlib message object or formatting template.
         :param args: Deferred message formatting arguments.
+        :param compact: Whether to omit logger name and source location in default layouts.
         :param kwargs: Stdlib extra, exception and caller options.
+        :raises LclValidationError: If compact is not Boolean.
         """
+        boolean(compact, "compact")
         runtime = current_runtime()
         with runtime.handler.admission:
             if runtime.handler.closing:
                 return
             extra = dict(kwargs.pop("extra", None) or {})
             extra[PREFIX_ATTRIBUTE] = self.prefix
+            extra[COMPACT_ATTRIBUTE] = compact
             stacklevel = kwargs.pop("stacklevel", 1) + self.emit_level + 2
             self.backend.log(level, msg, *args, extra=extra, stacklevel=stacklevel, **kwargs)
 
     @guard_failure(LclLoggerError, LoggerErrorCode.E11_LOGGER_CONFIGURATION_NATIVE_FAILURE)
-    def debug(self, msg: object, *args: object, **kwargs: Any) -> None:
+    def debug(self, msg: object, *args: object, compact: bool = False, **kwargs: Any) -> None:
         """Emit DEBUG through the shared forwarding path.
 
         :param msg: Message object or template.
         :param args: Deferred formatting arguments.
+        :param compact: Whether to omit logger name and source location in default layouts.
         :param kwargs: Stdlib logging options.
+        :raises LclValidationError: If compact is not Boolean.
         """
-        self.log(logging.DEBUG, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 2, **kwargs)
+        self.log(
+            logging.DEBUG,
+            msg,
+            *args,
+            compact=compact,
+            stacklevel=kwargs.pop("stacklevel", 1) + 2,
+            **kwargs,
+        )
 
     @guard_failure(LclLoggerError, LoggerErrorCode.E11_LOGGER_CONFIGURATION_NATIVE_FAILURE)
-    def info(self, msg: object, *args: object, **kwargs: Any) -> None:
+    def info(self, msg: object, *args: object, compact: bool = False, **kwargs: Any) -> None:
         """Emit INFO through the shared forwarding path.
 
         :param msg: Message object or template.
         :param args: Deferred formatting arguments.
+        :param compact: Whether to omit logger name and source location in default layouts.
         :param kwargs: Stdlib logging options.
+        :raises LclValidationError: If compact is not Boolean.
         """
-        self.log(logging.INFO, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 2, **kwargs)
+        self.log(
+            logging.INFO,
+            msg,
+            *args,
+            compact=compact,
+            stacklevel=kwargs.pop("stacklevel", 1) + 2,
+            **kwargs,
+        )
 
     @guard_failure(LclLoggerError, LoggerErrorCode.E11_LOGGER_CONFIGURATION_NATIVE_FAILURE)
-    def warning(self, msg: object, *args: object, **kwargs: Any) -> None:
+    def warning(self, msg: object, *args: object, compact: bool = False, **kwargs: Any) -> None:
         """Emit WARNING through the shared forwarding path.
 
         :param msg: Message object or template.
         :param args: Deferred formatting arguments.
+        :param compact: Whether to omit logger name and source location in default layouts.
         :param kwargs: Stdlib logging options.
+        :raises LclValidationError: If compact is not Boolean.
         """
-        self.log(logging.WARNING, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 2, **kwargs)
+        self.log(
+            logging.WARNING,
+            msg,
+            *args,
+            compact=compact,
+            stacklevel=kwargs.pop("stacklevel", 1) + 2,
+            **kwargs,
+        )
 
     @guard_failure(LclLoggerError, LoggerErrorCode.E11_LOGGER_CONFIGURATION_NATIVE_FAILURE)
-    def error(self, msg: object, *args: object, **kwargs: Any) -> None:
+    def error(self, msg: object, *args: object, compact: bool = False, **kwargs: Any) -> None:
         """Emit ERROR through the shared forwarding path.
 
         :param msg: Message object or template.
         :param args: Deferred formatting arguments.
+        :param compact: Whether to omit logger name and source location in default layouts.
         :param kwargs: Stdlib logging options.
+        :raises LclValidationError: If compact is not Boolean.
         """
-        self.log(logging.ERROR, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 2, **kwargs)
+        self.log(
+            logging.ERROR,
+            msg,
+            *args,
+            compact=compact,
+            stacklevel=kwargs.pop("stacklevel", 1) + 2,
+            **kwargs,
+        )
 
     @guard_failure(LclLoggerError, LoggerErrorCode.E11_LOGGER_CONFIGURATION_NATIVE_FAILURE)
-    def critical(self, msg: object, *args: object, **kwargs: Any) -> None:
+    def critical(self, msg: object, *args: object, compact: bool = False, **kwargs: Any) -> None:
         """Emit CRITICAL through the shared forwarding path.
 
         :param msg: Message object or template.
         :param args: Deferred formatting arguments.
+        :param compact: Whether to omit logger name and source location in default layouts.
         :param kwargs: Stdlib logging options.
+        :raises LclValidationError: If compact is not Boolean.
         """
-        self.log(logging.CRITICAL, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 2, **kwargs)
+        self.log(
+            logging.CRITICAL,
+            msg,
+            *args,
+            compact=compact,
+            stacklevel=kwargs.pop("stacklevel", 1) + 2,
+            **kwargs,
+        )
 
     @guard_failure(LclLoggerError, LoggerErrorCode.E11_LOGGER_CONFIGURATION_NATIVE_FAILURE)
-    def exception(self, msg: object, *args: object, **kwargs: Any) -> None:
+    def exception(self, msg: object, *args: object, compact: bool = False, **kwargs: Any) -> None:
         """Emit ERROR with the current exception unless explicitly overridden.
 
         :param msg: Message object or template.
         :param args: Deferred formatting arguments.
+        :param compact: Whether to omit logger name and source location in default layouts.
         :param kwargs: Stdlib logging options including optional exc_info.
+        :raises LclValidationError: If compact is not Boolean.
         """
         kwargs.setdefault("exc_info", True)
-        self.log(logging.ERROR, msg, *args, stacklevel=kwargs.pop("stacklevel", 1) + 2, **kwargs)
+        self.log(
+            logging.ERROR,
+            msg,
+            *args,
+            compact=compact,
+            stacklevel=kwargs.pop("stacklevel", 1) + 2,
+            **kwargs,
+        )

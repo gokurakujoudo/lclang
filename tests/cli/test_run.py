@@ -230,16 +230,16 @@ def test_application_info_and_verbose_debug_logs_print_to_stderr(
             )
             assert asyncio.run(entrance.run(["python", "tool.py", "logged"])) == 0
             captured = capsys.readouterr()
-            assert " | INFO     | " in captured.err
-            assert " | WARNING  | " in captured.err
+            assert " | INFO  | " in captured.err
+            assert " | WARN  | " in captured.err
             assert " | info message" in captured.err
             assert " | warning message" in captured.err
-            assert " | ERROR    | " in captured.err
+            assert " | ERROR | " in captured.err
             assert " | error message" in captured.err
 
             assert asyncio.run(entrance.run(["python", "tool.py", "logged", "--verbose"])) == 0
             captured = capsys.readouterr()
-            assert " | DEBUG    | " in captured.err
+            assert " | DEBUG | " in captured.err
             assert " | debug message" in captured.err
             assert " | info message" in captured.err
             assert " | warning message" in captured.err

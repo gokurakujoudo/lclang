@@ -59,7 +59,7 @@ Overlapping CLI entry invocations are rejected because root logging is global.
 All diagnostic console records use stderr; successful command results retain
 stdout. The shared format uses local time with microseconds and a numeric offset
 by default; `-o logger.timezone utc` selects UTC with a `Z` suffix. The timezone
-setting also applies under `--verbose`. Verbose records display `VERBOSE` while
+setting also applies under `--verbose`. Verbose records display `TRACE` while
 remaining DEBUG records. Their default prefix contains time, pid and thread;
 other records retain source name, file/line and function. Explicit formats remain
 effective. Each permanent file segment begins

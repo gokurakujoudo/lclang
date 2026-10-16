@@ -11,7 +11,7 @@ Runtime trees contain dependencies that actually ran, sorted by
 unevaluated definitions. Cached inspection nodes stop expansion; their structured
 fields still retain the static children. Workflow trees retain execution order.
 
-Verbose events are DEBUG records displayed as VERBOSE by the framework formatter.
+Verbose events are DEBUG records displayed as TRACE by the framework formatter.
 The default verbose prefix retains the timestamp, process and thread. Root requests
 produce one complete successful runtime tree. First failures show a short reason,
 failure identifier and execution context; exception output expands the failing
@@ -156,7 +156,7 @@ async def main() -> None:
             else:
                 raise AssertionError("The zero divisor must fail")
     text = output.getvalue()
-    assert "VERBOSE Failed while evaluating total [LCL131421: division by zero]" in text
+    assert "TRACE Failed while evaluating total [LCL131421: division by zero]" in text
     assert text.count("Error in evaluating RESULT") == 1
     assert "Returned the cached failure of total; no new evaluation" in text
     assert "Could not evaluate RESULT" in text

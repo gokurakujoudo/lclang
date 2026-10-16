@@ -19,19 +19,17 @@ from lclang.logger.traceback_policy import validate_traceback_style
 
 # Unitless format and takeover names follow the logger reference and CLI diagnostic layout.
 DEFAULT_FORMAT = (
-    "%(asctime)s | %(levelname)-8s | pid=%(process)d thread=%(threadName)s | "
-    "%(name)s | %(filename)s:%(lineno)d | %(funcName)s | %(message)s"
+    "%(asctime)s | %(levelname)-5s | %(threadName)s(%(process)d) | "
+    "%(name)s | %(lclang_source_file)s:%(lineno)d:%(funcName)s | %(message)s"
 )
 DEFAULT_TAKEOVER = ("uvicorn", "uvicorn.error", "uvicorn.access")
 # Default verbose layout retains event identity while omitting implementation locations.
-VERBOSE_FORMAT = (
-    "%(asctime)s | %(levelname)-8s | pid=%(process)d thread=%(threadName)s | %(message)s"
-)
+VERBOSE_FORMAT = "%(asctime)s | %(levelname)-5s | %(threadName)s(%(process)d) | %(message)s"
 # Business event layout follows the workflow reference: application locations
 # identify the producer while task metadata supplies the execution identity.
 EVENT_FORMAT = (
-    "%(asctime)s | %(levelname)-8s | pid=%(process)d thread=%(threadName)s | "
-    "%(filename)s:%(lineno)d | %(funcName)s | %(message)s"
+    "%(asctime)s | %(levelname)-5s | %(threadName)s(%(process)d) | "
+    "%(lclang_source_file)s:%(lineno)d:%(funcName)s | %(message)s"
 )
 CONFIG_FIELDS = {
     "level",

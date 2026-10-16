@@ -67,8 +67,8 @@ def test_standard_layout_arguments_and_empty_exception_tuple_remain_supported() 
     formatter = LclExceptionFormatter(
         "{levelname} {application} {message}", style="{", defaults={"application": "app"}
     )
-    assert formatter.format(record) == "VERBOSE app read"
-    assert LclExceptionFormatter("$levelname $message", style="$").format(record) == "VERBOSE read"
+    assert formatter.format(record) == "TRACE app read"
+    assert LclExceptionFormatter("$levelname $message", style="$").format(record) == "TRACE read"
     assert formatter.formatException((None, None, None)) == ""
     assert record.levelname == "DEBUG" and record.levelno == logging.DEBUG
     assert logging.getLevelName(logging.DEBUG) == "DEBUG"

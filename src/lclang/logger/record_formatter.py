@@ -1,4 +1,4 @@
-"""Framework timestamps and default verbose, lifecycle and business event layouts.
+"""Framework timestamps and default compact, verbose, lifecycle and event layouts.
 
 Defines ``RecordFormatter``.
 """
@@ -14,6 +14,7 @@ from lclang.logger.lcl_exception_formatter import LclExceptionFormatter
 
 # Unitless LogRecord extras shared by wrappers and CLI failure reporting.
 PREFIX_ATTRIBUTE = "lclang_prefix"
+COMPACT_ATTRIBUTE = "lclang_compact"
 FILE_ONLY_ATTRIBUTE = "lclang_file_only"
 DIAGNOSTIC_ATTRIBUTE = "lclang_failure_diagnostic"
 
@@ -70,7 +71,8 @@ class RecordFormatter(LclExceptionFormatter):
         :returns: Configured log text with protected exception trees when present.
         """
         if self.verbose_formatter is not None and (
-            getattr(record, "lclang_verbose", False)
+            getattr(record, COMPACT_ATTRIBUTE, False)
+            or getattr(record, "lclang_verbose", False)
             or getattr(record, "lclang_workflow_lifecycle", False)
         ):
             return self.verbose_formatter.format(record)

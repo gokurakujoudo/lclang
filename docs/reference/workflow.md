@@ -522,7 +522,7 @@ publication, declared child traversal and extra Frame cleanup are excluded.
 Context resource holding time is excluded. I/O and dynamic workflow calls awaited
 inside an action count toward that action. Unstarted callbacks have no duration.
 
-An explicit stopping status produces a single-line WARNING headed
+An explicit stopping status produces a single-line WARN headed
 `Workflow task stopped: [path] STATUS`, with the reason and the remaining task
 traversal being skipped. `WorkflowStatusStop` still reaches context exit so the
 context can finish its work. It does not produce an exception tree or traceback
@@ -561,7 +561,8 @@ and task Frames.
 masked_fields=(), **values)` emits an application event through the execution
 logger and its existing configuration. Messages start with `[task.path] | message`,
 including a bounded, newline-escaped message and dry-run status. The default event
-layout omits the logger name but keeps the application's file, line and function.
+layout omits the logger name but keeps
+`qualified_module_name.py:lineno:func_name` for the application caller.
 Record metadata also supplies
 `lclang_event`, `lclang_task_branch`, and `lclang_dryrun`.
 
@@ -594,7 +595,7 @@ handling with `except*` and native control signals.
 
 ### Logging normal context unwinding
 
-Use a field-free WARNING event when a stopping task causes a context to skip its
+Use a field-free WARN event when a stopping task causes a context to skip its
 normal success actions. Put the reason and the actual skipped business action in
 the message. Calling `logger.exception` would report this expected exit as a new
 exception. A failed handler or cleanup operation still needs its error diagnostic.
@@ -668,7 +669,7 @@ async def main() -> None:
     assert result.execution_status.status is ExecutionStatus.ERROR
     assert notifications == [] and cleanup == ["closed"]
     lines = output.getvalue().splitlines()
-    assert "WARNING [root.scope] | task 'root' ended with ERROR; skipped: success notification" in lines
+    assert "WARN [root.scope] | task 'root' ended with ERROR; skipped: success notification" in lines
     assert not any("Python traceback:" in line for line in lines)
 
 
