@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Improvements
+
+- Compact default log records with a five-character level column,
+  `thread_name(pid)` and `qualified_module_name.py:lineno:func_name` caller
+  locations. All lclang formatters display WARN, CRIT, UNSET and TRACE while
+  preserving original severity names, numeric levels and filtering.
+- Add keyword-only `compact=False` to every downstream logger emission method.
+  Set `compact=True` for structural messages without logger names or caller
+  locations; explicit configured formats retain their chosen layout.
+
 ## 1.1.1 - 2026-10-13
 
 ### Improvements

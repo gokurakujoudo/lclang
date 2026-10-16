@@ -110,6 +110,47 @@ logging and do not mutate referenced objects afterwards. For expensive business
 summaries, check `logger.isEnabledFor(logging.DEBUG)` before constructing them.
 That checks producer admission; a sink can still reject the resulting record.
 
+## Use compact records for task boundaries
+
+Pass `compact=True` to a downstream logger method when a task boundary needs
+only the message and the shared timestamp, level and thread/process prefix.
+Ordinary calls on the same logger keep the full default layout.
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+import io
+
+from lclang.logger import Logger, use_logger, use_logger_handler
+
+
+async def main() -> None:
+    output = io.StringIO()
+    async with use_logger_handler({"console": {"stream": output}}):
+        logger: Logger = await use_logger("catalog.batch")
+        logger.info("Task started", compact=True)
+        logger.warning("Copied %d rows", 3)
+        logger.info("Task finished", compact=True)
+    lines = output.getvalue().splitlines()
+    assert [line.split(" | ")[-1] for line in lines] == [
+        "Task started", "Copied 3 rows", "Task finished"
+    ]
+    assert len(lines[0].split(" | ")) == len(lines[2].split(" | ")) == 4
+    assert " | catalog.batch | " in lines[1]
+    assert ".py:" in lines[1] and " | WARN  | " in lines[1]
+
+
+asyncio.run(main())
+```
+
+The first and last lines omit the logger name and caller location. The warning
+between them retains both, and formats its argument in the writer. The scope
+drains all three records before the assertions run. `compact=False` is the
+default on `log`, `debug`, `info`, `warning`, `error`, `critical` and `exception`.
+The flag changes the default layout for one record; an explicitly configured
+`format` still controls its selected fields. Exception records keep their full
+diagnostic tree in either layout.
+
 ## Configure levels and outputs before starting business work
 
 `LoggerHandlerConfig` accepts Python declarations or mappings. If the application
@@ -128,15 +169,19 @@ intends to replace their handlers and levels for the scope; other named loggers
 retain their stdlib settings.
 
 `use_verbose` emits DEBUG records but does not lower thresholds. The framework
-formatter displays their level as `VERBOSE` without changing the original record.
+formatter displays their level as `TRACE` without changing the original record.
 `resolve_logger_config(..., verbose=True)` lowers the global and enabled sink
 thresholds to DEBUG. Disabled sinks stay disabled, and source filters remain in
 effect. `logger_names` on a file sink selects a source and its dot-separated
 descendants; it does not set the producer's level.
 
 Keep console output on stderr when stdout carries a result or another program's
-input. Use the default format for timestamps, process/thread identity and the
-shorter verbose prefix, or choose an explicit application format. Explicit
+input. The default format uses a five-character level column,
+`thread_name(pid)` and `qualified_module_name.py:lineno:func_name`; verbose
+and workflow lifecycle records omit the source column. All lclang formatters
+display WARNING as WARN, CRITICAL as CRIT, NOTSET as UNSET and marked verbose
+records as TRACE. Configuration names and numeric severities stay unchanged.
+Use this default or choose an explicit application format. Explicit
 formats are respected. `timezone="utc"` changes displayed timestamps to UTC;
 the default uses local time with a numeric offset. It has no effect when the
 chosen format omits `%(asctime)s`.
@@ -203,7 +248,7 @@ async def main() -> None:
         path = runtime.metrics.sinks["file.diagnostic"].path
         assert path is not None
         text = path.read_text(encoding="utf-8")
-        assert "VERBOSE | Failed while evaluating total" in text
+        assert "TRACE | Failed while evaluating total" in text
         assert "Cached failures: total, RESULT" in text
         assert f"(failure {identity})" in text
         assert text.count("Error in evaluating RESULT") == 1
@@ -220,9 +265,9 @@ exception report:
 
 <!-- lclang-doc-output: stdout -->
 ```text
-VERBOSE | Read amount from external input in Frame "LCL_IMPORTS": (int) 39 (evaluation E2)
-VERBOSE | Read divisor from external input in Frame "LCL_IMPORTS": (int) 0 (evaluation E2)
-VERBOSE | Failed while evaluating total [LCL131421: division by zero] (failure F3)
+TRACE | Read amount from external input in Frame "LCL_IMPORTS": (int) 39 (evaluation E2)
+TRACE | Read divisor from external input in Frame "LCL_IMPORTS": (int) 0 (evaluation E2)
+TRACE | Failed while evaluating total [LCL131421: division by zero] (failure F3)
   Type: LclEvaluationError
   Source: "<string>":1:1
   Evaluation: E2
@@ -232,7 +277,7 @@ VERBOSE | Failed while evaluating total [LCL131421: division by zero] (failure F
   Execution: new evaluation
   Task: Task-3
   Phase: arithmetic operation
-VERBOSE | Could not evaluate RESULT (failure F3)
+TRACE | Could not evaluate RESULT (failure F3)
   Cached failures: total, RESULT
 ERROR | Order calculation failed
 Error in evaluating RESULT [LCL131421: division by zero] (failure F3)
@@ -342,7 +387,7 @@ async def main() -> None:
         output.seek(0)
         output.truncate(0)
         await calculate(logger, verbose=True)
-        assert "VERBOSE | Evaluated RESULT" in output.getvalue()
+        assert "TRACE | Evaluated RESULT" in output.getvalue()
         assert "RESULT: amount * 2 (" in output.getvalue()
         print("With verbose enabled:")
         print(output.getvalue(), end="")
@@ -368,9 +413,9 @@ business message:
 With the handler filter:
 INFO | Calculated total=6
 With verbose enabled:
-VERBOSE | Read amount from external input in Frame "LCL_IMPORTS": (int) 3 (evaluation E2)
-VERBOSE | Evaluated RESULT: (int) 6 (evaluation E2)
-VERBOSE | Evaluation tree for RESULT (evaluation E2)
+TRACE | Read amount from external input in Frame "LCL_IMPORTS": (int) 3 (evaluation E2)
+TRACE | Evaluated RESULT: (int) 6 (evaluation E2)
+TRACE | Evaluation tree for RESULT (evaluation E2)
   Result: (int) 6
 RESULT: amount * 2 ("<string>":1:1)
 └─ amount: (int) 3 (external)

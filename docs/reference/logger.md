@@ -13,13 +13,28 @@ stdlib loggers and explicit uncaught-error hooks.
 
 ## Configuration
 
+The default ordinary record is
+`timestamp | level | thread_name(pid) | logger_name | qualified_module_name.py:lineno:func_name | message`.
+The level column is left-aligned with a minimum width of five characters.
+Caller module names come from the producing Python frame's `__name__`, including
+`__main__.py` for script entry points. The queue snapshots that name before the
+writer formats the record. Records without caller module metadata retain their
+original filename. Source lookup does not import modules or read source files.
+
+Every lclang formatter, including `LclExceptionFormatter` and explicit layouts,
+displays `WARNING` as `WARN`, `CRITICAL` as `CRIT`, and `NOTSET` as `UNSET`.
+Marked verbose DEBUG records display `TRACE`. These are display labels only:
+original records, numeric levels, configuration names and filtering are unchanged.
+Application-defined level names retain their spelling and are never truncated.
+Explicit layouts retain their selected fields and column widths.
+
 Default workflow lifecycle lines retain timestamp, level, process and thread.
 Business events also retain the application file, line and function, with
 `[task.path] | message` headings. Both omit the fixed framework logger name.
 Explicit `format` layouts apply to these records unchanged. See the
 [workflow log contract](workflow.md#business-event-logs) for paths and fields.
 
-See [text diagnostics](text-display.md) for shared tree layout, VERBOSE labels,
+See [text diagnostics](text-display.md) for shared tree layout, TRACE labels,
 inline code reasons, compact/full tracebacks and external `LclExceptionFormatter`.
 
 Python objects and mappings share the `level`, `format`, `timezone`, `traceback_style`, `console`, `file`,
@@ -272,6 +287,15 @@ available through `str(error)` and retains the same identifier.
 `use_logger(name=None, prefix="", emit_level=0)` selects a stdlib logger;
 None selects root. Prefixes are formatter-only and appear on the first line.
 `emit_level` skips additional wrapper callers through stdlib stacklevel.
+`Logger.log`, `debug`, `info`, `warning`, `error`, `critical` and `exception`
+accept the keyword-only `compact: bool = False` parameter. For example,
+`logger.info("Task started", compact=True)` selects
+`timestamp | level | thread_name(pid) | message` for that record's default layout.
+Other calls through the same logger keep their usual layout. An explicit
+configured `format` remains authoritative. Prefixes, arguments, numeric severity,
+filters and exception trees work in either layout; the original record retains
+its logger name and caller location. A non-Boolean `compact` raises
+`LclValidationError` with code `LCL612141` through shared logger flag validation.
 Messages, arguments and exception formatting run in the writer. Queue records
 are shallow copies: do not mutate referenced arguments after logging.
 

@@ -4,6 +4,7 @@ import asyncio
 import inspect
 import io
 import logging
+import os
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -23,6 +24,32 @@ class EventRecord:
 
     visible: str = "shown"
     secret: str = "hidden"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("standard", [False, True])
+async def test_default_event_layout_uses_qualified_application_caller(standard: bool) -> None:
+    """Business events keep one qualified source column without the framework logger name."""
+    stream = io.StringIO()
+    async with use_logger_handler({"console": {"stream": stream}}), define_frame() as frame:
+        logger = logging.getLogger("events") if standard else await use_logger("events")
+        context = wf.TaskContext(
+            False,
+            date(2026, 9, 22),
+            False,
+            logger,
+            frame,
+            wf.define_task("root", "Root"),
+            [wf.TaskID("root")],
+        )
+        caller = inspect.currentframe()
+        assert caller is not None
+        expected = caller.f_lineno + 1
+        context.log_event("saved", level=logging.WARNING)
+    assert stream.getvalue().endswith(
+        f" | WARN  | MainThread({os.getpid()}) | {__name__}.py:{expected}:"
+        "test_default_event_layout_uses_qualified_application_caller | [root] | saved\n"
+    )
 
 
 @pytest.mark.asyncio
@@ -166,7 +193,7 @@ async def test_lclang_logger_keeps_business_caller_and_configuration() -> None:
         expected = line.f_lineno + 1
         context.log_event("warning", level=logging.WARNING, value=3)
     assert stream.getvalue().strip() == (
-        f"test_events.py:{expected} WARNING [APP] [root] | warning\n    value: 3"
+        f"test_events.py:{expected} WARN [APP] [root] | warning\n    value: 3"
     )
 
 

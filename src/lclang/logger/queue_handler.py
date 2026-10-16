@@ -1,11 +1,12 @@
 """Admission-ordered queue handler with no producer formatting or output.
 
-Defines ``LocalQueueHandler``.
+Defines ``resolve_caller_module`` and ``LocalQueueHandler``.
 """
 
 from __future__ import annotations
 
 import copy
+import inspect
 import logging
 from queue import SimpleQueue
 from threading import RLock
@@ -14,6 +15,29 @@ from lclang.error import LclLoggerError, LoggerErrorCode
 from lclang.error.exception_base import LclValidationError
 from lclang.error.operation_guard import guard_constructor, guard_failure
 from lclang.logger.logging_metrics import Counters
+
+
+@guard_failure(LclLoggerError, LoggerErrorCode.E36_LOG_QUEUE_NATIVE_FAILURE)
+def resolve_caller_module(record: logging.LogRecord) -> str | None:
+    """Read the actual producer module selected by standard-library caller attribution.
+
+    :param record: Producer record whose pathname, function and line identify the caller.
+    :returns: Nonempty module name, or None when the caller frame is unavailable.
+    """
+    frame = inspect.currentframe()
+    try:
+        while frame is not None:
+            if (
+                frame.f_code.co_filename == record.pathname
+                and frame.f_code.co_name == record.funcName
+                and frame.f_lineno == record.lineno
+            ):
+                name = frame.f_globals.get("__name__")
+                return name if isinstance(name, str) and name else None
+            frame = frame.f_back
+        return None
+    finally:
+        del frame
 
 
 @guard_constructor(LclValidationError, LoggerErrorCode.E36_LOG_QUEUE_NATIVE_FAILURE)
@@ -52,7 +76,9 @@ class LocalQueueHandler(logging.Handler):
         """
         with self.admission:
             if not self.closing:
-                self.queue.put(copy.copy(record))
+                snapshot = copy.copy(record)
+                snapshot.lclang_module_name = resolve_caller_module(record)
+                self.queue.put(snapshot)
                 self.counters.add("records_enqueued")
 
     @guard_failure(LclLoggerError, LoggerErrorCode.E36_LOG_QUEUE_NATIVE_FAILURE)

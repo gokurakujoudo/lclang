@@ -15,6 +15,10 @@ from lclang.error.failure_traceback import render_failure_traceback
 from lclang.error.operation_guard import guard_constructor, guard_failure
 from lclang.logger.traceback_policy import validate_traceback_style
 
+# Unitless display labels follow the logger reference; original severity names
+# remain available to filters, configuration and other handlers.
+DISPLAY_LEVEL_NAMES = {"WARNING": "WARN", "CRITICAL": "CRIT", "NOTSET": "UNSET"}
+
 
 @guard_constructor(LclValidationError, LoggerErrorCode.E41_LOG_FORMATTING_NATIVE_FAILURE)
 class LclExceptionFormatter(logging.Formatter):
@@ -65,14 +69,19 @@ class LclExceptionFormatter(logging.Formatter):
 
     @guard_failure(LclLoggerError, LoggerErrorCode.E41_LOG_FORMATTING_NATIVE_FAILURE)
     def format(self, record: logging.LogRecord) -> str:
-        """Render a detached record with display-only verbose labels and prefixes.
+        """Render a detached record with compact display labels and caller metadata.
 
         :param record: Original producer record, borrowed without modification.
         :returns: Message plus a single diagnostic and optional traceback tree.
         """
         detached = copy.copy(record)
-        if getattr(record, "lclang_verbose", False):
-            detached.levelname = "VERBOSE"
+        detached.levelname = (
+            "TRACE"
+            if getattr(record, "lclang_verbose", False)
+            else DISPLAY_LEVEL_NAMES.get(record.levelname, record.levelname)
+        )
+        module_name = getattr(record, "lclang_module_name", None)
+        detached.lclang_source_file = f"{module_name}.py" if module_name else record.filename
         prefix = getattr(record, "lclang_prefix", "")
         detached.msg = (prefix + " " if prefix else "") + record.getMessage()
         detached.args = ()

@@ -84,10 +84,13 @@ live in `lang.common`. Package metadata reads the sole `__version__.py` definiti
   first-scene summaries, cached returns and complete exception diagnostics.
 - Shared text-tree layout for verbose, errors, inspection, CLI and workflow;
   actual runtime dependencies, sorted static inspection and cached value leaves.
-- Display-only VERBOSE labels and compact prefixes preserve DEBUG admission and
+- Display-only TRACE labels and compact prefixes preserve DEBUG admission and
   original records. Public `LclExceptionFormatter` supports compact or full stacks;
   CLI `eval_lcl` keeps value stdout with optional `TREE`, and `parse_lcl EVAL`
   displays the current runtime tree.
+- Downstream logger methods accept per-call `compact=True` for default task
+  boundary records without logger names or caller locations; explicit formats
+  remain authoritative.
 
 ## Error contracts
 

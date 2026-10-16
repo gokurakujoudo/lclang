@@ -327,7 +327,7 @@ failure, later cached returns and the complete exception diagnostic. See the
 [logging reference](docs/reference/logger.md#verbose-execution-diagnostics).
 
 Text diagnostics share dependency-tree connectors and inline error reasons.
-Verbose records display `VERBOSE` with a compact prefix while retaining DEBUG
+Verbose records display `TRACE` with a compact prefix while retaining DEBUG
 severity. CLI `eval_lcl -o TREE` shows actual dependencies; `parse_lcl` shows
 static inspection unless `-o EVAL` is selected. `LclExceptionFormatter` provides
 the same exception trees to application loggers, with compact or full Python
@@ -384,6 +384,8 @@ Standalone applications use `LoggerHandlerConfig`, `use_logger_handler` and
 `use_logger` from `lclang.logger`, which also exports `Logger`, runtime, resolved
 configuration and metric types. `await resolve_logger_config(frame)` extracts
 `logger.*` from a Frame loaded from `.lclcfg`, without requiring CLI.
+Logger methods accept `compact=True` for task boundaries that omit the logger
+name and caller location from the default layout; ordinary calls retain both.
 Log lines default to server local time with a numeric offset; set
 `logger.timezone` to `"utc"` for UTC timestamps ending in `Z`.
 One background writer handles stderr and named
