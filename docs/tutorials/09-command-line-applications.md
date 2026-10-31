@@ -246,6 +246,9 @@ from lclang.cli import (
 logger.file.app.filename: f"{__command__}-{__ymd__}-{__execution_timestamp__}.log"
 ```
 
+For a complete `--config` and `--as-of` example that loads a JSON calendar,
+see [Load a JSON calendar from CLI configuration](11-business-day-calendars.md#load-a-json-calendar-from-cli-configuration).
+
 ## Trace parsing and evaluation
 
 Place `--verbose` after a leaf command to follow runtime value lookup, caching,

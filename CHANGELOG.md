@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Documentation
+
+- Add executable examples for JSON calendars in CLI configuration and yearly
+  database-backed calendar overrides.
+
 ## 1.1.2 - 2026-10-16
 
 ### Improvements

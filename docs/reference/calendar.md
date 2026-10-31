@@ -106,6 +106,9 @@ dependants, optionally installing a replacement.
 `use_calendar_manager(loaders)` appends a builtin loader last when needed.
 `use_file_system_hardcoded_calendar_loader(path)` accepts `Path` or text.
 
+The tutorial shows [JSON calendar loading from CLI configuration](../tutorials/11-business-day-calendars.md#load-a-json-calendar-from-cli-configuration)
+and [database overrides loaded by year](../tutorials/11-business-day-calendars.md#load-database-overrides-one-year-at-a-time).
+
 ## LCL exposure
 
 Canonical Frames expose the manager helpers and a read-only `calendars`
