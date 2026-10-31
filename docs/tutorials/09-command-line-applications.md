@@ -66,9 +66,19 @@ The declared default supplies `Hello` because no config or override replaces
 handler combines both values, and `CliResult.success` writes the asserted line
 to stdout while mapping to status `0`.
 
-In a real process, call `application.run()` without an explicit token list. The
-adapter uses the current executable and `sys.argv`. Tests should pass exact
-token arrays so shell quoting never becomes part of the unit under test.
+For a real `greeting.py` process, replace the capture and assertions after
+`application` with this entry point:
+
+```python
+if __name__ == "__main__":
+    raise SystemExit(asyncio.run(application.run()))
+```
+
+`application.run()` reads the current executable and `sys.argv`; `SystemExit`
+passes its returned status to the shell. Tests can pass exact token arrays so
+shell quoting never becomes part of the unit under test. The
+[settlement case study](15-energy-settlement-workflow.md#build-the-complete-settlement-command)
+tests a saved entry point in a subprocess as well.
 
 ## Layer configuration, override, and dry-run policy
 

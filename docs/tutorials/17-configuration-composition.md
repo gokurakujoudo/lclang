@@ -622,6 +622,83 @@ example, `--override service.port "LCL[9000]"` supplies integer `9000` to
 dependants. An unmarked `9000` argument remains text. See
 [command-line applications](09-command-line-applications.md).
 
+## Publish a new configuration snapshot
+
+A long-running service may reuse a `ConfigLoader` when the source files are
+immutable. Its successfully loaded sources are snapshots: changing a file does
+not refresh that loader. To pick up a new revision, load through a fresh loader
+or call `load_config`, which creates one for each call. With the default
+filesystem resolver this reads the files again; a custom resolver must provide
+the intended revision itself.
+
+The following fixture starts as `policy.lclcfg`:
+
+<!-- lclang-doc-case: reload-configuration -->
+
+<!-- lclang-doc-file: policy.lclcfg -->
+```lclcfg
+unit_price: 5
+total: unit_price * quantity
+```
+
+The replacement revision is `next-policy.lclcfg`:
+
+<!-- lclang-doc-file: next-policy.lclcfg -->
+```lclcfg
+unit_price: 8
+total: unit_price * quantity
+```
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+from pathlib import Path
+
+from lclang.config import ConfigLoader, FileConfigResolver, load_config
+
+
+async def main() -> None:
+    path = Path("policy.lclcfg")
+    loader = ConfigLoader(FileConfigResolver())
+    first = await loader.load(path)
+    async with first.to_frame(preset={"quantity": 2}) as ongoing:
+        assert await ongoing.get("total") == 10
+        path.write_text(Path("next-policy.lclcfg").read_text(encoding="utf-8"), encoding="utf-8")
+
+        cached = await loader.load(path)
+        fresh = await load_config(path)
+        async with cached.to_frame(preset={"quantity": 2}) as old_run:
+            assert await old_run.get("total") == 10
+        async with fresh.to_frame(preset={"quantity": 2}) as new_run:
+            assert await new_run.get("total") == 16
+        assert await ongoing.get("total") == 10
+        print("old: 10, new: 16")
+
+
+asyncio.run(main())
+```
+
+The program prints:
+
+<!-- lclang-doc-output: stdout -->
+```text
+old: 10, new: 16
+```
+<!-- /lclang-doc-case -->
+
+The reused loader expands its cached source, so `cached` and the in-flight
+Frame still use the original price. The fresh `load_config` call reads the
+replacement, and a new Frame evaluates the new price. A successful load checks
+parsing and expansion, but definitions are evaluated lazily and some branches
+may remain untested. Before publishing, evaluate representative requests in
+owned Frames according to the application's validation policy; those checks
+cannot prove every possible path. Publish the new `Config` to later requests
+only after validation succeeds, and let in-flight requests finish with their old
+Config and owned Frames. If a configuration spans multiple files,
+publish a coherent revision of all files before loading it, or use a resolver
+that provides a consistent version. A fresh loader does not make concurrent
+file updates atomic.
+
 ## Keep composition predictable
 
 - Start every introduction target with `f"{__dir__}/..."`. Each file then

@@ -4,6 +4,8 @@
 
 ### Documentation
 
+- Clarify configuration reload and limits, workflow resource scope and CLI
+  entry points, utility failures, and logging rotation and monitoring.
 - Explain calendar classification, navigation, yearly generation, and the
   functional, forward-step, and year-batch implementation strategies.
 - Add executable examples for JSON calendars in CLI configuration and yearly

@@ -1,5 +1,13 @@
 # Quick Start Guide
 
+Install `lclang` in a Python 3.14 or newer environment:
+
+```console
+python -m pip install lclang
+```
+
+See [installation](installation.md) for environment setup and source installation.
+
 An LCL `Module` stores named expressions without evaluating them. A `Frame`
 supplies host values and evaluates definitions lazily, resolving references to
 other definitions as needed.

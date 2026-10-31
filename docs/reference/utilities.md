@@ -60,6 +60,42 @@ Python integrations may import `STANDARD_MANIFESTS`, `STANDARD_PRESET`,
 `assemble_stdlib`, `collect`, `first`, `join`, `lines`, `lookup`, `merge`,
 `json_encode`, `json_decode`, and `recursive` from `lclang.lang.stdlib`.
 
+### Iterable, text, mapping, and JSON contracts
+
+Python calls use the signatures below. In LCL, use the corresponding namespace
+names, such as `iter.first(...)` and `json.decode(...)`.
+
+| Python call | Result and boundaries |
+| --- | --- |
+| `await collect(values)` | Fresh list of all items in order; accepts sync or async iterables. |
+| `await first(values, default=None)` | First item, or `default` for an empty iterable; stops requesting items after the first. |
+| `await join(separator, values)` | Joins a sync or async iterable of strings. The separator and every item must be strings; no implicit string conversion. |
+| `lines(value, *, keep_ends=False)` | A fresh list using Python `str.splitlines`; `keep_ends=True` retains line endings. |
+| `lookup(mapping, key, default=None)` | The present value, including `None`, or the default for an absent key. |
+| `merge(*mappings)` | Read-only shallow snapshot, applied left to right with later values winning; `merge()` is empty. Nested objects retain their identity. |
+| `json_encode(value)` | Compact JSON text with direct Unicode characters and insertion order preserved. |
+| `json_decode(value)` | Scalar, list, or dictionary decoded from JSON text. |
+
+The iterable helpers prefer async iteration when both protocols exist and await
+items that are awaitable. `collect` and `join` consume their input; `first`
+stops early, leaving later items untouched. They do not take ownership of a
+caller-supplied iterable or promise to close its underlying resources. Keep
+files and other resources in their own context managers and close an early-ended
+generator when necessary. Non-iterables and iteration failures raise
+`LclEvaluationError`; ordinary producer exceptions remain in `__cause__`.
+Invalid helper arguments or JSON data raise `LclValidationError`. Native
+cancellation and other control signals propagate.
+
+JSON supports `None`, Booleans, strings, integers, finite floats, lists, tuples,
+and dictionaries with `None`, Boolean, string, integer, or finite float keys.
+Keys other than strings are converted to JSON strings during encoding. Distinct
+Python keys can consequently encode to the same JSON key, so use string keys
+when round-trip identity matters. Cycles, unsupported objects, and non-finite
+numbers are rejected. Decoding duplicate object names keeps the last value; it
+does not enforce unique names. Validate uniqueness separately if required by
+the application's input contract. See the [utility tutorial](../tutorials/16-python-utilities.md#reuse-the-reviewed-standard-helpers)
+for boundary examples.
+
 ## Snowflake IDs
 
 `from lclang.utils import SnowflakeGenerator` exposes
@@ -86,8 +122,10 @@ share it. It never sleeps or spins waiting for the clock.
 
 `next_id()` raises `LclValidationError` when the clock precedes the epoch,
 `LclStateError` when it moves behind the last successful millisecond, and
-`OverflowError` when the sequence or 41-bit timestamp is exhausted. Failures
-leave the last successful timestamp and sequence unchanged. After sequence
+`LclUtilityError` when the sequence or 41-bit timestamp is exhausted.
+The codes `LCL741892` and `LCL741891` distinguish sequence and timestamp
+exhaustion, respectively. Failures leave the last successful timestamp and
+sequence unchanged. After sequence
 exhaustion, the caller may retry when the clock advances; after rollback, it
 must wait until the clock catches up (and advances if that sequence was full).
 Timestamp exhaustion requires a planned migration to a new ID domain.

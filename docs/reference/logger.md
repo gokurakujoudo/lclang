@@ -69,10 +69,39 @@ the template, including False and empty collections. Thus setting
 `-o logger.file.audit.enabled "LCL[False]"`. A disabled sink does no file I/O.
 
 Files have independent `enabled`, `directory`, `filename`, `level`, `encoding`,
-`flush_interval`, `logger_names`, and `rotation` settings. Rotation supports
-`none`, `size`, `time`, and `size_or_time`; intervals use positive integer
-`s/m/h/d` units. Aligned rotation supports UTC `1h` and `1d`. Source names
-match themselves and dot-separated descendants. Empty source lists match all.
+`flush_interval`, `logger_names`, and `rotation` settings. Source names match
+themselves and dot-separated descendants. Empty source lists match all.
+
+A file's `rotation` mapping has these fields:
+
+| Field | Default | Contract |
+| --- | --- | --- |
+| `mode` | `"none"` | `"none"`, `"size"`, `"time"`, or `"size_or_time"`. The last rotates when either limit is reached. |
+| `max_bytes` | `0` | Nonnegative integer encoded bytes; positive for `size` or `size_or_time`. |
+| `interval` | absent | Positive integer followed by `s`, `m`, `h`, or `d`, for seconds, minutes, hours, or 24-hour days. Required for `time` or `size_or_time`. |
+| `align` | `False` | Boolean; `True` requires `"1h"` or `"1d"` and uses UTC hour or day boundaries. |
+
+For unaligned time rotation, the schedule starts when the sink initializes and
+uses elapsed monotonic time. Size rollover does not reset the time schedule. The
+size threshold is checked before writing a subsequent complete record, including
+the segment header in the current size. A first record and the continuation
+metadata can exceed the threshold; it is not a strict file-size cap.
+
+For example, an LCL configuration can select a 10 MiB limit or one UTC day:
+
+```lclcfg
+logger.file.audit.directory: f"{__dir__}/logs"
+logger.file.audit.rotation.mode: "size_or_time"
+logger.file.audit.rotation.max_bytes: 10485760
+logger.file.audit.rotation.interval: "1d"
+logger.file.audit.rotation.align: True
+```
+
+The equivalent Python declaration passes `{"mode": "size_or_time", "max_bytes":
+10485760, "interval": "1d", "align": True}` as the sink's `rotation` field.
+A complete, executable example that observes size rollover appears in the
+[logging tutorial](../tutorials/18-application-logging.md#rotate-file-segments).
+Rotated segments remain on disk; the application or deployment owns retention.
 
 The console defaults to INFO on stderr. Files default to INFO, UTF-8 with
 backslashreplace, one-second flushing, and no rotation. An enabled file needs
@@ -324,8 +353,20 @@ and permanently blocked I/O cannot guarantee delivery.
 
 `runtime.metrics` supplies immutable aggregate and per-sink snapshots with
 records_enqueued, records_written, writer_errors, rollover_count and paths.
-Aggregate records_written counts a record once if any sink accepted its write;
-metadata is excluded. Successful writes do not imply fsync durability.
+Aggregate `records_enqueued` counts records admitted to the process queue;
+aggregate `records_written` counts a record once if any sink successfully writes
+it. Sink counters count records selected for that sink and its successful writes.
+Metadata is excluded. Successful writes do not imply fsync durability.
+
+The public metrics do not expose queue depth. The difference between aggregate
+`records_enqueued` and `records_written` is not a backlog count: records can
+be filtered by every sink or fail to write, and a record can be in dispatch.
+Measure changes in the counters over time as admitted and successful output
+rates, while accounting for filtering and sink configuration. Monitor process
+memory and `writer_errors` as additional operational signals; these are not
+exact measurements of queued records either. If producers can outpace output,
+apply application-level rate or concurrency limits and plan for a potentially
+long drain at shutdown.
 
 ## Service entry points
 

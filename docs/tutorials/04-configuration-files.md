@@ -357,9 +357,83 @@ defining physical file, and separate Frames prevent shared result caches:
 ```
 <!-- /lclang-doc-case -->
 
-Files decode as UTF-8, with a BOM accepted at byte zero. Loading performs no
-globbing or network access. Use `ConfigLoadLimits` and an allowed-root resolver
-when the application needs bounded loading. Treat configuration and supplied
-Python objects as trusted code.
+## Restrict file loading and resource use
+
+A service that selects a configuration directory can bound file loading with
+`FileConfigResolver` and `ConfigLoadLimits`. The resolver checks each requested
+file against the selected directory, and the limits constrain the loader's work.
+For example, create these files under the application's working directory:
+
+<!-- lclang-doc-case: bounded-config -->
+
+`tenant/policy.lclcfg`:
+
+<!-- lclang-doc-file: tenant/policy.lclcfg -->
+```lclcfg
+using f"{__dir__}/rates.lclcfg"
+total: base * units
+```
+
+`tenant/rates.lclcfg`:
+
+<!-- lclang-doc-file: tenant/rates.lclcfg -->
+```lclcfg
+base: 12
+```
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+from pathlib import Path
+
+from lclang.config import ConfigLoadLimits, FileConfigResolver, load_config
+from lclang.error import LclConfigLimitError
+
+
+async def main() -> None:
+    tenant_root = Path.cwd() / "tenant"
+    policy = tenant_root / "policy.lclcfg"
+    resolver = FileConfigResolver(allowed_root=tenant_root)
+    limits = ConfigLoadLimits(
+        max_sources=2,
+        max_depth=2,
+        max_characters=1000,
+        max_declarations=8,
+    )
+    config = await load_config(policy, resolver=resolver, limits=limits)
+    async with config.to_frame(preset={"units": 3}) as frame:
+        assert await frame.get("total") == 36
+
+    try:
+        await load_config(policy, resolver=resolver, limits=ConfigLoadLimits(max_sources=1))
+    except LclConfigLimitError:
+        print("source limit enforced")
+    else:
+        raise AssertionError("the second source exceeded the limit")
+
+
+asyncio.run(main())
+```
+
+The program prints:
+
+<!-- lclang-doc-output: stdout -->
+```text
+source limit enforced
+```
+<!-- /lclang-doc-case -->
+
+The first load permits the root and its one included file. The included `base`
+resolves to 12, and the Frame multiplies it by the supplied three units. The
+second load permits only one source, so it fails before it can load the rates.
+See the [configuration reference](../reference/configuration.md#loading-limits-and-filesystem-boundary)
+for defaults and how the limits are counted.
+
+Files decode as UTF-8, with a BOM accepted at byte zero. The resolver performs
+no globbing or network access. Its allowed root checks canonical paths, including
+resolved symbolic links; an outside target is rejected. Keep the directory
+and links under application control while loading: the check and file read are
+not an atomic filesystem operation. Loading limits and the allowed root constrain
+file loading; LCL and supplied Python objects must still be trusted.
 
 [Previous: The LCL language](03-language.md) | [Next: Async Python integration](05-async-python-integration.md) | [Return to the series introduction](README.md)

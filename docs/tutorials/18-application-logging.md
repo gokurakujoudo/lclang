@@ -191,6 +191,68 @@ those paths; the configured filename is the base name, not a promise that the
 writer will create exactly that path. Rotation creates new segments and retains
 old ones. The application or its deployment tooling owns retention.
 
+The producer queue is unbounded. If producers outpace the writer, it can grow
+in memory. The public metrics do not expose queue depth, and subtracting
+`records_written` from `records_enqueued` does not measure it: filtering and
+write failures also affect those counts. Monitor process memory and changes in
+admitted and successfully written record rates, investigate `writer_errors`,
+and apply upstream rate or concurrency limits appropriate to the application.
+These signals do not establish the number of queued records. Scope exit waits
+for accepted records to drain without a built-in drain timeout. Finish producers
+before closing and plan shutdown time for slow output. The
+[logger reference](../reference/logger.md#permanent-segments-and-shutdown) describes the counters,
+and its [performance notes](../reference/logger.md#performance-measurement)
+explain what the benchmark measures.
+
+## Rotate file segments
+
+For production, set size and time thresholds to suit the available disk and
+retention policy. This example uses a one-byte threshold to force size rollover
+deterministically; the hour interval shows how to configure the alternative
+trigger without relying on a clock delay.
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from lclang.logger import LoggerHandlerConfig, use_logger, use_logger_handler
+
+
+async def main() -> None:
+    with TemporaryDirectory() as directory:
+        config = LoggerHandlerConfig(
+            format="%(message)s",
+            console={"enabled": False},
+            file={"audit": {
+                "directory": directory,
+                "rotation": {"mode": "size_or_time", "max_bytes": 1, "interval": "1h"},
+            }},
+        )
+        async with use_logger_handler(config) as runtime:
+            logger = await use_logger("example.audit")
+            logger.info("first record")
+            logger.info("second record")
+        paths = list(Path(directory).glob("*.log"))
+        contents = [path.read_text(encoding="utf-8") for path in paths]
+        assert len(paths) == 2
+        assert runtime.metrics.sinks["file.audit"].rollover_count == 1
+        assert sum("first record" in text for text in contents) == 1
+        assert sum("second record" in text for text in contents) == 1
+        assert any("continued in:" in text for text in contents)
+
+
+asyncio.run(main())
+```
+
+The first record is written intact even though the threshold is tiny. The
+second triggers a new segment, and the first retains a continuation link to the
+new path. Both segments remain until the application or deployment removes them.
+An hourly timer would also rotate this sink, including while idle; a size
+rollover does not restart that timer. For settings, UTC alignment and the
+threshold's limitations, see the [rotation reference](../reference/logger.md#configuration).
+
 ## Trace one operation and report its final failure once
 
 Let business functions propagate failures with their existing diagnostics. The
