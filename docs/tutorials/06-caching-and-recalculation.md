@@ -106,9 +106,18 @@ host input. Recalculating `subtotal` produces `60`, but the already cached
 `total` and `label` remain `35`. Refreshing those definitions in dependency
 order finally produces and formats `65`.
 
-This rule is intentionally strong: recalculation never silently invalidates
-dependants. The application chooses the refresh order and therefore can explain
-the resulting state.
+Recalculation never invalidates dependants. For this fixed chain, refresh from
+`subtotal` through `total` to `label`. If a definition has conditional or
+deferred references, a previous run may not have read every dependency that a
+future run can select. Host callbacks can also perform lookups the static graph
+cannot predict, and definitions selected from a parent are evaluated in their
+own Frame. Do not treat a single observed trace or the default eager-only
+topological order as a complete refresh plan. The
+[dependency tutorial](08-dependency-analysis.md#use-dependency-evidence-for-refresh-decisions)
+explains what each form of evidence includes. Create a fresh Frame for a complete
+new run when the application cannot establish every affected owner and order.
+If it borrows a stateful parent, refresh or replace the relevant parent too;
+a new child alone still reads that parent's snapshots.
 
 ## New Frame or recalculation?
 

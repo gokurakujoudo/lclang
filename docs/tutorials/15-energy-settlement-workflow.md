@@ -26,9 +26,9 @@ scoped-values, and tree-workflow chapters. It demonstrates how to:
 
 Documentation tests run this case inside a separate `TemporaryDirectory`, so
 its configuration, reports, and logs disappear after verification. To try the
-example, save the shown configuration files and run the Python code from the
-same directory. A production application would retain the workflow definition
-and point the configuration at durable paths.
+example, save the configuration and `settlement.py` in the same directory, then
+run the operator commands shown below. The separate test program exercises both
+the application object and the actual process entry point.
 
 ## Start with the configuration contract
 
@@ -97,8 +97,8 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-The program completes without console output. Its assertions check the
-results and log contents described below.
+The program completes without console output. Its assertions check the loaded
+configuration and masking metadata.
 <!-- /lclang-doc-case -->
 
 The scoped names are still exact names. `tariff.unit_rate` does not use relative
@@ -117,8 +117,18 @@ The full program below has four business tasks:
 
 The first three tasks explicitly publish their outputs to the shared execution
 Frame. The next sibling reads those values through its own derived task Frame.
-The report stream is different: it belongs only to the final task, so an async
-context task opens it, mixes it into that task Frame, and closes it afterward.
+The report stream is different: it belongs only to the final task and its
+descendants, so an async context task opens it, mixes it into that task Frame,
+and closes it afterward.
+
+This teaching example uses `float` and `round` to keep the calculation visible.
+Production billing needs an explicit decimal precision and rounding policy. The
+file context opens the destination in write mode before the report action checks
+the credential. A later failure or cancellation can leave an empty or partial
+file, and opening an existing file truncates it. Choose a staging and atomic
+publication strategy, failure reconciliation, and idempotent retry policy for
+the real application. Dry-run avoids the file write because this example
+explicitly substitutes `StringIO`.
 
 Notice the keyword form used for every dataclass value, such as
 `ReadingArgs(start=meter_start.quote, end=meter_end.quote)`. A reader can see
@@ -154,14 +164,14 @@ logger.file.app.level: "INFO" # Application threshold
 lunch.options: ["noodles"] # Successful-run lunch choice
 ```
 
-Run the following program beside the file:
+Save this application as `settlement.py` beside the configuration:
 
-<!-- lclang-doc-exec -->
+<!-- lclang-doc-file: settlement.py -->
 ```python
 import asyncio
 import io
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager, redirect_stderr, redirect_stdout
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TextIO
@@ -423,6 +433,25 @@ application = CliEntrance(
 )
 
 
+if __name__ == "__main__":
+    raise SystemExit(asyncio.run(application.run()))
+```
+
+The entry point adapts the process arguments and returns the command's exit
+status to the shell. The following separate verification program checks the
+application with explicit arguments and also starts the saved entry point as a
+real subprocess. Run it beside the same files:
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+import io
+import subprocess
+import sys
+from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
+
+from settlement import application
 
 
 async def invoke(config_path: Path, *options: str) -> tuple[int, str, str]:
@@ -565,6 +594,29 @@ async def main() -> None:
     assert "*masked*" in final_log
     assert "warehouse-writer-token" not in final_log
 
+    # The saved application reads real argv and passes its status to the shell.
+    help_process = subprocess.run(
+        [sys.executable, "settlement.py", "settle", "--help"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert help_process.returncode == 0
+    assert "Usage: settlement.py settle [options]" in help_process.stdout
+    failed_process = subprocess.run(
+        [
+            sys.executable, "settlement.py", "settle", "--config", str(config_path),
+            "--override", "meter.end", "LCL[900.0]",
+            "--override", "paths.output_name", "process-failure.txt",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert failed_process.returncode == 2
+    assert "ValueError: end reading 900.0" in failed_process.stderr
+    assert not (result_dir / "process-failure.txt").exists()
+
 
 asyncio.run(main())
 ```
@@ -573,9 +625,10 @@ The program completes without console output. Its assertions check the
 results and log contents described below.
 <!-- /lclang-doc-case -->
 
-The `invoke` helper passes exact argument tokens to `CliEntrance`, which is the
-same behavior a real shell process reaches after argument adaptation. The
-equivalent operator commands are:
+The verification program's `invoke` helper passes exact argument tokens to
+`CliEntrance`; its subprocess checks exercise the saved entry point with actual
+process arguments and exit statuses. Run these commands with `settlement.py`
+and `settlement.lclcfg` in the current directory:
 
 ```console
 python settlement.py settle --help
@@ -639,8 +692,8 @@ lunch option: no lunch!
 ```
 
 No rainy result file is created because execution stops before the file context
-is entered. This is the practical value of acquiring the file only around the
-task that needs it.
+is entered. A failure after that context opens the destination can leave an empty
+or partial file; the example does not implement rollback or atomic publication.
 
 ## Understand the CLI log
 

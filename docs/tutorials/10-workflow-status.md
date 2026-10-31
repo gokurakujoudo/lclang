@@ -100,4 +100,16 @@ The returned tree contains ordinary typed fields. Applications may render it,
 log it, or convert it to their own wire schema; lclang deliberately defines the
 status semantics without forcing one presentation format.
 
+The example above operates on an `ExecutionStatusManager` directly. When
+running a workflow, an ordinary task exception is captured in its returned
+`WorkflowExecutionResult` and recorded in the shared Frame; inspect the status
+and diagnostic rather than relying only on `try`/`except` around `execute`.
+A recovery context can mark a handled failure `FAILURE_COVERED`, which still
+stops the remaining branch. A workflow converted to a CLI maps success,
+failure, error, and covered failure to exit statuses `0`, `1`, `2`, and `3`.
+See the [workflow reference](../reference/workflow.md#execution-and-results) and
+[exception guide](../reference/exceptions.md) for recovery and cleanup failure
+examples. Native cancellation propagates after cleanup; the application must
+coordinate any external side effects and retries.
+
 [Previous: Command-line applications](09-command-line-applications.md) | [Next: Business-day calendars](11-business-day-calendars.md) | [Return to the series introduction](README.md)

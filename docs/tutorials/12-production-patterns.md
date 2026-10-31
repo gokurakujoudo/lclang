@@ -139,7 +139,7 @@ asyncio.run(main())
 ```
 
 The program completes without console output. Its assertions check the
-results and log contents described below.
+results described below.
 <!-- /lclang-doc-case -->
 
 The first scenario requests `40`, so `40 <= 100` selects `accept`. The second

@@ -54,8 +54,8 @@ example directly from its Markdown source.
    overrides, dry runs, logging, and stable exit behavior.
 10. **[Workflow status](10-workflow-status.md)** -- report nested task and step outcomes while preserving
     failure and cleanup semantics.
-11. **[Business-day calendars](11-business-day-calendars.md)** -- compose three-state calendars, map dates, and
-    load named policies from strict JSON.
+11. **[Business-day calendars](11-business-day-calendars.md)** -- classify, navigate and generate dates;
+    choose a calendar implementation, compose policies and load named calendars.
 12. **[Production patterns](12-production-patterns.md)** -- organize modules, factories, tests, limits, trust
     boundaries, and application ownership.
 13. **[Scoped values and Frame evaluation](13-scoped-values-and-frame-evaluation.md)** -- organize qualified

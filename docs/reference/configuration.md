@@ -170,7 +170,8 @@ parses one unresolved document and performs no I/O. Supplying `source_path`
 enables file magic without reading that path.
 
 `await load_config(path, resolver=None, limits=None, overrides=None)` uses
-`FileConfigResolver` by default. Embedders may provide an async
+`FileConfigResolver` by default. Each `load_config` call creates a fresh loader
+with a fresh source cache. Embedders may provide an async
 `ConfigSourceResolver`; returned sources remain path-backed so relative targets
 and magic stay deterministic. `ConfigLoader.load` accepts the same `overrides`
 mapping. LCL AST values are lazy definitions during dynamic target evaluation;
@@ -245,10 +246,44 @@ therefore have the root `lhs()` function (the current definition name), builtin
 Python builtins, and reviewed standard namespaces. An explicit parent replaces
 the canonical imports layer.
 
-`ConfigLoadLimits` caps distinct paths, recursive depth, decoded characters,
-and declarations. `ConfigLoader` is safe for concurrent tasks in one event loop,
-uses per-path single-flight, shields owners from waiter cancellation, retries
-failed loads, and rejects cross-loop reuse.
+## Loading limits and filesystem boundary
+
+`ConfigLoadLimits` accepts the following positive integers; Boolean values are
+not accepted. These are ceilings, not measurements of bytes or elapsed time.
+
+| Parameter | Default | Counted work |
+| --- | ---: | --- |
+| `max_sources` | 1,000 | Distinct requested canonical source paths held by the loader. |
+| `max_depth` | 100 | Recursive loading depth, with the root at depth 1. |
+| `max_characters` | 10,000,000 | Decoded characters across unique loaded source identities. |
+| `max_declarations` | 100,000 | Parsed declarations across unique loaded source identities. |
+
+A reusable loader retains successfully parsed source snapshots and their counts
+across calls. Repeated expansion placements do not recount the same parsed
+source. Exceeding a ceiling raises `LclConfigLimitError`. Optional missing
+sources are retried and do not become successful cached sources. For a complete
+example passing both limits and a resolver, see
+[Restrict file loading and resource use](../tutorials/04-configuration-files.md#restrict-file-loading-and-resource-use).
+
+These limits do not cap peak memory or the bytes read for one source. The
+resolver returns the complete decoded text before the character limit is checked,
+and the declaration limit is checked after parsing. The depth limit applies to
+expansion: a child source can be read and parsed before its depth is rejected.
+Repeated placements expand cached documents again, so unique-source counts do
+not bound total expansion work. Apply separate input-size or execution controls
+when an application needs those bounds.
+
+`FileConfigResolver(allowed_root=Path(...))` resolves the boundary and requested
+paths canonically before checking containment. A symbolic link whose resolved
+target lies outside that boundary is rejected. Only regular files are read as
+UTF-8 with an optional initial BOM; there is no globbing, environment expansion,
+or network I/O. Keep paths and links under application control while loading:
+checking containment and reading the file are separate filesystem operations.
+This boundary and the limits do not sandbox trusted LCL or host callables.
+
+`ConfigLoader` is safe for concurrent tasks in one event loop, uses per-path
+single-flight, shields owners from waiter cancellation, retries failed loads,
+and rejects cross-loop reuse.
 
 Missing optional sources are not cached. A later occurrence or load retries
 retrieval and can discover a file that has appeared; successful source

@@ -139,8 +139,36 @@ the same generator, so closing the first Frame does not reset the sequence.
 Clock rollback raises `LclStateError`; a pre-epoch clock raises
 `LclValidationError`. Both include a specific utility code.
 Exhausting 4096 sequences in one millisecond or the 41-bit timestamp raises
-`OverflowError`. These failures preserve state and never wait for the clock.
-After sequence exhaustion, retry only when time advances. See the
+`LclUtilityError`. The sequence and timestamp codes identify the different
+recovery actions. This example freezes the clock, exhausts one millisecond,
+then advances it before retrying:
+
+<!-- lclang-doc-exec -->
+```python
+from unittest.mock import patch
+
+from lclang.error import LclUtilityError, UtilityErrorCode
+from lclang.utils import SnowflakeGenerator
+
+ids = SnowflakeGenerator(7, epoch_ms=0)
+with patch("lclang.utils.snowflake_id.time_ns", return_value=1_000_000) as clock:
+    for _ in range(4096):
+        last = ids.next_id()
+    try:
+        ids.next_id()
+    except LclUtilityError as error:
+        assert error.code == (
+            UtilityErrorCode.E41_SNOWFLAKE_SEQUENCE_EXHAUSTED_RETRY_AFTER_THE_CLOCK_ADVANCES
+        )
+    else:
+        raise AssertionError("the sequence should be exhausted")
+    clock.return_value = 2_000_000
+    assert ids.next_id() > last
+```
+
+The failed allocation leaves the last successful state intact and never waits
+for the clock. A timestamp-exhaustion code means the ID domain needs migration,
+not a retry in the same domain. See the
 [Snowflake reference](../reference/utilities.md#snowflake-ids) for the full contract.
 
 ## Own a standalone logger
@@ -229,9 +257,63 @@ asyncio.run(main())
 
 `merge` is a shallow, left-to-right operation returning a read-only mapping.
 The JSON helpers reject nonstandard `NaN` and infinity rather than emitting
-implementation-specific data. Other public exports include `lines`, the
-fixed-point `recursive` helper, and the manifest APIs used to assemble a
-reviewed standard preset.
+implementation-specific data. The next example shows empty inputs, missing
+keys, duplicate JSON names, and rejected non-finite numbers.
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+
+from lclang.error import LclStandardError, LclValidationError
+from lclang.lang.stdlib import first, join, json_decode, json_encode, lines, lookup, merge
+
+
+async def main() -> None:
+    assert await first([]) is None
+    assert await join(",", []) == ""
+    assert lines("a\r\nb\n", keep_ends=True) == ["a\r\n", "b\n"]
+    assert lookup({"value": None}, "value", "missing") is None
+    assert lookup({}, "value", "missing") == "missing"
+    assert dict(merge({"region": "east"}, {"region": "west"})) == {"region": "west"}
+    assert json_decode('{"value":1,"value":2}') == {"value": 2}
+    try:
+        json_encode(float("nan"))
+    except LclValidationError as error:
+        assert error.code == "LCL921221"
+    else:
+        raise AssertionError("non-finite JSON values must fail")
+
+    try:
+        lookup({}, [])
+    except LclStandardError as error:
+        assert error.code == "LCL951890"
+        assert isinstance(error.__cause__, TypeError)
+    else:
+        raise AssertionError("a dictionary lookup key must be hashable")
+
+    try:
+        lookup({})
+    except LclValidationError as error:
+        assert error.code == "LCL031191"
+        assert isinstance(error.__cause__, TypeError)
+    else:
+        raise AssertionError("lookup requires a key")
+
+
+asyncio.run(main())
+```
+
+A present `None` is different from a missing key with an explicit default.
+Duplicate JSON names decode to the last value, so enforce unique names separately
+when the input contract requires them. A dictionary cannot look up the list key;
+`lookup` retains the native `TypeError` as the cause of `LclStandardError`.
+Calling `lookup` without the required key instead fails its call signature and
+raises `LclValidationError`, also retaining the `TypeError` cause. `first`
+stops after one item; keep ownership
+of any file or generator passed to it and close that resource explicitly. The
+[helper reference](../reference/utilities.md#iterable-text-mapping-and-json-contracts)
+records the signatures and failure boundaries. Other exports include the
+fixed-point `recursive` helper and manifest APIs for a reviewed standard preset.
 
 ## Use calendars in ordinary async code
 
@@ -287,7 +369,9 @@ renderer produces a stable failure description; the helper adds no type label.
 ## Call synchronous or asynchronous callbacks
 
 `invoke` forwards ordinary Python arguments and resolves the callback's result.
-It runs in the current task and propagates the original failure or cancellation.
+It runs in the current task. An ordinary native failure becomes `LclUtilityError`
+with its original exception in `__cause__`; existing LCL errors and native
+cancellation propagate unchanged.
 
 <!-- lclang-doc-exec -->
 ```python
@@ -310,6 +394,51 @@ asyncio.run(main())
 
 The first call returns immediately from a synchronous method. The second awaits
 an async function. Neither call schedules a worker or creates a new event loop.
+
+When a callback fails, inspect the cause at the application boundary. The
+example also checks that cancellation retains its original identity.
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+
+from lclang.error import LclUtilityError, UtilityErrorCode
+from lclang.utils import invoke
+
+
+async def main() -> None:
+    native = ValueError("invalid quantity")
+    cancelled = asyncio.CancelledError("cancelled")
+
+    def fail() -> None:
+        raise native
+
+    def cancel() -> None:
+        raise cancelled
+
+    try:
+        await invoke(fail)
+    except LclUtilityError as error:
+        assert error.code == UtilityErrorCode.E71_INVOCATION_FAILURE
+        assert error.__cause__ is native
+    else:
+        raise AssertionError("callback failure should propagate")
+
+    try:
+        await invoke(cancel)
+    except asyncio.CancelledError as error:
+        assert error is cancelled
+    else:
+        raise AssertionError("cancellation should propagate")
+
+
+asyncio.run(main())
+```
+
+The original `ValueError` remains available as the cause of the coded utility
+error. Cancellation is a control signal and is not converted into an ordinary
+failure. Do not place secrets in exception messages: rendering the cause may
+expose them even when a configuration value was masked.
 
 ## Combine resources, nested mappings, defaults, and events
 

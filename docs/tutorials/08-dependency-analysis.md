@@ -81,9 +81,6 @@ the external `tax_rate`. Those are the only names absent from the Module.
 Eager ordering can place `label` early because its reference to `total` is
 inside a deferred function body, then orders `subtotal` before `total`.
 
-The default topological order uses eager edges. Because `label` contains a
-deferred function body, it can appear before `subtotal` and `total`.
-
 ## Reconcile static and runtime evidence
 
 This final example evaluates the true branch. The remote dependency remains a
@@ -135,5 +132,28 @@ reconciliation did not execute the skipped host function.
 Use `build_dependency_graph(frame)` when parent lookup, shadowing, and host
 value terminals matter. Graph construction remains non-evaluating. Rebuild a
 Frame graph after changing host bindings because it is an immutable snapshot.
+
+## Use dependency evidence for refresh decisions
+
+For a chain such as `rate -> subtotal -> total -> label`, an updated `rate`
+requires each affected cached definition to be recalculated in dependency
+order if the application intentionally retains that Frame. Conditional branches
+can introduce another rate or subtotal that the last evaluation did not read.
+An observed snapshot describes that run; an inactive edge can become active
+when an input changes. Static edges describe names present in the LCL syntax,
+including conditional and deferred occurrences, but cannot predict arbitrary
+lookups performed inside a host callback. The default `topological_order`
+uses eager edges only and is not a complete order for every future branch.
+
+A Frame graph accounts for the selected owner in a parent hierarchy at the time
+it is built. Parent-owned definitions and their snapshots belong to that parent.
+Recalculating a child-owned definition does not refresh a parent definition or
+any dependants. Calling `recalculate` through a child for a selected parent-owned
+definition refreshes that owner, so other children borrowing it can observe the
+new snapshot. Rebuild the graph when bindings change. If your application cannot establish
+all affected definitions and their owners, create a fresh Frame for the next
+independent run instead of using these snapshots as an automatic invalidation
+plan. For parent-owned state, replace or refresh the relevant parent according
+to its own lifecycle as well; a fresh child still borrows its existing parent.
 
 [Previous: Errors and inspection](07-errors-and-inspection.md) | [Next: Command-line applications](09-command-line-applications.md) | [Return to the series introduction](README.md)
