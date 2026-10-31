@@ -4,6 +4,8 @@
 
 ### Documentation
 
+- Explain calendar classification, navigation, yearly generation, and the
+  functional, forward-step, and year-batch implementation strategies.
 - Add executable examples for JSON calendars in CLI configuration and yearly
   database-backed calendar overrides.
 

@@ -134,7 +134,7 @@ that does not require that permission.
 ## GitHub feature development
 
 Use this lifecycle for feature development and bug fixes:
-`issue -> feature branch -> pull request -> squash merge -> branch cleanup`.
+`issue -> feature branch -> pull request -> verified feature-branch handoff`.
 
 1. Create or reuse an issue in `gokurakujoudo/lclang` before implementation.
    Record the problem, scope, public behavior, and acceptance criteria; avoid
@@ -153,18 +153,19 @@ Use this lifecycle for feature development and bug fixes:
    pull-request verification and builds. Fix failures and check the new head
    again. Results from an earlier commit do not approve a later commit; jobs
    intentionally excluded by workflow conditions are not missing checks.
-6. Unless the user requests a draft or review-only handoff, squash merge once
-   checks pass and merge requirements are satisfied. Guard the merge with the
-   expected head SHA so a concurrent update cannot merge unverified work.
-   Confirm the PR is merged and its linked issue is closed.
-7. Synchronize local `main`. After confirming that the implementation branch
-   contains no work added after the merged PR head, delete its remote and local
-   copies. Squash merging does not preserve feature-commit ancestry, so verify
-   the merged content before forcing local branch deletion if necessary.
-   Finish on `main` and report any unrelated work left in the checkout.
+6. Stop on the feature branch and hand off the PR after the checks finish. Do
+   not merge into `main` automatically. Preserve the branch locally and remotely
+   and report its status and any unrelated work left in the checkout.
+7. Only when the user explicitly requests a merge, squash merge after checks pass
+   and merge requirements are satisfied. Guard the merge with the expected head
+   SHA, then confirm the PR is merged and its linked issue is closed. Synchronize
+   local `main`. After verifying the merged content and confirming the feature
+   branch has no work beyond the merged PR head, delete its remote and local
+   copies and finish on `main`.
 
-Feature completion does not itself publish a version. When the user also
-requests a release, complete the release workflow before final branch cleanup.
+Feature completion does not itself publish a version. A release follows the
+release workflow only when requested; merging to `main` requires an explicit
+user request.
 
 ## Version release
 
@@ -179,8 +180,9 @@ Use this lifecycle when a version release is requested:
    `## <version> - YYYY-MM-DD`, retaining `Unreleased` for future changes.
 2. Validate release-note extraction with `scripts.release_notes`, run the full
    quality gate after the version update, and wait for the updated PR's CI.
-   Squash merge only the verified head; version preparation must reach `main`
-   before publication. Never add release-only commits on `release`.
+   With an explicit user request to merge, squash merge only the verified head;
+   version preparation must reach `main` before publication. Never add
+   release-only commits on `release`.
 3. Fetch the merged commit and verify that its content matches the tested PR.
    Fast-forward the persistent `release` branch to that exact commit on `main`
    and push it to `origin`. Do not force-update `release`, publish a feature
