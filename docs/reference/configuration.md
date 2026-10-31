@@ -265,6 +265,14 @@ sources are retried and do not become successful cached sources. For a complete
 example passing both limits and a resolver, see
 [Restrict file loading and resource use](../tutorials/04-configuration-files.md#restrict-file-loading-and-resource-use).
 
+These limits do not cap peak memory or the bytes read for one source. The
+resolver returns the complete decoded text before the character limit is checked,
+and the declaration limit is checked after parsing. The depth limit applies to
+expansion: a child source can be read and parsed before its depth is rejected.
+Repeated placements expand cached documents again, so unique-source counts do
+not bound total expansion work. Apply separate input-size or execution controls
+when an application needs those bounds.
+
 `FileConfigResolver(allowed_root=Path(...))` resolves the boundary and requested
 paths canonically before checking containment. A symbolic link whose resolved
 target lies outside that boundary is rejected. Only regular files are read as

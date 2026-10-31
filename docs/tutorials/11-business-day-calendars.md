@@ -454,21 +454,13 @@ market: calendar_manager.use_calendar("MARKET")
 market_with_weekdays: market.fallback(calendars.ALL_WEEKDAYS)
 ```
 
-Run this program beside the configuration file. It passes an explicit argv list
-to simulate a CLI invocation with `--config calendar.lclcfg` and `--as-of
-20240101`. A real entry point can call `application.run()` without that list to
-use the process arguments:
+Save this application as `calendar_app.py` beside the configuration file:
 
-<!-- lclang-doc-exec -->
+<!-- lclang-doc-file: calendar_app.py -->
 ```python
 import asyncio
-import io
-from contextlib import redirect_stdout
-from datetime import date
-from pathlib import Path
 
 from lclang.cli import CliContext, CliEntrance, CliResult, CommandGroup, cli
-from lclang.utils.calendar import DayType
 
 
 @cli.command()
@@ -477,39 +469,68 @@ async def classify_command(context: CliContext) -> CliResult:
     market = await context.frame.get("market")
     weekdays = await context.frame.get("market_with_weekdays")
     classification = await market.get_day_type(context.as_of_date)
-    assert classification is DayType.Holiday
-    assert await market.get_day_type(date(2024, 1, 2)) is DayType.Undefined
-    assert await weekdays.get_day_type(date(2024, 1, 2)) is DayType.BusinessDay
-    return CliResult.success(f"{context.as_of_date}: {classification.name}")
-
-
-async def main() -> None:
-    application = CliEntrance(
-        CommandGroup("root", "Calendar tools", [classify_command]),
-        version="1.0.0",
+    with_fallback = await weekdays.get_day_type(context.as_of_date)
+    return CliResult.success(
+        f"{context.as_of_date}: {classification.name} -> {with_fallback.name}"
     )
-    output = io.StringIO()
-    with redirect_stdout(output):
-        status = await application.run(
-            [
-                "python", "calendar_app.py", "classify",
-                "--config", str(Path.cwd() / "calendar.lclcfg"),
-                "--as-of", "20240101",
-            ]
-        )
-    assert status == 0, output.getvalue()
-    assert output.getvalue() == "2024-01-01: Holiday\n"
-    print(output.getvalue(), end="")
 
 
-asyncio.run(main())
+application = CliEntrance(
+    CommandGroup("root", "Calendar tools", [classify_command]),
+    version="1.0.0",
+)
+
+
+if __name__ == "__main__":
+    raise SystemExit(asyncio.run(application.run()))
 ```
 
-The program prints:
+The entry point reads the process arguments and returns the command status to
+the shell. For example, run:
+
+```console
+python calendar_app.py classify --config calendar.lclcfg --as-of 20240218
+```
+
+To verify the holiday, exceptional working day, and an absent date, run this
+separate program beside the same files:
+
+<!-- lclang-doc-exec -->
+```python
+import subprocess
+import sys
+from pathlib import Path
+
+
+config = str(Path.cwd() / "calendar.lclcfg")
+cases = (
+    ("20240101", "2024-01-01: Holiday -> Holiday\n"),
+    ("20240218", "2024-02-18: BusinessDay -> BusinessDay\n"),
+    ("20240102", "2024-01-02: Undefined -> BusinessDay\n"),
+)
+for as_of, expected in cases:
+    result = subprocess.run(
+        [
+            sys.executable, "calendar_app.py", "classify",
+            "--config", config, "--as-of", as_of,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == expected
+    print(result.stdout, end="")
+```
+
+The verification program prints the original classification followed by the
+classification with the weekday fallback:
 
 <!-- lclang-doc-output: stdout -->
 ```text
-2024-01-01: Holiday
+2024-01-01: Holiday -> Holiday
+2024-02-18: BusinessDay -> BusinessDay
+2024-01-02: Undefined -> BusinessDay
 ```
 <!-- /lclang-doc-case -->
 
@@ -517,9 +538,10 @@ The JSON object requires exactly `business_days` and `holidays` arrays of
 unique, nonoverlapping `YYYYMMDD` strings. `__dir__` resolves the loader path
 from the configuration file. The loader and manager functions and the
 `calendars` namespace are available in the standard LCL builtins; they do not
-need Python imports inside the configuration. The Frame automatically awaits the asynchronous
-`use_calendar` call when `market` is requested. January 1 is a holiday in the
-file; January 2 is absent and therefore `Undefined`. The optional
+need Python imports inside the configuration. The Frame automatically awaits
+the asynchronous `use_calendar` call when `market` is requested. January 1 is
+a holiday and February 18 is a business day in the file. January 2 is absent
+and therefore `Undefined`. The optional
 `market_with_weekdays` binding falls back to `calendars.ALL_WEEKDAYS` only for
 undefined dates, so January 2 becomes a business day while explicit holidays
 and exceptional working days retain their classifications.

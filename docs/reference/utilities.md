@@ -71,7 +71,7 @@ names, such as `iter.first(...)` and `json.decode(...)`.
 | `await first(values, default=None)` | First item, or `default` for an empty iterable; stops requesting items after the first. |
 | `await join(separator, values)` | Joins a sync or async iterable of strings. The separator and every item must be strings; no implicit string conversion. |
 | `lines(value, *, keep_ends=False)` | A fresh list using Python `str.splitlines`; `keep_ends=True` retains line endings. |
-| `lookup(mapping, key, default=None)` | The present value, including `None`, or the default for an absent key. |
+| `lookup(mapping, key, default=None)` | The present value, including `None`, or the default for an absent key accepted by the mapping. |
 | `merge(*mappings)` | Read-only shallow snapshot, applied left to right with later values winning; `merge()` is empty. Nested objects retain their identity. |
 | `json_encode(value)` | Compact JSON text with direct Unicode characters and insertion order preserved. |
 | `json_decode(value)` | Scalar, list, or dictionary decoded from JSON text. |
@@ -81,10 +81,21 @@ items that are awaitable. `collect` and `join` consume their input; `first`
 stops early, leaving later items untouched. They do not take ownership of a
 caller-supplied iterable or promise to close its underlying resources. Keep
 files and other resources in their own context managers and close an early-ended
-generator when necessary. Non-iterables and iteration failures raise
-`LclEvaluationError`; ordinary producer exceptions remain in `__cause__`.
-Invalid helper arguments or JSON data raise `LclValidationError`. Native
-cancellation and other control signals propagate.
+generator when necessary. A non-iterable raises `LclEvaluationError`. An individual
+ordinary native exception while iterating is wrapped in `LclEvaluationError`,
+with the original exception in `__cause__`; an existing LCL error retains its type.
+
+Explicit validation failures, such as a non-string separator or invalid JSON
+syntax, raise `LclValidationError`. A call rejected by the helper's Python
+signature, such as `lookup({})` without a key, is also a `LclValidationError`
+with the original `TypeError` as its cause. Other ordinary native failures
+after entering a helper become `LclStandardError` with the original exception
+in `__cause__`; ordinary exception groups become `LclErrorGroup` with their
+members retained.
+For example, a dictionary rejects an unhashable lookup key with `TypeError`,
+which `lookup` wraps as `LclStandardError`. JSON decoding can also encounter a
+native failure, such as a Python integer-conversion limit. Existing LCL errors,
+native cancellation, and other control signals propagate unchanged.
 
 JSON supports `None`, Booleans, strings, integers, finite floats, lists, tuples,
 and dictionaries with `None`, Boolean, string, integer, or finite float keys.

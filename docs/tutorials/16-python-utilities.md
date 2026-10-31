@@ -264,7 +264,7 @@ keys, duplicate JSON names, and rejected non-finite numbers.
 ```python
 import asyncio
 
-from lclang.error import LclValidationError
+from lclang.error import LclStandardError, LclValidationError
 from lclang.lang.stdlib import first, join, json_decode, json_encode, lines, lookup, merge
 
 
@@ -283,13 +283,33 @@ async def main() -> None:
     else:
         raise AssertionError("non-finite JSON values must fail")
 
+    try:
+        lookup({}, [])
+    except LclStandardError as error:
+        assert error.code == "LCL951890"
+        assert isinstance(error.__cause__, TypeError)
+    else:
+        raise AssertionError("a dictionary lookup key must be hashable")
+
+    try:
+        lookup({})
+    except LclValidationError as error:
+        assert error.code == "LCL031191"
+        assert isinstance(error.__cause__, TypeError)
+    else:
+        raise AssertionError("lookup requires a key")
+
 
 asyncio.run(main())
 ```
 
 A present `None` is different from a missing key with an explicit default.
 Duplicate JSON names decode to the last value, so enforce unique names separately
-when the input contract requires them. `first` stops after one item; keep ownership
+when the input contract requires them. A dictionary cannot look up the list key;
+`lookup` retains the native `TypeError` as the cause of `LclStandardError`.
+Calling `lookup` without the required key instead fails its call signature and
+raises `LclValidationError`, also retaining the `TypeError` cause. `first`
+stops after one item; keep ownership
 of any file or generator passed to it and close that resource explicitly. The
 [helper reference](../reference/utilities.md#iterable-text-mapping-and-json-contracts)
 records the signatures and failure boundaries. Other exports include the

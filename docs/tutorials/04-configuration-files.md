@@ -427,7 +427,9 @@ The first load permits the root and its one included file. The included `base`
 resolves to 12, and the Frame multiplies it by the supplied three units. The
 second load permits only one source, so it fails before it can load the rates.
 See the [configuration reference](../reference/configuration.md#loading-limits-and-filesystem-boundary)
-for defaults and how the limits are counted.
+for defaults, counting, and when each limit is checked. In particular, depth is
+checked after a child is retrieved and parsed; the character and declaration
+limits do not cap the bytes read or peak memory of one source.
 
 Files decode as UTF-8, with a BOM accepted at byte zero. The resolver performs
 no globbing or network access. Its allowed root checks canonical paths, including
