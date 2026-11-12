@@ -108,6 +108,9 @@ CATEGORY_OVERRIDES = {
     "8613": "Record attributes",
 }
 CAUSE_OVERRIDES = {
+    "98171": "File not found",
+    "98172": "Permission denied",
+    "98173": "Text decoding",
     "13142": "Arithmetic operation",
     "13111": "Operator operand types",
     "13281": "Host callable",

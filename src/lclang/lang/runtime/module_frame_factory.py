@@ -31,6 +31,7 @@ from lclang.utils.calendar.loading import (
 from lclang.utils.date_conversion import parse_ymd, to_ymd
 from lclang.utils.process_environment import env
 from lclang.utils.snowflake_id import SnowflakeGenerator
+from lclang.utils.text_file import read_text_file
 
 # Curated ordinary Python values and explicit environment/calendar utilities.
 # Unitless canonical names and objects below come from the runtime hierarchy contract. Stable
@@ -68,6 +69,7 @@ LCL_BUILTIN_VALUES: dict[str, object] = {
     "parse_ymd": parse_ymd,
     "pow": pow,
     "range": range,
+    "read_text_file": read_text_file,
     "recursive": recursive,
     "repr": repr,
     "reversed": reversed,

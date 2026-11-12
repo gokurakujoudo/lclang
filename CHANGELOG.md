@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Features
+
+- Add `read_text_file(fp, encoding="utf-8")` as an LCL builtin and Python
+  utility, with strict decoding, deterministic file cleanup, and native causes
+  retained in LCL errors.
+
 ### Documentation
 
 - Clarify configuration reload and limits, workflow resource scope and CLI

@@ -25,7 +25,7 @@ It also exposes these functions:
 
 `abs`, `all`, `any`, `bin`, `chr`, `divmod`, `enumerate`, `filter`, `format`,
 `hex`, `isinstance`, `len`, `map`, `max`, `min`, `oct`, `ord`, `parse_ymd`,
-`pow`, `range`, `recursive`, `repr`, `reversed`, `round`, `slice`, `sorted`,
+`pow`, `range`, `read_text_file`, `recursive`, `repr`, `reversed`, `round`, `slice`, `sorted`,
 `sum`, `to_ymd`, and `zip`.
 
 `parse_ymd` converts strict eight-character `YYYYMMDD` strings to dates;
@@ -34,6 +34,63 @@ function suitable for recursive LCL programs.
 
 Python callers can import `parse_ymd` and `to_ymd` from `lclang.utils`; neither
 helper loads the LCL interpreter.
+
+## Reading text files
+
+`read_text_file(fp, encoding="utf-8") -> str` is a canonical LCL builtin and is
+also exported by `lclang.utils`. It accepts a string or `os.PathLike[str]` path
+and reads the entire file synchronously. Relative paths use the process working
+directory. In configuration files, use `read_text_file(f"{__dir__}/message.txt")`
+to read a file beside the defining configuration.
+
+The encoding may be positional or named. Decoding is strict, universal newlines
+become `\n`, and leading and trailing whitespace is retained. Empty files
+return `""`. There is no encoding detection; a UTF-8 BOM remains in the result
+unless the caller selects a codec such as `utf-8-sig` that consumes it.
+
+The function owns and closes its file before returning or raising. File access,
+unknown encoding, and decoding failures raise `LclStandardError` with the native
+exception in `__cause__`. Unsupported path and encoding types raise
+`LclValidationError`; file descriptors, binary paths, open streams, and `None`
+encodings are rejected. Errors have [registered codes](errors.md).
+
+<!-- lclang-doc-exec -->
+```python
+import asyncio
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from lclang.lang import define_frame, define_module
+from lclang.utils import read_text_file
+
+
+async def main():
+    with TemporaryDirectory() as directory:
+        path = Path(directory) / "message.txt"
+        path.write_bytes("hello\r\nworld\n".encode("utf-8"))
+        assert read_text_file(path) == "hello\nworld\n"
+        module = define_module("files", {
+            "content": "read_text_file(fp)",
+            "lines": "text.lines(content)",
+        })
+        async with define_frame(module, preset={"fp": path}) as frame:
+            assert await frame.get("lines") == ["hello", "world"]
+            path.write_text("changed", encoding="utf-8")
+            assert await frame.get("content") == "hello\nworld\n"
+            assert await frame.recalculate("content") == "changed"
+            assert await frame.get("lines") == ["hello", "world"]
+            assert await frame.recalculate("lines") == ["changed"]
+
+
+asyncio.run(main())
+```
+
+The `fp` preset supplies the path. Evaluating `lines` first reads `content`,
+then splits its normalized text. Frame results are snapshots: changing the file
+does not refresh either value. Recalculating `content` reads the file again;
+its dependent `lines` keeps its previous result until separately recalculated.
+The helper itself does not cache, retry, or create background work. Reads occupy
+the calling thread and materialize the complete file in memory.
 
 ## Standard namespaces
 
