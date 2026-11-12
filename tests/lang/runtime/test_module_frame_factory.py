@@ -97,6 +97,7 @@ def test_builtin_layer_has_a_fixed_reviewed_inventory() -> None:
         "pow",
         "parse_ymd",
         "range",
+        "read_text_file",
         "recursive",
         "repr",
         "reversed",

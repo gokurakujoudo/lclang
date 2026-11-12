@@ -395,6 +395,10 @@ win over template overrides. CLI and Workflow share these keys through LCL and
 `-o`. Scope exit drains output and restores stdlib logging configuration.
 See the [logger reference](https://gokurakujoudo.github.io/lclang/reference/logger.html).
 
+`read_text_file(fp, encoding="utf-8")` reads a complete text file and closes it
+on success or failure. It is available as an LCL builtin and a Python utility;
+see the [text file reference](docs/reference/utilities.md#reading-text-files).
+
 `env`, `safe_repr`, and `SnowflakeGenerator` are available from `lclang.utils`; the
 [Python utilities tutorial](https://gokurakujoudo.github.io/lclang/tutorials/16-python-utilities.html)
 shows these APIs without requiring CLI or LCL evaluation.
@@ -533,8 +537,8 @@ clearer as a normal function than as configuration policy.
 ## Trust and security
 
 lclang is a trusted configuration language, not a hostile-code sandbox.
-`env` reads the process environment; explicitly configured calendar loaders
-read files. Host-provided objects and callables retain their ordinary Python
+`env` reads the process environment; `read_text_file` and explicitly configured
+calendar loaders read files. Host-provided objects and callables retain their ordinary Python
 capabilities. Developer command discovery imports the application's trusted
 Python modules. These choices determine the authority available during use.
 

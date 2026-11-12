@@ -115,6 +115,7 @@ OPERATIONS = {
     "921": "Json values",
     "911": "Manifest",
     "991": "Namespaces",
+    "981": "Read text file",
     "971": "Recursion",
     "961": "Text",
     "721": "Boxes",

@@ -48,6 +48,7 @@ BUILTIN_DESCRIPTIONS: Mapping[str, str] = MappingProxyType(
         "parse_ymd": "Parse a strict YYYYMMDD date.",
         "pow": "Raise a value to a power, optionally modulo a value.",
         "range": "Create an arithmetic integer range.",
+        "read_text_file": "Read a complete text file and close it.",
         "recursive": "Build a variadic eager fixed point.",
         "repr": "Return the Python representation of a value.",
         "reversed": "Iterate over a sequence in reverse.",

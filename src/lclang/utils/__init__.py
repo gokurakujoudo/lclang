@@ -6,7 +6,7 @@ Exports ``CallableBox``, ``ValueBox``, ``Environment``, ``SnowflakeGenerator``, 
 ``make_repr_lines``, ``resolve_awaitable``, ``MASK_SUFFIX``, ``MASKED_VALUE``,
 ``split_masked_name``, ``normalize_masked_mapping``, ``normalize_masked_names``,
 ``DefaultBinding``, ``DefaultOmission``, ``NO_DEFAULT``, ``ScopedProxyFactory``,
-``ScopedProxyValue``, ``scoped_proxy_factory``, ``parse_ymd``, ``to_ymd``.
+``ScopedProxyValue``, ``scoped_proxy_factory``, ``parse_ymd``, ``to_ymd``, ``read_text_file``.
 """
 
 from lclang.utils.awaitable_resolution import resolve_awaitable
@@ -25,6 +25,7 @@ from lclang.utils.process_environment import Environment, env
 from lclang.utils.python_callable_definition import PythonCallableDefinition
 from lclang.utils.scoped_proxy import ScopedProxyFactory, ScopedProxyValue, scoped_proxy_factory
 from lclang.utils.snowflake_id import SnowflakeGenerator
+from lclang.utils.text_file import read_text_file
 from lclang.utils.value_box import CallableBox, ValueBox
 from lclang.utils.value_representation import make_multi_log_lines, make_repr_lines, safe_repr
 
@@ -54,6 +55,7 @@ __all__ = [
     "ScopedProxyFactory",
     "ScopedProxyValue",
     "scoped_proxy_factory",
+    "read_text_file",
     "parse_ymd",
     "to_ymd",
 ]

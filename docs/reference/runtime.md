@@ -107,9 +107,10 @@ The remaining fixed builtin inventory is: value types `bool`, `bytes`, `dict`, `
 `frozenset`, `int`, `list`, `set`, `str`, and `tuple`; functions `abs`, `all`,
 `any`, `bin`, `chr`, `divmod`, `enumerate`, `filter`, `format`, `hex`,
 `isinstance`, `len`, `map`, `max`, `min`, `oct`, `ord`, `parse_ymd`, `pow`,
-`range`, `recursive`, `repr`, `reversed`, `round`, `slice`, `sorted`, `sum`,
-`to_ymd`, and `zip`. File/process input,
-dynamic import/code, reflection, and mutation helpers are deliberately absent.
+`range`, `read_text_file`, `recursive`, `repr`, `reversed`, `round`, `slice`, `sorted`, `sum`,
+`to_ymd`, and `zip`. `read_text_file` reads a complete text file and closes it;
+see [text files](utilities.md#reading-text-files). General file handles, process
+input, dynamic import/code, reflection, and mutation helpers are absent.
 
 `recursive(builder)` returns a callable eager fixed point. Its representation is
 `Recursive Function: <original source>`: an LCL function builder uses canonical

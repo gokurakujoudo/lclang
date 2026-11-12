@@ -23,6 +23,9 @@ live in `lang.common`. Package metadata reads the sole `__version__.py` definiti
   recursive-program support.
 - Raise, assert, try/except/finally, and sync or async with-expressions.
 
+- `read_text_file(fp, encoding="utf-8")` reads complete text files with strict
+  decoding and deterministic cleanup, as an LCL builtin and Python utility.
+
 ## Evaluation and runtime
 
 - Async-first custom AST interpreter with public evaluation through
