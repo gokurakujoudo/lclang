@@ -262,12 +262,10 @@ status manager for an expected rejection.
 
 For deliberate recovery, subclass `FailureCoveringContextTask`. Its
 `handle_exception` hook must complete before the failure becomes
-`FAILURE_COVERED`. Covered failures remain visible and stop the remaining
-siblings; they are not silently converted into success. This fixed behavior is
-part of the strong format. The recovery code inside the hook is the confined
-flexibility.
+`FAILURE_COVERED`. Covered failures remain visible, and later sibling tasks run
+after the recovery context has finished cleanup.
 
-### Recover a failed task and stop later work
+### Recover a failed task and continue
 
 A recovery context owns the compensating action and resource cleanup. Here a
 failed upload releases a reserved slot. The handler covers only the expected
@@ -348,8 +346,8 @@ async def main() -> None:
     status = result.execution_status.sub_tasks[0]
     assert result.execution_status.status is ExecutionStatus.FAILURE_COVERED
     assert status.sub_tasks[0].status is ExecutionStatus.FAILURE_COVERED
-    assert status.sub_tasks[1].status is ExecutionStatus.SKIPPED
-    assert events == ["reserve", "compensate A", "release A"]
+    assert status.sub_tasks[1].status is ExecutionStatus.SUCCESS
+    assert events == ["reserve", "compensate A", "release A", "notify"]
 
 
 asyncio.run(main())
@@ -358,9 +356,9 @@ asyncio.run(main())
 The action failure reaches the handler as an lclang exception whose cause is
 the original `UploadRejected`. The handler selects it by type and re-raises
 other failures. A successful handler and release mark the upload
-`FAILURE_COVERED`. The sibling notification is skipped, so compensation does
-not make the workflow successful or resume the remaining tasks. If compensation
-or release fails, the diagnostic preserves the failures; see the
+`FAILURE_COVERED`. The notification runs after the reservation is released,
+while the status tree retains the covered failure. If compensation or release
+fails, the diagnostic preserves the failures; see the
 [exception guide](../reference/exceptions.md#failure-handling-and-release-both-fail).
 
 ### Cancel while resources are open

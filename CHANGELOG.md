@@ -8,6 +8,12 @@
   utility, with strict decoding, deterministic file cleanup, and native causes
   retained in LCL errors.
 
+### Fixes
+
+- Preserve explicit workflow task statuses during child aggregation and allow
+  later siblings to run after a covered failure. Dynamic workflow calls retain
+  their child result for inspection and aggregate status when the action ends.
+
 ### Documentation
 
 - Clarify configuration reload and limits, workflow resource scope and CLI

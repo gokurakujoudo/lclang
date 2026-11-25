@@ -145,12 +145,14 @@ class ExecutionStatusManager:
 
     @guard_failure(LclWorkflowError, WorkflowErrorCode.E51_STATUS_MANAGER_NATIVE_FAILURE)
     def __enter__(self) -> Self:
-        """Enter a scoped manager and ensure it is still editable.
+        """Enter an editable manager, starting it if it is pending.
 
         :returns: This manager cursor.
         :raises LclStateError: If this manager's subtree is already finalized.
         """
         ensure_unlocked(self.state, self.current)
+        if self.current.status is ExecutionStatus.PENDING:
+            self.update(ExecutionStatus.RUNNING)
         return self
 
     @guard_failure(LclWorkflowError, WorkflowErrorCode.E51_STATUS_MANAGER_NATIVE_FAILURE)
@@ -160,7 +162,7 @@ class ExecutionStatusManager:
         error: BaseException | None,
         traceback: TracebackType | None,
     ) -> Literal[False]:
-        """Record a scope error when present, finalize, and never suppress it.
+        """Record a scope error or clean completion, then finalize without suppression.
 
         :param error_type: Raised exception type, or ``None`` on clean exit.
         :param error: Raised exception instance, or ``None`` on clean exit.
@@ -171,5 +173,7 @@ class ExecutionStatusManager:
         del error_type, traceback
         if error is not None:
             self.update(ExecutionStatus.ERROR, str(error))
+        elif self.current.status is ExecutionStatus.RUNNING and not self.current.sub_tasks:
+            self.update(ExecutionStatus.SUCCESS)
         self.finalize()
         return False

@@ -136,6 +136,7 @@ async def execute_context_scope(
                 )
             )
             record_exception(state, context_manager, branch, recorded)
+            manager.update(ExecutionStatus.ERROR)
         finalize_manager(context_manager)
         log_task_complete(state.context, branch, context_manager.current.status, times)
         log_mapping(

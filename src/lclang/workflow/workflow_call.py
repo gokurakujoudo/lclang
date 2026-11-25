@@ -18,7 +18,7 @@ from lclang.error.native_wrap import is_ordinary_failure, wrap_failure
 from lclang.error.operation_guard import guard_async_failure
 from lclang.lang.runtime import Frame, Preset
 from lclang.lang.runtime.module_frame_factory import define_frame
-from lclang.workflow.call_status import attach_call_status, propagate_call_status
+from lclang.workflow.call_status import attach_call_status
 from lclang.workflow.execution_context import (
     TaskContext,
     WorkflowExecutionContext,
@@ -156,7 +156,6 @@ async def execute_workflow_in_task(
                 {},
             )
         attach_call_status(manager, result.execution_status, workflow.root_task)
-        propagate_call_status(parent, result.execution_status.status)
         yield result
     except BaseException as error:
         code = (
@@ -179,7 +178,6 @@ async def execute_workflow_in_task(
                     result.execution_status.task_description += " (Frame cleanup failed)"
         if pending is not None:
             manager.update(ExecutionStatus.ERROR, str(pending))
-            propagate_call_status(parent, ExecutionStatus.ERROR)
             context.logger.error(
                 "Workflow call error: [%s]\n%s",
                 branch,

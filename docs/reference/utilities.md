@@ -244,10 +244,11 @@ and command-line overrides; see the [logger reference](logger.md).
   updated atomically.
 
 Task and step context managers finalize successful scopes automatically, record
-failures, and allow exceptions to propagate. Parent aggregation is
-deterministic, subtree operations are locked, and snapshots preserve child
-order. `FAILURE_COVERED` records an exception handled by an explicit workflow
-context without disguising it as success. See the [workflow reference](workflow.md)
+failures, and allow exceptions to propagate. A parent aggregates its children
+only while `RUNNING`; other statuses remain unchanged. Entering a pending task
+manager starts it, and finalization locks its subtree. `FAILURE_COVERED` records
+an exception handled by an explicit workflow context and permits later siblings
+to run. See the [workflow reference](workflow.md)
 for task definitions, mappings, execution, static rendering, and CLI conversion.
 
 ## Safe representations

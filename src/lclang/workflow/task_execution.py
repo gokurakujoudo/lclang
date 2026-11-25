@@ -29,6 +29,7 @@ from lclang.workflow.execution_context import TaskContext, WorkflowExecutionCont
 from lclang.workflow.execution_status import ExecutionStatus
 from lclang.workflow.mappings import mapped_outputs, materialize_args
 from lclang.workflow.mappings.record_mapping import record_type
+from lclang.workflow.status_finalization import aggregate_children
 from lclang.workflow.status_manager import ExecutionStatusManager
 from lclang.workflow.task_id import TaskID
 from lclang.workflow.task_logging import log_mapping, log_task_error
@@ -37,9 +38,7 @@ from lclang.workflow.workflow_definition import TaskNode
 # Statuses that stop declared workflow traversal.
 # Unitless stop statuses below come from the workflow execution contract. The selected failure
 # states prevent dependent child tasks from continuing after their prerequisites fail.
-STOP_STATUSES = frozenset(
-    {ExecutionStatus.FAILURE, ExecutionStatus.FAILURE_COVERED, ExecutionStatus.ERROR}
-)
+STOP_STATUSES = frozenset({ExecutionStatus.FAILURE, ExecutionStatus.ERROR})
 
 
 @guard_constructor(LclValidationError, WorkflowErrorCode.E31_TASK_EXECUTION_NATIVE_FAILURE)
@@ -148,7 +147,7 @@ def finalize_manager(manager: ExecutionStatusManager) -> None:
 
     :param manager: Editable status manager.
     """
-    if manager.current.status is ExecutionStatus.RUNNING:
+    if manager.current.status is ExecutionStatus.RUNNING and not manager.current.sub_tasks:
         manager.update(ExecutionStatus.SUCCESS)
     manager.finalize()
 
@@ -243,7 +242,12 @@ async def execute_action_and_children(
                 state, manager, stack, error, code=WorkflowErrorCode.E22_MAPPING_FAILURE
             )
             raise failure from failure.__cause__
+        running = manager.current.status is ExecutionStatus.RUNNING
+        description = manager.current.task_description
+        aggregate_children(manager.current)
         raise_for_status(state, manager, stack)
+        if running:
+            manager.update(ExecutionStatus.RUNNING, description)
     if context._child_execution.children_skipped:
         return True
     for index, child in enumerate(task.children):

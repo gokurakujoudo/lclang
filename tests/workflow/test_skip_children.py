@@ -217,7 +217,11 @@ async def test_omission_survives_failures_and_cancellation(
                     )
                 )
                 sibling_status = result.execution_status.sub_tasks[0].sub_tasks[1].status
-                assert sibling_status is wf.ExecutionStatus.SKIPPED
+                assert sibling_status is (
+                    wf.ExecutionStatus.SUCCESS
+                    if failure == "covered"
+                    else wf.ExecutionStatus.SKIPPED
+                )
                 assert "child" not in result.task_args and "child" not in result.task_outputs
     assert events == ["cleanup"]
     assert "child" not in status_names(managers[0].current)

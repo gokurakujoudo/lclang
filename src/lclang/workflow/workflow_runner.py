@@ -134,9 +134,21 @@ async def execute_task(
             output=True,
             frame=frame,
         )
+    if (
+        (pending is None or is_ordinary_failure(pending))
+        and parent.current.status not in {ExecutionStatus.RUNNING, ExecutionStatus.ERROR}
+        and manager.current.status in STOP_STATUSES
+        and (
+            manager.current.status is ExecutionStatus.ERROR
+            or parent.current.status is not ExecutionStatus.FAILURE
+        )
+    ):
+        parent.update(manager.current.status)
     if pending is not None:
         raise pending
-    return completed and manager.current.status not in STOP_STATUSES
+    return (
+        completed or manager.current.status is ExecutionStatus.FAILURE_COVERED
+    ) and manager.current.status not in STOP_STATUSES
 
 
 @guard_async_failure(LclWorkflowError, WorkflowErrorCode.E32_WORKFLOW_RUNNER_NATIVE_FAILURE)

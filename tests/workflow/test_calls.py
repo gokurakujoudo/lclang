@@ -66,8 +66,8 @@ async def test_call_results_live_frame_isolation_and_detached_status(
 
 
 @pytest.mark.asyncio
-async def test_parent_retains_severity_and_publishes_summary_before_stopping_children() -> None:
-    """Batch actions can continue after business failures while declared dependants stop."""
+async def test_parent_aggregates_batch_severity_after_action_before_stopping_children() -> None:
+    """Batch actions inspect child results before their failures stop declared dependants."""
     statuses = [
         wf.ExecutionStatus.FAILURE_COVERED,
         wf.ExecutionStatus.FAILURE,
@@ -90,12 +90,7 @@ async def test_parent_retains_severity_and_publishes_summary_before_stopping_chi
 
     async with define_frame() as frame:
         result = await run_parent(parent, frame, [wf.define_task("after", "Must not run")])
-    assert observed == [
-        wf.ExecutionStatus.FAILURE,
-        wf.ExecutionStatus.FAILURE,
-        wf.ExecutionStatus.ERROR,
-        wf.ExecutionStatus.ERROR,
-    ]
+    assert observed == [wf.ExecutionStatus.RUNNING] * 4
     assert result.execution_status.status is wf.ExecutionStatus.ERROR
     assert result.task_outputs[wf.TaskID("parent")] == Value(4)
     assert result.execution_status.sub_tasks[0].sub_tasks[-1].status is wf.ExecutionStatus.SKIPPED

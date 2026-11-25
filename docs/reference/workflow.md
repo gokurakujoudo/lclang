@@ -306,9 +306,9 @@ Iterator termination signals also propagate through execution and recovery
 boundaries, including native groups that contain them. They are not treated as
 successful workflow execution or as failures covered by a recovery handler.
 Successful handling and cleanup suppress the ordinary exception and mark the
-context `FAILURE_COVERED`. Covered failures remain visible and still stop later
-siblings; covering means the failure was wrapped up, not that execution can be
-resumed safely.
+context `FAILURE_COVERED`. The failure remains visible in the status tree.
+After cleanup, execution continues with the next sibling; tasks interrupted
+inside the covered branch remain unexecuted.
 
 ## Execution and results
 
@@ -405,13 +405,20 @@ valid action return. Structural, unreached, and failed stages are absent.
 
 Raised exceptions become `WorkflowException` under the shared Frame name
 `__exception__`. The value retains the ordinary exception and originating
-task or context-task ID. Explicit `FAILURE`, `ERROR`, or `FAILURE_COVERED`
-statuses also stop execution and receive a deterministic synthetic exception.
-All unexecuted declared branches appear as `SKIPPED`.
+task or context-task ID. Explicit `FAILURE` and `ERROR` statuses stop execution
+and receive a deterministic synthetic exception. `FAILURE_COVERED` remains
+visible and permits later sibling tasks to run. Unexecuted declared branches
+appear as `SKIPPED`.
 
 Severity is `ERROR`, `FAILURE`, `FAILURE_COVERED`, then `PENDING`. Clean work
-retains the existing success/all-skipped aggregation rules. Process-control
-`BaseException` values unwind task contexts and Frames, then propagate.
+retains the existing success/all-skipped aggregation rules. A parent aggregates
+child statuses only while its own status is `RUNNING`; an explicitly set status
+remains unchanged by aggregation. Managers start as `PENDING` by default. A
+workflow starts its tasks automatically, and entering a manager with `with`
+starts a pending manager. Adding children alone does not start it. Finalization
+still locks the subtree, including when the parent status is already set.
+Process-control `BaseException` values unwind task contexts and Frames, then
+propagate.
 
 ## Static trees and CLI conversion
 

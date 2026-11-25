@@ -133,21 +133,23 @@ never flattened.
 
 | Outcome | Result and parent behavior |
 | --- | --- |
-| Child `SUCCESS` | Yield native result; do not clear an earlier parent failure. |
-| Child `FAILURE` or `FAILURE_COVERED` | Yield native result unchanged; raise parent severity to `FAILURE`, retaining an existing `ERROR`. |
-| Child `ERROR` or unexpected ordinary execution exception | Yield an `ERROR` result and mark the parent `ERROR`. |
-| Frame setup exception | Propagate the exception; mark the call and parent `ERROR`; never substitute or close the parent Frame. |
-| Exception in the `async with` body | Close the child Frame, mark the call and parent `ERROR`, and propagate the exception. |
-| Final Frame cleanup failure | Retain child values and task nodes, mark result/call/parent `ERROR`, and propagate the cleanup failure. |
+| Child `SUCCESS`, `FAILURE`, or `FAILURE_COVERED` | Yield the native result unchanged and attach its status to the parent tree. |
+| Child `ERROR` or unexpected ordinary execution exception | Yield an `ERROR` result and attach its status to the parent tree. |
+| Frame setup exception | Mark the call `ERROR` and propagate the exception; never substitute or close the parent Frame. |
+| Exception in the `async with` body | Close the child Frame, mark the call `ERROR`, and propagate the exception. |
+| Final Frame cleanup failure | Retain child values and task nodes, mark the result and call `ERROR`, and propagate the cleanup failure. |
 | Cancellation or another nonordinary exception | Finish owned cleanup and propagate; do not convert it into a business result. |
 
-A child failure does not interrupt the parent action's loop. After the action
-returns its summary, normal workflow failure rules stop dependent declared
-tasks. `FAILURE_COVERED` remains covered in the child result; the parent still
-needs to account for unsuccessful work. Multiple ordinary body/cleanup failures
-are retained in an exception group; cancellation retains associated cleanup
-failures as causes. Start and completion logs include the call name, workflow
-title and status, without automatically logging the preset payload.
+A child failure does not interrupt the parent action's loop. Inspect each
+returned `result.execution_status` for the child outcome. The parent's status
+is aggregated after the action returns, unless the action explicitly set it.
+An unhandled `FAILURE` or `ERROR` stops dependent declared tasks;
+`FAILURE_COVERED` remains visible and permits later siblings to run. Setup,
+body, and cleanup exceptions that escape the action also mark it `ERROR`.
+Multiple ordinary body/cleanup failures are retained in an exception group;
+cancellation retains associated cleanup failures as causes. Start and
+completion logs include the call name, workflow title and status, without
+automatically logging the preset payload.
 
 See [errors and diagnostic codes](errors.md) for exception fields, specific
 codes, cause chains, and executable troubleshooting examples. Ordinary library

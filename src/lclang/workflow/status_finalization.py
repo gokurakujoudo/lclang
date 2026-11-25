@@ -71,31 +71,27 @@ def finalize_node(state: SharedExecutionState, node: ExecutionStatusTree) -> Non
         return
     for child in node.sub_tasks:
         finalize_node(state, child)
+    if node.status is ExecutionStatus.RUNNING and node.sub_tasks:
+        aggregate_children(node)
     if node.status is ExecutionStatus.RUNNING:
         node.status = ExecutionStatus.FAILURE
         node.task_description += " (did not finish)"
-    if node.sub_tasks:
-        aggregate_children(node)
     state.locked_nodes.add(id(node))
 
 
 @guard_failure(LclWorkflowError, WorkflowErrorCode.E31_TASK_EXECUTION_NATIVE_FAILURE)
 def aggregate_children(node: ExecutionStatusTree) -> None:
-    """Apply deterministic child severity and clean-result rules to one task.
+    """Aggregate current child statuses while the parent is running.
 
-    :param node: Composite node whose direct children are finalized.
+    :param node: Composite node whose children can include active contexts.
     :returns: ``None``.
     """
-    if node.status is ExecutionStatus.FAILURE_COVERED:
+    if node.status is not ExecutionStatus.RUNNING or not node.sub_tasks:
         return
     errors = [child for child in node.sub_tasks if child.status is ExecutionStatus.ERROR]
-    if node.status is ExecutionStatus.ERROR:
-        return
     if errors:
         node.status = ExecutionStatus.ERROR
         append_child_issue(node, errors[0])
-        return
-    if node.status is ExecutionStatus.FAILURE:
         return
     failures = [child for child in node.sub_tasks if child.status is ExecutionStatus.FAILURE]
     if failures:
