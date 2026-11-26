@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.1.3 - 2026-11-26
+
 ### Features
 
 - Add `read_text_file(fp, encoding="utf-8")` as an LCL builtin and Python
