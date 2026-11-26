@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from lclang.error import LclWorkflowError, WorkflowErrorCode
 from lclang.error.exception_base import LclValidationError
-from lclang.error.failure_aggregation import combine_failures
+from lclang.error.failure_aggregation import combine_failures, contains_ordinary_failure
 from lclang.error.native_wrap import is_ordinary_failure, wrap_failure
 from lclang.error.operation_guard import guard_async_failure, guard_failure
 from lclang.lang.common.identifiers import ModuleName
@@ -21,9 +21,9 @@ from lclang.workflow.execution_context import (
     WorkflowExecutionResult,
 )
 from lclang.workflow.execution_status import ExecutionStatus
+from lclang.workflow.status_finalization import mark_unfinished
 from lclang.workflow.status_manager import ExecutionStatusManager
 from lclang.workflow.task_execution import (
-    STOP_STATUSES,
     WorkflowRunState,
     add_skipped_task,
     finalize_manager,
@@ -60,6 +60,10 @@ def add_unexecuted_statuses(
             manager.add_sub_task(
                 definition.task_id, definition.title, ExecutionStatus.SKIPPED
             ).finalize()
+    if task.task_action is not None and f"{task.task_id}$action" not in existing:
+        manager.add_sub_task(
+            f"{task.task_id}$action", task.title, ExecutionStatus.SKIPPED
+        ).finalize()
     if omit_children:
         return
     existing = {child.task_name for child in manager.current.sub_tasks}
@@ -75,7 +79,7 @@ async def execute_task(
     parent: ExecutionStatusManager,
     stack: tuple[TaskID, ...],
     parent_frame: Frame | None = None,
-) -> bool:
+) -> None:
     """Execute and finalize one declared task node.
 
     :param state: Current workflow execution state.
@@ -83,7 +87,6 @@ async def execute_task(
     :param parent: Parent status manager.
     :param stack: Root-to-current task path.
     :param parent_frame: Parent task lookup environment, or the shared Frame for the root.
-    :returns: Whether traversal may continue.
     """
     manager = parent.add_sub_task(task.task_id, task.title, ExecutionStatus.RUNNING)
     log_task_start(state.context, stack, task.title)
@@ -122,6 +125,11 @@ async def execute_task(
                 )
             )
             record_exception(state, manager, stack, recorded)
+    if pending is not None and not is_ordinary_failure(pending):
+        if contains_ordinary_failure(pending):
+            manager.update(ExecutionStatus.ERROR, str(pending))
+        else:
+            mark_unfinished(manager.current)
     finalize_manager(manager)
     log_task_complete(state.context, stack, manager.current.status, state.callback_times.get(stack))
     output = state.task_outputs.get(task.task_id)
@@ -134,21 +142,8 @@ async def execute_task(
             output=True,
             frame=frame,
         )
-    if (
-        (pending is None or is_ordinary_failure(pending))
-        and parent.current.status not in {ExecutionStatus.RUNNING, ExecutionStatus.ERROR}
-        and manager.current.status in STOP_STATUSES
-        and (
-            manager.current.status is ExecutionStatus.ERROR
-            or parent.current.status is not ExecutionStatus.FAILURE
-        )
-    ):
-        parent.update(manager.current.status)
     if pending is not None:
         raise pending
-    return (
-        completed or manager.current.status is ExecutionStatus.FAILURE_COVERED
-    ) and manager.current.status not in STOP_STATUSES
 
 
 @guard_async_failure(LclWorkflowError, WorkflowErrorCode.E32_WORKFLOW_RUNNER_NATIVE_FAILURE)

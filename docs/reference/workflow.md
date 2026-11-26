@@ -307,8 +307,8 @@ boundaries, including native groups that contain them. They are not treated as
 successful workflow execution or as failures covered by a recovery handler.
 Successful handling and cleanup suppress the ordinary exception and mark the
 context `FAILURE_COVERED`. The failure remains visible in the status tree.
-After cleanup, execution continues with the next sibling; tasks interrupted
-inside the covered branch remain unexecuted.
+After cleanup, execution continues with the next sibling; tasks not reached
+within the interrupted branch remain unexecuted.
 
 ## Execution and results
 
@@ -382,7 +382,9 @@ async def main() -> None:
             )
         )
     assert result.execution_status.status is ExecutionStatus.SUCCESS
-    assert result.execution_status.sub_tasks[0].sub_tasks == []
+    assert [node.task_name for node in result.execution_status.sub_tasks[0].sub_tasks] == [
+        "root$action",
+    ]
     assert set(result.task_args) == {"root"}
     assert result.task_outputs == {"root": Options(False)}
 
@@ -391,9 +393,9 @@ asyncio.run(main())
 ```
 
 The root action chooses not to enter its child, then returns its normal output.
-The root succeeds and retains that output; the child has no status node or
-materialized values. The immutable definition still contains the child for
-other executions that choose to run it.
+The root succeeds and retains that output. Its `root$action` status remains
+visible; the omitted child has no status node or materialized values. The
+immutable definition still contains the child for other executions.
 
 ### Result values
 
@@ -403,22 +405,34 @@ of successfully materialized action arguments and returned outputs. A key is
 added to `task_args` after argument construction and to `task_outputs` after a
 valid action return. Structural, unreached, and failed stages are absent.
 
+Each task with an action has an action status node named `<task ID>$action`
+under its task node. Its initial description is the task title. The action's
+`status_mgr` owns that node: manually added steps and dynamic workflow calls
+appear beneath it. Context task status nodes and declared child tasks remain
+direct children of the task node. An action that is not reached is recorded as
+`SKIPPED`; a task with no action has no action node. The action node is
+finalized after output validation and publication. Exceptions, covered failures,
+and cancellation retain their normal propagation and cleanup rules.
+
 Raised exceptions become `WorkflowException` under the shared Frame name
 `__exception__`. The value retains the ordinary exception and originating
 task or context-task ID. Explicit `FAILURE` and `ERROR` statuses stop execution
-and receive a deterministic synthetic exception. `FAILURE_COVERED` remains
-visible and permits later sibling tasks to run. Unexecuted declared branches
-appear as `SKIPPED`.
+and receive a deterministic synthetic exception. Unexecuted declared branches
+appear as `SKIPPED`; see the recovery context behavior above for covered failures.
 
-Severity is `ERROR`, `FAILURE`, `FAILURE_COVERED`, then `PENDING`. Clean work
-retains the existing success/all-skipped aggregation rules. A parent aggregates
-child statuses only while its own status is `RUNNING`; an explicitly set status
-remains unchanged by aggregation. Managers start as `PENDING` by default. A
+Severity is `ERROR`, `FAILURE`, `FAILURE_COVERED`, then `PENDING`. A parent with
+only skipped children becomes `SKIPPED`; a clean mixture with a successful child
+becomes `SUCCESS`. A parent aggregates child statuses only while its own status
+is `RUNNING`; an explicitly set non-`RUNNING` status remains unchanged by
+aggregation. Managers start as `PENDING` by default. A
 workflow starts its tasks automatically, and entering a manager with `with`
 starts a pending manager. Adding children alone does not start it. Finalization
 still locks the subtree, including when the parent status is already set.
-Process-control `BaseException` values unwind task contexts and Frames, then
-propagate.
+Cancellation unwinds entered contexts and Frames before propagating unchanged.
+Interrupted actions, tasks, contexts, manual scopes, and calls are recorded as
+`FAILURE`; a cleanup error is recorded as `ERROR` and retained in the
+cancellation's cause. Completed actions and child results retain their status.
+Other process-control `BaseException` values also unwind resources and propagate.
 
 ## Static trees and CLI conversion
 

@@ -19,7 +19,7 @@ from lclang.error import (
     LclValidationError,
 )
 from lclang.error.diagnostic_records import ConfigLoadFrame
-from lclang.error.failure_aggregation import combine_failures
+from lclang.error.failure_aggregation import combine_failures, contains_ordinary_failure
 from lclang.error.native_wrap import wrap_failure
 from lclang.error.operation_guard import guard_async_failure, guard_failure
 from lclang.lang import LclRecord, define_module
@@ -182,6 +182,31 @@ def test_aggregation_keeps_control_identity_and_all_ordinary_causes() -> None:
     assert combine_failures(signal, signal) is signal
     with pytest.raises(LclValidationError):
         combine_failures(cast(BaseException, 1), second)
+
+
+def test_detect_ordinary_failure_in_control_groups_and_causes() -> None:
+    """Detection searches nested groups and causes without looping on cause cycles."""
+    cancellation = asyncio.CancelledError("cancel")
+    assert not contains_ordinary_failure(cancellation)
+
+    cleanup = OSError("cleanup")
+    nested = BaseExceptionGroup(
+        "outer",
+        [
+            asyncio.CancelledError("cancel"),
+            BaseExceptionGroup("inner", [KeyboardInterrupt(), cleanup]),
+        ],
+    )
+    assert contains_ordinary_failure(nested)
+
+    cancellation.__cause__ = cleanup
+    assert contains_ordinary_failure(cancellation)
+
+    first = asyncio.CancelledError("first")
+    second = asyncio.CancelledError("second")
+    first.__cause__ = second
+    second.__cause__ = first
+    assert not contains_ordinary_failure(first)
 
 
 def test_native_groups_keep_splitting_members_codes_and_original_cause() -> None:

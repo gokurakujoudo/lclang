@@ -6,11 +6,6 @@ from lclang.error import LclStateError
 from lclang.workflow import ExecutionStatus, ExecutionStatusManager
 
 
-def read_status(manager: ExecutionStatusManager) -> ExecutionStatus:
-    """Read status after lifecycle operations have changed the tree."""
-    return manager.current.status
-
-
 @pytest.mark.parametrize(
     "status",
     [
@@ -71,18 +66,18 @@ def test_entering_default_manager_starts_it_without_starting_children() -> None:
     """A scope starts on entry, while adding a child does not start either node."""
     parent = ExecutionStatusManager("parent")
     child = parent.add_sub_task("child", "not started")
-    assert read_status(parent) is ExecutionStatus.PENDING
-    assert read_status(child) is ExecutionStatus.PENDING
+    assert str(parent.current.status) == ExecutionStatus.PENDING.value
+    assert str(child.current.status) == ExecutionStatus.PENDING.value
 
     with parent:
-        assert read_status(parent) is ExecutionStatus.RUNNING
-        assert read_status(child) is ExecutionStatus.PENDING
+        assert str(parent.current.status) == ExecutionStatus.RUNNING.value
+        assert str(child.current.status) == ExecutionStatus.PENDING.value
         with child:
-            assert read_status(child) is ExecutionStatus.RUNNING
+            assert str(child.current.status) == ExecutionStatus.RUNNING.value
             child.add_step("done", "completed", ExecutionStatus.SUCCESS)
 
-    assert read_status(child) is ExecutionStatus.SUCCESS
-    assert read_status(parent) is ExecutionStatus.SUCCESS
+    assert str(child.current.status) == ExecutionStatus.SUCCESS.value
+    assert str(parent.current.status) == ExecutionStatus.SUCCESS.value
 
 
 def test_explicit_success_survives_ancestor_finalization() -> None:
@@ -102,5 +97,5 @@ def test_empty_manager_scope_finishes_successfully() -> None:
     """Entering and leaving a pending manager completes the work it started."""
     manager = ExecutionStatusManager("empty")
     with manager:
-        assert read_status(manager) is ExecutionStatus.RUNNING
-    assert read_status(manager) is ExecutionStatus.SUCCESS
+        assert str(manager.current.status) == ExecutionStatus.RUNNING.value
+    assert str(manager.current.status) == ExecutionStatus.SUCCESS.value

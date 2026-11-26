@@ -267,4 +267,6 @@ async def test_skip_control_is_per_execution_and_allows_leaf_tasks() -> None:
     async with define_frame() as frame:
         result = await wf.define_workflow("Leaf", leaf).execute(execution_context(frame))
     assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
-    assert not result.execution_status.sub_tasks[0].sub_tasks
+    assert [child.task_name for child in result.execution_status.sub_tasks[0].sub_tasks] == [
+        "leaf$action"
+    ]

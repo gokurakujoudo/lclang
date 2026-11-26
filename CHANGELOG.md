@@ -13,6 +13,8 @@
 - Preserve explicit workflow task statuses during child aggregation and allow
   later siblings to run after a covered failure. Dynamic workflow calls retain
   their child result for inspection and aggregate status when the action ends.
+- Record each workflow action under its own `<task ID>$action` status node,
+  including its steps, dynamic calls, and skipped or failed outcome.
 
 ### Documentation
 

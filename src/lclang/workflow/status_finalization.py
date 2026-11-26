@@ -1,7 +1,7 @@
 """Shared locking and deterministic workflow status aggregation.
 
 Defines ``SharedExecutionState``, ``ensure_unlocked``, ``ensure_can_add``,
-``finalize_node``, ``aggregate_children``, ``append_child_issue``.
+``finalize_node``, ``mark_unfinished``, ``aggregate_children``, ``append_child_issue``.
 """
 
 from __future__ import annotations
@@ -71,12 +71,21 @@ def finalize_node(state: SharedExecutionState, node: ExecutionStatusTree) -> Non
         return
     for child in node.sub_tasks:
         finalize_node(state, child)
-    if node.status is ExecutionStatus.RUNNING and node.sub_tasks:
-        aggregate_children(node)
+    aggregate_children(node)
     if node.status is ExecutionStatus.RUNNING:
+        mark_unfinished(node)
+    state.locked_nodes.add(id(node))
+
+
+@guard_failure(LclWorkflowError, WorkflowErrorCode.E31_TASK_EXECUTION_NATIVE_FAILURE)
+def mark_unfinished(node: ExecutionStatusTree) -> None:
+    """Record an interrupted node without replacing an existing error.
+
+    :param node: Editable node whose work did not finish.
+    """
+    if node.status is not ExecutionStatus.ERROR:
         node.status = ExecutionStatus.FAILURE
         node.task_description += " (did not finish)"
-    state.locked_nodes.add(id(node))
 
 
 @guard_failure(LclWorkflowError, WorkflowErrorCode.E31_TASK_EXECUTION_NATIVE_FAILURE)

@@ -247,10 +247,12 @@ async def test_unhandled_action_error_records_failure_and_skips_full_branch() ->
     assert failure.error_task == wf.TaskID("root")
     assert result.execution_status.status is wf.ExecutionStatus.ERROR
     task = result.execution_status.sub_tasks[0]
-    assert task.sub_tasks[0].status is wf.ExecutionStatus.SKIPPED
-    assert task.sub_tasks[0].sub_tasks[0].task_name == "skipped_context"
-    assert task.sub_tasks[0].sub_tasks[0].status is wf.ExecutionStatus.SKIPPED
-    assert task.sub_tasks[0].sub_tasks[1].status is wf.ExecutionStatus.SKIPPED
+    assert task.sub_tasks[0].task_name == "root$action"
+    assert task.sub_tasks[0].status is wf.ExecutionStatus.ERROR
+    assert task.sub_tasks[1].status is wf.ExecutionStatus.SKIPPED
+    assert task.sub_tasks[1].sub_tasks[0].task_name == "skipped_context"
+    assert task.sub_tasks[1].sub_tasks[0].status is wf.ExecutionStatus.SKIPPED
+    assert task.sub_tasks[1].sub_tasks[1].status is wf.ExecutionStatus.SKIPPED
     assert wf.TaskID("root") in result.task_args
     assert wf.TaskID("root") not in result.task_outputs
 
@@ -423,7 +425,7 @@ async def test_explicit_failure_creates_synthetic_exception_and_stops() -> None:
 
     assert result.execution_status.status is wf.ExecutionStatus.FAILURE
     assert result.task_outputs[wf.TaskID("root")] == NumberOutputs(4)
-    assert result.execution_status.sub_tasks[0].sub_tasks[0].status is wf.ExecutionStatus.SKIPPED
+    assert result.execution_status.sub_tasks[0].sub_tasks[1].status is wf.ExecutionStatus.SKIPPED
     assert isinstance(cast(WorkflowException, failure).exception, LclWorkflowError)
 
 

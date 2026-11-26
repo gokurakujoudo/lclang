@@ -53,7 +53,7 @@ async def test_call_results_live_frame_isolation_and_detached_status(
     native_root = results[0].execution_status.sub_tasks[0]
     native_leaf = native_root.sub_tasks[0] if grouped else native_root
     assert native_leaf.task_description == "Child"
-    calls = result.execution_status.sub_tasks[0].sub_tasks
+    calls = result.execution_status.sub_tasks[0].sub_tasks[0].sub_tasks
     assert [node.sub_tasks[0].task_name for node in calls] == ["child", "child"]
     assert any(
         "Workflow call started: [parent.call-0] Child workflow (dryrun)" in m

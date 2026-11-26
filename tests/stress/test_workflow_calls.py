@@ -36,4 +36,6 @@ async def test_repeated_workflow_calls_release_frames_and_keep_detached_results(
     assert result.task_outputs[wf.TaskID("parent")] == Value(150)
     assert outputs == [Value(index + 1) for index in range(150)]
     assert all(reference() is None for reference in frames)
-    assert len(result.execution_status.sub_tasks[0].sub_tasks) == 150
+    action = result.execution_status.sub_tasks[0].sub_tasks[0]
+    assert action.task_name == "parent$action"
+    assert len(action.sub_tasks) == 150

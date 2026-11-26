@@ -347,6 +347,9 @@ async def main() -> None:
     assert result.execution_status.status is ExecutionStatus.FAILURE_COVERED
     assert status.sub_tasks[0].status is ExecutionStatus.FAILURE_COVERED
     assert status.sub_tasks[1].status is ExecutionStatus.SUCCESS
+    upload_nodes = {node.task_name: node for node in status.sub_tasks[0].sub_tasks}
+    assert upload_nodes["upload$action"].status is ExecutionStatus.ERROR
+    assert status.sub_tasks[1].sub_tasks[0].task_name == "notify$action"
     assert events == ["reserve", "compensate A", "release A", "notify"]
 
 
@@ -357,7 +360,8 @@ The action failure reaches the handler as an lclang exception whose cause is
 the original `UploadRejected`. The handler selects it by type and re-raises
 other failures. A successful handler and release mark the upload
 `FAILURE_COVERED`. The notification runs after the reservation is released,
-while the status tree retains the covered failure. If compensation or release
+while `upload$action` retains the original `ERROR` and the status tree reports
+the covered failure. If compensation or release
 fails, the diagnostic preserves the failures; see the
 [exception guide](../reference/exceptions.md#failure-handling-and-release-both-fail).
 

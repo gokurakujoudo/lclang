@@ -10,6 +10,7 @@ from typing import Literal, Self
 
 from lclang.error import LclWorkflowError, WorkflowErrorCode
 from lclang.error.exception_base import LclValidationError
+from lclang.error.failure_aggregation import contains_ordinary_failure
 from lclang.error.operation_guard import guard_constructor, guard_failure
 from lclang.workflow.execution_status import (
     ExecutionStatus,
@@ -23,6 +24,7 @@ from lclang.workflow.status_finalization import (
     ensure_can_add,
     ensure_unlocked,
     finalize_node,
+    mark_unfinished,
 )
 from lclang.workflow.status_step import ExecutionStatusStep
 
@@ -172,7 +174,11 @@ class ExecutionStatusManager:
         """
         del error_type, traceback
         if error is not None:
-            self.update(ExecutionStatus.ERROR, str(error))
+            if contains_ordinary_failure(error):
+                self.update(ExecutionStatus.ERROR, str(error))
+            else:
+                ensure_unlocked(self.state, self.current)
+                mark_unfinished(self.current)
         elif self.current.status is ExecutionStatus.RUNNING and not self.current.sub_tasks:
             self.update(ExecutionStatus.SUCCESS)
         self.finalize()

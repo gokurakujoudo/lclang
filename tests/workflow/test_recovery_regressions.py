@@ -76,7 +76,8 @@ async def test_covering_context_runs_outer_sibling_and_records_interrupted_child
     assert result.execution_status.status is wf.ExecutionStatus.FAILURE_COVERED
     assert failed_status.status is wf.ExecutionStatus.FAILURE_COVERED
     assert failed_status.sub_tasks[0].status is wf.ExecutionStatus.FAILURE_COVERED
-    assert failed_status.sub_tasks[1].status is wf.ExecutionStatus.SKIPPED
+    assert failed_status.sub_tasks[-1].task_name == "interrupted"
+    assert failed_status.sub_tasks[-1].status is wf.ExecutionStatus.SKIPPED
     assert sibling_status.status is wf.ExecutionStatus.SUCCESS
 
 
@@ -99,7 +100,9 @@ async def test_dynamic_covered_status_is_visible_in_result_and_next_child_runs()
     parent_status = result.execution_status.sub_tasks[0]
     assert observed == [wf.ExecutionStatus.FAILURE_COVERED, wf.ExecutionStatus.RUNNING]
     assert result.execution_status.status is wf.ExecutionStatus.FAILURE_COVERED
+    assert parent_status.sub_tasks[0].task_name == "parent$action"
     assert parent_status.sub_tasks[0].status is wf.ExecutionStatus.FAILURE_COVERED
+    assert parent_status.sub_tasks[0].sub_tasks[0].status is wf.ExecutionStatus.FAILURE_COVERED
     assert parent_status.sub_tasks[1].status is wf.ExecutionStatus.SUCCESS
 
 
@@ -124,8 +127,11 @@ async def test_explicit_success_after_dynamic_error_survives_ancestor_finalizati
     assert observed == [wf.ExecutionStatus.ERROR, wf.ExecutionStatus.RUNNING]
     assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
     assert parent_status.status is wf.ExecutionStatus.SUCCESS
-    assert parent_status.task_description == "handled child error"
-    assert parent_status.sub_tasks[0].status is wf.ExecutionStatus.ERROR
+    action_status = parent_status.sub_tasks[0]
+    assert action_status.task_name == "parent$action"
+    assert action_status.status is wf.ExecutionStatus.SUCCESS
+    assert action_status.task_description == "handled child error"
+    assert action_status.sub_tasks[0].status is wf.ExecutionStatus.ERROR
     assert parent_status.sub_tasks[1].status is wf.ExecutionStatus.SUCCESS
 
 
@@ -199,7 +205,8 @@ async def test_later_failure_is_not_hidden_by_explicit_action_success(
     assert root.sub_tasks[-2].status is status
     assert root.sub_tasks[-1].status is wf.ExecutionStatus.SKIPPED
     if handled_history:
-        assert root.sub_tasks[0].status is wf.ExecutionStatus.ERROR
+        assert root.sub_tasks[0].task_name == "parent$action"
+        assert root.sub_tasks[0].sub_tasks[0].status is wf.ExecutionStatus.ERROR
 
 
 @pytest.mark.asyncio
@@ -242,7 +249,8 @@ async def test_action_can_explicitly_handle_dynamic_scope_exception(
     root = result.execution_status.sub_tasks[0]
     assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
     assert root.status is wf.ExecutionStatus.SUCCESS
-    assert root.sub_tasks[0].status is wf.ExecutionStatus.ERROR
+    assert root.sub_tasks[0].task_name == "parent$action"
+    assert root.sub_tasks[0].sub_tasks[0].status is wf.ExecutionStatus.ERROR
     assert root.sub_tasks[1].status is wf.ExecutionStatus.SUCCESS
 
 
@@ -330,8 +338,9 @@ async def test_unfinished_step_stops_later_sibling(explicit_success: bool) -> No
         result = await wf.define_workflow("Unfinished", parent).execute(execution_context(frame))
 
     parent_status = result.execution_status.sub_tasks[0]
-    child_status, sibling_status = parent_status.sub_tasks
-    step = child_status.sub_tasks[0]
+    action_status, child_status, sibling_status = parent_status.sub_tasks
+    assert action_status.task_name == "parent$action"
+    step = child_status.sub_tasks[0].sub_tasks[0]
     assert events == ["child"]
     assert result.execution_status.status is wf.ExecutionStatus.FAILURE
     assert parent_status.status is wf.ExecutionStatus.FAILURE

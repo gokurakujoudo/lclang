@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 from lclang.error import LclWorkflowError, WorkflowErrorCode
 from lclang.error.diagnostic_rendering import render_failure
 from lclang.error.exception_base import LclStateError, LclValidationError
-from lclang.error.failure_aggregation import combine_failures
+from lclang.error.failure_aggregation import combine_failures, contains_ordinary_failure
 from lclang.error.native_wrap import is_ordinary_failure, wrap_failure
 from lclang.error.operation_guard import guard_async_failure
 from lclang.lang.runtime import Frame, Preset
@@ -26,6 +26,7 @@ from lclang.workflow.execution_context import (
 )
 from lclang.workflow.execution_status import ExecutionStatus, ExecutionStatusTree, ExecutionTaskType
 from lclang.workflow.log_identity import make_lifecycle_metadata
+from lclang.workflow.status_finalization import mark_unfinished
 from lclang.workflow.status_manager import ExecutionStatusManager
 from lclang.workflow.task_execution import finalize_manager
 from lclang.workflow.task_logging import status_level
@@ -33,31 +34,44 @@ from lclang.workflow.workflow_definition import Workflow
 
 
 @guard_async_failure(LclWorkflowError, WorkflowErrorCode.E41_WORKFLOW_CALL_NATIVE_FAILURE)
-async def close_call_frame(frame: Frame) -> BaseException | None:
+async def close_call_frame(frame: Frame) -> tuple[BaseException | None, bool]:
     """Wait for owned cleanup even when cancellation interrupts the waiting caller.
 
     :param frame: The call's exclusively owned execution Frame.
-    :returns: Combined cancellation or cleanup failure, or None after clean closure.
+    :returns: Combined interruption and cleanup failure, and whether cleanup failed ordinarily.
     """
-    closing = asyncio.create_task(frame.close())
+
+    async def capture_close() -> BaseException | None:
+        """Retain the exact cleanup failure without raising it in the waiting task.
+
+        :returns: Original cleanup failure, or None after successful cleanup.
+        """
+        try:
+            await frame.close()
+        except BaseException as error:
+            return error
+        return None
+
+    closing = asyncio.create_task(capture_close())
     failure: BaseException | None = None
+    cleanup_failed = False
     while not closing.done():
         try:
-            await asyncio.shield(closing)
-        except asyncio.CancelledError as error:
+            await asyncio.wait({closing})
+        except BaseException as error:
             failure = combine_failures(failure, error, code=WorkflowErrorCode.E35_COMPOSITE_FAILURE)
-        except BaseException:
-            break
-    try:
-        closing.result()
-    except BaseException as error:
+    close_failure = closing.result()
+    if close_failure is not None:
+        cleanup_failed = contains_ordinary_failure(close_failure)
         cleanup = (
-            wrap_failure(error, LclWorkflowError, WorkflowErrorCode.E41_CALL_CLEANUP_FAILURE)
-            if is_ordinary_failure(error)
-            else error
+            wrap_failure(
+                close_failure, LclWorkflowError, WorkflowErrorCode.E41_CALL_CLEANUP_FAILURE
+            )
+            if is_ordinary_failure(close_failure)
+            else close_failure
         )
         failure = combine_failures(failure, cleanup, code=WorkflowErrorCode.E35_COMPOSITE_FAILURE)
-    return failure
+    return failure, cleanup_failed
 
 
 @asynccontextmanager
@@ -167,24 +181,35 @@ async def execute_workflow_in_task(
             wrap_failure(error, LclWorkflowError, code) if is_ordinary_failure(error) else error
         )
     finally:
+        ordinary_failure = pending is not None and contains_ordinary_failure(pending)
         if frame is not None:
-            cleanup = await close_call_frame(frame)
+            cleanup, cleanup_failed = await close_call_frame(frame)
             if cleanup is not None:
                 pending = combine_failures(
                     pending, cleanup, code=WorkflowErrorCode.E35_COMPOSITE_FAILURE
                 )
-                if result is not None:
+                ordinary_failure = ordinary_failure or cleanup_failed
+                if result is not None and cleanup_failed and is_ordinary_failure(pending):
                     result.execution_status.status = ExecutionStatus.ERROR
                     result.execution_status.task_description += " (Frame cleanup failed)"
         if pending is not None:
-            manager.update(ExecutionStatus.ERROR, str(pending))
-            context.logger.error(
-                "Workflow call error: [%s]\n%s",
-                branch,
-                render_failure(pending, action=f"calling workflow {branch!r}"),
-                exc_info=(type(pending), pending, pending.__traceback__),
-                extra={**extra, "lclang_failure_diagnostic": True},
-            )
+            if ordinary_failure:
+                manager.update(ExecutionStatus.ERROR, str(pending))
+                context.logger.error(
+                    "Workflow call error: [%s]\n%s",
+                    branch,
+                    render_failure(pending, action=f"calling workflow {branch!r}"),
+                    exc_info=(type(pending), pending, pending.__traceback__),
+                    extra={**extra, "lclang_failure_diagnostic": True},
+                )
+            else:
+                mark_unfinished(manager.current)
+                context.logger.warning(
+                    "Workflow call interrupted: [%s] %s",
+                    branch,
+                    type(pending).__name__,
+                    extra=extra,
+                )
         finalize_manager(manager)
         context.logger.log(
             status_level(manager.current.status),
