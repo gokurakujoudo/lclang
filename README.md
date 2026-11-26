@@ -449,7 +449,8 @@ masking, with required/optional inputs and static defaults grouped by scope.
 `lclang.cli.scan_commands()` discovers commands in a package.
 
 Execution records nested task and step outcomes, including visible covered
-failures, skipped branches, and error origins. Contexts unwind in reverse order,
+failures, skipped branches, and error origins. Each action has a `<task ID>$action`
+status node that contains its steps and dynamic calls. Contexts unwind in reverse order,
 and the result retains the final status tree plus every successful action's
 materialized arguments and outputs. CLI workflows log start, traceback-bearing
 error, and finalized completion records using dot-connected task branches and

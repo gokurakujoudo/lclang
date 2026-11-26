@@ -500,6 +500,7 @@ async def main() -> None:
     assert (sunny_status, sunny_stdout) == (0, "")
     assert "validated usage=250.00 kWh" in sunny_stderr
     assert "[SUCCESS] Energy settlement workflow" in sunny_stderr
+    assert "[SUCCESS] calculate_usage$action" in sunny_stderr
     result_path = result_dir / "settlement.txt"
     assert result_path.read_text(encoding="utf-8") == (
         "Warehouse energy settlement\n"
@@ -529,6 +530,8 @@ async def main() -> None:
     )
     assert rainy_status == 2
     assert "[SKIPPED] calculate_subtotal" in rainy_stderr
+    assert "[ERROR] calculate_usage$action" in rainy_stderr
+    assert "[SKIPPED] calculate_subtotal$action" in rainy_stderr
     assert "Error in running workflow task 'settlement.calculate_usage' [LCL531811:" in rainy_stderr
     assert "ValueError: end reading 900.0" in rainy_stderr
     assert "[ERROR] Energy settlement workflow" in rainy_stderr
@@ -642,7 +645,7 @@ python settlement.py settle --config settlement.lclcfg --verbose
 
 The default log format adds timestamps; application logs also retain source
 locations. Task completion lines include measured `action_ms` durations. The
-following excerpts omit those changing values:
+following excerpts omit those changing values and some status-tree details:
 
 ```text
 validated usage=250.00 kWh
@@ -655,12 +658,13 @@ closed settlement report .../results/settlement.txt
 Workflow completed: [settle] SUCCESS:
 [SUCCESS] Energy settlement workflow
 └─ [SUCCESS] settlement: Settle one meter period
+   ...
 lunch option: noodles
 ```
 
 Ordinary `INFO` application logs appear on stderr and in the configured file
-before the final tree. Each task's
-`add_step(...)` scope also appears under that task, which makes the final tree a
+before the final tree. Each task's `add_step(...)` scope appears under its
+`<task ID>$action` status node, which makes the final tree a
 useful audit outline without forcing every calculation into the log message
 format.
 
@@ -685,9 +689,15 @@ Workflow completed: [settle] ERROR:
 [ERROR] Energy settlement workflow: ...
    └─ [ERROR] settlement: ...
       ├─ [ERROR] calculate_usage: ...
+      │  └─ [ERROR] calculate_usage$action: ...
+      │     ...
       ├─ [SKIPPED] calculate_subtotal: Price energy usage
+      │  └─ [SKIPPED] calculate_subtotal$action: Price energy usage
       ├─ [SKIPPED] calculate_tax: Apply settlement tax
+      │  └─ [SKIPPED] calculate_tax$action: Apply settlement tax
       └─ [SKIPPED] write_report: Write finance settlement
+         ├─ [SKIPPED] open_report: Own the settlement output file
+         └─ [SKIPPED] write_report$action: Write finance settlement
 lunch option: no lunch!
 ```
 

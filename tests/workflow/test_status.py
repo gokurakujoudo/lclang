@@ -18,8 +18,8 @@ InvalidTree = cast(Any, ExecutionStatusTree)
 
 def test_managers_share_ordered_tree_and_clean_statuses() -> None:
     """Child cursors update one tree and clean outcomes aggregate predictably."""
-    manager = ExecutionStatusManager("deploy", "release")
-    skipped = manager.add_sub_task("optional", "optional checks")
+    manager = ExecutionStatusManager("deploy", "release", status=ExecutionStatus.RUNNING)
+    skipped = manager.add_sub_task("optional", "optional checks", ExecutionStatus.RUNNING)
     skipped.add_step("lint", "not required", ExecutionStatus.SKIPPED)
     skipped_tree = skipped.finalize()
     assert skipped_tree.status is ExecutionStatus.SKIPPED
@@ -45,7 +45,7 @@ def test_managers_share_ordered_tree_and_clean_statuses() -> None:
 
 def test_context_manager_records_error_finalizes_and_reraises() -> None:
     """Exceptional scope exit records the message without suppressing the error."""
-    manager = ExecutionStatusManager("workflow")
+    manager = ExecutionStatusManager("workflow", status=ExecutionStatus.RUNNING)
     with (
         pytest.raises(ValueError, match="broken input") as caught,
         manager.add_sub_task("prepare", "initial text") as prepare,
@@ -64,11 +64,11 @@ def test_context_manager_records_error_finalizes_and_reraises() -> None:
 
 def test_finalization_handles_pending_running_and_issue_severity() -> None:
     """Complex branches retain pending work and choose the first worst issue."""
-    manager = ExecutionStatusManager("workflow", "daily")
+    manager = ExecutionStatusManager("workflow", "daily", status=ExecutionStatus.RUNNING)
     manager.add_step("failed-first", "expected failure", ExecutionStatus.FAILURE)
     manager.add_step("pending", "not started", ExecutionStatus.PENDING)
     manager.add_step("running", "started", ExecutionStatus.RUNNING)
-    error = manager.add_sub_task("errored", "nested")
+    error = manager.add_sub_task("errored", "nested", ExecutionStatus.RUNNING)
     error.add_step("boom", "unexpected", ExecutionStatus.ERROR)
 
     tree = manager.finalize()
@@ -80,19 +80,20 @@ def test_finalization_handles_pending_running_and_issue_severity() -> None:
     assert tree.sub_tasks[3].task_description == ("nested (sub-task 'boom' ended with ERROR)")
 
 
-def test_explicit_failures_are_sticky_but_errors_escalate() -> None:
-    """A clean child cannot erase failure while a child error still escalates it."""
+def test_explicit_failures_are_sticky_when_children_finish() -> None:
+    """An explicit failure remains authoritative over any child result."""
     failed = ExecutionStatusManager("failed", "own", status=ExecutionStatus.FAILURE)
     failed.add_step("clean", "done", ExecutionStatus.SUCCESS)
     failed_tree = failed.finalize()
     assert failed_tree.status is ExecutionStatus.FAILURE
     assert failed_tree.task_description == "own"
 
-    escalated = ExecutionStatusManager("failed", "own", status=ExecutionStatus.FAILURE)
-    escalated.add_step("broken", "bad", ExecutionStatus.ERROR)
-    escalated_tree = escalated.finalize()
-    assert escalated_tree.status is ExecutionStatus.ERROR
-    assert escalated_tree.task_description == "own (sub-task 'broken' ended with ERROR)"
+    failed_with_error = ExecutionStatusManager("failed", "own", status=ExecutionStatus.FAILURE)
+    failed_with_error.add_step("broken", "bad", ExecutionStatus.ERROR)
+    failed_error_tree = failed_with_error.finalize()
+    assert failed_error_tree.status is ExecutionStatus.FAILURE
+    assert failed_error_tree.task_description == "own"
+    assert failed_error_tree.sub_tasks[0].status is ExecutionStatus.ERROR
 
     errored = ExecutionStatusManager("errored", "own", status=ExecutionStatus.ERROR)
     errored.add_step("failed", "bad", ExecutionStatus.FAILURE)
@@ -103,7 +104,7 @@ def test_explicit_failures_are_sticky_but_errors_escalate() -> None:
 
 def test_failure_and_pending_children_propagate_without_errors() -> None:
     """Failure and pending branches select their documented parent outcomes."""
-    failed = ExecutionStatusManager("root", "work")
+    failed = ExecutionStatusManager("root", "work", status=ExecutionStatus.RUNNING)
     failed.add_step("broken", "bad", ExecutionStatus.FAILURE)
     failed_tree = failed.finalize()
     assert failed_tree.status is ExecutionStatus.FAILURE
@@ -111,12 +112,13 @@ def test_failure_and_pending_children_propagate_without_errors() -> None:
 
     pending = ExecutionStatusManager("root", status=ExecutionStatus.SUCCESS)
     pending.add_step("waiting", "later", ExecutionStatus.PENDING)
-    assert pending.finalize().status is ExecutionStatus.PENDING
+    assert pending.finalize().status is ExecutionStatus.SUCCESS
+    assert pending.current.sub_tasks[0].status is ExecutionStatus.PENDING
 
 
 def test_covered_failure_is_visible_below_failure_and_sticky_on_its_scope() -> None:
     """Covered work propagates unless a worse outcome exists and remains covered."""
-    covered = ExecutionStatusManager("root")
+    covered = ExecutionStatusManager("root", status=ExecutionStatus.RUNNING)
     covered.add_step("recovered", "handled", ExecutionStatus.FAILURE_COVERED)
     covered_tree = covered.finalize()
     assert covered_tree.status is ExecutionStatus.FAILURE_COVERED
@@ -128,7 +130,7 @@ def test_covered_failure_is_visible_below_failure_and_sticky_on_its_scope() -> N
     assert sticky_tree.status is ExecutionStatus.FAILURE_COVERED
     assert sticky_tree.task_description == "handled"
 
-    worse = ExecutionStatusManager("root")
+    worse = ExecutionStatusManager("root", status=ExecutionStatus.RUNNING)
     worse.add_step("covered", "handled", ExecutionStatus.FAILURE_COVERED)
     worse.add_step("failed", "rejected", ExecutionStatus.FAILURE)
     assert worse.finalize().status is ExecutionStatus.FAILURE

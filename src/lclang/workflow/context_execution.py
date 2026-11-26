@@ -10,7 +10,7 @@ from dataclasses import replace
 from typing import cast
 
 from lclang.error import LclWorkflowError, WorkflowErrorCode
-from lclang.error.failure_aggregation import combine_failures
+from lclang.error.failure_aggregation import combine_failures, contains_ordinary_failure
 from lclang.error.native_wrap import is_ordinary_failure, wrap_failure
 from lclang.error.operation_guard import guard_async_failure
 from lclang.workflow.callback_timing import measure_callback
@@ -19,6 +19,7 @@ from lclang.workflow.execution_context import (
 )
 from lclang.workflow.execution_status import ExecutionStatus
 from lclang.workflow.mappings import mapped_outputs, materialize_args
+from lclang.workflow.status_finalization import mark_unfinished
 from lclang.workflow.status_manager import ExecutionStatusManager
 from lclang.workflow.task_execution import (
     WorkflowRunState,
@@ -92,6 +93,10 @@ async def execute_context_scope(
                 error,
                 code=WorkflowErrorCode.E32_CONTEXT_ENTER_FAILURE,
             )
+        elif contains_ordinary_failure(error):
+            context_manager.update(ExecutionStatus.ERROR, str(error))
+        else:
+            mark_unfinished(context_manager.current)
         finalize_manager(context_manager)
         log_task_complete(state.context, branch, context_manager.current.status, times)
         raise error
@@ -136,6 +141,12 @@ async def execute_context_scope(
                 )
             )
             record_exception(state, context_manager, branch, recorded)
+            manager.update(ExecutionStatus.ERROR)
+        elif contains_ordinary_failure(error):
+            context_manager.update(ExecutionStatus.ERROR, str(error))
+            manager.update(ExecutionStatus.ERROR)
+        else:
+            mark_unfinished(context_manager.current)
         finalize_manager(context_manager)
         log_task_complete(state.context, branch, context_manager.current.status, times)
         log_mapping(

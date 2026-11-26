@@ -1,6 +1,6 @@
 """Combine ordinary failures without converting process-control exceptions.
 
-Defines ``contains_failure``, ``combine_failures``.
+Defines ``contains_failure``, ``contains_ordinary_failure``, ``combine_failures``.
 """
 
 from typing import cast
@@ -26,6 +26,28 @@ def contains_failure(error: BaseException, failure: BaseException) -> bool:
         contains_failure(member, failure)
         for member in cast(BaseExceptionGroup[BaseException], error).exceptions
     )
+
+
+def contains_ordinary_failure(error: BaseException) -> bool:
+    """Find an ordinary failure among control signals, group members and causes.
+
+    :param error: Failure whose retained members and explicit causes are inspected.
+    :returns: Whether an ordinary failure is present.
+    """
+    pending = [error]
+    visited: set[int] = set()
+    while pending:
+        current = pending.pop()
+        if id(current) in visited:
+            continue
+        visited.add(id(current))
+        if is_ordinary_failure(current):
+            return True
+        if isinstance(current, BaseExceptionGroup):
+            pending.extend(cast(BaseExceptionGroup[BaseException], current).exceptions)
+        if current.__cause__ is not None:
+            pending.append(current.__cause__)
+    return False
 
 
 def combine_failures(

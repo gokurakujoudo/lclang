@@ -176,6 +176,45 @@ async def test_cleanup_cancellation_still_attempts_remaining_resources() -> None
 
 
 @pytest.mark.asyncio
+async def test_concurrent_close_preserves_resource_cancellation_and_cause() -> None:
+    """Every closer receives the same resource cancellation without repeating cleanup."""
+    started = asyncio.Event()
+    release = asyncio.Event()
+    original_cause = OSError("resource cleanup failed")
+    original_cancel = asyncio.CancelledError("resource cancelled cleanup")
+    calls: list[str] = []
+
+    class Resource:
+        async def aclose(self) -> None:
+            calls.append("close")
+            started.set()
+            await release.wait()
+            raise original_cancel from original_cause
+
+    resource = Resource()
+    frame = _frame({"resource": "make()"}, make=lambda: resource)
+    await frame.get("resource")
+    first = asyncio.create_task(frame.close())
+    await started.wait()
+    others = [asyncio.create_task(frame.close()) for _ in range(2)]
+    await asyncio.sleep(0)
+    release.set()
+
+    observed: list[asyncio.CancelledError] = []
+    for waiter in [first, *others]:
+        with pytest.raises(asyncio.CancelledError) as caught:
+            await waiter
+        observed.append(caught.value)
+    with pytest.raises(asyncio.CancelledError) as repeated:
+        await frame.close()
+    observed.append(repeated.value)
+    assert all(error is original_cancel for error in observed)
+    assert all(error.__cause__ is original_cause for error in observed)
+    assert frame.closed
+    assert calls == ["close"]
+
+
+@pytest.mark.asyncio
 async def test_child_close_borrows_parent_but_parent_close_blocks_fallback() -> None:
     """Hierarchy ownership is directional rather than cascading."""
     parent = _frame({"value": "42"})

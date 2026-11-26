@@ -1,7 +1,7 @@
 """Shared locking and deterministic workflow status aggregation.
 
 Defines ``SharedExecutionState``, ``ensure_unlocked``, ``ensure_can_add``,
-``finalize_node``, ``aggregate_children``, ``append_child_issue``.
+``finalize_node``, ``mark_unfinished``, ``aggregate_children``, ``append_child_issue``.
 """
 
 from __future__ import annotations
@@ -71,31 +71,36 @@ def finalize_node(state: SharedExecutionState, node: ExecutionStatusTree) -> Non
         return
     for child in node.sub_tasks:
         finalize_node(state, child)
+    aggregate_children(node)
     if node.status is ExecutionStatus.RUNNING:
-        node.status = ExecutionStatus.FAILURE
-        node.task_description += " (did not finish)"
-    if node.sub_tasks:
-        aggregate_children(node)
+        mark_unfinished(node)
     state.locked_nodes.add(id(node))
 
 
 @guard_failure(LclWorkflowError, WorkflowErrorCode.E31_TASK_EXECUTION_NATIVE_FAILURE)
-def aggregate_children(node: ExecutionStatusTree) -> None:
-    """Apply deterministic child severity and clean-result rules to one task.
+def mark_unfinished(node: ExecutionStatusTree) -> None:
+    """Record an interrupted node without replacing an existing error.
 
-    :param node: Composite node whose direct children are finalized.
+    :param node: Editable node whose work did not finish.
+    """
+    if node.status is not ExecutionStatus.ERROR:
+        node.status = ExecutionStatus.FAILURE
+        node.task_description += " (did not finish)"
+
+
+@guard_failure(LclWorkflowError, WorkflowErrorCode.E31_TASK_EXECUTION_NATIVE_FAILURE)
+def aggregate_children(node: ExecutionStatusTree) -> None:
+    """Aggregate current child statuses while the parent is running.
+
+    :param node: Composite node whose children can include active contexts.
     :returns: ``None``.
     """
-    if node.status is ExecutionStatus.FAILURE_COVERED:
+    if node.status is not ExecutionStatus.RUNNING or not node.sub_tasks:
         return
     errors = [child for child in node.sub_tasks if child.status is ExecutionStatus.ERROR]
-    if node.status is ExecutionStatus.ERROR:
-        return
     if errors:
         node.status = ExecutionStatus.ERROR
         append_child_issue(node, errors[0])
-        return
-    if node.status is ExecutionStatus.FAILURE:
         return
     failures = [child for child in node.sub_tasks if child.status is ExecutionStatus.FAILURE]
     if failures:

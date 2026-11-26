@@ -53,7 +53,7 @@ class InternalFrameLifecycle:
         self.retired: list[object] = []
         self.closing = False
         self.closed = False
-        self.close_task: asyncio.Task[None] | None = None
+        self.close_task: asyncio.Task[BaseException | None] | None = None
 
     @guard_failure(LclEvaluationError, RuntimeErrorCode.E36_FRAME_CLEANUP_NATIVE_FAILURE)
     def ensure_open(self, span: SourceSpan | None) -> None:
@@ -100,13 +100,14 @@ class InternalFrameLifecycle:
             self.closing = True
             task = asyncio.create_task(self.internal_run_close())
             self.close_task = task
-        await asyncio.shield(task)
+        failure = await asyncio.shield(task)
+        if failure is not None:
+            raise failure from failure.__cause__
 
-    async def internal_run_close(self) -> None:
+    async def internal_run_close(self) -> BaseException | None:
         """Cancel work, close unique resources, and clear all owned state.
 
-        :raises BaseException: If cleanup raises a non-Exception cancellation.
-        :raises LclEvaluationError: If ordinary resource cleanup fails.
+        :returns: The retained cleanup failure, or None after clean closure.
         """
         errors: list[BaseException] = []
         try:
@@ -150,8 +151,7 @@ class InternalFrameLifecycle:
             failure = combine_failures(
                 failure, cleanup, code=RuntimeErrorCode.E36_MULTIPLE_CLEANUP_FAILURES
             )
-        if failure is not None:
-            raise failure from failure.__cause__
+        return failure
 
 
 async def internal_close_resource(resource: object) -> None:

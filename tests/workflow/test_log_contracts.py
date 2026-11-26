@@ -149,11 +149,11 @@ async def test_callback_durations_exclude_child_traversal_and_context_holding(
 @pytest.mark.parametrize(
     "status", [ExecutionStatus.ERROR, ExecutionStatus.FAILURE, ExecutionStatus.FAILURE_COVERED]
 )
-async def test_status_stop_and_context_unwind_are_warning_records(
+async def test_status_and_context_unwind_logging(
     caplog: pytest.LogCaptureFixture,
     status: ExecutionStatus,
 ) -> None:
-    """Stopping status remains failed while normal context unwinding reports no new exception."""
+    """Stopping statuses warn on unwind; covered status completes without a stop."""
     received: list[WorkflowStatusStop] = []
 
     @asynccontextmanager
@@ -186,7 +186,18 @@ async def test_status_stop_and_context_unwind_are_warning_records(
     with caplog.at_level(logging.INFO, logger=logger.name):
         async with define_frame() as frame:
             result = await define_workflow("Stop", task).execute(execution(frame, logger))
-    assert result.execution_status.status is status and len(received) == 1
+    assert result.execution_status.status is status
+    if status is ExecutionStatus.FAILURE_COVERED:
+        assert not received
+        assert not any("Workflow task stopped:" in record.getMessage() for record in caplog.records)
+        completed = next(
+            record
+            for record in caplog.records
+            if "Workflow task completed: [root]" in record.getMessage()
+        )
+        assert completed.levelno == logging.WARNING and status.value in completed.getMessage()
+        return
+    assert len(received) == 1
     stopped = next(r for r in caplog.records if "Workflow task stopped:" in r.getMessage())
     assert stopped.levelno == logging.WARNING and stopped.exc_info is None
     assert (

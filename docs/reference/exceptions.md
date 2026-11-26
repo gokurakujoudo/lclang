@@ -2023,7 +2023,7 @@ Status: ERROR
 ```
 <!-- /lclang-doc-case -->
 
-Return from handle_exception only when every selected failure has been dealt with. Re-raise an unhandled remainder, as in the except* example above. A successful handler and release mark FAILURE_COVERED; that status still stops dependent traversal. Here the handler and release fail, so the result is ERROR, and codes LCL533811 and LCL532812 identify the two later operations. Release runs even when handling or a control signal fails.
+Return from handle_exception only when every selected failure has been dealt with. Re-raise an unhandled remainder, as in the except* example above. A successful handler and release mark FAILURE_COVERED and allow later sibling tasks to run. Here the handler and release fail, so the result is ERROR, and codes LCL533811 and LCL532812 identify the two later operations. Release runs even when handling or a control signal fails.
 
 ## Mixed native control groups at the process boundary
 

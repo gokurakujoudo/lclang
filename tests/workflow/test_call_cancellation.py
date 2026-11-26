@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 import pytest
 
 import lclang.workflow as wf
+from lclang.error.failure_aggregation import contains_failure
 from lclang.lang import define_frame
 from tests.workflow.call_support import Value, install_call_resource, make_child, run_parent
 
@@ -20,12 +21,27 @@ async def test_cancellation_during_child_execution_unwinds_context_resources(
     """The active child scope unwinds before cancellation leaves the parent action."""
     entered = asyncio.Event()
     closed: list[str] = []
+    cleanup_failure = OSError("cleanup after cancelled execution")
+    captured: dict[str, wf.ExecutionStatusTree] = {}
+    add_sub_task = wf.ExecutionStatusManager.add_sub_task
+
+    def capture_sub_task(
+        manager: wf.ExecutionStatusManager,
+        name: str,
+        description: str,
+        status: wf.ExecutionStatus = wf.ExecutionStatus.PENDING,
+    ) -> wf.ExecutionStatusManager:
+        child_manager = add_sub_task(manager, name, description, status)
+        captured[name] = child_manager.current
+        return child_manager
+
+    monkeypatch.setattr(wf.ExecutionStatusManager, "add_sub_task", capture_sub_task)
 
     class Resource:
         def close(self) -> None:
             closed.append("frame")
             if fail_cleanup:
-                raise OSError("cleanup after cancelled execution")
+                raise cleanup_failure
 
     install_call_resource(monkeypatch, Resource)
 
@@ -75,6 +91,10 @@ async def test_cancellation_during_child_execution_unwinds_context_resources(
             await running
         if fail_cleanup:
             assert caught.value.__cause__ is not None
+            assert contains_failure(caught.value.__cause__, cleanup_failure)
+        else:
+            for name in ("parent", "parent$action", "waiting"):
+                assert captured[name].status is wf.ExecutionStatus.FAILURE
         assert closed == ["context", "frame"]
         assert await frame.get("alive") == 1
 
@@ -84,12 +104,15 @@ async def test_cancellation_during_child_execution_unwinds_context_resources(
 async def test_repeated_cancellation_waits_for_final_owned_frame_cleanup(
     fail_cleanup: bool,
     monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Even repeated cancellation cannot leave asynchronous Frame cleanup running behind."""
     entered = asyncio.Event()
     release = asyncio.Event()
     closed: list[str] = []
     results: list[wf.WorkflowExecutionResult] = []
+    call_statuses: list[wf.ExecutionStatusTree] = []
+    cleanup_failure = OSError("cleanup failed")
 
     class Resource:
         async def aclose(self) -> None:
@@ -97,7 +120,7 @@ async def test_repeated_cancellation_waits_for_final_owned_frame_cleanup(
             await release.wait()
             closed.append("frame")
             if fail_cleanup:
-                raise OSError("cleanup failed")
+                raise cleanup_failure
 
     install_call_resource(monkeypatch, Resource)
 
@@ -110,20 +133,30 @@ async def test_repeated_cancellation_waits_for_final_owned_frame_cleanup(
         ) as result:
             results.append(result)
             await result.execution_frame.get("resource")
+            call_statuses.append(manager.current.sub_tasks[-1])
         return Value(1)
 
     async with define_frame() as frame, asyncio.timeout(5):
         running = asyncio.create_task(run_parent(parent, frame))
         await entered.wait()
-        for _ in range(2):
-            running.cancel()
+        for message in ("user-stop", "second-cancel"):
+            running.cancel(message)
             await asyncio.sleep(0)
         assert not running.done()
         release.set()
-        with pytest.raises(asyncio.CancelledError):
+        with pytest.raises(asyncio.CancelledError) as caught:
             await running
+        assert caught.value.args == ("user-stop",)
         assert closed == ["frame"]
-        assert results[0].execution_status.status is wf.ExecutionStatus.ERROR
+        await asyncio.sleep(0)
+        assert not any(
+            "exception in shielded future" in record.getMessage() for record in caplog.records
+        )
+        if fail_cleanup:
+            assert call_statuses[0].status is wf.ExecutionStatus.ERROR
+            assert caught.value.__cause__ is not None
+            assert contains_failure(caught.value.__cause__, cleanup_failure)
+        assert results[0].execution_status.status is wf.ExecutionStatus.SUCCESS
         assert results[0].task_outputs[wf.TaskID("child")] == Value(2)
 
 

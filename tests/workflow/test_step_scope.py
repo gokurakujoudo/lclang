@@ -59,7 +59,7 @@ def test_step_updates_description_status_or_both_and_preserves_status() -> None:
 
 def test_exceptional_step_exit_records_error_and_reraises() -> None:
     """An exception overrides earlier status, records its message, and escapes."""
-    manager = ExecutionStatusManager("workflow")
+    manager = ExecutionStatusManager("workflow", status=ExecutionStatus.RUNNING)
     handle = manager.add_step("decode", "decode input")
     with pytest.raises(ValueError, match="bad header"), handle as step:
         step.update(status=ExecutionStatus.SUCCESS)

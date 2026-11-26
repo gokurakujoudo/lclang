@@ -247,10 +247,12 @@ async def test_unhandled_action_error_records_failure_and_skips_full_branch() ->
     assert failure.error_task == wf.TaskID("root")
     assert result.execution_status.status is wf.ExecutionStatus.ERROR
     task = result.execution_status.sub_tasks[0]
-    assert task.sub_tasks[0].status is wf.ExecutionStatus.SKIPPED
-    assert task.sub_tasks[0].sub_tasks[0].task_name == "skipped_context"
-    assert task.sub_tasks[0].sub_tasks[0].status is wf.ExecutionStatus.SKIPPED
-    assert task.sub_tasks[0].sub_tasks[1].status is wf.ExecutionStatus.SKIPPED
+    assert task.sub_tasks[0].task_name == "root$action"
+    assert task.sub_tasks[0].status is wf.ExecutionStatus.ERROR
+    assert task.sub_tasks[1].status is wf.ExecutionStatus.SKIPPED
+    assert task.sub_tasks[1].sub_tasks[0].task_name == "skipped_context"
+    assert task.sub_tasks[1].sub_tasks[0].status is wf.ExecutionStatus.SKIPPED
+    assert task.sub_tasks[1].sub_tasks[1].status is wf.ExecutionStatus.SKIPPED
     assert wf.TaskID("root") in result.task_args
     assert wf.TaskID("root") not in result.task_outputs
 
@@ -321,8 +323,8 @@ class CoverFailure(wf.FailureCoveringContextTask[NumberArgs, NumberOutputs]):
 
 
 @pytest.mark.asyncio
-async def test_covering_context_wraps_failure_but_still_skips_sibling() -> None:
-    """Covered failure performs housekeeping, remains visible, and stops DFS."""
+async def test_covering_context_wraps_failure_and_continues_to_sibling() -> None:
+    """Covered failure performs housekeeping, remains visible, and permits the sibling."""
     events: list[str] = []
     source = wf.define_variable[int]("source")
 
@@ -342,12 +344,12 @@ async def test_covering_context_wraps_failure_but_still_skips_sibling() -> None:
         del context, args, status_mgr
         raise ValueError("covered")
 
-    async def unreachable_action(
+    async def sibling_action(
         context: wf.TaskContext,
         args: NumberArgs,
         status_mgr: wf.ExecutionStatusManager,
     ) -> NumberOutputs:
-        """Record an invocation that must be skipped.
+        """Record the sibling invocation.
 
         :param context: Current task context.
         :param args: Materialized arguments.
@@ -355,7 +357,7 @@ async def test_covering_context_wraps_failure_but_still_skips_sibling() -> None:
         :returns: Echoed value.
         """
         del context, status_mgr
-        events.append("unreachable")
+        events.append("sibling")
         return NumberOutputs(args.value)
 
     covering = wf.define_context_task(
@@ -373,8 +375,8 @@ async def test_covering_context_wraps_failure_but_still_skips_sibling() -> None:
     )
     sibling = wf.define_task(
         "sibling",
-        "Skipped sibling",
-        task_action=unreachable_action,
+        "Later sibling",
+        task_action=sibling_action,
         args_mapping=NumberArgs(source.quote),
     )
     root = wf.define_task("root", "Root", children=[failed, sibling])
@@ -382,11 +384,11 @@ async def test_covering_context_wraps_failure_but_still_skips_sibling() -> None:
     async with define_frame(preset={"source": 3}) as frame:
         result = await wf.define_workflow("Covered", root).execute(execution_context(frame))
 
-    assert events == ["acquire", "handle", "release"]
+    assert events == ["acquire", "handle", "release", "sibling"]
     assert result.execution_status.status is wf.ExecutionStatus.FAILURE_COVERED
     root_status = result.execution_status.sub_tasks[0]
     assert root_status.sub_tasks[0].status is wf.ExecutionStatus.FAILURE_COVERED
-    assert root_status.sub_tasks[1].status is wf.ExecutionStatus.SKIPPED
+    assert root_status.sub_tasks[1].status is wf.ExecutionStatus.SUCCESS
 
 
 @pytest.mark.asyncio
@@ -423,7 +425,7 @@ async def test_explicit_failure_creates_synthetic_exception_and_stops() -> None:
 
     assert result.execution_status.status is wf.ExecutionStatus.FAILURE
     assert result.task_outputs[wf.TaskID("root")] == NumberOutputs(4)
-    assert result.execution_status.sub_tasks[0].sub_tasks[0].status is wf.ExecutionStatus.SKIPPED
+    assert result.execution_status.sub_tasks[0].sub_tasks[1].status is wf.ExecutionStatus.SKIPPED
     assert isinstance(cast(WorkflowException, failure).exception, LclWorkflowError)
 
 

@@ -217,7 +217,11 @@ async def test_omission_survives_failures_and_cancellation(
                     )
                 )
                 sibling_status = result.execution_status.sub_tasks[0].sub_tasks[1].status
-                assert sibling_status is wf.ExecutionStatus.SKIPPED
+                assert sibling_status is (
+                    wf.ExecutionStatus.SUCCESS
+                    if failure == "covered"
+                    else wf.ExecutionStatus.SKIPPED
+                )
                 assert "child" not in result.task_args and "child" not in result.task_outputs
     assert events == ["cleanup"]
     assert "child" not in status_names(managers[0].current)
@@ -263,4 +267,6 @@ async def test_skip_control_is_per_execution_and_allows_leaf_tasks() -> None:
     async with define_frame() as frame:
         result = await wf.define_workflow("Leaf", leaf).execute(execution_context(frame))
     assert result.execution_status.status is wf.ExecutionStatus.SUCCESS
-    assert not result.execution_status.sub_tasks[0].sub_tasks
+    assert [child.task_name for child in result.execution_status.sub_tasks[0].sub_tasks] == [
+        "leaf$action"
+    ]

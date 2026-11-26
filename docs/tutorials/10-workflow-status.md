@@ -21,6 +21,8 @@ can sit beside successful work without making the whole task skipped.
 from lclang.workflow import ExecutionStatus, ExecutionStatusManager
 
 workflow = ExecutionStatusManager("release", "publish version 1.2.0")
+# Workflow execution starts task managers automatically.
+workflow.update(ExecutionStatus.RUNNING)
 
 with workflow.add_sub_task("verify", "run release checks") as verify:
     with verify.add_step("tests", "unit and integration tests") as tests:
@@ -43,15 +45,19 @@ assert [child.status for child in result.sub_tasks[0].sub_tasks] == [
 ]
 ```
 
+The root starts as `PENDING`; the example marks it `RUNNING` before adding work.
+Entering each pending sub-task with `with` also starts it.
 Leaving each scoped running step cleanly changes it to `SUCCESS`; the manual
 step keeps its explicit `SKIPPED` state. Each sub-task therefore contains at
 least one success and no failure, so both become successful. Finalizing the root
 applies the same aggregation and preserves the insertion order checked by the
 assertions.
 
-Children retain insertion order. A clean scoped step changes an unchanged
-`RUNNING` status to `SUCCESS`. Finalization locks that subtree against later
-mutation.
+Use `with` around a step that tracks an operation; it records a clean completion
+or an exception. Add a step without `with` for a descriptive child whose status
+is already known, such as the skipped approval above. A step left `RUNNING`
+becomes `FAILURE` when its action is finalized. Finalization locks the subtree
+against later mutation.
 
 ## Capture failure detail and incomplete work
 
@@ -63,6 +69,8 @@ description, finalizes it, and then propagates the same exception.
 from lclang.workflow import ExecutionStatus, ExecutionStatusManager
 
 workflow = ExecutionStatusManager("import", "load customer data")
+# Workflow execution starts task managers automatically.
+workflow.update(ExecutionStatus.RUNNING)
 
 try:
     with workflow.add_step("decode", "decode input") as decode:
@@ -91,10 +99,11 @@ explicitly left running, so finalization converts it to `FAILURE` and appends
 the unfinished suffix. Because error outranks failure, the root reports the
 decode child as its direct cause.
 
-Aggregation severity is `ERROR`, then `FAILURE`, then `PENDING`. If every child
-is skipped, the parent becomes `SKIPPED`; a clean mixture containing success
-becomes `SUCCESS`. An unfinished `RUNNING` node becomes `FAILURE` with the
-`(did not finish)` suffix rather than being silently accepted.
+While a parent is `RUNNING`, aggregation severity is `ERROR`, then `FAILURE`,
+`FAILURE_COVERED`, and `PENDING`. If every child is skipped, the parent becomes
+`SKIPPED`; a clean mixture containing success becomes `SUCCESS`. An explicitly
+set non-`RUNNING` parent status is retained. A `RUNNING` leaf still unfinished when
+it is finalized becomes `FAILURE` with the `(did not finish)` suffix.
 
 The returned tree contains ordinary typed fields. Applications may render it,
 log it, or convert it to their own wire schema; lclang deliberately defines the
@@ -104,8 +113,8 @@ The example above operates on an `ExecutionStatusManager` directly. When
 running a workflow, an ordinary task exception is captured in its returned
 `WorkflowExecutionResult` and recorded in the shared Frame; inspect the status
 and diagnostic rather than relying only on `try`/`except` around `execute`.
-A recovery context can mark a handled failure `FAILURE_COVERED`, which still
-stops the remaining branch. A workflow converted to a CLI maps success,
+A recovery context can mark a handled failure `FAILURE_COVERED`; later sibling
+tasks may then run. A workflow converted to a CLI maps success,
 failure, error, and covered failure to exit statuses `0`, `1`, `2`, and `3`.
 See the [workflow reference](../reference/workflow.md#execution-and-results) and
 [exception guide](../reference/exceptions.md) for recovery and cleanup failure

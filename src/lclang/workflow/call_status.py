@@ -1,11 +1,11 @@
-"""Detached status attachment and monotonic severity for dynamic workflow calls.
+"""Detached status attachment for dynamic workflow calls.
 
-Defines ``copy_status_tree``, ``attach_call_status``, ``propagate_call_status``.
+Defines ``copy_status_tree``, ``attach_call_status``.
 """
 
 from lclang.error import LclWorkflowError, WorkflowErrorCode
 from lclang.error.operation_guard import guard_failure
-from lclang.workflow.execution_status import ExecutionStatus, ExecutionStatusTree
+from lclang.workflow.execution_status import ExecutionStatusTree
 from lclang.workflow.status_manager import ExecutionStatusManager
 from lclang.workflow.workflow_definition import TaskNode
 
@@ -43,18 +43,3 @@ def attach_call_status(
         children = children[0].sub_tasks
     manager.current.sub_tasks.extend(copy_status_tree(child) for child in children)
     manager.update(status.status, status.task_description)
-
-
-@guard_failure(LclWorkflowError, WorkflowErrorCode.E31_TASK_EXECUTION_NATIVE_FAILURE)
-def propagate_call_status(parent: ExecutionStatusManager, status: ExecutionStatus) -> None:
-    """Raise the parent's severity without clearing a previous call's failure.
-
-    :param parent: Editable action status manager.
-    :param status: Latest native call outcome.
-    """
-    if parent.current.status is ExecutionStatus.ERROR:
-        return
-    if status is ExecutionStatus.ERROR:
-        parent.update(ExecutionStatus.ERROR)
-    elif status in {ExecutionStatus.FAILURE, ExecutionStatus.FAILURE_COVERED}:
-        parent.update(ExecutionStatus.FAILURE)
